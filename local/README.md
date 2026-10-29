@@ -8,6 +8,8 @@ local/
   infra/        # nơi thực hành Docker/Compose/deploy/backup/monitor (mirror infra/ ở repo chính)
   exploits/     # nháp exploit theo lane, chưa chắc chạy ổn
     pwn/ web/ crypto/ rev/
+  refs/         # symlink tới tài liệu/tutorial NGOÀI đã có sẵn trên máy (đọc, không sửa)
+    pwn/ -> /home/ld/hoc/CTF/learn/pwnable  (tutorial BOF/FSB/heap/advance + CheatSheet/Tools.pdf)
   scratch/      # mọi thứ khác không rõ xếp đâu — test lệnh, note rời, binary đang nghịch
 ```
 
@@ -18,6 +20,7 @@ local/
 | `infra/*` | `infra/` (sau khi đạt tiêu chí HT_x) |
 | `exploits/<lane>/<tên>/` | `exploits/<lane>/<tên>/` (khi exploit chạy ổn) |
 | ghi chú trong `labs/` | không copy — đây là guide để đọc, không phải sản phẩm |
+| `refs/` | không copy — chỉ là symlink đọc tutorial, không thuộc repo này |
 | bài học/snippet đáng nhớ | gõ tay vào `cheatsheets/<mảng>.md` ở repo chính |
 
 Đang luyện: xem [`labs/HT1.md`](labs/HT1.md).
