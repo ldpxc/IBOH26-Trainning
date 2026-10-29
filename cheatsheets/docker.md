@@ -28,12 +28,4 @@ docker compose down -v        # XOÁ volume (mất dữ liệu!) — cẩn thậ
 - Map cổng ra `127.0.0.1` khi test local để không lộ ra ngoài.
 - `restart: unless-stopped` + `healthcheck` để service tự sống lại.
 
-## HT1 — recreate nhanh (đã test thật 29/10)
-```bash
-docker stop <name> && docker rm <name>
-docker run -d --name <name> -p 127.0.0.1:<host>:<cont> <img>:<tag>   # không cần build lại
-```
-- Sau khi `rm`, request cũ sẽ `connection refused` — bình thường, không phải lỗi.
-- Xem bài mẫu: `infra/Dockerfile` + `infra/app/app.py` + `infra/evidence/HT1.md`.
-
 <!-- Thêm mục của đội bên dưới -->

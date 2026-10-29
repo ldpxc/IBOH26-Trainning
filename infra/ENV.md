@@ -1,3 +1,0 @@
-- `docker version` → Docker 29.1.3 (build 29.1.3-0ubuntu3~24.04.2)
-- `docker compose version` → Docker Compose 2.40.3+ds1-0ubuntu1~24.04.1
-- `python3 --version` → Python 3.12.3
