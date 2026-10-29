@@ -1,4 +1,8 @@
-# Sân chơi làm việc cá nhân — KHÔNG push gì trong thư mục này lên repo.
+# Sân chơi làm việc cá nhân — KHÔNG push gì trong thư mục này lên repo,
+# trừ chính cấu trúc (README + .gitignore + .gitkeep để giữ cây thư mục).
 # Cái gì cần chia sẻ thì copy tay ra chỗ đúng (cheatsheets/, exploits/, infra/, ...).
 *
 !.gitignore
+!README.md
+!.gitkeep
+!*/
