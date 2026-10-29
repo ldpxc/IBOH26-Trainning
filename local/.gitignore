@@ -1,0 +1,4 @@
+# Sân chơi làm việc cá nhân — KHÔNG push gì trong thư mục này lên repo.
+# Cái gì cần chia sẻ thì copy tay ra chỗ đúng (cheatsheets/, exploits/, infra/, ...).
+*
+!.gitignore
