@@ -1,0 +1,41 @@
+# ── Bí mật / không bao giờ commit (theo cảnh báo trong README) ──
+*.ovpn
+*.key
+*.pem
+id_rsa*
+.env
+.env.*
+secrets*
+*secret*
+*token*.txt
+flag.txt
+flags.txt
+
+# ── Capture traffic thật (có thể chứa flag/token của trận) ──
+# Muốn commit 1 .pcap mẫu (dữ liệu giả) thì thêm thủ công: git add -f <file>.pcap
+*.pcap
+*.pcapng
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ── Build / tạm ──
+*.log
+*.tmp
+*.o
+*.out
+a.out
+core
+core.*
+
+# ── OS / editor ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

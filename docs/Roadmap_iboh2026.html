@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Roadmap IBOH 2026 — Attack-Defense</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+<style>
+:root{
+  --bg:#f7f8fa; --surface:#ffffff; --surface-2:#f0f2f6; --text:#1c2230; --muted:#5c6575;
+  --border:#d9dee7; --accent:#6d3bf5; --accent-2:#1d9bf0; --accent-soft:#efeaff;
+  --ok:#1f9d57; --ok-soft:#e4f6ec; --warn:#c7860a; --warn-soft:#fbf1dd;
+  --code-bg:#eef1f6; --code-text:#b02a5b; --th-bg:#efeaff; --zebra:#f6f7fb;
+  --shadow:0 1px 3px rgba(20,25,40,.07),0 6px 24px rgba(20,25,40,.05);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0e1117; --surface:#161b24; --surface-2:#1b222e; --text:#e4e8f0; --muted:#9aa4b5;
+  --border:#2a333f; --accent:#a98bff; --accent-2:#54b2f7; --accent-soft:#241d3a;
+  --ok:#54d08a; --ok-soft:#14301f; --warn:#e6b45a; --warn-soft:#332611;
+  --code-bg:#1d2430; --code-text:#ff8fb3; --th-bg:#241d3a; --zebra:#141a23;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 30px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  --bg:#0e1117; --surface:#161b24; --surface-2:#1b222e; --text:#e4e8f0; --muted:#9aa4b5;
+  --border:#2a333f; --accent:#a98bff; --accent-2:#54b2f7; --accent-soft:#241d3a;
+  --ok:#54d08a; --ok-soft:#14301f; --warn:#e6b45a; --warn-soft:#332611;
+  --code-bg:#1d2430; --code-text:#ff8fb3; --th-bg:#241d3a; --zebra:#141a23;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; background:var(--bg) !important; color:var(--text)}
+body{
+  background:var(--bg) !important; color:var(--text) !important;
+  max-width:960px !important; margin:0 auto !important; padding:40px 20px 90px !important;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans",sans-serif;
+  line-height:1.65; font-size:16.5px;
+  -webkit-font-smoothing:antialiased;
+}
+.theme-toggle{
+  position:fixed; top:14px; right:14px; z-index:50;
+  background:var(--surface); color:var(--text); border:1px solid var(--border);
+  border-radius:999px; padding:7px 14px; font-size:13px; cursor:pointer; box-shadow:var(--shadow);
+}
+.theme-toggle:hover{border-color:var(--accent)}
+h1.title{
+  font-size:2.05rem; line-height:1.2; font-weight:800; letter-spacing:-.5px;
+  margin:.2em auto .1em; padding-bottom:0;
+  background:linear-gradient(90deg,var(--accent),var(--accent-2));
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+h1:not(.title){
+  font-size:1.55rem; font-weight:800; margin-top:2.4em; padding:14px 0 8px;
+  border-bottom:3px solid var(--accent); letter-spacing:-.3px;
+}
+h2{font-size:1.28rem; font-weight:750; margin-top:1.9em; color:var(--text); border-bottom:1px solid var(--border); padding-bottom:6px}
+h3{
+  font-size:1.08rem; font-weight:700; margin-top:1.6em;
+  padding:6px 0 6px 12px; border-left:4px solid var(--accent-2);
+}
+h4{font-size:1rem; font-weight:700; margin-top:1.3em; color:var(--muted)}
+a{color:var(--accent-2); text-decoration:none}
+a:hover{text-decoration:underline}
+p,li{color:var(--text)}
+strong{color:var(--text); font-weight:700}
+hr{border:none; border-top:1px dashed var(--border); margin:2.4em auto}
+code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  background:var(--code-bg); color:var(--code-text); padding:.12em .4em; border-radius:5px; font-size:.86em;
+}
+pre{background:var(--code-bg); padding:14px 16px; border-radius:10px; overflow:auto; border:1px solid var(--border)}
+pre code{background:none; color:var(--text); padding:0}
+/* tables */
+table{border-collapse:collapse; width:100%; margin:1.2em auto; font-size:.92rem;
+  background:var(--surface); border:1px solid var(--border); border-radius:10px; overflow:hidden; box-shadow:var(--shadow)}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--border); vertical-align:top}
+th{background:var(--th-bg); font-weight:700; color:var(--text); border-bottom:2px solid var(--accent)}
+tbody tr:nth-child(even){background:var(--zebra)}
+tbody tr:last-child td{border-bottom:none}
+/* blockquote -> callout */
+blockquote{
+  margin:1.2em auto; padding:12px 18px; background:var(--warn-soft);
+  border-left:4px solid var(--warn); border-radius:0 10px 10px 0; color:var(--text);
+}
+blockquote p{margin:.4em 0}
+/* TOC */
+nav#TOC{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:16px 20px; margin:1.6em auto 2.4em; box-shadow:var(--shadow);
+}
+nav#TOC::before{content:"Mục lục"; display:block; font-weight:800; font-size:.8rem;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px}
+nav#TOC ul{list-style:none; margin:.2em 0; padding-left:1.1em}
+nav#TOC>ul{padding-left:0}
+nav#TOC li{margin:.15em 0}
+nav#TOC a{color:var(--text); font-size:.92rem}
+nav#TOC a:hover{color:var(--accent-2)}
+ul,ol{padding-left:1.4em}
+li{margin:.25em 0}
+li::marker{color:var(--accent)}
+@media (max-width:640px){
+  body{padding:28px 14px 70px !important; font-size:16px}
+  h1.title{font-size:1.65rem}
+  table{font-size:.85rem}
+  th,td{padding:7px 9px}
+}
+</style>
+
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle" type="button" aria-label="Đổi nền sáng/tối">🌓 Sáng/Tối</button>
+<script>
+(function(){
+  var root=document.documentElement, KEY="roadmap-theme";
+  try{var s=localStorage.getItem(KEY); if(s){root.setAttribute("data-theme",s);}}catch(e){}
+  function cur(){ if(root.getAttribute("data-theme"))return root.getAttribute("data-theme");
+    return (window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches)?"dark":"light"; }
+  var btn=document.getElementById("themeToggle");
+  if(btn){btn.addEventListener("click",function(){
+    var next=cur()==="dark"?"light":"dark";
+    root.setAttribute("data-theme",next);
+    try{localStorage.setItem(KEY,next);}catch(e){}
+  });}
+})();
+</script>
+
+<header id="title-block-header">
+<h1 class="title">Roadmap IBOH 2026 — Attack-Defense</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#lộ-trình-luyện-tập-iboh-2026-attack-defense"
+id="toc-lộ-trình-luyện-tập-iboh-2026-attack-defense">Lộ trình luyện tập
+IBOH 2026 Attack-Defense</a>
+<ul>
+<li><a href="#luật-thi-tóm-tắt-từ-briefing-chính-thức"
+id="toc-luật-thi-tóm-tắt-từ-briefing-chính-thức">Luật thi (tóm tắt, từ
+briefing chính thức)</a></li>
+</ul></li>
+<li><a href="#phần-i-kỹ-năng-cần-luyện"
+id="toc-phần-i-kỹ-năng-cần-luyện">PHẦN I — KỸ NĂNG CẦN LUYỆN</a>
+<ul>
+<li><a
+href="#hạ-tầng-vận-hành-bảng-nhiệm-vụ-bắt-buộc-cả-đội-không-chia-tier"
+id="toc-hạ-tầng-vận-hành-bảng-nhiệm-vụ-bắt-buộc-cả-đội-không-chia-tier">1.
+Hạ tầng &amp; vận hành — BẢNG NHIỆM VỤ (bắt buộc, cả đội, không chia
+tier)</a>
+<ul>
+<li><a href="#sổ-tay-lab-ht1ht7-làm-trên-máy-cá-nhân-mỗi-người-tự-chạy"
+id="toc-sổ-tay-lab-ht1ht7-làm-trên-máy-cá-nhân-mỗi-người-tự-chạy">Sổ tay
+lab HT1–HT7 (làm trên máy cá nhân, mỗi người tự chạy)</a></li>
+</ul></li>
+<li><a href="#kỹ-thuật-khai-thác-theo-tier-bảng-tham-chiếu"
+id="toc-kỹ-thuật-khai-thác-theo-tier-bảng-tham-chiếu">2. Kỹ thuật khai
+thác theo tier — BẢNG THAM CHIẾU</a>
+<ul>
+<li><a href="#pwn-khai-thác-nhị-phân-p1-chính-p2-phụ"
+id="toc-pwn-khai-thác-nhị-phân-p1-chính-p2-phụ">PWN — khai thác nhị phân
+(P1 chính, P2 phụ)</a></li>
+<li><a href="#web-khai-thác-ứng-dụng-web-p2-chính"
+id="toc-web-khai-thác-ứng-dụng-web-p2-chính">WEB — khai thác ứng dụng
+web (P2 chính)</a></li>
+<li><a href="#crypto-mật-mã-p3-chính"
+id="toc-crypto-mật-mã-p3-chính">CRYPTO — mật mã (P3 chính)</a></li>
+<li><a href="#rev-dịch-ngược-p1p2-chia-nhau"
+id="toc-rev-dịch-ngược-p1p2-chia-nhau">REV — dịch ngược (P1/P2 chia
+nhau)</a></li>
+<li><a href="#khai-thác-đặc-thù-ad-cross-category-ai-cũng-nắm"
+id="toc-khai-thác-đặc-thù-ad-cross-category-ai-cũng-nắm">Khai thác đặc
+thù AD (cross-category — ai cũng nắm)</a></li>
+</ul></li>
+<li><a href="#thao-tác-vá-phần-khó-thật-vá-thế-nào-không-phải-vá-ở-đâu"
+id="toc-thao-tác-vá-phần-khó-thật-vá-thế-nào-không-phải-vá-ở-đâu">3.
+Thao tác VÁ (phần khó thật — vá thế nào, không phải vá ở đâu)</a></li>
+</ul></li>
+<li><a href="#phần-ii-lịch-15-ngày-2-giai-đoạn"
+id="toc-phần-ii-lịch-15-ngày-2-giai-đoạn">PHẦN II — LỊCH 15 NGÀY (2 GIAI
+ĐOẠN)</a>
+<ul>
+<li><a href="#quy-ước-lặp-lại-mỗi-ngày"
+id="toc-quy-ước-lặp-lại-mỗi-ngày">Quy ước lặp lại mỗi ngày</a></li>
+<li><a href="#giai-đoạn-1-tuần-1-luyện-kỹ-năng-ngày-1-7"
+id="toc-giai-đoạn-1-tuần-1-luyện-kỹ-năng-ngày-1-7">GIAI ĐOẠN 1 — TUẦN 1:
+LUYỆN KỸ NĂNG (Ngày 1-7)</a>
+<ul>
+<li><a
+href="#ngày-1-docker-căn-bản-mở-màn-khai-thác-hạ-tầng-2h-khai-thác-3h-bb"
+id="toc-ngày-1-docker-căn-bản-mở-màn-khai-thác-hạ-tầng-2h-khai-thác-3h-bb">Ngày
+1 — Docker căn bản + mở màn khai thác · hạ tầng ~2h · khai thác ~3h ·
+[BB]</a></li>
+<li><a
+href="#ngày-2-docker-compose-khai-thác-hạ-tầng-2h-khai-thác-4h-bb"
+id="toc-ngày-2-docker-compose-khai-thác-hạ-tầng-2h-khai-thác-4h-bb">Ngày
+2 — Docker Compose + khai thác · hạ tầng ~2h · khai thác ~4h ·
+[BB]</a></li>
+<li><a
+href="#ngày-3-deployrollbackbackup-khai-thác-rev-mở-màn-hạ-tầng-1.5h-khai-thác-4h-bb"
+id="toc-ngày-3-deployrollbackbackup-khai-thác-rev-mở-màn-hạ-tầng-1.5h-khai-thác-4h-bb">Ngày
+3 — Deploy/rollback/backup + khai thác + REV mở màn · hạ tầng ~1.5h ·
+khai thác ~4h · [BB]</a></li>
+<li><a
+href="#ngày-4-monitortraffic-khai-thác-hạ-tầng-1.5h-khai-thác-4.5h-bb"
+id="toc-ngày-4-monitortraffic-khai-thác-hạ-tầng-1.5h-khai-thác-4.5h-bb">Ngày
+4 — Monitor/traffic + khai thác · hạ tầng ~1.5h · khai thác ~4.5h ·
+[BB]</a></li>
+<li><a href="#ngày-5-ngày-exploit-nặng-rev-tier-2-khai-thác-6h-bb"
+id="toc-ngày-5-ngày-exploit-nặng-rev-tier-2-khai-thác-6h-bb">Ngày 5 —
+Ngày exploit-nặng + REV tier 2 · khai thác ~6h · [BB]</a></li>
+<li><a
+href="#ngày-6-luyện-kỹ-năng-vá-cầu-nối-sang-tuần-2-khai-thác-vá-3h-khai-thác-3h-bb"
+id="toc-ngày-6-luyện-kỹ-năng-vá-cầu-nối-sang-tuần-2-khai-thác-vá-3h-khai-thác-3h-bb">Ngày
+6 — Luyện kỹ năng VÁ (cầu nối sang Tuần 2) + khai thác · vá ~3h · khai
+thác ~3h · [BB]</a></li>
+<li><a href="#ngày-7-tổng-kết-tuần-1-gate-1-chuẩn-bị-tuần-2-5h-bb"
+id="toc-ngày-7-tổng-kết-tuần-1-gate-1-chuẩn-bị-tuần-2-5h-bb">Ngày 7 —
+Tổng kết Tuần 1 + Gate 1 + chuẩn bị Tuần 2 · ~5h · [BB]</a></li>
+</ul></li>
+<li><a href="#giai-đoạn-2-tuần-2-dựng-ad-thực-chiến-ngày-8-15"
+id="toc-giai-đoạn-2-tuần-2-dựng-ad-thực-chiến-ngày-8-15">GIAI ĐOẠN 2 —
+TUẦN 2: DỰNG AD &amp; THỰC CHIẾN (Ngày 8-15)</a>
+<ul>
+<li><a href="#bảng-nhiệm-vụ-dựng-tuần-2-có-sản-phẩm-dw1dw5"
+id="toc-bảng-nhiệm-vụ-dựng-tuần-2-có-sản-phẩm-dw1dw5">Bảng nhiệm vụ dựng
+Tuần 2 (có sản phẩm) — DW1–DW5</a></li>
+<li><a href="#sổ-tay-lab-dw0dw5-chỉ-trong-sân-chơi-do-đội-dựng"
+id="toc-sổ-tay-lab-dw0dw5-chỉ-trong-sân-chơi-do-đội-dựng">Sổ tay lab
+DW0–DW5 (chỉ trong sân chơi do đội dựng)</a></li>
+<li><a href="#ngày-8-hoàn-tất-dw0-dw1-dw2-dw3-dựng-sân-chơi-7h-bb"
+id="toc-ngày-8-hoàn-tất-dw0-dw1-dw2-dw3-dựng-sân-chơi-7h-bb">Ngày 8 —
+hoàn tất DW0 + DW1 + DW2 + DW3 (dựng sân chơi) · ~7h · [BB]</a></li>
+<li><a
+href="#ngày-9-dw4-viết-checker-drill-vá-sống-1-smoke-test-7-8h-bb"
+id="toc-ngày-9-dw4-viết-checker-drill-vá-sống-1-smoke-test-7-8h-bb">Ngày
+9 — DW4 (viết checker) + Drill Vá-Sống #1 + smoke test · ~7-8h ·
+[BB]</a></li>
+<li><a href="#ngày-10-mô-phỏng-1-farm-bước-đầu-7h-sim-2-3h-bb"
+id="toc-ngày-10-mô-phỏng-1-farm-bước-đầu-7h-sim-2-3h-bb">Ngày 10 — Mô
+phỏng #1 + farm bước đầu · ~7h (sim 2-3h) · [BB]</a></li>
+<li><a
+href="#ngày-11-sửa-2-điểm-yếu-farmreplay-mô-phỏng-2-7h-sim-3h-bb-ngày-đệm-mềm"
+id="toc-ngày-11-sửa-2-điểm-yếu-farmreplay-mô-phỏng-2-7h-sim-3h-bb-ngày-đệm-mềm">Ngày
+11 — Sửa 2 điểm yếu + farm/replay + Mô phỏng #2 · ~7h (sim 3h) · [BB];
+ngày đệm mềm</a></li>
+<li><a href="#ngày-12-mô-phỏng-3-replay-farm-live-sửa-7h-sim-4h-bb"
+id="toc-ngày-12-mô-phỏng-3-replay-farm-live-sửa-7h-sim-4h-bb">Ngày 12 —
+Mô phỏng #3 (replay + farm live) + sửa · ~7h (sim 4h) · [BB]</a></li>
+<li><a
+href="#ngày-13-mô-phỏng-4-dài-sát-thi-xoay-vai-sửa-7h-sim-4-5h-bb-5-bđ"
+id="toc-ngày-13-mô-phỏng-4-dài-sát-thi-xoay-vai-sửa-7h-sim-4-5h-bb-5-bđ">Ngày
+13 — Mô phỏng #4 (dài, sát thi) + xoay vai + sửa · ~7h (sim 4-5h) ·
+[BB]; #5 [BĐ]</a></li>
+<li><a
+href="#ngày-14-gate-2-dress-rehearsal-đóng-băng-cheatsheet-hậu-cần-6h-sim-4h-bb"
+id="toc-ngày-14-gate-2-dress-rehearsal-đóng-băng-cheatsheet-hậu-cần-6h-sim-4h-bb">Ngày
+14 — Gate 2 + dress rehearsal + đóng băng + cheatsheet + hậu cần · ~6h
+(sim 4h) · [BB]</a></li>
+<li><a href="#ngày-15-đệmthi-1-2h-bb"
+id="toc-ngày-15-đệmthi-1-2h-bb">Ngày 15 — Đệm/thi · 1-2h · [BB]</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#phần-iii-chuẩn-bị-nguồn-học"
+id="toc-phần-iii-chuẩn-bị-nguồn-học">PHẦN III — CHUẨN BỊ &amp; NGUỒN
+HỌC</a>
+<ul>
+<li><a href="#việc-chuẩn-bị-ưu-tiên-giảm-dần"
+id="toc-việc-chuẩn-bị-ưu-tiên-giảm-dần">Việc chuẩn bị (ưu tiên giảm
+dần)</a></li>
+<li><a href="#nguồn-học-theo-mảng" id="toc-nguồn-học-theo-mảng">Nguồn
+học theo mảng</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="lộ-trình-luyện-tập-iboh-2026-attack-defense">Lộ trình luyện tập
+IBOH 2026 Attack-Defense</h1>
+<p>15 ngày (28/10 → 10/11), thi ~11/11 · trung bình 7h/ngày · 6 phiên mô
+phỏng.</p>
+<h2 id="luật-thi-tóm-tắt-từ-briefing-chính-thức">Luật thi (tóm tắt, từ
+briefing chính thức)</h2>
+<ul>
+<li>Thi <strong>6 giờ</strong>, <strong>tick = 5 phút</strong>, flag đổi
+mỗi tick, <strong>sống 5 tick</strong> (~25 phút). 5 đội, IP
+<code>10.10.&lt;team&gt;.10</code>, VPN = <strong>OpenVPN</strong> (mang
+mobile data phòng venue chặn).</li>
+<li><strong>White box</strong> (có source,
+<code>/home/player/challengeN/</code>): vá được trước khi bị pwn.
+<strong>Black box</strong> (không source,
+<code>/home/challengeN/</code>): <strong>phải pwn trước mới vá
+được</strong>.</li>
+<li>Chỉ vá được <strong>code/binary</strong> (<code>app.py</code>…);
+<strong><code>Dockerfile</code>/<code>docker-compose.yml</code> KHÔNG vá
+được</strong>. <code>restart_docker.sh</code> <strong>cooldown 10
+phút</strong>. Flag ở <code>/home/user/flag.txt</code>.</li>
+<li>Nộp flag: <code>nc gameserver 6666</code> (chỉ tính từ máy đội
+mình). Điểm: <strong>SLA</strong> (động) + <strong>Attack
++2</strong>/flag + <strong>Defence −1</strong>/lần bị nộp.</li>
+</ul>
+<p><strong>Trục chiến lược:</strong> exploit là nền cho cả công lẫn thủ
+(black box bắt buộc pwn mới vá; Attack +2 &gt; Defence −1). Dồn luyện
+vào khai thác sâu; trong trận vẫn giữ SLA sống. Biết exploit thì chỗ vá
+hiển nhiên — cái khó là <strong>thao tác vá không làm chết dịch
+vụ</strong>.</p>
+<hr />
+<h1 id="phần-i-kỹ-năng-cần-luyện">PHẦN I — KỸ NĂNG CẦN LUYỆN</h1>
+<h2
+id="hạ-tầng-vận-hành-bảng-nhiệm-vụ-bắt-buộc-cả-đội-không-chia-tier">1.
+Hạ tầng &amp; vận hành — BẢNG NHIỆM VỤ (bắt buộc, cả đội, không chia
+tier)</h2>
+<blockquote>
+<p>Giống tier khai thác (“giải được = xong”), mỗi nhiệm vụ dưới có
+<strong>việc cụ thể + tiêu chí đạt đo được + sản phẩm để lại</strong>.
+Làm <strong>thật</strong> trên máy, không chỉ đọc. “Xong” = đạt cột giữa
+<strong>và</strong> có sản phẩm cột phải. Các ngày Tuần 1 tham chiếu
+theo mã <strong>HT1–HT7</strong>.</p>
+</blockquote>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Mã</th>
+<th>Việc cụ thể</th>
+<th>Đạt khi (đo được)</th>
+<th>Sản phẩm để lại</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>HT1</strong></td>
+<td>Docker-hoá 1 app nhỏ tự viết (vd Flask “hello” đọc 1 file flag):
+viết <code>Dockerfile</code>, build image, chạy container map cổng</td>
+<td><code>curl localhost:&lt;port&gt;</code> trả đúng ·
+<code>docker ps</code> thấy container · kill rồi chạy lại bằng 1
+lệnh</td>
+<td><code>Dockerfile</code> chạy được + cheatsheet “Docker:
+build/run/exec/logs/rm/cp”</td>
+</tr>
+<tr class="even">
+<td><strong>HT2</strong></td>
+<td>Dựng stack nhiều container bằng Compose (app + DB redis/postgres),
+có <code>healthcheck</code> + <code>restart: unless-stopped</code></td>
+<td><code>docker compose up -d</code> lên cả stack · app gọi được DB ·
+<code>compose ps</code> báo healthy · <code>down</code> rồi
+<code>up</code> lại ra đúng trạng thái</td>
+<td><code>docker-compose.yml</code> mẫu + cheatsheet “Compose:
+up/down/logs/ps/exec/build”</td>
+</tr>
+<tr class="odd">
+<td><strong>HT3</strong></td>
+<td>Deploy theo version + rollback: build image gắn tag
+<code>v1</code>/<code>v2</code>, đổi qua lại</td>
+<td>Đổi <code>v1</code>↔︎<code>v2</code> mỗi lần 1 lệnh · service gián
+đoạn ≤ vài giây</td>
+<td><code>deploy.sh</code> + <code>rollback.sh</code> + ghi chú quy ước
+tag</td>
+</tr>
+<tr class="even">
+<td><strong>HT4</strong></td>
+<td>Backup/restore 1 lệnh: nén thư mục challenge + volume/DB ra 1 file;
+script phục hồi</td>
+<td>Cố ý xoá/hỏng 1 service → <code>restore</code> về bản sống
+<strong>&lt; 1 phút thao tác</strong>, dữ liệu nguyên</td>
+<td><code>infra/backup.sh</code> + <code>infra/restore.sh</code> (đã
+test khôi phục thật)</td>
+</tr>
+<tr class="odd">
+<td><strong>HT5</strong></td>
+<td>Theo dõi + cảnh báo: script poll cổng/endpoint mỗi N giây, in
+UP/DOWN, kêu khi chết; biết
+<code>docker stats</code>/<code>logs -f</code>/<code>htop</code></td>
+<td>Chủ động kill 1 service → script báo <strong>DOWN trong 1 chu
+kỳ</strong></td>
+<td><code>infra/watch.sh</code> + cheatsheet “monitor:
+stats/logs/htop/ss”</td>
+</tr>
+<tr class="even">
+<td><strong>HT6</strong></td>
+<td>Bắt &amp; đọc traffic: <code>tcpdump</code> lưu traffic 1 service ra
+<code>.pcap</code>, mở bằng <code>tshark</code>/Wireshark, lọc ra 1
+request đầy đủ</td>
+<td>Trích được payload 1 request từ <code>.pcap</code> + đọc hiểu nó
+(nền cho replay Tuần 2)</td>
+<td>1 <code>.pcap</code> mẫu + cheatsheet “tcpdump/tshark filter”</td>
+</tr>
+<tr class="odd">
+<td><strong>HT7</strong></td>
+<td>Quy trình <strong>vá + restart không rớt SLA</strong>: backup → sửa
+code/binary → test local → deploy → verify sống (dưới ràng buộc
+cooldown)</td>
+<td>Chạy trọn chu trình: service xanh lại + exploit hết ăn (xem mục
+3)</td>
+<td>cheatsheet “quy trình vá-deploy-verify 6 bước”</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lưu ý theo luật thi:</strong> không vá được container config
+→ <strong>bỏ</strong> hướng gia cố
+<code>read_only</code>/<code>cap_drop</code>/seccomp qua compose.
+Cooldown restart 10 phút → <strong>test vá offline cho chắc rồi deploy
+một lần, không thử-sai trên máy thi</strong>. HT1-2-5-6 vẫn cần để
+<em>dựng hệ thống luyện</em> và <em>hiểu môi trường</em>; HT7 là nhiệm
+vụ quan trọng nhất.</p>
+<p><strong>Cả đội đều làm HT1-HT7</strong> (đây là kỹ năng phòng thủ
+chung), P1 dẫn và xong sớm nhất.</p>
+<h3 id="sổ-tay-lab-ht1ht7-làm-trên-máy-cá-nhân-mỗi-người-tự-chạy">Sổ tay
+lab HT1–HT7 (làm trên máy cá nhân, mỗi người tự chạy)</h3>
+<p><strong>Môi trường chung:</strong> Ubuntu 22.04/24.04 hoặc VM Ubuntu
+(4 GB RAM, 10 GB trống), Docker Engine + Compose plugin, Python 3,
+<code>curl</code>, <code>git</code>, <code>tcpdump</code>,
+<code>tshark</code>, <code>jq</code>. Làm trong repo riêng
+<code>iboh-labs/</code>; mỗi người dùng nhánh/thư mục riêng, không chạy
+lab trên vulnbox thi thật. Trước HT1 kiểm tra
+<code>docker version</code>, <code>docker compose version</code>,
+<code>python3 --version</code>; ghi phiên bản vào
+<code>infra/ENV.md</code>. Nếu không có quyền cài Docker trên máy, dùng
+Ubuntu VM; Play with Docker chỉ đủ cho HT1–HT2 vì phiên làm việc tạm
+thời.</p>
+<p><strong>Ứng dụng xuyên suốt HT1–HT6:</strong> một Flask app có
+<code>GET /health</code> trả <code>{"ok":true}</code>,
+<code>GET /note/&lt;id&gt;</code> đọc note trong Redis,
+<code>POST /note</code> ghi note. Tạo thêm <code>GET /version</code> trả
+<code>v1</code> hoặc <code>v2</code>. Redis là dữ liệu cần
+backup/restore. Dùng cùng một app qua các lab để thời gian dành cho thao
+tác vận hành, không phải viết ứng dụng mới. Đặt cấu trúc
+<code>infra/app/app.py</code>, <code>infra/app/requirements.txt</code>,
+<code>infra/Dockerfile</code>, <code>infra/compose.yaml</code>,
+<code>infra/scripts/</code>, <code>infra/evidence/</code>.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Lab</th>
+<th>Làm ở đâu / thao tác theo thứ tự</th>
+<th>Kiểm tra và bằng chứng phải lưu</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>HT1 — Docker</strong> (Ngày 1, 90–120’)</td>
+<td>Trong <code>infra/</code>: viết <code>Dockerfile</code> từ
+<code>python:3.12-slim</code>, copy requirements, cài dependency, copy
+app, <code>CMD</code> chạy Flask trên <code>0.0.0.0:8000</code>. Chạy
+<code>docker build -t iboh-lab:v1 .</code>,
+<code>docker run -d --name iboh-app -p 127.0.0.1:18080:8000 iboh-lab:v1</code>.
+Thực hành <code>docker ps</code>, <code>docker logs iboh-app</code>,
+<code>docker exec iboh-app ...</code>, <code>docker stop/rm</code>; chạy
+lại bằng đúng lệnh đã ghi.</td>
+<td><code>curl -fsS localhost:18080/health</code> thành công trước và
+sau khi tạo lại container. Lưu <code>Dockerfile</code>,
+<code>app.py</code>, lệnh đã chạy và output ngắn trong
+<code>infra/evidence/HT1.md</code>. Một thành viên khác làm lại theo
+README, không cần hỏi tác giả.</td>
+</tr>
+<tr class="even">
+<td><strong>HT2 — Compose</strong> (Ngày 2, 90–120’)</td>
+<td>Thêm Redis vào <code>compose.yaml</code>, volume có tên cho dữ liệu,
+app dùng hostname <code>redis</code> trên mạng Compose. Redis
+healthcheck bằng <code>redis-cli ping</code>; app healthcheck bằng
+HTTP/Python; app chờ Redis healthy bằng <code>depends_on</code>. Chạy
+<code>docker compose up -d --build</code>, tạo note qua API,
+<code>docker compose ps</code>,
+<code>docker compose logs --tail=30 app</code>,
+<code>docker compose exec redis redis-cli ping</code>, rồi
+<code>down</code> và <code>up -d</code>.</td>
+<td><code>/health</code> xanh; note còn sau
+<code>down</code>/<code>up</code> <strong>không dùng
+<code>down -v</code></strong>; <code>compose ps</code> báo healthy. Lưu
+<code>compose.yaml</code> và transcript kiểm tra trong
+<code>HT2.md</code>. Ghi rõ volume bị xoá nếu dùng
+<code>down -v</code>.</td>
+</tr>
+<tr class="odd">
+<td><strong>HT3 — deploy/rollback</strong> (Ngày 3, 45’)</td>
+<td>Tạo v2 trả <code>/version = v2</code>; build
+<code>iboh-lab:v2</code>. <code>deploy.sh v1|v2</code> đổi tag image app
+trong Compose rồi <code>docker compose up -d --no-deps app</code>;
+<code>rollback.sh</code> gọi lại tag trước. Đo gián đoạn bằng vòng
+<code>curl</code> mỗi giây trong lúc đổi v1→v2→v1.</td>
+<td><code>/version</code> đúng từng lần; Redis note còn nguyên; ghi số
+request thất bại và thời gian gián đoạn vào <code>HT3.md</code>.
+<strong>Không đặt ngưỡng vài giây cứng cho Compose một
+container</strong>: mục tiêu là biết số đo thực tế và rollback được bằng
+1 lệnh; trước khi áp dụng vào trận phải test với checker.</td>
+</tr>
+<tr class="even">
+<td><strong>HT4 — backup/restore</strong> (Ngày 3, 45’)</td>
+<td><code>backup.sh</code> nhận thư mục đầu ra: lưu bản code/config, tag
+image đang chạy và export dữ liệu Redis bằng
+<code>redis-cli --rdb</code> hoặc <code>SAVE</code> rồi copy
+<code>dump.rdb</code>; tạo archive có timestamp + checksum.
+<code>restore.sh &lt;archive&gt;</code> dừng stack, phục hồi code/dump,
+lên stack và gọi <code>/health</code> + đọc note mẫu. Diễn tập: tạo note
+<code>marker-123</code>, backup, sửa/xoá note và làm hỏng app,
+restore.</td>
+<td>Note <code>marker-123</code> trở lại, <code>/health</code> xanh; lưu
+thời gian thao tác thực đo, checksum và transcript <code>HT4.md</code>.
+Không coi việc nén mỗi thư mục source là đã backup DB. Bản backup đặt
+ngoài thư mục sẽ xoá.</td>
+</tr>
+<tr class="odd">
+<td><strong>HT5 — giám sát</strong> (Ngày 4, 40’)</td>
+<td><code>watch.sh &lt;url&gt; &lt;interval&gt;</code> gọi
+<code>curl --max-time 2</code> theo chu kỳ, ghi timestamp, HTTP status,
+<code>UP/DOWN</code> vào log, kêu một lần khi chuyển UP→DOWN. Mở
+terminal khác chạy <code>docker stats</code>,
+<code>docker compose logs -f app</code>, <code>ss -ltnp</code>.
+<code>docker compose stop app</code>, quan sát, rồi
+<code>start app</code>.</td>
+<td>Log chỉ ra DOWN trong ≤1 chu kỳ + timeout, sau đó UP; lưu log và
+lệnh chẩn đoán vào <code>HT5.md</code>. Phân biệt container đang chạy
+với endpoint thật sự hoạt động.</td>
+</tr>
+<tr class="even">
+<td><strong>HT6 — traffic</strong> (Ngày 4, 40’)</td>
+<td>Chỉ bắt traffic <strong>lab của mình</strong>. Tạo request có marker
+<code>LAB-REQUEST-123</code>; bắt
+<code>sudo tcpdump -i any -s 0 -w infra/evidence/HT6.pcap 'tcp port 18080'</code>,
+gửi request, dừng capture. Đọc <code>tshark -r ... -Y http -V</code>
+hoặc mở Wireshark → Follow TCP Stream; tìm marker và xác định
+method/path/body. Nếu Docker không xuất hiện trên <code>any</code>, bắt
+interface bridge/container tương ứng (<code>ip route</code>,
+<code>docker network inspect</code>).</td>
+<td><code>HT6.md</code> chứa đúng 1 request đã trích, filter đã dùng, và
+ý nghĩa từng trường. <code>.pcap</code> có thể chứa token/flag: chỉ giữ
+dữ liệu giả và không commit capture thật từ trận.</td>
+</tr>
+<tr class="odd">
+<td><strong>HT7 — vá và xác minh</strong> (Ngày 6, 2–3h)</td>
+<td>Dùng <strong>một service web tự tạo có path traversal</strong> hoặc
+binary C nhỏ có <code>read</code> quá độ dài (không dùng challenge có
+điều khoản cấm sửa). Lưu exploit PoC và request hợp lệ trước vá; copy
+code/binary ra backup. Vá đúng điểm lỗi trong code/binary, build/chạy
+<strong>bản clone offline</strong>; chạy PoC (phải thất bại) và request
+hợp lệ (phải thành công). Sau đó mới chép file được phép sửa lên service
+lab, restart một lần; ghi thời gian và rollback nếu request hợp lệ hỏng.
+Mô phỏng cooldown 10 phút bằng log thời điểm restart, không restart lần
+hai trong 10 phút.</td>
+<td><code>patches/&lt;service&gt;/</code> gồm <code>before</code>,
+<code>after</code> hoặc diff, PoC, request hợp lệ, kết quả trước/sau và
+<code>HT7.md</code> ghi 6 mốc: backup → vá → test exploit → test chức
+năng → deploy/restart → verify. Với binary, xác nhận hash/file/kiến trúc
+của file chạy sau deploy.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Quy tắc chấm lab:</strong> người làm tự demo từ repo sạch;
+người còn lại chạy lại các lệnh từ README. Mỗi <code>HTx.md</code> ghi
+người làm, ngày, lệnh, output quan trọng, lỗi gặp và cách xử lý. Nếu
+chưa chạy được thực tế, đánh dấu <code>CHƯA ĐẠT</code>; không tính chỉ
+vì đã viết script.</p>
+<h2 id="kỹ-thuật-khai-thác-theo-tier-bảng-tham-chiếu">2. Kỹ thuật khai
+thác theo tier — BẢNG THAM CHIẾU</h2>
+<blockquote>
+<p>Bảng tra cứu đầy đủ, <strong>không phải việc-cần-làm-hết</strong>.
+Mỗi người leo lane mình từ Tier thấp lên, <strong>không giới hạn
+trên</strong> — ai làm tới đâu hay tới đó. Trần mục tiêu mặc định: P1 →
+PWN T4, P2 → WEB T5, P3 → CRYPTO T4; phần cao hơn là <em>stretch</em>
+(leo tự do nếu dư sức). Mỗi tier chỉ tính “xong” khi <strong>tự
+viết/chạy được ≥1 exploit thật</strong>; lưu script vào
+<code>exploits/&lt;lane&gt;/</code> để tái dùng làm farm.</p>
+<p>Cột <strong>Dạng hay gặp</strong> giúp nhận diện nhanh class lỗi khi
+nhìn một challenge lạ.</p>
+</blockquote>
+<h3 id="pwn-khai-thác-nhị-phân-p1-chính-p2-phụ">PWN — khai thác nhị phân
+(P1 chính, P2 phụ)</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tier</th>
+<th>Kỹ thuật</th>
+<th>Dạng hay gặp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Stack BOF: ret2win, ghi đè saved RIP, đổi biến local; ret2shellcode
+khi stack RWX (<code>jmp rsp</code>)</td>
+<td>Binary nhỏ, hàm <code>win()</code>,
+<code>gets</code>/<code>read</code> quá cỡ</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Format string: leak stack (<code>%p</code>/<code>%x</code>),
+arbitrary read (<code>%s</code>), arbitrary write
+(<code>%n</code>/<code>%hn</code>/<code>%hhn</code>), ghi đè GOT, leak
+canary/PIE/libc</td>
+<td><code>printf(buf)</code> không format</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>ROP bypass NX: ret2libc, ret2plt, ret2syscall, ROP chain, ret2csu
+(điều khiển tham số), one-gadget, stack pivot, ret2dlresolve (no
+leak)</td>
+<td>NX bật, có/không PIE</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Bypass mitigation: leak + rewrite canary, leak PIE/ASLR → tính
+offset libc, partial overwrite, <strong>SROP</strong>,
+format-string→ROP</td>
+<td>Full mitigation, cần leak trước</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>Shellcoding: viết shellcode tay (x64/x86), hạn chế ký
+tự/alphanumeric, egghunter, <strong>ORW seccomp</strong>
+(open-read-write khi execve bị chặn), SROP-shellcode</td>
+<td>Sandbox seccomp, shellcode runner</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Heap intro: cấu trúc chunk/bin/tcache, UAF, double free,
+<strong>tcache poisoning/dup</strong>, off-by-one &amp; null-byte
+poison, chunk overlap</td>
+<td>Menu heap (add/edit/free/show)</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>Heap trung cấp: fastbin dup (+consolidate), unsorted-bin leak
+(libc), unsafe unlink, tcache stashing unlink, house of spirit,
+<strong>large bin attack</strong></td>
+<td>Menu heap, libc leak qua unsorted</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>Heap nâng cao (glibc 2.32+ safe-linking &amp; key): bypass
+safe-linking, tcache-key bypass, house of
+botcake/einherjar/lore/force</td>
+<td>glibc mới, không có hook</td>
+</tr>
+<tr class="odd">
+<td>9</td>
+<td><strong>FILE/FSOP</strong>: <code>_IO_FILE</code> + fake vtable,
+<code>_IO_str_jumps</code>, house of orange/apple2/cat/banana, FSOP qua
+stdout</td>
+<td>Không free hook, có arbitrary write</td>
+</tr>
+<tr class="even">
+<td>10</td>
+<td>Hijack control-flow hiện đại:
+<code>__free_hook</code>/<code>__malloc_hook</code> (glibc cũ),
+<strong>exit handlers</strong> (<code>__exit_funcs</code>,
+<code>tls_dtor_list</code>, pointer-guard), largebin→write target</td>
+<td>Tùy phiên bản glibc</td>
+</tr>
+<tr class="odd">
+<td>11 (stretch)</td>
+<td>Kernel pwn: LKM char-device bug, ret2usr, bypass KASLR/SMEP/SMAP,
+<code>modprobe_path</code>/cred overwrite, kernel UAF + heap spray,
+dirtypipe/cross-cache</td>
+<td>File <code>.ko</code>, <code>bzImage</code>,
+<code>initramfs</code></td>
+</tr>
+<tr class="even">
+<td>12 (stretch)</td>
+<td>Integer overflow/underflow, type confusion, race/TOCTOU &amp;
+double-fetch, uninitialized memory, arch khác (ARM/MIPS/RISC-V), Windows
+pwn</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Công cụ PWN:</strong> pwntools, <code>cyclic</code>/pattern
+offset, ROPgadget/ropper/angrop, one_gadget, libc-database/libc.rip, GDB
++ pwndbg/gef, <code>checksec</code>, Ghidra/IDA.</p>
+<h3 id="web-khai-thác-ứng-dụng-web-p2-chính">WEB — khai thác ứng dụng
+web (P2 chính)</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tier</th>
+<th>Kỹ thuật</th>
+<th>Dạng hay gặp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>SQLi (union/error/boolean-blind/time-blind/stacked), NoSQLi cơ bản,
+auth bypass (login SQLi, default cred), IDOR, path traversal, LFI, info
+disclosure (<code>.git</code>/<code>.env</code>/backup)</td>
+<td>Login, search, <code>?id=</code>, <code>?file=</code></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>XSS (reflected/stored/DOM), CSRF, clickjacking, open redirect,
+CRLF/response-splitting, upload bypass
+(ext/MIME/magic/double-ext/<code>.htaccess</code>/SVG/polyglot)</td>
+<td>Comment, profile, form upload</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>RCE qua injection: command/OS injection, <strong>SSTI</strong>
+(Jinja2/Twig/Freemarker/Smarty/ERB/Velocity), code injection
+(<code>eval</code>/<code>exec</code>), LDAP/XPath/SSI/ESI injection</td>
+<td>Template render, ping/convert tool</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><strong>SSRF</strong> (blind, cloud metadata 169.254,
+gopher/dict/file scheme, redirect bypass), <strong>XXE</strong>
+(in-band/OOB/blind), RFI, LFI→RCE (log/session/PHP
+wrapper/filter-chain/<code>/proc</code>)</td>
+<td>Fetch URL, XML parser, import</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><strong>Deserialization</strong>: PHP object injection + POP chain
+(phpggc), Python pickle/PyYAML, Java (ysoserial, JNDI/log4shell), .NET
+ViewState, Ruby Marshal, Node</td>
+<td>Cookie/param dạng serialize</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Auth/token: <strong>JWT</strong> (none, HS/RS confusion, weak
+secret, <code>kid</code>-inject,
+<code>jku</code>/<code>x5u</code>/<code>jwk</code>), OAuth/OIDC/SAML
+flaw, session fixation/prediction, reset poisoning, 2FA bypass</td>
+<td>API có Bearer token</td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>Logic/JS hiện đại: <strong>prototype pollution</strong> (client
+&amp; server → RCE sink), <strong>race condition</strong>
+(limit-overrun/TOCTOU/multi-step), business logic (giá/số lượng/coupon),
+mass assignment, HTTP parameter pollution</td>
+<td>Giỏ hàng, chuyển tiền, Node app</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td>Chaining &amp; bypass: WAF/filter bypass
+(encoding/case/comment/charset), <strong>HTTP request smuggling</strong>
+(CL.TE/TE.CL/H2), web cache poisoning/deception, DOM clobbering,
+mutation XSS, XS-Leaks</td>
+<td>Có proxy/CDN/WAF trước app</td>
+</tr>
+<tr class="odd">
+<td>9 (stretch)</td>
+<td>GraphQL abuse (introspection/batching/injection), WebSocket/gRPC
+attack, dependency confusion, client-side path traversal, CVE framework
+(Spring4Shell…)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Công cụ WEB:</strong> Burp Suite, ffuf/gobuster, sqlmap,
+HackTricks + PayloadsAllTheThings, jwt_tool, phpggc/ysoserial. Lang bẫy
+riêng: <strong>PHP / Python / Go / Node/Vue</strong>.</p>
+<h3 id="crypto-mật-mã-p3-chính">CRYPTO — mật mã (P3 chính)</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tier</th>
+<th>Kỹ thuật</th>
+<th>Dạng hay gặp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Encoding (base16/32/64/85, URL/HTML), XOR (single/repeating-key,
+known-plaintext, crib-drag), cổ điển
+(Caesar/ROT/Vigenère/Affine/substitution/rail-fence), frequency
+analysis, nhận diện mã</td>
+<td>Chuỗi lạ, “giải mã này”</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>AES mode sai: ECB (pattern leak, byte-at-a-time, cut-paste), CBC
+(<strong>bit-flip</strong>, <strong>padding oracle</strong>, IV=key, IV
+reuse), CTR/OFB/CFB keystream reuse (many-time pad), <strong>GCM nonce
+reuse</strong> (forbidden attack)</td>
+<td>Oracle encrypt/decrypt</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Hash &amp; PRNG: <strong>length extension</strong> (MD/SHA1/2),
+collision (MD5 chosen-prefix, SHA1), khôi phục <strong>MT19937</strong>
+(untemper), LCG/<code>random</code> predict, nonce reuse,
+HMAC/timing</td>
+<td>Token/cookie sinh từ hash/rand</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>RSA cơ bản: factor (<strong>Fermat</strong> p≈q, Pollard p−1/ρ,
+batch-GCD shared prime, FactorDB), e nhỏ (cube root,
+<strong>Håstad</strong> broadcast), <strong>Wiener</strong> (d nhỏ),
+common modulus, <strong>LSB/parity oracle</strong>, forge e=3,
+Franklin-Reiter</td>
+<td>Cho <code>n,e,c</code>; nhiều ciphertext</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>RSA nâng cao: <strong>Coppersmith</strong> (stereotyped msg, known
+high/low bits p, short-pad), <strong>Boneh-Durfee</strong>, partial key
+exposure, multi-prime/power, CRT fault (Bellcore), Manger (OAEP)</td>
+<td>Lộ một phần p/d/m</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>Discrete log / DH: BSGS, <strong>Pohlig-Hellman</strong> (order
+smooth), Pollard-rho DLP, small-subgroup confinement, invalid param, DH
+MITM, ElGamal nonce reuse</td>
+<td>Cho <code>g,p,g^x</code></td>
+</tr>
+<tr class="odd">
+<td>7</td>
+<td>ECC: ECDLP smooth-order, <strong>invalid curve</strong>,
+<strong>singular curve</strong> (node/cusp), anomalous
+(<strong>Smart’s</strong>), MOV/pairing, <strong>ECDSA nonce
+reuse/biased</strong> → private key, twist attack</td>
+<td>Chữ ký/điểm trên đường cong</td>
+</tr>
+<tr class="even">
+<td>8</td>
+<td><strong>Lattice</strong>: LLL/BKZ, Hidden Number Problem
+(biased-nonce DSA/ECDSA), knapsack (Merkle-Hellman),
+Coppersmith-qua-lattice, modular inequalities</td>
+<td>“nghe mùi” lattice, nonce lệch</td>
+</tr>
+<tr class="odd">
+<td>9 (stretch)</td>
+<td>Pairing-based (BLS/IBE), isogeny (SIDH/CSIDH toy), post-quantum toy
+(LWE), side-channel, RC4 bias/LFSR (Berlekamp-Massey), AES
+white-box</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Công cụ CRYPTO:</strong> SageMath, PyCryptodome,
+<code>sympy</code>/<code>gmpy2</code>, RsaCtfTool, z3,
+<code>pwntools</code> (kết nối oracle), lattice: fpylll.</p>
+<h3 id="rev-dịch-ngược-p1p2-chia-nhau">REV — dịch ngược (P1/P2 chia
+nhau)</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tier</th>
+<th>Kỹ thuật</th>
+<th>Dạng hay gặp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Static+dynamic: đọc asm x86/x64, Ghidra/IDA/Binja, gdb/pwndbg,
+<code>strings</code>/<code>strace</code>/<code>ltrace</code>/<code>file</code>/<code>binwalk</code>,
+khôi phục logic keygen/crackme, patch nhảy điều kiện</td>
+<td>“nhập đúng key”, flag check</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Anti-analysis: anti-debug (ptrace, <code>/proc</code>, timing/rdtsc,
+int3-scan), anti-disasm, string obfuscation (XOR/stack-string/RC4),
+unpack UPX &amp; packer tự chế, self-modifying code, TLS callback</td>
+<td>Binary “chống xem”</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Obfuscation nâng cao: control-flow flattening (OLLVM), opaque
+predicate, <strong>VM/bytecode interpreter</strong> (devirtualization),
+MBA simplification, instruction substitution</td>
+<td>Vòng lặp fetch-decode-execute</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Tooling &amp; nền tảng: <strong>angr/symbolic &amp;
+concolic</strong>, <strong>Z3/claripy</strong>, qiling/unicorn emulate,
+.NET (dnSpy/de4dot), Java/Android (jadx/apktool/Frida), Go/Rust/Nim
+stripped, Python (pyc/PyInstaller)</td>
+<td>Constraint phức tạp, managed code</td>
+</tr>
+<tr class="odd">
+<td>5 (stretch)</td>
+<td>Firmware (binwalk/QEMU), kernel module, eBPF, bootloader, arch lạ
+(MIPS/ARM/RISC-V/AVR), hardware/JTAG, custom ISA</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Công cụ REV:</strong> Ghidra/IDA/Binary Ninja, pwndbg/gef,
+angr, Z3, dnSpy, jadx, qiling/unicorn.</p>
+<blockquote>
+<p><strong>Ghi chú:</strong> forensics / stego / misc / OSINT có thể
+xuất hiện nhưng <strong>ưu tiên thấp trong AD</strong> (briefing chỉ cho
+thấy app code + binary). Không luyện sâu, chỉ nắm công cụ cơ bản
+(<code>binwalk</code>, <code>zsteg</code>, <code>volatility</code>,
+<code>exiftool</code>) để không bí nếu lạc vào.</p>
+</blockquote>
+<h3 id="khai-thác-đặc-thù-ad-cross-category-ai-cũng-nắm">Khai thác đặc
+thù AD (cross-category — ai cũng nắm)</h3>
+<ol type="1">
+<li><strong>Exploit farm</strong>: biến mỗi script thành vũ khí tự chạy
+mọi IP đối thủ mỗi tick, tự nộp flag (DestructiveFarm / tự viết).</li>
+<li><strong>Đọc traffic → steal exploit</strong>: bắt gói đối thủ đánh
+mình (<code>tcpdump</code>/<code>tshark</code>/pcap), tách payload.</li>
+<li><strong>Replay &amp; modify</strong>: bắn lại payload bắt được,
+chỉnh flag-id/tham số để đánh đội khác.</li>
+<li><strong>Flag-ID handling</strong>: lấy danh sách target/flag-id từ
+gameserver mỗi tick, nạp vào farm.</li>
+<li><strong>Khai thác song song nhiều dịch vụ</strong> không để lỗi 1
+cái làm chết cả farm.</li>
+<li><strong>Tốc độ first-blood</strong>: nhận diện class lỗi quen → ra
+exploit trong vài phút đầu.</li>
+</ol>
+<h2 id="thao-tác-vá-phần-khó-thật-vá-thế-nào-không-phải-vá-ở-đâu">3.
+Thao tác VÁ (phần khó thật — vá thế nào, không phải vá ở đâu)</h2>
+<p>Mỗi kỹ thuật vá luyện tới mức: <strong>vá xong exploit hết ăn +
+checker vẫn xanh</strong>. Vá mà chết dịch vụ = tệ hơn không vá.</p>
+<p><strong>Ràng buộc bắt buộc:</strong> chỉ sửa được code/binary (không
+<code>Dockerfile</code>/<code>compose</code>) → không dùng
+<code>LD_PRELOAD</code>/seccomp/proxy qua compose, phải vá thẳng vào
+code/binary. Cooldown restart 10 phút → test offline chắc rồi deploy một
+lần. Black box: pwn trước mới vá được.</p>
+<p><strong>Vá binary (pwn/rev — khó nhất):</strong> - Giữ nguyên kích
+thước &amp; offset: sửa hằng số (vd giảm size <code>read</code>), NOP
+đoạn nguy hiểm, đổi nhánh nhảy, vá hex tại chỗ. - <strong>Code
+cave</strong>: nhét logic kiểm tra mới vào vùng trống rồi nhảy tới. -
+Công cụ: <code>pwntools</code>, <strong>LIEF</strong>,
+<code>patchelf</code>, <strong>keystone</strong>, Ghidra patch,
+<code>objcopy</code>. - Hook trong binary: ghi đè GOT/PLT trỏ hàm nguy
+hiểm sang wrapper an toàn; seccomp qua code cave (chỉ khi vá thẳng
+binary). - Quy trình: tải về máy cá nhân → vá → test exploit hết ăn +
+chức năng còn sống → đẩy lên → restart → xác nhận checker xanh. Luôn giữ
+backup.</p>
+<p><strong>Vá web/source:</strong> - Vá đúng điểm vào, không chặn
+request hợp lệ của checker: parameterized query, whitelist input,
+output-encoding, tắt hàm nguy hiểm, ép kiểu, giới hạn độ dài. -
+Middleware/filter trước app (mini-WAF) mà vẫn cho checker đi qua. - Vá
+config lộ: tắt debug, bịt <code>.git</code>/backup, sửa quyền file flag,
+bỏ endpoint thừa. - Rủi ro lớn nhất: chặn nhầm checker → mất SLA.
+<strong>Test mỗi rule với checker trước khi bật.</strong></p>
+<p><strong>Kỷ luật chung:</strong> backup trước khi đụng → vá nhỏ nhất
+có thể → test 2 mặt (exploit hết ăn + checker sống) → rollback nhanh nếu
+checker đỏ.</p>
+<hr />
+<h1 id="phần-ii-lịch-15-ngày-2-giai-đoạn">PHẦN II — LỊCH 15 NGÀY (2 GIAI
+ĐOẠN)</h1>
+<ul>
+<li><strong>Giai đoạn 1 — Tuần 1 (Ngày 1-7): luyện kỹ năng &amp; kiến
+thức</strong> kiểu jeopardy. Học Docker/Compose/vận hành + leo tier khai
+thác từng mảng + viết cheatsheet khi học. <strong>Chưa dựng AD, chưa mô
+phỏng.</strong></li>
+<li><strong>Giai đoạn 2 — Tuần 2 (Ngày 8-15): dựng hệ thống
+Attack-Defense &amp; thực chiến.</strong> Dựng ForcAD + mạng, cắm
+service/checker, rồi mô phỏng lặp đi lặp lại.</li>
+</ul>
+<h2 id="quy-ước-lặp-lại-mỗi-ngày">Quy ước lặp lại mỗi ngày</h2>
+<ul>
+<li><strong>[BB]</strong> = bắt buộc · <strong>[BĐ]</strong> = bỏ được
+nếu trễ/stretch. Giờ ghi là giờ tập trung phần chính (~7h/ngày).</li>
+<li><strong>“Xong” đo được</strong>: tier xong = tự chạy ≥1 exploit
+thật; infra xong = tự dựng lại được không cần hướng dẫn; script xong =
+chạy ra kết quả đúng, đã lưu repo.</li>
+<li><strong>Vừa học vừa viết cheatsheet</strong>: mỗi kỹ thuật/lệnh học
+được ghi ngay vào <code>cheatsheet.md</code> — chỉ ghi thứ <strong>đã tự
+chạy thật</strong>.</li>
+<li><strong>Báo cáo cuối ngày (10 phút, [BB])</strong>: mỗi người 3 ý
+vào <code>progress.md</code> — <em>làm được gì / kẹt ở đâu / mai cần
+gì</em>.</li>
+<li><strong>2 cổng kiểm</strong>: <strong>Gate 1</strong> cuối Tuần 1
+(kỹ năng), <strong>Gate 2</strong> trước dress rehearsal (Ngày 14).</li>
+</ul>
+<p><strong>Tier: đặt mục tiêu theo lớp, KHÔNG giới hạn trên — ai làm tới
+đâu hay tới đó.</strong> Trần mục tiêu mặc định, phần cao hơn leo tự
+do:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Người</th>
+<th>Lane</th>
+<th>Trần mục tiêu</th>
+<th>Stretch (leo tự do)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>P1</td>
+<td>PWN + infra</td>
+<td>PWN T4 (BOF/fmt/ROP/bypass canary+PIE)</td>
+<td>PWN T5+ (shellcode/heap/FSOP…)</td>
+</tr>
+<tr class="even">
+<td>P2</td>
+<td>WEB</td>
+<td>WEB T5 (tới deserialization/JWT)</td>
+<td>WEB T6+</td>
+</tr>
+<tr class="odd">
+<td>P3</td>
+<td>CRYPTO</td>
+<td>CRYPTO T4 (tới RSA cơ bản)</td>
+<td>CRYPTO T5+</td>
+</tr>
+<tr class="even">
+<td>REV</td>
+<td>P1+P2 chia</td>
+<td>REV T2 (static+patch, anti-debug)</td>
+<td>REV T3+</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="giai-đoạn-1-tuần-1-luyện-kỹ-năng-ngày-1-7">GIAI ĐOẠN 1 — TUẦN 1:
+LUYỆN KỸ NĂNG (Ngày 1-7)</h2>
+<p>Mỗi ngày chạy <strong>2 mạch song song</strong>: - <strong>Mạch Hạ
+tầng</strong> (P1 dẫn, cả đội học đủ để vận hành) —
+Docker/Compose/deploy/monitor, học tuần tự, front-load Ngày 1-4 rồi nhẹ
+dần. - <strong>Mạch Khai thác</strong> (theo lane) — giải challenge
+jeopardy thật (pwn.college, PortSwigger, CryptoHack, crackmes, CTF
+cũ).</p>
+<blockquote>
+<p><strong>Cách chạy mạch khai thác:</strong> số giờ ghi mỗi ngày là
+<strong>giờ chuẩn</strong> — luyện thêm ngoài giờ thoải mái. Mỗi ngày
+<strong>bắt đầu từ tier hiện tại của mỗi người</strong>, không cố định
+tier theo ngày. Cuối ngày cập nhật tiến độ (xong tier nào) vào
+<code>progress.md</code>; <strong>tier bắt đầu hôm sau = tier kế
+tiếp</strong>. Mỗi tier tính “xong” khi tự chạy ≥1 exploit thật, lưu
+script vào <code>exploits/&lt;lane&gt;/</code>. Đi theo tốc độ thật của
+từng người.</p>
+</blockquote>
+<p>Ô “tier bắt đầu” dưới đây để <strong>điền sau mỗi ngày</strong> (ban
+đầu = Tier 1, hoặc tier mỗi người tự đánh giá đang ở).</p>
+<h3
+id="ngày-1-docker-căn-bản-mở-màn-khai-thác-hạ-tầng-2h-khai-thác-3h-bb">Ngày
+1 — Docker căn bản + mở màn khai thác · hạ tầng ~2h · khai thác ~3h ·
+[BB]</h3>
+<ul>
+<li><strong>Hạ tầng — P1 dẫn (~2h): làm <code>HT1</code></strong>
+(Docker-hoá 1 app). Đạt khi + sản phẩm: xem bảng HT ở Part I.</li>
+<li><strong>Khai thác (~3h, bắt đầu từ Tier 1):</strong> P1 ▸ Tier __ ·
+P2 ▸ Tier __ · P3 ▸ Tier __.</li>
+<li><strong>Đầu ra:</strong> sản phẩm <code>HT1</code>
+(<code>Dockerfile</code> + cheatsheet Docker); <code>progress.md</code>
+ghi tier mỗi người đạt.</li>
+</ul>
+<h3 id="ngày-2-docker-compose-khai-thác-hạ-tầng-2h-khai-thác-4h-bb">Ngày
+2 — Docker Compose + khai thác · hạ tầng ~2h · khai thác ~4h · [BB]</h3>
+<ul>
+<li><strong>Hạ tầng (~2h): làm <code>HT2</code></strong> (Compose stack
+nhiều container + healthcheck).</li>
+<li><strong>Khai thác (~4h, bắt đầu từ tier hiện tại):</strong> P1 ▸
+Tier __ · P2 ▸ Tier __ · P3 ▸ Tier __.</li>
+<li><strong>Đầu ra:</strong> sản phẩm <code>HT2</code>
+(<code>docker-compose.yml</code> + cheatsheet Compose) + mỗi exploit vừa
+làm (script <code>exploits/&lt;lane&gt;/</code>).</li>
+</ul>
+<h3
+id="ngày-3-deployrollbackbackup-khai-thác-rev-mở-màn-hạ-tầng-1.5h-khai-thác-4h-bb">Ngày
+3 — Deploy/rollback/backup + khai thác + REV mở màn · hạ tầng ~1.5h ·
+khai thác ~4h · [BB]</h3>
+<ul>
+<li><strong>Hạ tầng (~1.5h): làm <code>HT3</code> +
+<code>HT4</code></strong> (deploy/rollback theo version; backup/restore
+1 lệnh).</li>
+<li><strong>Khai thác (~4h, bắt đầu từ tier hiện tại):</strong> P1 ▸
+Tier __ · P2 ▸ Tier __ · P3 ▸ Tier __. <strong>REV Tier 1</strong>
+(P1/P2 chia): đọc Ghidra + patch nhảy điều kiện.</li>
+<li><strong>Đầu ra:</strong> sản phẩm <code>HT3</code>+<code>HT4</code>
+(<code>deploy.sh</code>/<code>rollback.sh</code>/<code>backup.sh</code>/<code>restore.sh</code>).</li>
+</ul>
+<h3
+id="ngày-4-monitortraffic-khai-thác-hạ-tầng-1.5h-khai-thác-4.5h-bb">Ngày
+4 — Monitor/traffic + khai thác · hạ tầng ~1.5h · khai thác ~4.5h ·
+[BB]</h3>
+<ul>
+<li><strong>Hạ tầng (~1.5h): làm <code>HT5</code> +
+<code>HT6</code></strong> (theo dõi/cảnh báo health; bắt &amp; đọc
+traffic ra <code>.pcap</code>).</li>
+<li><strong>Khai thác (~4.5h, bắt đầu từ tier hiện tại):</strong> P1 ▸
+Tier __ · P2 ▸ Tier __ · P3 ▸ Tier __.</li>
+<li><strong>Đầu ra:</strong> sản phẩm <code>HT5</code>+<code>HT6</code>
+(<code>watch.sh</code>, <code>.pcap</code> mẫu, cheatsheet
+tcpdump/monitor).</li>
+</ul>
+<h3 id="ngày-5-ngày-exploit-nặng-rev-tier-2-khai-thác-6h-bb">Ngày 5 —
+Ngày exploit-nặng + REV tier 2 · khai thác ~6h · [BB]</h3>
+<ul>
+<li><strong>Hạ tầng:</strong> chỉ ôn qua cheatsheet, không học mới.</li>
+<li><strong>Khai thác (~6h, bắt đầu từ tier hiện tại):</strong> P1 ▸
+Tier __ · P2 ▸ Tier __ · P3 ▸ Tier __. <strong>REV Tier 2</strong>
+(anti-debug) nếu P1/P2 đã qua REV T1.</li>
+<li><strong>Đầu ra:</strong> mỗi người ≥1 exploit mới lưu repo +
+cheatsheet cập nhật.</li>
+</ul>
+<h3
+id="ngày-6-luyện-kỹ-năng-vá-cầu-nối-sang-tuần-2-khai-thác-vá-3h-khai-thác-3h-bb">Ngày
+6 — Luyện kỹ năng VÁ (cầu nối sang Tuần 2) + khai thác · vá ~3h · khai
+thác ~3h · [BB]</h3>
+<ul>
+<li><strong>Kỹ năng vá (~3h): làm <code>HT7</code></strong> trên
+<strong>chính binary/web vừa exploit ở Tuần 1</strong> → vá tối thiểu
+(binary giữ offset; web không chết chức năng) → tự kiểm <em>exploit hết
+ăn + chức năng còn chạy</em> (test thủ công, chưa cần ForcAD). P1 dẫn vá
+binary, P2 vá web.</li>
+<li><strong>Khai thác (~3h, bắt đầu từ tier hiện tại):</strong> P1 ▸
+Tier __ · P2 ▸ Tier __ · P3 ▸ Tier __.</li>
+<li><strong>Đầu ra:</strong> sản phẩm <code>HT7</code> (cheatsheet quy
+trình vá 6 bước) + <code>patches/</code> (bản vá + ghi chú chỗ
+sửa).</li>
+</ul>
+<h3 id="ngày-7-tổng-kết-tuần-1-gate-1-chuẩn-bị-tuần-2-5h-bb">Ngày 7 —
+Tổng kết Tuần 1 + Gate 1 + chuẩn bị Tuần 2 · ~5h · [BB]</h3>
+<ul>
+<li><strong>Gate 1 (điều kiện sang Tuần 2):</strong> mỗi người đạt (hoặc
+gần) <strong>trần mục tiêu</strong> của lane + tự chạy exploit thật mỗi
+tier đã học · Docker/Compose/deploy/backup/monitor tự vận hành · bắt+đọc
+được traffic · cheatsheet đủ các mục đã học.</li>
+<li><strong>Chuẩn bị Tuần 2 — bắt đầu <code>DW0</code>:</strong>
+gom/đóng gói <strong>3-5 service phủ 4 mảng</strong>
+(web/pwn/crypto/rev), mỗi service đọc flag từ
+<code>/home/user/flag.txt</code>; với pwn/rev xoá source chỉ để binary.
+P1 đọc trước tài liệu <strong>ForcAD</strong> +
+<strong>Tailscale/OpenVPN</strong>.</li>
+<li><strong>Ai chưa đạt trần:</strong> ghi rõ còn thiếu gì → tranh thủ
+khoảng trống Tuần 2 bù (ngày đệm Ngày 11).</li>
+</ul>
+<hr />
+<h2 id="giai-đoạn-2-tuần-2-dựng-ad-thực-chiến-ngày-8-15">GIAI ĐOẠN 2 —
+TUẦN 2: DỰNG AD &amp; THỰC CHIẾN (Ngày 8-15)</h2>
+<p><strong>Hai cơ chế dùng xuyên suốt các phiên mô phỏng:</strong></p>
+<ul>
+<li><strong>Drill Vá-Sống</strong> (lặp mỗi sim): 1 service đang bị
+exploit ăn → vá đạt khi (a) exploit hết ăn, (b) checker xanh 3 tick, (c)
+chỉ sửa code/binary, (d) ≤1 lần restart (cooldown 10’). <strong>Ghi thời
+gian mỗi lần, mục tiêu giảm dần.</strong></li>
+<li><strong>Đường lui khi KHÔNG exploit được black box</strong> (thứ tự
+ưu tiên mỗi tick): (1) giữ service sống trước — SLA là điểm chắc; (2) có
+exploit sẵn → chạy farm nộp flag; (3) đang bị đánh → P3 bắt payload,
+<strong>replay</strong> (không cần hiểu) + xem payload lộ chỗ nào để vá;
+(4) bí thật → bỏ qua, chuyển service khác. <strong>Không đốt cả tick vào
+1 black box.</strong></li>
+</ul>
+<h3 id="bảng-nhiệm-vụ-dựng-tuần-2-có-sản-phẩm-dw1dw5">Bảng nhiệm vụ dựng
+Tuần 2 (có sản phẩm) — DW1–DW5</h3>
+<blockquote>
+<p>Giống bảng HT: mỗi nhiệm vụ có <strong>việc cụ thể + tiêu chí đạt +
+sản phẩm</strong>. Các ngày dưới tham chiếu theo mã.</p>
+</blockquote>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Mã</th>
+<th>Việc cụ thể</th>
+<th>Đạt khi (đo được)</th>
+<th>Sản phẩm để lại</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>DW0</strong></td>
+<td>Đóng gói service có ghi/đọc flag: bắt đầu 1 web service, sau đó mở
+rộng 3–5 service phủ web/pwn/crypto/rev</td>
+<td>mỗi service chạy được, lưu/đọc flag và có checker riêng trước khi
+đưa vào sim</td>
+<td><code>services/&lt;tên&gt;/</code> (mã + Dockerfile + README)</td>
+</tr>
+<tr class="even">
+<td><strong>DW1</strong></td>
+<td>Dựng <strong>ForcAD</strong> 3 đội, tick 300 giây, flag lifetime 5
+nếu phiên bản hỗ trợ; cắm service đầu tiên</td>
+<td>scoreboard lên · ≥1 service checker <strong>xanh 3 tick liên
+tục</strong></td>
+<td><code>forcad/</code> (config đúng phiên bản + VERSION.md +
+README)</td>
+</tr>
+<tr class="odd">
+<td><strong>DW2</strong></td>
+<td>Nối 3 máy bằng <strong>Tailscale</strong> + cài/test <strong>OpenVPN
+client</strong></td>
+<td>3 máy ping nhau bằng IP tailscale + ssh được vào nhau</td>
+<td>ghi chú IP mỗi máy + cheatsheet “tailscale/openvpn up”</td>
+</tr>
+<tr class="even">
+<td><strong>DW3</strong></td>
+<td>Thử nộp flag bằng giao thức ForcAD thực tế (dùng <code>nc</code> nếu
+là line protocol)</td>
+<td>nộp 1 flag hợp lệ → scoreboard ghi điểm; flag sai bị từ chối</td>
+<td><code>ops/submit.md</code> (host/port/định dạng đã kiểm chứng)</td>
+</tr>
+<tr class="odd">
+<td><strong>DW4</strong></td>
+<td>Viết <strong>checker ForcAD</strong> cho các service ở DW0 (PUT flag
+<code>/home/user/flag.txt</code>, GET qua chức năng bình thường, CHECK
+liveness)</td>
+<td>mỗi checker <strong>xanh 5 tick liên tục</strong>, tự đặt+đọc được
+flag</td>
+<td><code>checkers/&lt;service&gt;/</code></td>
+</tr>
+<tr class="even">
+<td><strong>DW5</strong></td>
+<td><strong>Exploit farm</strong> tự động, dựng dần 5 bước: ① bắt
+traffic → ② script nộp flag auto → ③ lấy flag-id/target mỗi tick → ④
+ghép exploit bắn mọi IP → ⑤ replay payload bắt được</td>
+<td>Trong 1 sim: farm <strong>tự nộp flag mọi IP không cần tay</strong>
++ <strong>replay ≥1 payload</strong></td>
+<td><code>farm/</code> (<code>submit.py</code>,
+<code>get_targets.py</code>, <code>run.py</code>,
+<code>replay.py</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sổ-tay-lab-dw0dw5-chỉ-trong-sân-chơi-do-đội-dựng">Sổ tay lab
+DW0–DW5 (chỉ trong sân chơi do đội dựng)</h3>
+<p><strong>Cấu trúc bàn giao:</strong> <code>services/</code>,
+<code>checkers/</code>, <code>forcad/</code>, <code>farm/</code>,
+<code>ops/</code>, <code>evidence/</code>, <code>README.md</code>. P1 sở
+hữu host và runbook, P2 làm service web + checker chức năng, P3 làm flag
+pipeline/farm; <strong>mỗi người phải tự chạy lại một lần phần của người
+khác</strong>. Dùng 3 VM Ubuntu hoặc 3 máy thật nối LAN/Tailscale. Mỗi
+đội có một service instance riêng; không dùng chung volume flag. Host
+ForcAD cần truy cập được IP/port của cả 3 instance. Ghi sơ đồ IP/port
+thật vào <code>ops/network.md</code>; không đưa token thật vào repo.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Lab</th>
+<th>Bài thực hành cụ thể</th>
+<th>Điều kiện nghiệm thu / file bàn giao</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>DW0 — service</strong> (Ngày 7–8)</td>
+<td><strong>Bắt đầu bằng 1 web service</strong> có chức năng lưu và đọc
+note hợp lệ, thêm một endpoint lỗi để attacker đọc flag giả. Cho checker
+đặt flag qua chức năng hợp lệ và lấy lại bằng ID; flag lưu bền qua
+restart. Clone cùng image thành 3 instance, mỗi instance có DB/volume
+riêng. Sau khi pipeline chạy, thêm 1 TCP binary pwn và 1 service
+crypto/rev có giao thức rõ ràng; mục tiêu 3–5 service là phần mở rộng,
+<strong>không chặn việc bắt đầu sim</strong>. Viết
+<code>services/&lt;name&gt;/README.md</code> gồm port, cách chạy, lệnh
+request bình thường, vị trí flag và PoC khai thác.</td>
+<td>Mỗi service có 3 phép thử thủ công: ghi flag giả → đọc lại bằng ID →
+exploit lấy flag trên bản chưa vá. Restart rồi đọc lại flag.
+<code>docker compose config</code> hợp lệ. Với binary, chỉ giao binary
+cho vai defender trong sim; source giữ ở thư mục người tổ chức, không
+xoá bản gốc.</td>
+</tr>
+<tr class="even">
+<td><strong>DW1 — trọng tài</strong> (Ngày 8)</td>
+<td>Clone repo ForcAD vào thư mục riêng, đọc <strong>README/config mẫu
+đúng phiên bản đã clone</strong>, pin commit trong
+<code>forcad/VERSION.md</code>; chạy ví dụ đi kèm trước, sau đó cấu hình
+3 team + 1 service + checker DW0, tick 300 giây, flag lifetime 5 nếu
+phiên bản hỗ trợ đúng tên trường. Mở scoreboard từ máy host, theo dõi
+log một tick PUT/GET/CHECK.</td>
+<td><code>forcad/README.md</code> ghi commit, lệnh setup/start/stop thực
+chạy, tên field cấu hình đã xác minh, ảnh hoặc log 3 tick xanh liên tục.
+<strong>Đừng giả định</strong> <code>config.yml</code>, cổng 8080 hay
+giao thức nộp của một phiên bản ForcAD chưa kiểm tra. Nếu ForcAD ngốn
+thời gian, dùng harness local nhỏ gọi checker mỗi 300 giây để luyện
+HT7/DW4 rồi tích hợp lại ngày 9.</td>
+</tr>
+<tr class="odd">
+<td><strong>DW2 — mạng</strong> (Ngày 8)</td>
+<td>Mỗi người cài Tailscale trên máy/VM của mình, đăng nhập cùng
+tailnet, ghi IP qua <code>tailscale ip -4</code>; test từ P1 tới P2/P3
+bằng <code>ping</code>, <code>ssh</code>,
+<code>curl &lt;IP&gt;:&lt;service-port&gt;</code>. P1 giới hạn firewall
+chỉ cho mạng lab. Riêng OpenVPN: dùng profile test của đội hoặc server
+lab <strong>do đội kiểm soát</strong>, chạy client rồi xác nhận
+route/IP; không cần dựng OpenVPN server nếu sân chơi đã chạy qua
+Tailscale.</td>
+<td><code>ops/network.md</code> có bảng host, Tailscale IP, port, lệnh
+kết nối, kết quả test hai chiều và cách ngắt VPN. Không commit
+<code>.ovpn</code> chứa credential/key.</td>
+</tr>
+<tr class="even">
+<td><strong>DW3 — submit</strong> (Ngày 8–9)</td>
+<td>Tạo flag giả qua checker, lấy flag đúng của tick hiện tại, kiểm tra
+cổng và giao thức submit <strong>từ tài liệu/source ForcAD đúng
+commit</strong>, thử thủ công bằng client phù hợp; nếu là line protocol
+thì dùng
+<code>printf '%s\n' "$FLAG" | nc &lt;host&gt; &lt;port&gt;</code>. Thử
+lại với flag sai và flag hết hạn.</td>
+<td><code>ops/submit.md</code> ghi host/port thực, định dạng input,
+nguyên văn phản hồi đã che flag, trường hợp valid/invalid/expired. Chỉ
+đặt mục tiêu chữ <code>ACCEPT</code> nếu server thực trả đúng chữ đó;
+tiêu chí chính là scoreboard tăng điểm cho flag hợp lệ.</td>
+</tr>
+<tr class="odd">
+<td><strong>DW4 — checker</strong> (Ngày 9)</td>
+<td>Đọc interface checker của đúng phiên bản ForcAD; triển khai
+<code>check</code>, <code>put</code>, <code>get</code> (hoặc tên hàm
+thật của phiên bản đó). <code>put</code> gọi chức năng hợp lệ để lưu
+flag mới và trả ID; <code>get</code> dùng ID để đọc đúng flag;
+<code>check</code> dùng dữ liệu bình thường, không phụ thuộc exploit.
+Test độc lập với 2 flag khác nhau, restart service giữa PUT và GET, rồi
+nối với trọng tài.</td>
+<td><code>checkers/&lt;name&gt;/README.md</code> mô tả giao thức và câu
+lệnh test. 5 tick liên tục xanh, hai flag khác nhau không bị lẫn; vá lỗ
+hổng xong checker vẫn xanh. Nếu chưa đủ thời gian viết mọi checker, chỉ
+đưa service đã có checker vào sim.</td>
+</tr>
+<tr class="even">
+<td><strong>DW5 — farm/replay</strong> (Ngày 10–12)</td>
+<td><code>farm/submit.py</code> nhận flag từ stdin và trả trạng thái;
+<code>get_targets.py</code> đọc danh sách target/flag-id từ <strong>API
+hoặc file thực tế của sân chơi</strong> (nếu chưa có, dùng fixture JSON
+rõ nhãn giả lập); <code>run.py</code> mỗi tick gọi exploit cho từng
+target với timeout, tách lỗi từng target, loại flag trùng, submit từ
+đúng máy đội mình, log tick/service/target/result.
+<code>replay.py</code> nhận request <strong>đã bắt trong lab</strong>,
+thay target và ID, gửi lại rồi submit flag. Test bằng 2 instance cố ý có
+lỗi và 1 instance đã vá.</td>
+<td><code>farm/README.md</code> có sơ đồ input/output và lệnh chạy. Log
+một phiên cho thấy ≥2 target bị thử, flag hợp lệ được nộp tự động,
+target đã vá không làm farm dừng, và 1 payload replay thành công. Không
+hardcode flag, token hoặc IP của giải thật; mọi request có timeout để
+không lấn sang tick sau.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Mốc quyết định:</strong> cuối Ngày 8 phải có <em>1 service +
+checker + trọng tài chạy được</em> trước khi mở rộng số service. Cuối
+Ngày 9 mới tăng lên 3–5 service nếu pipeline đầu tiên xanh; nếu chưa,
+giữ 1–2 service nhưng chạy sim đúng tick. Điều này giúp các buổi mô
+phỏng rèn thao tác vận hành thực sự, thay vì dành hết thời gian dựng sân
+chơi.</p>
+<h3 id="ngày-8-hoàn-tất-dw0-dw1-dw2-dw3-dựng-sân-chơi-7h-bb">Ngày 8 —
+hoàn tất DW0 + DW1 + DW2 + DW3 (dựng sân chơi) · ~7h · [BB]</h3>
+<ul>
+<li><strong>Hoàn tất pipeline <code>DW0</code> tối thiểu</strong> nếu
+Ngày 7 chưa xong: 1 service web có ghi/đọc flag; mở rộng 4 mảng sau khi
+checker đầu tiên xanh.</li>
+<li><strong>P1+P3 (~5h): làm <code>DW1</code> + <code>DW2</code> +
+<code>DW3</code></strong> (ForcAD + Tailscale/OpenVPN + test nộp flag
+nc). Đạt khi + sản phẩm: xem bảng DW.</li>
+<li><strong>P2 (~2h):</strong> tiếp tục leo tier / ôn.</li>
+<li><strong>Đầu ra:</strong> sản phẩm DW0-DW1-DW2-DW3 (service đóng gói,
+ForcAD chạy, mạng nối, cheatsheet nộp flag).</li>
+</ul>
+<h3 id="ngày-9-dw4-viết-checker-drill-vá-sống-1-smoke-test-7-8h-bb">Ngày
+9 — DW4 (viết checker) + Drill Vá-Sống #1 + smoke test · ~7-8h ·
+[BB]</h3>
+<ul>
+<li><strong>P1+P3 (~4h, việc nặng): làm <code>DW4</code></strong> (viết
+checker cho các service đã chuẩn bị ở DW0).</li>
+<li><strong>P1+P2 (~2h):</strong> <strong>Drill Vá-Sống #1</strong> trên
+1 binary (lần đầu có checker thật).</li>
+<li><strong>Cuối ngày:</strong> smoke sim ~1h chạy thử trọn pipeline
+tick→flag→SLA.</li>
+<li><strong>[BĐ]:</strong> binary thứ 2 có thể lùi sang Ngày 11.</li>
+</ul>
+<h3 id="ngày-10-mô-phỏng-1-farm-bước-đầu-7h-sim-2-3h-bb">Ngày 10 — Mô
+phỏng #1 + farm bước đầu · ~7h (sim 2-3h) · [BB]</h3>
+<ul>
+<li><strong>Cấu hình phiên:</strong> các service đã chuẩn bị (DW0),
+<code>round_time: 300</code>, 3 đội, chưa cooldown. Vai: P1
+uptime/deploy, P2 exploit+vá web, P3 farm.</li>
+<li><strong>P3: <code>DW5</code> bước ①-③</strong> (bắt traffic → script
+nộp flag auto → lấy flag-id/target mỗi tick).</li>
+<li><strong>Debrief [BB]:</strong> chốt <strong>đúng 2 điểm yếu</strong>
+(tên service/bước/người) vào <code>progress.md</code>.</li>
+</ul>
+<h3
+id="ngày-11-sửa-2-điểm-yếu-farmreplay-mô-phỏng-2-7h-sim-3h-bb-ngày-đệm-mềm">Ngày
+11 — Sửa 2 điểm yếu + farm/replay + Mô phỏng #2 · ~7h (sim 3h) · [BB];
+ngày đệm mềm</h3>
+<ul>
+<li><strong>Sửa 2 điểm yếu</strong> sim#1 (và bù Gate 1 nếu ai còn nợ từ
+Tuần 1).</li>
+<li><strong>P3: <code>DW5</code> bước ④-⑤</strong> (ghép exploit bắn mọi
+IP, tự nộp + <strong>replay</strong> payload bắt được) → hoàn tất
+DW5.</li>
+<li><strong>Mô phỏng #2:</strong> <strong>bắt đầu tự áp cooldown restart
+10’</strong>, trọng tâm giữ uptime khi vá. <strong>Drill Vá-Sống
+#2</strong> (so thời gian với #1). Debrief chốt 2 điểm yếu.</li>
+</ul>
+<h3 id="ngày-12-mô-phỏng-3-replay-farm-live-sửa-7h-sim-4h-bb">Ngày 12 —
+Mô phỏng #3 (replay + farm live) + sửa · ~7h (sim 4h) · [BB]</h3>
+<ul>
+<li><strong>Cấu hình:</strong> đủ service, <code>round_time: 300</code>,
+cooldown 10’, <strong>farm + replay chạy thật</strong> cả phiên (có
+người cố tình đánh để P3 có traffic mà bắt).</li>
+<li><strong>Mục tiêu đo được:</strong> farm tự nộp flag không cần can
+thiệp tay; P3 replay ≥1 payload.</li>
+<li><strong>Debrief:</strong> chốt 2 điểm yếu cho Ngày 13.</li>
+</ul>
+<h3
+id="ngày-13-mô-phỏng-4-dài-sát-thi-xoay-vai-sửa-7h-sim-4-5h-bb-5-bđ">Ngày
+13 — Mô phỏng #4 (dài, sát thi) + xoay vai + sửa · ~7h (sim 4-5h) ·
+[BB]; #5 [BĐ]</h3>
+<ul>
+<li><strong>Cấu hình:</strong> sát thật nhất — 3 vai song song, cooldown
+10’, áp đúng “đường lui khi không exploit được”.</li>
+<li><strong>Xoay vai:</strong> mỗi người cầm thử khâu người khác 1 lượt
+(không ai là điểm chết đơn).</li>
+<li><strong>[BĐ]:</strong> chạy thêm phiên #5 nếu còn sức. Debrief + sửa
+nhanh.</li>
+</ul>
+<h3
+id="ngày-14-gate-2-dress-rehearsal-đóng-băng-cheatsheet-hậu-cần-6h-sim-4h-bb">Ngày
+14 — Gate 2 + dress rehearsal + đóng băng + cheatsheet + hậu cần · ~6h
+(sim 4h) · [BB]</h3>
+<ul>
+<li><strong>Rà Gate 2 (điều kiện chạy dress rehearsal):</strong> mỗi
+category exploit sống ≥1 service · farm tự nộp flag · P3 replay được ·
+vá 1 binary + 1 web không rớt SLA dưới cooldown 10’ · backup/restore 1
+lệnh. Thiếu gì bù ngay.</li>
+<li><strong>Dress rehearsal</strong> đúng độ dài &amp; tick thật (300s),
+cooldown 10’, không can thiệp ngoài vai. Sau đó <strong>đóng băng
+tooling</strong>.</li>
+<li><strong>Hoàn thiện cheatsheet offline</strong> + hậu cần: OpenVPN
+config đã test, SSH key, <strong>mobile data/hotspot</strong>, phân công
+<strong>ai làm gì 15 phút đầu trận</strong>, tải trước writeup/công
+cụ.</li>
+</ul>
+<h3 id="ngày-15-đệmthi-1-2h-bb">Ngày 15 — Đệm/thi · 1-2h · [BB]</h3>
+<ul>
+<li>Khởi động nhẹ 1 service quen cho ấm tay. <strong>Không học thứ
+mới.</strong></li>
+</ul>
+<blockquote>
+<p>Rủi ro mất mạng khi thi: venue có thể chặn VPN/internet. AI chỉ rút
+ngắn phần học kiến thức, <strong>không rút ngắn phản xạ</strong>.
+Cheatsheet offline là bảo hiểm.</p>
+</blockquote>
+<hr />
+<h1 id="phần-iii-chuẩn-bị-nguồn-học">PHẦN III — CHUẨN BỊ &amp; NGUỒN
+HỌC</h1>
+<h2 id="việc-chuẩn-bị-ưu-tiên-giảm-dần">Việc chuẩn bị (ưu tiên giảm
+dần)</h2>
+<ol type="1">
+<li><strong>Chuẩn bị service để luyện (<code>DW0</code>)</strong>: 3-5
+service phủ 4 mảng (web/pwn/crypto/rev), mỗi service đọc flag từ
+<code>/home/user/flag.txt</code> hoặc DB. Nguồn: tự viết app nhỏ · đóng
+gói lại challenge jeopardy cũ thành service có lưu/đọc flag · tải
+service A-D công bố sau giải. pwn/rev: xoá source, chỉ để binary.</li>
+<li>Bộ script: backup/restore 1 lệnh, khung exploit farm, script
+bắt+tách flag từ traffic.</li>
+<li>Cài &amp; test <strong>OpenVPN client</strong> (cái dùng thật) song
+song Tailscale (hạ tầng luyện).</li>
+<li>Chuẩn bị mobile data/hotspot phòng venue chặn VPN.</li>
+</ol>
+<h2 id="nguồn-học-theo-mảng">Nguồn học theo mảng</h2>
+<p><strong>PWN</strong> — “Học PWN cùng JHT” (tiếng Việt):
+https://youtube.com/playlist?list=PLEvZsp0uc3SFuVi6TtcahxqsEbV29lXAM ·
+pwn.college: https://pwn.college/ · how2heap (T6→T10):
+https://github.com/shellphish/how2heap · ir0nstone:
+https://ir0nstone.gitbook.io/</p>
+<p><strong>WEB</strong> — PortSwigger Academy (T1→T8):
+https://portswigger.net/web-security · HackTricks:
+https://book.hacktricks.xyz/ · PayloadsAllTheThings:
+https://github.com/swisskyrepo/PayloadsAllTheThings</p>
+<p><strong>CRYPTO</strong> — CryptoHack: https://cryptohack.org/ ·
+Cryptopals (T2→T4): https://cryptopals.com/ · RsaCtfTool:
+https://github.com/RsaCtfTool/RsaCtfTool</p>
+<p><strong>REV</strong> — Ghidra + angr (T4): https://docs.angr.io/ ·
+crackmes.one: https://crackmes.one/</p>
+<p><strong>AD</strong> — DestructiveFarm:
+https://github.com/DestructiveVoice/DestructiveFarm · ForcAD:
+https://github.com/pomo-mondreganto/ForcAD</p>
+<blockquote>
+<p>Tải trước writeup/notes/công cụ về máy vì thi thật có thể bị chặn
+mạng.</p>
+</blockquote>
+</body>
+</html>
