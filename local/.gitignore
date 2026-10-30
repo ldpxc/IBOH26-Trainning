@@ -3,6 +3,5 @@
 # Cái gì cần chia sẻ thì copy tay ra chỗ đúng (cheatsheets/, exploits/, infra/, ...).
 *
 !.gitignore
-!README.md
 !.gitkeep
 !*/

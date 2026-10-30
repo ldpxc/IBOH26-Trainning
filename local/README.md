@@ -6,6 +6,7 @@
 local/
   labs/         # hướng dẫn lab step-by-step để tự học & làm theo (HT1.md, HT2.md, ...)
   infra/        # nơi thực hành Docker/Compose/deploy/backup/monitor (mirror infra/ ở repo chính)
+    ht1/ ht2/ ...   # mỗi HT 1 thư mục riêng; HT sau copy từ HT trước rồi sửa tiếp, không sửa bản cũ
   exploits/     # nháp exploit theo lane, chưa chắc chạy ổn
     pwn/ web/ crypto/ rev/
   refs/         # symlink tới tài liệu/tutorial NGOÀI đã có sẵn trên máy (đọc, không sửa)
@@ -17,10 +18,10 @@ local/
 
 | Từ `local/...` | Ra repo chính |
 | --- | --- |
-| `infra/*` | `infra/` (sau khi đạt tiêu chí HT_x) |
+| `infra/htX/` | `infra/htX/` (sau khi đạt tiêu chí HT_x) |
 | `exploits/<lane>/<tên>/` | `exploits/<lane>/<tên>/` (khi exploit chạy ổn) |
 | ghi chú trong `labs/` | không copy — đây là guide để đọc, không phải sản phẩm |
 | `refs/` | không copy — chỉ là symlink đọc tutorial, không thuộc repo này |
 | bài học/snippet đáng nhớ | gõ tay vào `cheatsheets/<mảng>.md` ở repo chính |
 
-Đang luyện: xem [`labs/HT1.md`](labs/HT1.md).
+Đang luyện: xem [`labs/HT2.md`](labs/HT2.md) (HT1 xong).

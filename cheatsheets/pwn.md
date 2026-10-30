@@ -16,6 +16,7 @@ one_gadget ./libc.so.6
 ## T3 — ROP bypass NX (ret2libc/plt/syscall, ret2csu, stack pivot)
 ## T4 — Bypass mitigation (leak canary/PIE, SROP)
 ## T5 — Shellcoding (ORW seccomp, alphanumeric)
+Kho shellcode đã test: [`exploits/pwn/shellcode/`](../exploits/pwn/shellcode/) — `from shellcodes import SC`. Chọn theo ràng buộc (độ dài / null / seccomp / NX) xem README ở đó. Seccomp: `seccomp-tools dump ./bin` trước.
 ## T6 — Heap intro (UAF, double free, tcache poisoning)
 ## T7 — Heap trung cấp (fastbin dup, unsorted leak, large bin)
 ## T8 — Heap nâng cao (safe-linking, house of ...)
