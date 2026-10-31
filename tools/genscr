@@ -1,0 +1,653 @@
+#!/usr/bin/env python3
+"""
+genscr: generate exploit.py template and symlink pwnld.py into current dir.
+Updated to support pwncollege specific generation via -c flag.
+"""
+import sys
+import os
+import re
+import stat
+import argparse
+import subprocess
+import shutil  # Thêm module này để copy file
+
+# Lấy đường dẫn tuyệt đối của thư mục chứa script genscr này
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+# ======= CONFIGURE THIS: absolute path to your default pwnld.py =======
+# Đây là đường dẫn dùng cho các profile thường (generic, xyz).
+# Với option -c (college), ta sẽ dùng file pwnld.py nằm CÙNG THƯ MỤC với script này.
+PWNLD_SRC_DEFAULT = "/home/ld/hoc/CTF/Tools/pwnld/pwnld.py"
+
+# Nguồn pwnretry.py (khung retry). Mặc định nằm cùng thư mục với script này.
+PWNRETRY_SRC_DEFAULT = os.path.join(SCRIPT_DIR, "pwnretry.py")
+
+EXPLOIT_NAME = "exploit.py"
+EXPLOIT_OLD_NAME = "exploit_not_retry.py"   # bản 1-shot cũ được giữ lại khi convert
+PWNLD_LINK_NAME = "pwnld.py"
+PWNRETRY_LINK_NAME = "pwnretry.py"
+RETRY_TYPES = ("shell", "flag", "parallel")
+
+# ---------- Presets ----------
+PROFILES = {
+    "generic": {
+        "remote_host": "host",
+        "remote_port": 0,
+        "ssh_host": "example.com",
+        "ssh_user": "user",
+        "ssh_pass": "password",
+        "ssh_port": 22,
+        "ssh_keyfile": None,
+    },
+    "xyz": {
+        "remote_host": "svc.pwnable.xyz",
+        "remote_port": 300,
+        "ssh_host": "ssh.pwnable.xyz",
+        "ssh_user": "user",
+        "ssh_pass": "password",
+        "ssh_port": 22,
+        "ssh_keyfile": None,
+    },
+}
+
+TEMPLATE = r"""#!/usr/bin/env python3
+import os, time
+from pwn import *
+from pwnld import * 
+
+context.log_level = 'debug'
+context.terminal  = ['ghostty', '-e']
+
+context.binary = exe = ELF('./{CHALL}', checksec=False)
+rop = ROP(exe)
+
+libc = get_libc()
+
+set_remote({REMOTE_HOST!r}, {REMOTE_PORT})
+set_ssh(
+    {SSH_HOST!r},            # host
+    {SSH_USER!r},            # user
+    {SSH_PASS!r},            # password (None if using key)
+    {SSH_PATH!r},            # path to chall on server
+    port={SSH_PORT},         # port
+    keyfile={SSH_KEYFILE_EXPR}   # os.path.expanduser('...') or None
+)
+set_gdbscript('''
+c
+
+''')
+
+p = start()
+GDB()
+
+ia()
+"""
+
+
+def parse_host_port(s: str):
+    if ":" not in s:
+        raise argparse.ArgumentTypeError("Expected HOST:PORT")
+    host, port = s.rsplit(":", 1)
+    try:
+        port = int(port)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Port must be an integer")
+    return host, port
+
+
+def build_template_values(profile_name: str, chall: str, overrides: dict):
+    if profile_name not in PROFILES:
+        raise ValueError(f"Unknown profile '{profile_name}'. Add it to PROFILES.")
+    base = PROFILES[profile_name].copy()
+
+    if overrides.get("remote"):
+        h, p = overrides["remote"]
+        base["remote_host"] = h
+        base["remote_port"] = p
+
+    if overrides.get("ssh_host"):
+        base["ssh_host"] = overrides["ssh_host"]
+    if overrides.get("ssh_user"):
+        base["ssh_user"] = overrides["ssh_user"]
+    if "ssh_pass" in overrides and overrides["ssh_pass"] is not None:
+        base["ssh_pass"] = overrides["ssh_pass"]
+    if overrides.get("ssh_port"):
+        base["ssh_port"] = overrides["ssh_port"]
+    if "ssh_keyfile" in overrides and overrides["ssh_keyfile"] is not None:
+        base["ssh_keyfile"] = overrides["ssh_keyfile"]
+
+    if base.get("ssh_keyfile"):
+        ssh_keyfile_expr = f"os.path.expanduser({repr(base['ssh_keyfile'])})"
+    else:
+        ssh_keyfile_expr = "None"
+
+    vals = {
+        "CHALL": chall,
+        "REMOTE_HOST": base["remote_host"],
+        "REMOTE_PORT": base["remote_port"],
+        "SSH_HOST": base["ssh_host"],
+        "SSH_USER": base["ssh_user"],
+        "SSH_PASS": base["ssh_pass"],
+        "SSH_PORT": base["ssh_port"],
+        "SSH_KEYFILE_EXPR": ssh_keyfile_expr,
+        "SSH_PATH": chall,
+    }
+    return vals
+
+
+def ensure_symlink(src_path: str, link_path: str):
+    """
+    Tạo symlink trỏ từ src_path đến link_path
+    """
+    # Nếu file nguồn không tồn tại, cảnh báo nhưng vẫn cho phép tạo link (có thể file nguồn sẽ có sau)
+    if not os.path.exists(src_path):
+        print(f"[warn] Source file for symlink does not exist: {src_path}")
+
+    if os.path.exists(link_path):
+        if os.path.islink(link_path) and os.path.realpath(
+            link_path
+        ) == os.path.realpath(src_path):
+            print(f"[ok] symlink '{os.path.basename(link_path)}' already correct.")
+            return
+        backup = link_path + ".bak"
+        print(f"[warn] '{link_path}' exists — move to '{backup}'")
+        try:
+            os.replace(link_path, backup)
+        except Exception as e:
+            print(f"[err] failed to move existing '{link_path}': {e}")
+            sys.exit(1)
+    try:
+        os.symlink(src_path, link_path)
+        print(f"[ok] created symlink '{os.path.basename(link_path)}' -> '{src_path}'")
+    except Exception as e:
+        print(f"[err] failed to create symlink: {e}")
+        sys.exit(1)
+
+
+def write_exploit(exploit_path: str, content: str):
+    if os.path.exists(exploit_path):
+        backup = exploit_path + ".bak"
+        print(
+            f"[warn] '{os.path.basename(exploit_path)}' exists — backing up to '{backup}'"
+        )
+        try:
+            os.replace(exploit_path, backup)
+        except Exception as e:
+            print(f"[err] failed to backup existing exploit: {e}")
+            sys.exit(1)
+    try:
+        with open(exploit_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print(f"[ok] wrote '{os.path.basename(exploit_path)}'")
+    except Exception as e:
+        print(f"[err] failed to write exploit file: {e}")
+        sys.exit(1)
+
+
+def make_executable(path: str):
+    try:
+        st = os.stat(path)
+        os.chmod(path, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        print(f"[ok] set executable bit on '{os.path.basename(path)}'")
+    except Exception as e:
+        print(f"[err] failed to chmod: {e}")
+
+
+def open_in_nvim(filepath):
+    try:
+        subprocess.run(["nvim", filepath])
+    except FileNotFoundError:
+        print("[warn] nvim not found in PATH.")
+        print(f"Open the file manually: {filepath}")
+    except Exception as e:
+        print(f"[warn] failed to launch nvim: {e}")
+
+
+# ==========================================
+# LOGIC MỚI CHO PWNCOLLEGE (FLAG -c)
+# ==========================================
+def gen_pwncollege(args):
+    """
+    Logic xử lý riêng cho cờ -c:
+    1. Tìm pwncollege.py cùng thư mục với script này.
+    2. Copy sang thư mục hiện tại với tên <chall_name>.py
+    3. Tạo symlink pwnld.py từ file cùng thư mục script này.
+    """
+    # 1. Xác định file nguồn (nằm cùng thư mục với genscr)
+    src_template = os.path.join(SCRIPT_DIR, "pwncollege.py")
+    src_pwnld = os.path.join(SCRIPT_DIR, "pwnld.py")
+
+    if not os.path.exists(src_template):
+        print(
+            f"[err] Cannot find '{src_template}'. Ensure pwncollege.py is in the same dir as genscr."
+        )
+        sys.exit(1)
+
+    # 2. Xác định tên file đích
+    # Nếu args.chall_name không có đuôi .py thì thêm vào
+    dest_filename = args.chall_name
+    if not dest_filename.endswith(".py"):
+        dest_filename += ".py"
+
+    dest_path = os.path.join(os.getcwd(), dest_filename)
+
+    # Thực hiện Copy template
+    if os.path.exists(dest_path):
+        backup = dest_path + ".bak"
+        print(f"[warn] '{dest_filename}' exists — backing up to '{backup}'")
+        try:
+            os.replace(dest_path, backup)
+        except Exception as e:
+            print(f"[err] Backup failed: {e}")
+            sys.exit(1)
+
+    try:
+        shutil.copyfile(src_template, dest_path)
+        print(f"[ok] Copied 'pwncollege.py' to '{dest_filename}'")
+    except Exception as e:
+        print(f"[err] Failed to copy template: {e}")
+        sys.exit(1)
+
+    # Cấp quyền thực thi cho file mới copy
+    make_executable(dest_path)
+
+    # 3. Tạo symlink pwnld.py (Dùng file ở cùng thư mục SCRIPT_DIR)
+    dest_link = os.path.join(os.getcwd(), PWNLD_LINK_NAME)
+    ensure_symlink(src_pwnld, dest_link)
+
+    # 4. Mở nvim (nếu không cấm)
+    if not args.no_open:
+        open_in_nvim(dest_path)
+
+
+# ==========================================
+# RETRY MODE
+# ==========================================
+# Khung retry sạch cho từng loại. Dùng .format(**vals) → mọi dấu { } literal
+# (vd regex flag) PHẢI nhân đôi thành {{ }}.
+RETRY_TEMPLATE_SHELL = r"""#!/usr/bin/env python3
+import os, time
+from pwn import *
+from pwnld import *
+from pwnretry import retry, got_shell, got_flag
+
+context.log_level = 'debug'          # 'error' khi brute nhiều cho nhanh/đỡ rối
+context.terminal  = ['ghostty', '-e']
+
+context.binary = exe = ELF('./{CHALL}', checksec=False)
+rop = ROP(exe)
+libc = get_libc()
+
+set_remote({REMOTE_HOST!r}, {REMOTE_PORT})
+set_ssh(
+    {SSH_HOST!r},            # host
+    {SSH_USER!r},            # user
+    {SSH_PASS!r},            # password (None if using key)
+    {SSH_PATH!r},            # path to chall on server
+    port={SSH_PORT},         # port
+    keyfile={SSH_KEYFILE_EXPR}   # os.path.expanduser('...') or None
+)
+set_gdbscript('''
+c
+
+''')
+
+ret = rop.find_gadget(['ret']).address
+# shellcode = asm(shellcraft.amd64.linux.sh())   # hoặc: from shellcodes import SC
+
+def attempt(i):
+    start()
+    # GDB()                      # chỉ bật khi tries=1 + mode 11 để debug 1 lần
+    # ── leak / tương tác (đổi mỗi lần → để TRONG hàm) ──
+
+    # ── payload ──
+
+    return got_shell()           # bài tự in flag → return got_flag(rb'flag\{{[^}}]+\}}')
+
+# tries: 1/16 ~ 48-64 | 1/256 ~ 512-1024 | ASLR hên-xui ~ 100-300
+retry(attempt, tries=200)        # trúng → tự interactive()
+"""
+
+RETRY_TEMPLATE_FLAG = r"""#!/usr/bin/env python3
+import os
+from pwn import *
+from pwnld import *
+from pwnretry import retry, got_flag
+
+context.log_level = 'error'          # 'debug' khi dev
+context.terminal  = ['ghostty', '-e']
+
+context.binary = exe = ELF('./{CHALL}', checksec=False)
+set_remote({REMOTE_HOST!r}, {REMOTE_PORT})
+set_ssh(
+    {SSH_HOST!r}, {SSH_USER!r}, {SSH_PASS!r}, {SSH_PATH!r},
+    port={SSH_PORT}, keyfile={SSH_KEYFILE_EXPR}
+)
+set_gdbscript('c\n')
+
+FLAG_RE = rb'flag\{{[^}}]+\}}'      # sửa định dạng flag của giải
+# win = exe.sym.get('win', 0)        # ví dụ ret2win 1-byte brute
+
+def attempt(i):
+    start()
+    # ── payload ──
+
+    return got_flag(FLAG_RE)         # output có flag → trúng
+
+flag, n = retry(attempt, tries=300, on_hit='return')
+if flag:
+    log.success(flag.decode())
+    print(flag.decode())
+"""
+
+RETRY_TEMPLATE_PARALLEL = r"""#!/usr/bin/env python3
+# Brute SONG SONG remote: mỗi luồng TỰ remote()/close(), KHÔNG dùng pwnld globals.
+import os, re
+from pwn import *
+from pwnretry import retry_parallel
+
+context.log_level = 'error'
+
+HOST, PORT = {REMOTE_HOST!r}, {REMOTE_PORT}
+FLAG_RE = re.compile(rb'flag\{{[^}}]+\}}')
+exe = ELF('./{CHALL}', checksec=False)
+# win = exe.sym.get('win', 0)
+
+def attempt(i):
+    io = remote(HOST, PORT)
+    try:
+        # ── payload ──
+        io.sendlineafter(b'input: ', b'A' * 40)
+        data = io.recvrepeat(0.5)
+        m = FLAG_RE.search(data)
+        return m.group(0) if m else None
+    except EOFError:
+        return None
+    finally:
+        io.close()
+
+flag, runs = retry_parallel(attempt, tries=1024, workers=16)
+if flag:
+    log.success(flag.decode())
+    print(flag.decode())
+"""
+
+RETRY_TEMPLATES = {
+    "shell": RETRY_TEMPLATE_SHELL,
+    "flag": RETRY_TEMPLATE_FLAG,
+    "parallel": RETRY_TEMPLATE_PARALLEL,
+}
+
+
+def convert_to_retry(old: str, rtype: str) -> str:
+    """Chuyển exploit 1-shot (phong cách pwnld) thành bản retry, best-effort.
+
+    Cách làm: cắt ở lần gọi start() đầu tiên — phần TRƯỚC là setup (giữ ngoài),
+    phần TỪ start() trở đi là runtime (gói vào attempt(i)). Tự: bỏ 'p ='/GDB()/
+    .close() trong vòng, đổi interactive()/ia() -> return điều-kiện-trúng.
+    Chỗ không chắc → để comment '# TODO(retry): ...' trỏ về exploit_not_retry.py.
+    """
+    lines = old.splitlines()
+    notes = []
+
+    # 1. điểm cắt: dòng đầu tiên gọi start( (bỏ qua dòng comment)
+    split = None
+    for i, ln in enumerate(lines):
+        if re.search(r"\bstart\s*\(", ln) and not ln.lstrip().startswith("#"):
+            split = i
+            break
+    if split is None:
+        notes.append("không thấy start() ở bản cũ → tự chép phần runtime vào attempt().")
+        header, body = lines, []
+    else:
+        header, body = lines[:split], lines[split:]
+
+    # tách shebang để luôn ở dòng đầu file
+    shebang = None
+    if header and header[0].lstrip().startswith("#!"):
+        shebang = header[0]
+        header = header[1:]
+
+    # phát hiện vòng lặp thủ công cũ (nếu có) → cảnh báo
+    if re.search(r"^\s*(for\s+\w+\s+in\s+range|while\s+)", old, re.M):
+        notes.append("bản cũ có vòng lặp thủ công → đã bỏ, retry() lo lặp. Soát lại thân attempt.")
+
+    # 2. chèn import pwnretry
+    imp = "from pwnretry import retry, got_shell, got_flag"
+    out_header, inserted = [], False
+    for ln in header:
+        out_header.append(ln)
+        if not inserted and re.match(r"\s*from\s+pwnld\s+import", ln):
+            out_header.append(imp)
+            inserted = True
+    if not inserted:
+        out_header = [imp] + out_header
+        notes.append("không thấy 'from pwnld import *' → đã chèn import pwnretry ở đầu, kiểm tra lại.")
+
+    # flag mode cần FLAG_RE
+    succ = "got_flag(FLAG_RE)" if rtype == "flag" else "got_shell()"
+    if rtype == "flag" and "FLAG_RE" not in "\n".join(out_header):
+        out_header += ["", r"FLAG_RE = rb'flag\{[^}]+\}'   # TODO(retry): sửa định dạng flag"]
+
+    # 3. biến đổi body → thân attempt
+    attempt_lines, found_hit = [], False
+    for ln in body:
+        indent = re.match(r"(\s*)", ln).group(1)
+        if re.search(r"\bstart\s*\(", ln):
+            ln = re.sub(r"^(\s*)(?:[\w.]+\s*=\s*)?start\s*\(", r"\1start(", ln)
+        if re.search(r"\bGDB\s*\(\s*\)", ln):
+            ln = f"{indent}# GDB()  # bật khi debug: tries=1 + mode 11"
+        elif re.search(r"\.close\s*\(\s*\)", ln):
+            ln = f"{indent}# {ln.strip()}  # retry tự đóng tube khi trượt"
+        elif re.search(r"\bia\s*\(\s*\)|[\w.]+\.interactive\s*\(\s*\)", ln):
+            ln = f"{indent}return {succ}  # <- tự sinh: ĐIỀU KIỆN TRÚNG"
+            found_hit = True
+        attempt_lines.append(ln)
+
+    if not found_hit:
+        attempt_lines.append(f"    return {succ}  # TODO(retry): chưa thấy ia()/interactive() — tự đặt điều kiện trúng")
+        notes.append("chưa thấy ia()/interactive() cuối bản cũ → thêm 'return' tạm, tự chỉnh điều kiện trúng.")
+
+    # bỏ dòng trống thừa ở cuối phần setup cho gọn
+    while out_header and not out_header[-1].strip():
+        out_header.pop()
+
+    # 4. ráp
+    banner = [
+        "# === genscr retry (convert) — bản 1-shot cũ: exploit_not_retry.py ===",
+        "# Đã tự: tách setup ra ngoài · gói runtime vào attempt(i) · start() đầu hàm",
+        "#        · bỏ GDB()/close() trong vòng · interactive() -> return điều-kiện-trúng.",
+    ]
+    banner += [f"# TODO(retry): {n}" for n in notes]
+    banner += [""]
+
+    if rtype == "flag":
+        tail = ["", "flag, n = retry(attempt, tries=300, on_hit='return')",
+                "if flag:", "    log.success(flag.decode())", "    print(flag.decode())"]
+    else:
+        tail = ["", "# tries: 1/16 ~ 48-64 | 1/256 ~ 512-1024 | ASLR ~ 100-300",
+                "retry(attempt, tries=200)   # trúng -> tự interactive()"]
+
+    doc = []
+    if shebang:
+        doc.append(shebang)
+    doc += banner
+    doc += out_header
+    doc += ["", "", "def attempt(i):"]
+    doc += ["    " + l if l.strip() else l for l in attempt_lines]
+    doc += tail
+    return "\n".join(doc) + "\n"
+
+
+def gen_retry(args):
+    """Xử lý chế độ retry: skeleton sạch (binary) hoặc convert (file .py cũ)."""
+    rtype = (args.retry_type or "shell").lower()
+    if rtype not in RETRY_TYPES:
+        print(f"[err] loại retry phải là một trong: {', '.join(RETRY_TYPES)}")
+        sys.exit(1)
+
+    cwd = os.getcwd()
+    target = args.chall_name
+    target_abs = target if os.path.isabs(target) else os.path.join(cwd, target)
+    exploit_path = os.path.join(cwd, EXPLOIT_NAME)
+    pwnld_link = os.path.join(cwd, PWNLD_LINK_NAME)
+    pwnretry_link = os.path.join(cwd, PWNRETRY_LINK_NAME)
+
+    is_convert = os.path.isfile(target_abs) and target.endswith(".py")
+
+    if is_convert:
+        if rtype == "parallel":
+            print("[err] convert không hỗ trợ 'parallel' (khác cấu trúc hẳn).")
+            print("      Dùng khung sạch:  genscr <binary> retry parallel")
+            sys.exit(1)
+        with open(target_abs, encoding="utf-8") as f:
+            old = f.read()
+        old_keep = os.path.join(cwd, EXPLOIT_OLD_NAME)
+        if os.path.exists(old_keep):
+            os.replace(old_keep, old_keep + ".bak")
+            print(f"[warn] '{EXPLOIT_OLD_NAME}' đã có → backup '.bak'")
+        os.replace(target_abs, old_keep)
+        print(f"[ok] giữ bản cũ: '{EXPLOIT_OLD_NAME}'")
+        with open(exploit_path, "w", encoding="utf-8") as f:
+            f.write(convert_to_retry(old, rtype))
+        print(f"[ok] sinh '{EXPLOIT_NAME}' (retry/{rtype}) từ bản cũ — soát '# TODO(retry)'")
+    else:
+        chall = os.path.basename(target)
+        prof = "xyz" if args.xyz else (args.profile or "generic")
+        overrides = {
+            "remote": args.remote, "ssh_host": args.ssh_host, "ssh_user": args.ssh_user,
+            "ssh_pass": args.ssh_pass, "ssh_port": args.ssh_port, "ssh_keyfile": args.ssh_keyfile,
+        }
+        try:
+            vals = build_template_values(prof, chall, overrides)
+        except Exception as e:
+            print(f"[err] {e}")
+            sys.exit(1)
+        write_exploit(exploit_path, RETRY_TEMPLATES[rtype].format(**vals))
+        print(f"[ok] khung retry/{rtype} sạch cho '{chall}'")
+
+    make_executable(exploit_path)
+    ensure_symlink(args.pwnretry_src, pwnretry_link)
+    if rtype != "parallel":
+        ensure_symlink(args.pwnld_src, pwnld_link)
+
+    if not args.no_open:
+        open_in_nvim(exploit_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate exploit template.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        epilog=(
+            "Retry:\n"
+            "  genscr <binary> retry [shell|flag|parallel]   # khung retry sạch\n"
+            "  genscr <exploit.py> retry [shell|flag]        # convert bản 1-shot cũ\n"
+        ),
+    )
+    me_group = parser.add_mutually_exclusive_group()
+    me_group.add_argument(
+        "-c",
+        "--college",
+        action="store_true",
+        help="Use pwncollege mode (copy pwncollege.py & link local pwnld.py)",
+    )
+    me_group.add_argument(
+        "-x", "--xyz", action="store_true", help="Use preset for pwnable.xyz"
+    )
+    me_group.add_argument(
+        "-p", "--profile", default=None, help="Use named profile from PROFILES"
+    )
+
+    parser.add_argument(
+        "--remote", type=parse_host_port, default=None, help="Override remote HOST:PORT"
+    )
+    parser.add_argument("--ssh-host", default=None, help="Override SSH host")
+    parser.add_argument("--ssh-user", default=None, help="Override SSH user")
+    parser.add_argument("--ssh-pass", default=None, help="Override SSH password")
+    parser.add_argument("--ssh-port", type=int, default=None, help="Override SSH port")
+    parser.add_argument("--ssh-keyfile", default=None, help="Override SSH keyfile")
+
+    # Default src for generic mode
+    parser.add_argument(
+        "--pwnld-src",
+        default=PWNLD_SRC_DEFAULT,
+        help="Override path to pwnld.py source (generic mode)",
+    )
+    parser.add_argument(
+        "--pwnretry-src",
+        default=PWNRETRY_SRC_DEFAULT,
+        help="Override path to pwnretry.py source (retry mode)",
+    )
+    parser.add_argument("--no-open", action="store_true", help="Do not open nvim")
+
+    parser.add_argument(
+        "chall_name", help="Challenge name (also output filename for -c)"
+    )
+    parser.add_argument(
+        "retry_kw", nargs="?", default=None,
+        help="chữ 'retry' để bật chế độ retry",
+    )
+    parser.add_argument(
+        "retry_type", nargs="?", default=None,
+        help="loại retry: shell (mặc định) | flag | parallel",
+    )
+
+    args = parser.parse_args()
+
+    # === CHẾ ĐỘ RETRY ===
+    if args.retry_kw is not None:
+        if args.retry_kw != "retry":
+            print(f"[err] tham số thứ 2 phải là 'retry' (nhận: {args.retry_kw!r}).")
+            print("      vd: genscr ./vuln retry shell   |   genscr exploit.py retry")
+            sys.exit(1)
+        gen_retry(args)
+        return
+
+    # === KIỂM TRA LOGIC MỚI ===
+    if args.college:
+        # Gọi sang hàm xử lý riêng cho pwncollege
+        gen_pwncollege(args)
+        return  # Kết thúc, không chạy logic generic phía dưới
+
+    # === LOGIC CŨ (Generic / Profile mode) ===
+    # resolve profile
+    if args.xyz:
+        prof = "xyz"
+    elif args.profile:
+        prof = args.profile
+    else:
+        prof = "generic"
+
+    chall = os.path.basename(args.chall_name)
+    cwd = os.getcwd()
+    exploit_path = os.path.join(cwd, EXPLOIT_NAME)
+    pwnld_link = os.path.join(cwd, PWNLD_LINK_NAME)
+
+    overrides = {
+        "remote": args.remote,
+        "ssh_host": args.ssh_host,
+        "ssh_user": args.ssh_user,
+        "ssh_pass": args.ssh_pass,
+        "ssh_port": args.ssh_port,
+        "ssh_keyfile": args.ssh_keyfile,
+    }
+
+    try:
+        vals = build_template_values(prof, chall, overrides)
+    except Exception as e:
+        print(f"[err] {e}")
+        sys.exit(1)
+
+    content = TEMPLATE.format(**vals)
+
+    ensure_symlink(args.pwnld_src, pwnld_link)
+    write_exploit(exploit_path, content)
+    make_executable(exploit_path)
+
+    if not args.no_open:
+        open_in_nvim(exploit_path)
+
+
+if __name__ == "__main__":
+    main()
