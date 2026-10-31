@@ -341,31 +341,29 @@ if flag:
 """
 
 RETRY_TEMPLATE_PARALLEL = r"""#!/usr/bin/env python3
-# Brute SONG SONG remote: mỗi luồng TỰ remote()/close(), KHÔNG dùng pwnld globals.
-import os, re
+# Brute SONG SONG remote. Mỗi luồng 1 Session (tube riêng) — viết kiểu pwnld, thêm 't.'.
+import os
 from pwn import *
-from pwnretry import retry_parallel
+from pwnld import *
+from pwnretry import retry_parallel, Session
 
 context.log_level = 'error'
 
-HOST, PORT = {REMOTE_HOST!r}, {REMOTE_PORT}
-FLAG_RE = re.compile(rb'flag\{{[^}}]+\}}')
-exe = ELF('./{CHALL}', checksec=False)
-# win = exe.sym.get('win', 0)
+context.binary = exe = ELF('./{CHALL}', checksec=False)
+set_remote({REMOTE_HOST!r}, {REMOTE_PORT})
+
+FLAG_RE = rb'flag\{{[^}}]+\}}'       # sửa định dạng flag của giải
 
 def attempt(i):
-    io = remote(HOST, PORT)
+    t = Session()                    # tube riêng = remote(CFG.HOST, CFG.PORT)
     try:
-        # ── payload ──
-        io.sendlineafter(b'input: ', b'A' * 40)
-        data = io.recvrepeat(0.5)
-        m = FLAG_RE.search(data)
-        return m.group(0) if m else None
-    except EOFError:
-        return None
+        # ── viết như pwnld nhưng dùng t.sla / t.ru / t.rl ... ──
+        t.sla('input: ', b'A' * 40)
+        return t.got_flag(FLAG_RE)   # output có flag → trúng
     finally:
-        io.close()
+        t.close()
 
+# workers: 8-32 tuỳ server chịu được
 flag, runs = retry_parallel(attempt, tries=1024, workers=16)
 if flag:
     log.success(flag.decode())
@@ -479,6 +477,111 @@ def convert_to_retry(old: str, rtype: str) -> str:
     return "\n".join(doc) + "\n"
 
 
+# Macro pwnld chạy trên tube → cần thêm tiền tố 't.' khi biên sang Session.
+# (không đụng p64/flat/asm/log... vì chúng KHÔNG phải method của tube)
+PWNLD_TUBE_MACROS = [
+    "sla", "slna", "sna", "sln", "sa", "sl", "sn", "s",
+    "ru", "rc", "ra", "rl", "rr",
+    "leak_all", "leak_libc", "leak_stack", "leak_bin", "leak_heap",
+    "got_shell", "got_flag",
+]
+_MACRO_RE = re.compile(r"(?<![\w.])(" + "|".join(PWNLD_TUBE_MACROS) + r")(\s*\()")
+
+
+def _prefix_macros(line: str) -> str:
+    """Thêm 't.' trước mỗi macro tube (sla(...) -> t.sla(...)); chừa p64/flat/..."""
+    return _MACRO_RE.sub(r"t.\1\2", line)
+
+
+def convert_to_parallel(old: str) -> str:
+    """Biên exploit kiểu pwnld (p toàn cục) -> bản PARALLEL dùng Session.
+
+    Ánh xạ 1-1: start() -> t = Session(); mỗi macro tube (sla/ru/rl/...) -> t.<macro>;
+    GDB()/close() bỏ (finally lo); ia()/interactive() -> return t.got_flag(FLAG_RE).
+    Thân chạy trong try/finally để mỗi luồng tự đóng tube.
+    """
+    lines = old.splitlines()
+    notes = []
+
+    split = None
+    for i, ln in enumerate(lines):
+        if re.search(r"\bstart\s*\(", ln) and not ln.lstrip().startswith("#"):
+            split = i
+            break
+    if split is None:
+        notes.append("không thấy start() ở bản cũ → tự chép runtime vào attempt().")
+        header, body = lines, []
+    else:
+        header, body = lines[:split], lines[split:]
+
+    shebang = None
+    if header and header[0].lstrip().startswith("#!"):
+        shebang = header[0]
+        header = header[1:]
+
+    if re.search(r"^\s*(for\s+\w+\s+in\s+range|while\s+)", old, re.M):
+        notes.append("bản cũ có vòng lặp thủ công → đã bỏ, retry_parallel lo lặp.")
+
+    # import pwnretry (parallel)
+    imp = "from pwnretry import retry_parallel, Session"
+    out_header, inserted = [], False
+    for ln in header:
+        out_header.append(ln)
+        if not inserted and re.match(r"\s*from\s+pwnld\s+import", ln):
+            out_header.append(imp)
+            inserted = True
+    if not inserted:
+        out_header = [imp] + out_header
+        notes.append("không thấy 'from pwnld import *' → chèn import pwnretry ở đầu.")
+
+    if "FLAG_RE" not in "\n".join(out_header):
+        out_header += ["", r"FLAG_RE = rb'flag\{[^}]+\}'   # TODO(retry): sửa định dạng flag"]
+
+    while out_header and not out_header[-1].strip():
+        out_header.pop()
+
+    # thân (body[0] là dòng start → thành Session, tách riêng; còn lại vào try)
+    inner, found_hit = [], False
+    for ln in body[1:]:
+        indent = re.match(r"(\s*)", ln).group(1)
+        stripped = ln.lstrip()
+        if stripped.startswith("#"):
+            inner.append(ln)
+        elif re.search(r"\bGDB\s*\(\s*\)", ln):
+            inner.append(f"{indent}# GDB() bỏ — parallel không attach được")
+        elif re.search(r"\.close\s*\(\s*\)", ln):
+            inner.append(f"{indent}# {stripped}  # bỏ — finally t.close() đã lo")
+        elif re.search(r"\bia\s*\(\s*\)|[\w.]+\.interactive\s*\(\s*\)", ln):
+            inner.append(f"{indent}return t.got_flag(FLAG_RE)  # <- parallel: ĐIỀU KIỆN TRÚNG")
+            found_hit = True
+        else:
+            inner.append(_prefix_macros(ln))
+    if not found_hit:
+        inner.append("return t.got_flag(FLAG_RE)  # TODO(retry): đặt điều kiện trúng")
+        notes.append("chưa thấy ia()/interactive() → thêm 'return t.got_flag' tạm.")
+
+    banner = [
+        "# === genscr retry parallel (biên từ 1-shot) — bản cũ: exploit_not_retry.py ===",
+        "# Đã tự: start() -> t=Session() · macro pwnld -> t.<macro> · GDB()/close() bỏ",
+        "#        · interactive() -> return t.got_flag(FLAG_RE) · bọc try/finally.",
+    ]
+    banner += [f"# TODO(retry): {n}" for n in notes]
+    banner += [""]
+
+    doc = []
+    if shebang:
+        doc.append(shebang)
+    doc += banner
+    doc += out_header
+    doc += ["", "", "def attempt(i):", "    t = Session()", "    try:"]
+    doc += ["        " + l if l.strip() else l for l in inner]
+    doc += ["    finally:", "        t.close()"]
+    doc += ["", "# workers: 8-32 tuỳ server chịu được",
+            "flag, runs = retry_parallel(attempt, tries=1024, workers=16)",
+            "if flag:", "    log.success(flag.decode())", "    print(flag.decode())"]
+    return "\n".join(doc) + "\n"
+
+
 def gen_retry(args):
     """Xử lý chế độ retry: skeleton sạch (binary) hoặc convert (file .py cũ)."""
     rtype = (args.retry_type or "shell").lower()
@@ -496,10 +599,6 @@ def gen_retry(args):
     is_convert = os.path.isfile(target_abs) and target.endswith(".py")
 
     if is_convert:
-        if rtype == "parallel":
-            print("[err] convert không hỗ trợ 'parallel' (khác cấu trúc hẳn).")
-            print("      Dùng khung sạch:  genscr <binary> retry parallel")
-            sys.exit(1)
         with open(target_abs, encoding="utf-8") as f:
             old = f.read()
         old_keep = os.path.join(cwd, EXPLOIT_OLD_NAME)
@@ -508,8 +607,9 @@ def gen_retry(args):
             print(f"[warn] '{EXPLOIT_OLD_NAME}' đã có → backup '.bak'")
         os.replace(target_abs, old_keep)
         print(f"[ok] giữ bản cũ: '{EXPLOIT_OLD_NAME}'")
+        new_src = convert_to_parallel(old) if rtype == "parallel" else convert_to_retry(old, rtype)
         with open(exploit_path, "w", encoding="utf-8") as f:
-            f.write(convert_to_retry(old, rtype))
+            f.write(new_src)
         print(f"[ok] sinh '{EXPLOIT_NAME}' (retry/{rtype}) từ bản cũ — soát '# TODO(retry)'")
     else:
         chall = os.path.basename(target)
@@ -528,8 +628,7 @@ def gen_retry(args):
 
     make_executable(exploit_path)
     ensure_symlink(args.pwnretry_src, pwnretry_link)
-    if rtype != "parallel":
-        ensure_symlink(args.pwnld_src, pwnld_link)
+    ensure_symlink(args.pwnld_src, pwnld_link)  # Session đọc CFG.HOST/PORT từ pwnld
 
     if not args.no_open:
         open_in_nvim(exploit_path)
@@ -550,11 +649,12 @@ def main():
             "  genscr ./vuln retry flag            khung retry dò flag\n"
             "  genscr ./vuln retry parallel        khung retry brute song song\n"
             "  genscr exploit.py retry             convert 1-shot cũ -> retry\n"
+            "  genscr exploit.py retry parallel    biên 1-shot -> brute song song\n"
             "\n"
             "Loại retry:\n"
             "  shell     brute tới khi RA SHELL (mặc định)\n"
             "  flag      brute tới khi DÒ ĐƯỢC FLAG (regex)\n"
-            "  parallel  brute SONG SONG remote (chỉ khung sạch, không convert)\n"
+            "  parallel  brute SONG SONG remote (Session mỗi luồng 1 tube)\n"
             "\n"
             "Phân biệt: <chall> là file .py đang tồn tại -> CONVERT; ngược lại -> khung sạch.\n"
         ),
