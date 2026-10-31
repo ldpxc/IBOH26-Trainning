@@ -537,61 +537,65 @@ def gen_retry(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate exploit template.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        prog="genscr",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="Sinh nhanh exploit.py (+ symlink pwnld.py / pwnretry.py) rồi mở nvim.",
+        usage="genscr [tùy chọn] <chall> [retry [shell|flag|parallel]]",
         epilog=(
-            "Retry:\n"
-            "  genscr <binary> retry [shell|flag|parallel]   # khung retry sạch\n"
-            "  genscr <exploit.py> retry [shell|flag]        # convert bản 1-shot cũ\n"
+            "Ví dụ:\n"
+            "  genscr ./vuln                       exploit 1-shot thường\n"
+            "  genscr -c baby_rop                  pwncollege (copy pwncollege.py)\n"
+            "  genscr -x ./chall                   preset pwnable.xyz\n"
+            "  genscr ./vuln retry                 khung retry (mặc định: shell)\n"
+            "  genscr ./vuln retry flag            khung retry dò flag\n"
+            "  genscr ./vuln retry parallel        khung retry brute song song\n"
+            "  genscr exploit.py retry             convert 1-shot cũ -> retry\n"
+            "\n"
+            "Loại retry:\n"
+            "  shell     brute tới khi RA SHELL (mặc định)\n"
+            "  flag      brute tới khi DÒ ĐƯỢC FLAG (regex)\n"
+            "  parallel  brute SONG SONG remote (chỉ khung sạch, không convert)\n"
+            "\n"
+            "Phân biệt: <chall> là file .py đang tồn tại -> CONVERT; ngược lại -> khung sạch.\n"
         ),
     )
-    me_group = parser.add_mutually_exclusive_group()
-    me_group.add_argument(
-        "-c",
-        "--college",
-        action="store_true",
-        help="Use pwncollege mode (copy pwncollege.py & link local pwnld.py)",
-    )
-    me_group.add_argument(
-        "-x", "--xyz", action="store_true", help="Use preset for pwnable.xyz"
-    )
-    me_group.add_argument(
-        "-p", "--profile", default=None, help="Use named profile from PROFILES"
-    )
 
-    parser.add_argument(
-        "--remote", type=parse_host_port, default=None, help="Override remote HOST:PORT"
-    )
-    parser.add_argument("--ssh-host", default=None, help="Override SSH host")
-    parser.add_argument("--ssh-user", default=None, help="Override SSH user")
-    parser.add_argument("--ssh-pass", default=None, help="Override SSH password")
-    parser.add_argument("--ssh-port", type=int, default=None, help="Override SSH port")
-    parser.add_argument("--ssh-keyfile", default=None, help="Override SSH keyfile")
+    # Đối số chính
+    parser.add_argument("chall_name", metavar="chall",
+                        help="tên binary (hoặc file exploit.py khi convert)")
+    parser.add_argument("retry_kw", metavar="retry", nargs="?", default=None,
+                        help="gõ chữ 'retry' để bật chế độ retry")
+    parser.add_argument("retry_type", metavar="loại", nargs="?", default=None,
+                        help="shell | flag | parallel (mặc định shell)")
 
-    # Default src for generic mode
-    parser.add_argument(
-        "--pwnld-src",
-        default=PWNLD_SRC_DEFAULT,
-        help="Override path to pwnld.py source (generic mode)",
-    )
-    parser.add_argument(
-        "--pwnretry-src",
-        default=PWNRETRY_SRC_DEFAULT,
-        help="Override path to pwnretry.py source (retry mode)",
-    )
-    parser.add_argument("--no-open", action="store_true", help="Do not open nvim")
+    # Chế độ (chọn tối đa 1)
+    g_mode = parser.add_argument_group("chế độ (chọn 1)")
+    me = g_mode.add_mutually_exclusive_group()
+    me.add_argument("-c", "--college", action="store_true",
+                    help="pwncollege: copy pwncollege.py, link pwnld.py nội bộ")
+    me.add_argument("-x", "--xyz", action="store_true",
+                    help="dùng preset pwnable.xyz")
+    me.add_argument("-p", "--profile", metavar="TÊN", default=None,
+                    help="dùng profile đặt sẵn trong PROFILES")
 
-    parser.add_argument(
-        "chall_name", help="Challenge name (also output filename for -c)"
-    )
-    parser.add_argument(
-        "retry_kw", nargs="?", default=None,
-        help="chữ 'retry' để bật chế độ retry",
-    )
-    parser.add_argument(
-        "retry_type", nargs="?", default=None,
-        help="loại retry: shell (mặc định) | flag | parallel",
-    )
+    # Ghi đè thông tin kết nối
+    g_conn = parser.add_argument_group("ghi đè kết nối (tùy chọn)")
+    g_conn.add_argument("--remote", type=parse_host_port, metavar="HOST:PORT",
+                        default=None, help="remote service")
+    g_conn.add_argument("--ssh-host", default=None, help="SSH host")
+    g_conn.add_argument("--ssh-user", default=None, help="SSH user")
+    g_conn.add_argument("--ssh-pass", default=None, help="SSH password")
+    g_conn.add_argument("--ssh-port", type=int, default=None, help="SSH port")
+    g_conn.add_argument("--ssh-keyfile", default=None, help="SSH keyfile")
+
+    # Khác
+    g_misc = parser.add_argument_group("khác")
+    g_misc.add_argument("--pwnld-src", default=PWNLD_SRC_DEFAULT,
+                        help="đường dẫn pwnld.py nguồn")
+    g_misc.add_argument("--pwnretry-src", default=PWNRETRY_SRC_DEFAULT,
+                        help="đường dẫn pwnretry.py nguồn (chế độ retry)")
+    g_misc.add_argument("--no-open", action="store_true",
+                        help="không mở nvim sau khi sinh")
 
     args = parser.parse_args()
 
