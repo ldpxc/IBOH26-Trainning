@@ -56,7 +56,7 @@ from pwn import *
 from pwnld import * 
 
 context.log_level = 'debug'
-context.terminal  = ['ghostty', '-e']
+context.terminal  = ['env', '-C', '/', 'ghostty', '--working-directory=' + os.getcwd(), '-e']
 
 context.binary = exe = ELF('./{CHALL}', checksec=False)
 rop = ROP(exe)
@@ -272,7 +272,7 @@ from pwnld import *
 from pwnretry import retry, got_shell, got_flag
 
 context.log_level = 'debug'          # 'error' khi brute nhiều cho nhanh/đỡ rối
-context.terminal  = ['ghostty', '-e']
+context.terminal  = ['env', '-C', '/', 'ghostty', '--working-directory=' + os.getcwd(), '-e']
 
 context.binary = exe = ELF('./{CHALL}', checksec=False)
 rop = ROP(exe)
@@ -315,7 +315,7 @@ from pwnld import *
 from pwnretry import retry, got_flag
 
 context.log_level = 'error'          # 'debug' khi dev
-context.terminal  = ['ghostty', '-e']
+context.terminal  = ['env', '-C', '/', 'ghostty', '--working-directory=' + os.getcwd(), '-e']
 
 context.binary = exe = ELF('./{CHALL}', checksec=False)
 set_remote({REMOTE_HOST!r}, {REMOTE_PORT})
@@ -634,68 +634,158 @@ def gen_retry(args):
         open_in_nvim(exploit_path)
 
 
+class GenscrHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    SECTION_TITLES = (
+        "ĐỐI SỐ",
+        "TÙY CHỌN CHUNG",
+        "PRESET (chọn tối đa một)",
+        "KẾT NỐI (ghi đè profile)",
+        "TEMPLATE VÀ FILE",
+    )
+
+    def _format_usage(self, usage, actions, groups, prefix):
+        if prefix in (None, "usage: "):
+            prefix = "CÁCH DÙNG: "
+        return super()._format_usage(usage, actions, groups, prefix)
+
+    @staticmethod
+    def _color_mode():
+        for index, arg in enumerate(sys.argv[1:], 1):
+            if arg.startswith("--color="):
+                value = arg.split("=", 1)[1]
+                if value in {"auto", "always", "never"}:
+                    return value
+            if arg == "--color" and index + 1 < len(sys.argv):
+                value = sys.argv[index + 1]
+                if value in {"auto", "always", "never"}:
+                    return value
+        return "auto"
+
+    def format_help(self):
+        import shutil
+
+        text = super().format_help()
+        width = max(40, shutil.get_terminal_size((88, 24)).columns - 2)
+        color_mode = self._color_mode()
+        color = color_mode == "always" or (
+            color_mode == "auto"
+            and sys.stdout.isatty()
+            and os.environ.get("TERM") != "dumb"
+            and "NO_COLOR" not in os.environ
+        )
+
+        def frame(title):
+            label = f" {title} "
+            left, right = "╭─", "─╮"
+            fill = "─" * max(0, width - len(left) - len(label) - len(right))
+            if color:
+                return (
+                    "\033[36m" + left + "\033[0m"
+                    + "\033[1;97;44m" + label + "\033[0m"
+                    + "\033[36m" + fill + right + "\033[0m"
+                )
+            return left + label + fill + right
+
+        for title in self.SECTION_TITLES:
+            text = text.replace(f"{title}:\n", frame(title) + "\n")
+
+        if color:
+            def usage_banner(match):
+                line = match.group(0).ljust(width)
+                return "\033[1;97;44m" + line + "\033[0m"
+
+            text = re.sub(r"(?m)^CÁCH DÙNG:.*$", usage_banner, text)
+            text = re.sub(
+                r"(?<![\w])(?:--[a-z][a-z0-9-]*|-[a-z])(?=[\s,])",
+                lambda match: "\033[96m" + match.group(0) + "\033[0m",
+                text,
+            )
+        return text
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="genscr",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Sinh nhanh exploit.py (+ symlink pwnld.py / pwnretry.py) rồi mở nvim.",
-        usage="genscr [tùy chọn] <chall> [retry [shell|flag|parallel]]",
+        formatter_class=GenscrHelpFormatter,
+        add_help=False,
+        usage="genscr [TÙY CHỌN] CHALL [retry [LOẠI]]",
+        description=(
+            "Tạo exploit.py 1-shot hoặc khung retry, liên kết pwnld.py/pwnretry.py, "
+            "rồi mở nvim.\n"
+            "Nếu CHALL là file .py đang tồn tại và có retry, genscr chuyển file đó sang khung retry."
+        ),
         epilog=(
-            "Ví dụ:\n"
-            "  genscr ./vuln                       exploit 1-shot thường\n"
-            "  genscr -c baby_rop                  pwncollege (copy pwncollege.py)\n"
-            "  genscr -x ./chall                   preset pwnable.xyz\n"
-            "  genscr ./vuln retry                 khung retry (mặc định: shell)\n"
-            "  genscr ./vuln retry flag            khung retry dò flag\n"
-            "  genscr ./vuln retry parallel        khung retry brute song song\n"
-            "  genscr exploit.py retry             convert 1-shot cũ -> retry\n"
-            "  genscr exploit.py retry parallel    biên 1-shot -> brute song song\n"
+            "LỆNH MẪU\n"
+            "  genscr ./vuln                         tạo exploit 1-shot\n"
+            "  genscr -c baby_rop                    tạo template pwncollege\n"
+            "  genscr -x ./chall                     dùng profile pwnable.xyz\n"
+            "  genscr ./vuln retry                   retry tới khi có shell\n"
+            "  genscr ./vuln retry flag              retry tới khi thấy flag\n"
+            "  genscr ./vuln retry parallel          brute remote song song\n"
+            "  genscr exploit.py retry [LOẠI]        chuyển exploit cũ sang retry\n"
             "\n"
-            "Loại retry:\n"
-            "  shell     brute tới khi RA SHELL (mặc định)\n"
-            "  flag      brute tới khi DÒ ĐƯỢC FLAG (regex)\n"
-            "  parallel  brute SONG SONG remote (Session mỗi luồng 1 tube)\n"
-            "\n"
-            "Phân biệt: <chall> là file .py đang tồn tại -> CONVERT; ngược lại -> khung sạch.\n"
+            "LOẠI RETRY\n"
+            "  shell     thành công khi có shell (mặc định)\n"
+            "  flag      thành công khi regex tìm thấy flag\n"
+            "  parallel  nhiều kết nối remote; mỗi worker có tube riêng\n"
         ),
     )
+    parser._positionals.title = "ĐỐI SỐ"
+    parser._optionals.title = "TÙY CHỌN CHUNG"
+    parser.add_argument("-h", "--help", action="help", help="hiển thị hướng dẫn này rồi thoát")
 
-    # Đối số chính
-    parser.add_argument("chall_name", metavar="chall",
-                        help="tên binary (hoặc file exploit.py khi convert)")
-    parser.add_argument("retry_kw", metavar="retry", nargs="?", default=None,
-                        help="gõ chữ 'retry' để bật chế độ retry")
-    parser.add_argument("retry_type", metavar="loại", nargs="?", default=None,
-                        help="shell | flag | parallel (mặc định shell)")
+    parser.add_argument(
+        "chall_name", metavar="CHALL",
+        help="binary mục tiêu; .py đã tồn tại được dùng làm nguồn convert",
+    )
+    parser.add_argument(
+        "retry_kw", metavar="retry", nargs="?", default=None, choices=("retry",),
+        help="thêm chữ retry để tạo hoặc convert khung retry",
+    )
+    parser.add_argument(
+        "retry_type", metavar="LOẠI", nargs="?", default=None, choices=RETRY_TYPES,
+        help="shell, flag hoặc parallel (mặc định: shell)",
+    )
 
-    # Chế độ (chọn tối đa 1)
-    g_mode = parser.add_argument_group("chế độ (chọn 1)")
+    g_mode = parser.add_argument_group("PRESET (chọn tối đa một)")
     me = g_mode.add_mutually_exclusive_group()
-    me.add_argument("-c", "--college", action="store_true",
-                    help="pwncollege: copy pwncollege.py, link pwnld.py nội bộ")
-    me.add_argument("-x", "--xyz", action="store_true",
-                    help="dùng preset pwnable.xyz")
-    me.add_argument("-p", "--profile", metavar="TÊN", default=None,
-                    help="dùng profile đặt sẵn trong PROFILES")
+    me.add_argument(
+        "-c", "--college", action="store_true",
+        help="pwncollege: copy template và dùng pwnld.py nội bộ",
+    )
+    me.add_argument("-x", "--xyz", action="store_true", help="profile pwnable.xyz")
+    me.add_argument(
+        "-p", "--profile", metavar="TÊN", default=None,
+        help=f"profile trong PROFILES: {', '.join(PROFILES)}",
+    )
 
-    # Ghi đè thông tin kết nối
-    g_conn = parser.add_argument_group("ghi đè kết nối (tùy chọn)")
-    g_conn.add_argument("--remote", type=parse_host_port, metavar="HOST:PORT",
-                        default=None, help="remote service")
-    g_conn.add_argument("--ssh-host", default=None, help="SSH host")
-    g_conn.add_argument("--ssh-user", default=None, help="SSH user")
-    g_conn.add_argument("--ssh-pass", default=None, help="SSH password")
-    g_conn.add_argument("--ssh-port", type=int, default=None, help="SSH port")
-    g_conn.add_argument("--ssh-keyfile", default=None, help="SSH keyfile")
+    g_conn = parser.add_argument_group("KẾT NỐI (ghi đè profile)")
+    g_conn.add_argument(
+        "--remote", type=parse_host_port, metavar="HOST:PORT", default=None,
+        help="địa chỉ dịch vụ TCP, ví dụ chall.example:31337",
+    )
+    g_conn.add_argument("--ssh-host", metavar="HOST", default=None, help="máy chủ SSH")
+    g_conn.add_argument("--ssh-user", metavar="USER", default=None, help="tài khoản SSH")
+    g_conn.add_argument("--ssh-pass", metavar="PASS", default=None, help="mật khẩu SSH")
+    g_conn.add_argument("--ssh-port", metavar="PORT", type=int, default=None, help="cổng SSH")
+    g_conn.add_argument("--ssh-keyfile", metavar="FILE", default=None, help="đường dẫn SSH key")
 
-    # Khác
-    g_misc = parser.add_argument_group("khác")
-    g_misc.add_argument("--pwnld-src", default=PWNLD_SRC_DEFAULT,
-                        help="đường dẫn pwnld.py nguồn")
-    g_misc.add_argument("--pwnretry-src", default=PWNRETRY_SRC_DEFAULT,
-                        help="đường dẫn pwnretry.py nguồn (chế độ retry)")
-    g_misc.add_argument("--no-open", action="store_true",
-                        help="không mở nvim sau khi sinh")
+    g_files = parser.add_argument_group("TEMPLATE VÀ FILE")
+    g_files.add_argument(
+        "--pwnld-src", metavar="FILE", default=PWNLD_SRC_DEFAULT,
+        help="nguồn pwnld.py (mặc định: cấu hình genscr)",
+    )
+    g_files.add_argument(
+        "--pwnretry-src", metavar="FILE", default=PWNRETRY_SRC_DEFAULT,
+        help="nguồn pwnretry.py khi dùng retry",
+    )
+    g_files.add_argument("--no-open", action="store_true", help="không mở kết quả bằng nvim")
+
+    g_color = parser.add_argument_group("GIAO DIỆN")
+    g_color.add_argument(
+        "--color", choices=("auto", "always", "never"), default="auto", metavar="CHẾ_ĐỘ",
+        help="màu theo terminal, luôn bật hoặc tắt (mặc định: auto)",
+    )
 
     args = parser.parse_args()
 
