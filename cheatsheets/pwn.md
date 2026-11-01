@@ -18,7 +18,7 @@ one_gadget ./libc.so.6
 ## T1 — Stack BOF (ret2win, ret2shellcode)
 ## T2 — Format string (leak, GOT overwrite)
 
-> **Chi tiết đầy đủ (cơ chế, biến tấu, template mọi tình huống, syntax pwnld): [`fmtstr.md`](fmtstr.md)**
+> **Chi tiết đầy đủ (cơ chế, biến tấu, template mọi tình huống, syntax pwnld): [`pwn/fmtstr.md`](pwn/fmtstr.md)**
 
 **Nhận diện:** chương trình gọi `printf(input)` không format → gửi `%p %p %p` thấy leak.
 Ghi được số tuỳ ý vào địa chỉ tuỳ ý (`%n`) = arbitrary write → đè GOT / return addr / biến cờ.

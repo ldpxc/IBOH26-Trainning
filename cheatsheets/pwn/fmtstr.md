@@ -1,6 +1,6 @@
 # Format String — `fmtstr_payload` & `FmtStr` (pwnld edition)
 
-> Chi tiết cho **T2** trong [`pwn.md`](pwn.md). Đọc hết file này là ghi được bộ nhớ tuỳ ý.
+> Chi tiết cho **T2** trong [`pwn.md`](../pwn.md). Đọc hết file này là ghi được bộ nhớ tuỳ ý.
 > Code viết theo macro `pwnld` (`from pwnld import *`): `start` / `GDB` / `sla` / `ru` / `rl` / `ia` / `leak_libc` ...
 
 ---
@@ -176,7 +176,7 @@ payload = fmtstr_payload(OFFSET, {exe.got["puts"]: exe.sym["win"] & 0xffff},
 ### 4.5 Blind (không có binary) — sang mục 6 (`FmtStr`)
 
 ### 4.6 Xác suất (partial overwrite 1/16, ASLR) → bọc retry
-Ghi 2 byte có thể cần đoán nibble → dùng khung [`retry/`](../exploits/pwn/retry/):
+Ghi 2 byte có thể cần đoán nibble → dùng khung [`retry/`](../../exploits/pwn/retry/):
 viết `attempt(i)` gọi `start()` + gửi payload + kiểm tra shell, đưa cho `retry()`.
 
 ---
@@ -249,7 +249,7 @@ fmt.execute_writes()
 | Biết offset, ghi 1 phát | **`fmtstr_payload`** |
 | Chương trình KHÔNG echo | **`fmtstr_payload`** (FmtStr bó tay) |
 | Blind, không binary, CÓ echo | **`FmtStr`** |
-| Partial overwrite / ASLR xác suất | `fmtstr_payload` + [`retry/`](../exploits/pwn/retry/) |
+| Partial overwrite / ASLR xác suất | `fmtstr_payload` + [`retry/`](../../exploits/pwn/retry/) |
 
 ---
 
