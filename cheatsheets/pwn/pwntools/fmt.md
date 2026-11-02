@@ -2,6 +2,18 @@
 
 Dựng payload `%n` ghi giá trị vào địa chỉ **mà không cần tự tính pad/thứ tự byte**.
 
+> **Cơ chế bạn cần nắm để không bị "payload lạ":**
+> - `%n` ghi **số ký tự printf đã in ra tới thời điểm đó** vào địa chỉ ở slot tham số. Muốn ghi
+>   giá trị `V` thì phải **in cho đủ `V` ký tự trước** — đó là lý do có `%<N>c` (in N ký tự đệm).
+> - `write_size` quyết định chia nhỏ: `'byte'`→`%hhn` (ghi 1 byte/lần, tối đa phải in 255 ký tự),
+>   `'short'`→`%hn` (65535), `'int'`→`%n` (ghi 4 byte 1 phát nhưng có thể phải in **hàng tỉ** ký
+>   tự → treo). Vì vậy mặc định `'byte'`: `fmtstr_payload` ghi **từng byte tăng dần**, cộng dồn
+>   số đã in giữa các `%hhn`.
+> - **Bẫy 64-bit:** địa chỉ đích chứa nhiều `\x00`. Nếu đặt địa chỉ ở *đầu* payload, `printf`
+>   gặp `\x00` là **dừng đọc chuỗi** → hỏng. `fmtstr_payload` tự **đặt địa chỉ ở CUỐI** payload
+>   và tính lại chỉ số `%N$` trỏ tới đó — nên `offset` bạn truyền và số `$` trong payload sinh ra
+>   thường **khác nhau**, đừng hoảng.
+
 > Hai tình huống khác nhau:
 > - **Biết địa chỉ đích** (GOT, ret) → `fmtstr_payload` / `FmtStr` (nhúng địa chỉ vào payload).
 > - **Con trỏ đích đã nằm sẵn trên stack** (ghi xuyên) → [`pwnld.fmtstr_pos`](pwnld.md#5-ghi-bằng-format-string-fmt).

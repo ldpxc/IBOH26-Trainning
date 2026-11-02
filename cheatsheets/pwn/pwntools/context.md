@@ -34,6 +34,12 @@ with context.local(log_level='debug'):
 > `context.log_level='debug'` in **mọi byte gửi/nhận** + hexdump — công cụ debug mạnh nhất khi
 > prompt lệch hay payload sai.
 
+> **Cơ chế:** `context` là **thread-local**, `with context.local(...)` lưu trạng thái cũ rồi
+> **tự khôi phục** khi ra khỏi khối — dùng để đổi arch/timeout tạm thời mà không rò ra ngoài.
+> **Bẫy:** gán `context.arch='i386'` sẽ đặt lại `bits=32` *theo mặc định của arch*, nhưng đổi
+> ngược `arch='amd64'` khi đang `bits=32` **không** tự lên 64 nếu bạn đã set tay — khi lẫn 32/64
+> hãy set cả cặp: `context.update(arch='i386', bits=32)`.
+
 ---
 
 ## `gdb.debug / gdb.attach` — chạy dưới GDB

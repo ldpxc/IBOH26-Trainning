@@ -5,6 +5,18 @@ Sinh shellcode **không cần viết assembly tay**: `shellcraft` tạo mã ngu�
 > Mọi thứ phụ thuộc `context.arch/os/bits` → set `context.binary = ELF(...)` hoặc
 > `context.arch = 'amd64'` **trước**.
 
+> **Cơ chế 2 bước:** `shellcraft.sh()` chỉ trả **text assembly** (chuỗi), `asm(...)` mới **biên
+> dịch thành bytes**. Shellcode chỉ chạy khi **RIP nhảy vào bytes đó** và vùng đó **thực thi được
+> (X)**. Hai điều kiện độc lập — có bytes đúng nhưng vùng NX (không X) thì vẫn crash.
+>
+> **Đưa shellcode tới RIP — chọn 1 (ứng với dạng bài):**
+> - **Stack RWX / `jmp rsp`,`call rax`...** → nhét shellcode vào buffer, cho RIP trỏ tới nó
+>   (cần leak địa chỉ buffer hoặc dùng gadget `jmp rsp`).
+> - **NX bật** → không chạy trên stack: dùng ROP `mprotect(page, len, 7)` để bật X cho vùng chứa
+>   shellcode, rồi nhảy vào (xem [rop](rop.md), [constants](#constants--hằng-số-syscallcờ)).
+> - **Buffer nhỏ** → nhét **stage-1 ngắn** gọi `read(0, buf, 0x1000)` để nuốt thêm shellcode dài
+>   (staging), rồi nhảy vào stage-2.
+
 ---
 
 ## `shellcraft.*` — sinh assembly
