@@ -20,6 +20,7 @@
 |----------|------|----------|-----|
 | **Format string** | T2 | cơ chế `%n`, biến tấu, template mọi tình huống | [`pwn/fmtstr.md`](pwn/fmtstr.md) |
 | **ret2csu** | T3 | 2 gadget csu, mapping, ràng buộc + **writeup pwnld verify ra shell** + bài tập | [`pwn/ret2csu.md`](pwn/ret2csu.md) |
+| **Stack pivot** | T3 | rẽ `rsp` sang bss (leave;ret, pop rsp…) + **demo verify ra shell** + 2 cạm bẫy | [`pwn/stack_pivot.md`](pwn/stack_pivot.md) |
 | **SROP** | T4 | sigreturn frame set mọi thanh ghi 1 phát + **writeup pwnld verify ra shell** + bài tập | [`pwn/srop.md`](pwn/srop.md) |
 
 > Khác với `pwn/pwntools/` (tra nhanh API): mục này là **bài giảng** — hiểu *tại sao*, dựng chain
@@ -62,7 +63,7 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 |------|--------|-----------|
 | **T1** | Stack BOF (ret2win, ret2shellcode) | [rop](pwn/pwntools/rop.md), [shellcode](pwn/pwntools/shellcode.md), [packing `cyclic/flat`](pwn/pwntools/packing.md) |
 | **T2** | Format string (leak, GOT overwrite) | **[fmtstr.md](pwn/fmtstr.md)** · [fmt](pwn/pwntools/fmt.md) · [pwnld `fmtstr_pos`](pwn/pwntools/pwnld.md) |
-| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | [rop](pwn/pwntools/rop.md), **[ret2csu.md](pwn/ret2csu.md)** (học sâu), [advanced](pwn/pwntools/advanced.md) |
+| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | [rop](pwn/pwntools/rop.md), **[ret2csu.md](pwn/ret2csu.md)** · **[stack_pivot.md](pwn/stack_pivot.md)** (học sâu), [advanced](pwn/pwntools/advanced.md) |
 | **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | **[srop.md](pwn/srop.md)** (học sâu), [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
 | **T5** | Shellcoding (ORW seccomp, alphanumeric) | [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
 | **T6** | Heap intro (UAF, double free, tcache poisoning) | *(chưa có — điền khi giải)* |
