@@ -62,6 +62,7 @@ context.binary = exe = ELF('./{CHALL}', checksec=False)
 rop = ROP(exe)
 
 libc = get_libc()
+# rop2 = ROP(libc)   # TẠO SAU khi leak_* đã set libc.address (nếu không gadget chưa rebase -> địa chỉ sai)
 
 set_remote({REMOTE_HOST!r}, {REMOTE_PORT})
 set_ssh(
@@ -277,6 +278,7 @@ context.terminal  = ['env', '-C', '/', 'ghostty', '--working-directory=' + os.ge
 context.binary = exe = ELF('./{CHALL}', checksec=False)
 rop = ROP(exe)
 libc = get_libc()
+# rop2 = ROP(libc)   # TẠO SAU khi leak_* đã set libc.address (nếu không gadget chưa rebase -> địa chỉ sai)
 
 set_remote({REMOTE_HOST!r}, {REMOTE_PORT})
 set_ssh(
