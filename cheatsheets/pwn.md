@@ -21,6 +21,7 @@
 | **Format string** | T2 | cơ chế `%n`, biến tấu, template mọi tình huống | [`pwn/fmtstr.md`](pwn/fmtstr.md) |
 | **ret2libc** | T3 | leak libc → `system` (họ ret2win/ROPchain/one_gadget) + **writeup pwnld verify ra shell** | [`pwn/ret2libc.md`](pwn/ret2libc.md) |
 | **ret2csu** | T3 | 2 gadget csu, mapping, ràng buộc + **writeup pwnld verify ra shell** + bài tập | [`pwn/ret2csu.md`](pwn/ret2csu.md) |
+| **ret2dlresolve** | T3 | resolve `system` KHÔNG cần leak (+ret2plt/syscall/one-gadget) + **verify ra shell** | [`pwn/ret2dlresolve.md`](pwn/ret2dlresolve.md) |
 | **Stack pivot** | T3 | rẽ `rsp` sang bss (leave;ret, pop rsp…) + **demo verify ra shell** + 2 cạm bẫy | [`pwn/stack_pivot.md`](pwn/stack_pivot.md) |
 | **ret2shellcode** | T1/T5 | NX off, nhồi shellcode + nhảy (leak / `call rax`) + **verify ra shell** | [`pwn/ret2shellcode.md`](pwn/ret2shellcode.md) |
 | **Seccomp / ORW** | T5 | đọc filter + open-read-write shellcode (execve bị cấm) + **verify đọc flag** | [`pwn/seccomp_orw.md`](pwn/seccomp_orw.md) |
@@ -69,7 +70,7 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 |------|--------|-----------|
 | **T1** | Stack BOF (ret2win, ret2shellcode) | [rop](pwn/pwntools/rop.md), **[ret2shellcode.md](pwn/ret2shellcode.md)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [packing `cyclic/flat`](pwn/pwntools/packing.md) |
 | **T2** | Format string (leak, GOT overwrite) | **[fmtstr.md](pwn/fmtstr.md)** · [fmt](pwn/pwntools/fmt.md) · [pwnld `fmtstr_pos`](pwn/pwntools/pwnld.md) |
-| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | **[ret2libc.md](pwn/ret2libc.md)** · **[ret2csu.md](pwn/ret2csu.md)** · **[stack_pivot.md](pwn/stack_pivot.md)** (học sâu), [rop](pwn/pwntools/rop.md) |
+| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | **[ret2libc.md](pwn/ret2libc.md)** · **[ret2csu.md](pwn/ret2csu.md)** · **[ret2dlresolve.md](pwn/ret2dlresolve.md)** · **[stack_pivot.md](pwn/stack_pivot.md)** (học sâu), [rop](pwn/pwntools/rop.md) |
 | **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | **[canary.md](pwn/canary.md)** · **[srop.md](pwn/srop.md)** (học sâu), [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
 | **T5** | Shellcoding (ORW seccomp, alphanumeric) | **[seccomp_orw.md](pwn/seccomp_orw.md)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
 | **T6** | Heap intro (UAF, double free, tcache poisoning) | **[heap.md](pwn/heap.md)** (học sâu) |
