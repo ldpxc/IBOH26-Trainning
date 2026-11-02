@@ -27,6 +27,7 @@
 | **Canary bypass** | T4 | leak canary (đè byte \0) / brute forking + **writeup pwnld verify ra shell** | [`pwn/canary.md`](pwn/canary.md) |
 | **SROP** | T4 | sigreturn frame set mọi thanh ghi 1 phát + **writeup pwnld verify ra shell** + bài tập | [`pwn/srop.md`](pwn/srop.md) |
 | **Heap** | T6–T7 | allocator, UAF/double-free/tcache poisoning, khác biệt glibc + **2 writeup verify shell (2.31)** | [`pwn/heap.md`](pwn/heap.md) |
+| **Hook overwrite** | T10 | `__free_hook`/exit-handler/FSOP + **writeup verify shell (2.23)** + khác biệt glibc | [`pwn/hook_overwrite.md`](pwn/hook_overwrite.md) |
 
 > Khác với `pwn/pwntools/` (tra nhanh API): mục này là **bài giảng** — hiểu *tại sao*, dựng chain
 > tay, cạm bẫy, và bài luyện kèm writeup. Giải xong kỹ thuật nào → thêm 1 dòng vào bảng này.
@@ -75,7 +76,7 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 | **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | **[heap.md](pwn/heap.md)** |
 | **T8** | Heap nâng cao (safe-linking, house of …) | *(chưa có)* |
 | **T9** | FILE / FSOP | *(chưa có)* |
-| **T10** | Hijack control-flow (exit handlers, largebin→write) | *(chưa có)* |
+| **T10** | Hijack control-flow (exit handlers, largebin→write) | **[hook_overwrite.md](pwn/hook_overwrite.md)** (học sâu) |
 | **T11+** | Kernel / misc (stretch) | *(chưa có)* |
 
 <!-- Giải xong 1 tier: thêm dòng link exploits/pwn/<tên>/ vào cột "Tra ở đâu" -->
