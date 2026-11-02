@@ -4,6 +4,8 @@
 
 **Công cụ:** pwntools, `cyclic`, ROPgadget/ropper/angrop, one_gadget, libc-database/libc.rip, GDB + pwndbg/gef, `checksec`, Ghidra/IDA.
 
+> **Sổ tay tiện ích pwntools (packing/tubes/ELF/ROP/fmt/shellcode/context, ví dụ + bản làm tay): [`pwn/pwntools/`](pwn/pwntools/)**
+
 ```bash
 checksec ./bin
 cyclic 200 ; cyclic -l 0x6161...   # tìm offset
