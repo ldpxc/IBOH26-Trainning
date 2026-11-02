@@ -26,6 +26,7 @@
 | **Seccomp / ORW** | T5 | đọc filter + open-read-write shellcode (execve bị cấm) + **verify đọc flag** | [`pwn/seccomp_orw.md`](pwn/seccomp_orw.md) |
 | **Canary bypass** | T4 | leak canary (đè byte \0) / brute forking + **writeup pwnld verify ra shell** | [`pwn/canary.md`](pwn/canary.md) |
 | **SROP** | T4 | sigreturn frame set mọi thanh ghi 1 phát + **writeup pwnld verify ra shell** + bài tập | [`pwn/srop.md`](pwn/srop.md) |
+| **Heap** | T6–T7 | allocator, UAF/double-free/tcache poisoning, khác biệt glibc + **2 writeup verify shell (2.31)** | [`pwn/heap.md`](pwn/heap.md) |
 
 > Khác với `pwn/pwntools/` (tra nhanh API): mục này là **bài giảng** — hiểu *tại sao*, dựng chain
 > tay, cạm bẫy, và bài luyện kèm writeup. Giải xong kỹ thuật nào → thêm 1 dòng vào bảng này.
@@ -70,8 +71,8 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 | **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | **[ret2libc.md](pwn/ret2libc.md)** · **[ret2csu.md](pwn/ret2csu.md)** · **[stack_pivot.md](pwn/stack_pivot.md)** (học sâu), [rop](pwn/pwntools/rop.md) |
 | **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | **[canary.md](pwn/canary.md)** · **[srop.md](pwn/srop.md)** (học sâu), [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
 | **T5** | Shellcoding (ORW seccomp, alphanumeric) | **[seccomp_orw.md](pwn/seccomp_orw.md)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
-| **T6** | Heap intro (UAF, double free, tcache poisoning) | *(chưa có — điền khi giải)* |
-| **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | *(chưa có)* |
+| **T6** | Heap intro (UAF, double free, tcache poisoning) | **[heap.md](pwn/heap.md)** (học sâu) |
+| **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | **[heap.md](pwn/heap.md)** |
 | **T8** | Heap nâng cao (safe-linking, house of …) | *(chưa có)* |
 | **T9** | FILE / FSOP | *(chưa có)* |
 | **T10** | Hijack control-flow (exit handlers, largebin→write) | *(chưa có)* |
