@@ -3,6 +3,12 @@
 Bản sao để dành. Bản đang chạy thật nằm ở `~/hoc/CTF/Tools/pwnld/` và được symlink
 vào `~/.local/bin/`. Sửa bản chạy → nhớ copy lại vào đây.
 
+## [`pwnld.py`](pwnld.py)
+
+Lớp helper mỏng bọc pwntools (`from pwnld import *`). Tra cứu nhanh trong terminal:
+`python3 pwnld.py --help` (theo chủ đề: `--help start|modes|io|leaks|fmt|retry`, hoặc
+`--help all`). Bản tham chiếu đầy đủ: [`pwnld.md`](pwnld.md).
+
 ## [`genscr`](genscr)
 
 Sinh nhanh `exploit.py` + symlink `pwnld.py` (và `pwnretry.py` ở chế độ retry) vào
