@@ -31,6 +31,8 @@
 | **Heap trung cấp** | T7 | fastbin dup/unsafe unlink/tcache stashing/large bin/house of spirit (**verify how2heap 2.39**) | [`pwn/heap_intermediate.md`](pwn/heap_intermediate.md) |
 | **Heap nâng cao** | T8 | safe-linking/tcache-key + house of botcake/einherjar/lore/force (**verify 2.39**) | [`pwn/heap_advanced.md`](pwn/heap_advanced.md) |
 | **Hook overwrite** | T10 | `__free_hook`/exit-handler/FSOP + **writeup verify shell (2.23)** + khác biệt glibc | [`pwn/hook_overwrite.md`](pwn/hook_overwrite.md) |
+| **FSOP** | T9 | `_IO_FILE` + fake vtable, house of orange/apple2, `FileStructure` (verify) | [`pwn/fsop.md`](pwn/fsop.md) |
+| **Exit handlers** | T10 | `__exit_funcs`/`tls_dtor` + PTR_MANGLE, largebin→write | [`pwn/exit_handlers.md`](pwn/exit_handlers.md) |
 
 > Khác với `pwn/pwntools/` (tra nhanh API): mục này là **bài giảng** — hiểu *tại sao*, dựng chain
 > tay, cạm bẫy, và bài luyện kèm writeup. Giải xong kỹ thuật nào → thêm 1 dòng vào bảng này.
@@ -79,7 +81,7 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 | **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | **[heap_intermediate.md](pwn/heap_intermediate.md)** (học sâu) |
 | **T8** | Heap nâng cao (safe-linking, house of …) | **[heap_advanced.md](pwn/heap_advanced.md)** (học sâu) |
 | **T9** | FILE / FSOP | *(chưa có)* |
-| **T10** | Hijack control-flow (exit handlers, largebin→write) | **[hook_overwrite.md](pwn/hook_overwrite.md)** (học sâu) |
+| **T10** | Hijack control-flow (exit handlers, largebin→write) | **[hook_overwrite.md](pwn/hook_overwrite.md)** · **[exit_handlers.md](pwn/exit_handlers.md)** (học sâu) |
 | **T11+** | Kernel / misc (stretch) | *(chưa có)* |
 
 <!-- Giải xong 1 tier: thêm dòng link exploits/pwn/<tên>/ vào cột "Tra ở đâu" -->
