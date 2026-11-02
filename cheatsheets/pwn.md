@@ -14,6 +14,16 @@
 | **Wrapper tự viết của repo** (`from pwnld import *`: `start/GDB/set_*`, macro IO, `leak_*_p/s`, `fmtstr_pos` short/full/consumed) | [`pwn/pwntools/pwnld.md`](pwn/pwntools/pwnld.md) |
 | **Format string** chuyên sâu (cơ chế `%n`, biến tấu, template mọi tình huống, short-vs-full) | [`pwn/fmtstr.md`](pwn/fmtstr.md) |
 
+### 📚 Tài liệu học sâu theo kỹ thuật (đọc là nắm bài bản, có writeup verify)
+
+| Kỹ thuật | Tier | Nội dung | Mở |
+|----------|------|----------|-----|
+| **Format string** | T2 | cơ chế `%n`, biến tấu, template mọi tình huống | [`pwn/fmtstr.md`](pwn/fmtstr.md) |
+| **ret2csu** | T3 | 2 gadget csu, mapping, ràng buộc + **writeup pwnld verify ra shell** + bài tập | [`pwn/ret2csu.md`](pwn/ret2csu.md) |
+
+> Khác với `pwn/pwntools/` (tra nhanh API): mục này là **bài giảng** — hiểu *tại sao*, dựng chain
+> tay, cạm bẫy, và bài luyện kèm writeup. Giải xong kỹ thuật nào → thêm 1 dòng vào bảng này.
+
 ## 2. Công cụ trong repo
 
 | Công cụ | Vai trò | Đường dẫn |
