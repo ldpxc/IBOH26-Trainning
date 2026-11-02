@@ -83,6 +83,12 @@ payload = flat(cyclic(off, n=8), rop.chain())
 > Cần có `__libc_csu_init` (binary **dynamic** cổ điển). Binary static hiện đại như `bof4`
 > **không có** → `ret2csu` báo thiếu gadget. pwntools tự tìm 2 phần gadget của csu.
 
+> **Cơ chế & 2 giới hạn phải nhớ:** gadget csu kết thúc bằng `call qword [r12+rbx*8]` → tham số
+> `call` phải là **con trỏ TỚI hàm** (ô GOT, không phải `plt`/địa chỉ hàm trực tiếp); pwntools
+> đặt `rbx=0`, `rbp=1` để qua lệnh `cmp rbx,rbp; jne` rồi `ret`. Và `rdi` nạp qua `mov edi,
+> r13d` → **chỉ set được 32-bit thấp** của `rdi` (đủ cho `fd`/số nhỏ; cần địa chỉ 64-bit đầy đủ
+> trong `rdi` thì ret2csu không làm được, phải tìm `pop rdi` thật).
+
 **Bản làm tay:** tự nhớ 2 đoạn csu (pop r15..rbx; mov edi/rsi/rdx; call) + padding — rất dễ sai.
 
 ---

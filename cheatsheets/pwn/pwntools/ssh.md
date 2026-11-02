@@ -45,6 +45,18 @@ libc = ELF("./libc_server.so.6", checksec=False)
 libs = sh.libs("/challenge/bin")     # {path: base}
 ```
 
+> **Cơ chế khớp offset (hay sai nhất ở ret2libc remote):** offset `system/binsh` tính theo
+> **đúng file libc server**. Muốn chạy *local* mà khớp server thì phải tải **cả `libc.so.6` lẫn
+> `ld-linux.so`** của server rồi ép binary dùng chúng:
+> ```python
+> sh.download("/lib/x86_64-linux-gnu/libc.so.6", "./libc.so.6")
+> sh.download("/lib64/ld-linux-x86-64.so.2", "./ld.so")
+> # chạy local với đúng loader+libc của server:
+> p = process([ "./ld.so", "./chall" ], env={"LD_PRELOAD": os.path.abspath("./libc.so.6")})
+> # (hoặc patchelf --set-interpreter ./ld.so --set-rpath . ./chall)
+> ```
+> Chạy thẳng `sh.process` trên server thì khỏi lo khớp — nhưng khi debug local phải làm bước này.
+
 **Bản làm tay:** `scp` tay rồi nhớ đường dẫn — pwntools gộp vào script, 1 chỗ.
 
 ---
