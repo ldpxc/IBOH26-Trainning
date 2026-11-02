@@ -51,7 +51,7 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 |------|--------|-----------|
 | **T1** | Stack BOF (ret2win, ret2shellcode) | [rop](pwn/pwntools/rop.md), [shellcode](pwn/pwntools/shellcode.md), [packing `cyclic/flat`](pwn/pwntools/packing.md) |
 | **T2** | Format string (leak, GOT overwrite) | **[fmtstr.md](pwn/fmtstr.md)** · [fmt](pwn/pwntools/fmt.md) · [pwnld `fmtstr_pos`](pwn/pwntools/pwnld.md) |
-| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | [rop](pwn/pwntools/rop.md), [ret2csu](pwn/pwntools/advanced.md) |
+| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | [rop](pwn/pwntools/rop.md), **[ret2csu.md](pwn/ret2csu.md)** (học sâu), [advanced](pwn/pwntools/advanced.md) |
 | **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
 | **T5** | Shellcoding (ORW seccomp, alphanumeric) | [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
 | **T6** | Heap intro (UAF, double free, tcache poisoning) | *(chưa có — điền khi giải)* |

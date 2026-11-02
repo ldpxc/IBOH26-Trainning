@@ -65,6 +65,9 @@ libc = ELF(search_by_build_id('d1704d25...'))
 
 ## `ROP.ret2csu` — gọi hàm nhiều tham số khi thiếu gadget
 
+> **Học sâu cơ chế (2 gadget, mapping, vòng lặp, ràng buộc):** [`../ret2csu.md`](../ret2csu.md).
+> Mục này chỉ là tra nhanh API pwntools.
+
 **Công dụng:** dùng **universal gadget** trong `__libc_csu_init` để set `rdi/rsi/rdx` + gọi 1 hàm
 khi binary **không có** `pop rdx` v.v. **Dạng bài:** no-PIE, dynamic, thiếu gadget pop.
 
