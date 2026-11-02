@@ -4,7 +4,7 @@ Dựng payload `%n` ghi giá trị vào địa chỉ **mà không cần tự tí
 
 > Hai tình huống khác nhau:
 > - **Biết địa chỉ đích** (GOT, ret) → `fmtstr_payload` / `FmtStr` (nhúng địa chỉ vào payload).
-> - **Con trỏ đích đã nằm sẵn trên stack** (ghi xuyên) → [`pwnld.fmtstr_pos`](../../../tools/pwnld.md#5-ghi-bằng-format-string-fmt).
+> - **Con trỏ đích đã nằm sẵn trên stack** (ghi xuyên) → [`pwnld.fmtstr_pos`](pwnld.md#5-ghi-bằng-format-string-fmt).
 
 ---
 
@@ -95,7 +95,7 @@ from pwnld import fmtstr_pos
 payload = fmtstr_pos(38, exe.address + 0x2f0)     # %<pad>c%38$hn
 ```
 
-Chi tiết (short/full, chaining, star, consumed): [tools/pwnld.md](../../../tools/pwnld.md#5-ghi-bằng-format-string-fmt).
+Chi tiết (short/full, chaining, star, consumed): [pwnld.md](pwnld.md#5-ghi-bằng-format-string-fmt).
 
 ---
 

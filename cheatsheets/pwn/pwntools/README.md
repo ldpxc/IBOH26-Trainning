@@ -3,6 +3,9 @@
 Tập hợp các hàm/lớp pwntools **thay thế việc làm tay** khi viết exploit: đóng gói dữ liệu,
 IO với tiến trình/remote, đọc ELF/libc, dựng ROP/SROP, format string, shellcode, context.
 
+> Thư mục này gồm **tham chiếu pwntools** (các trang dưới) **+ [`pwnld.md`](pwnld.md)** — lớp
+> wrapper tự viết của repo (bọc pwntools: `start/GDB/set_*`, macro IO, `leak_*`, `fmtstr_pos`).
+
 > Verify trên **pwntools 4.15** (một số chữ ký khác bản cũ — đã ghi chú tại chỗ).
 > Mỗi mục theo khuôn: **công dụng → dạng bài → tham số → ví dụ (mọi case + mọi tham số) → bản làm tay để so sánh**.
 
@@ -14,13 +17,14 @@ IO với tiến trình/remote, đọc ELF/libc, dựng ROP/SROP, format string, 
 | [tubes.md](tubes.md) | `process/remote/ssh/listen`, họ `send*/recv*`, `clean`, `interactive`, timeout |
 | [elf.md](elf.md) | `ELF()`, `sym/got/plt/address`, `.search/.read`, `checksec`, `libc`, `Core()` |
 | [rop.md](rop.md) | `ROP()`, `call/setregs/find_gadget/chain/dump/migrate`, **SROP** `SigreturnFrame`, **ret2dlresolve** |
-| [fmt.md](fmt.md) | `fmtstr_payload`, `FmtStr`, `fmtstr_split` (+ trỏ sang [`pwnld` fmtstr_pos](../../../tools/pwnld.md#5-ghi-bằng-format-string-fmt)) |
+| [fmt.md](fmt.md) | `fmtstr_payload`, `FmtStr`, `fmtstr_split` (+ trỏ sang [`pwnld` fmtstr_pos](pwnld.md#5-ghi-bằng-format-string-fmt)) |
 | [shellcode.md](shellcode.md) | `shellcraft.*` (đa arch), `asm/disasm`, `constants`, `make_elf` |
 | [context.md](context.md) | `context(...)`, `gdb.debug/attach`, `log`, `pause/align/more` |
 | [advanced.md](advanced.md) | **DynELF**, **libcdb**, **ret2csu**, **encoders** (né badchar), **gdb api=True** |
 | [ssh.md](ssh.md) | `ssh()`, `process/run/download/upload/libs`, port-forward (bài qua SSH) |
 | [util.md](util.md) | fiddling, `cyclic_metasploit`, **`mbruteforce`** (PoW), proc, net, hashes |
 | [misc.md](misc.md) | vá/dựng ELF, tube↔tube, `listen`, context sâu, `atexit`, `adb`, lệnh `pwn ...` |
+| **[pwnld.md](pwnld.md)** | **wrapper của repo** (`from pwnld import *`): `start/GDB/set_*`, macro IO, `leak_*_p/s`, `fmtstr_pos` |
 
 ## Khung exploit tối thiểu (dùng xuyên suốt)
 

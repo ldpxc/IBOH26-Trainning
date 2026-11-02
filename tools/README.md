@@ -7,7 +7,7 @@ vào `~/.local/bin/`. Sửa bản chạy → nhớ copy lại vào đây.
 
 Lớp helper mỏng bọc pwntools (`from pwnld import *`). Tra cứu nhanh trong terminal:
 `python3 pwnld.py --help` (theo chủ đề: `--help start|modes|io|leaks|fmt|retry`, hoặc
-`--help all`). Bản tham chiếu đầy đủ: [`pwnld.md`](pwnld.md).
+`--help all`). Bản tham chiếu đầy đủ: [`cheatsheets/pwn/pwntools/pwnld.md`](../cheatsheets/pwn/pwntools/pwnld.md).
 
 ## [`genscr`](genscr)
 
