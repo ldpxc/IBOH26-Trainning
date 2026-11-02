@@ -64,6 +64,41 @@ byte xấu, khó sửa; `shellcraft` sinh đúng arch và chỉnh được.
 
 ---
 
+## Đa kiến trúc (ARM / AArch64 / MIPS)
+
+**Công dụng:** sinh shellcode cho kiến trúc khác (bài embedded/mobile/router).
+**Lưu ý:** đổi arch phải set **cả `bits` (và `endian` cho MIPS)**, nếu không template lỗi
+`KeyError (64, 'arm', ...)`.
+
+```python
+# SINH SOURCE (text asm) — không cần assembler ngoài:
+with context.local(arch='arm', bits=32):
+    src = shellcraft.sh()                 # text asm ARM
+with context.local(arch='aarch64'):       # aarch64 = 64-bit (khỏi set bits)
+    src = shellcraft.sh()
+with context.local(arch='mips', bits=32, endian='big'):
+    src = shellcraft.sh()
+
+# BIÊN DỊCH ra bytes: cần cross-binutils của arch đó
+#   sudo apt install binutils-arm-linux-gnueabi binutils-mips-linux-gnu ...
+with context.local(arch='arm', bits=32):
+    sc = asm(shellcraft.sh())             # cần 'arm-linux-gnueabi-as'
+```
+
+| arch | `bits` | ghi chú |
+|------|--------|---------|
+| `i386` | 32 | x86 32-bit |
+| `amd64` | 64 | mặc định |
+| `arm` | 32 | cần binutils-arm để `asm()` |
+| `thumb` | 32 | ARM thumb |
+| `aarch64` | 64 | ARM 64-bit |
+| `mips` | 32 | thêm `endian='big'`/`'little'` |
+
+> Verify: sinh **source** ARM/MIPS/AArch64 chạy được (text). `asm()` cho ARM/MIPS cần cài
+> cross-binutils — trên máy chưa cài sẽ báo `Could not find 'as'`.
+
+---
+
 ## `disasm()` — bytes → asm (đọc ngược)
 
 ```python

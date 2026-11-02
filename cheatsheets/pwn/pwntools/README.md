@@ -15,8 +15,12 @@ IO với tiến trình/remote, đọc ELF/libc, dựng ROP/SROP, format string, 
 | [elf.md](elf.md) | `ELF()`, `sym/got/plt/address`, `.search/.read`, `checksec`, `libc`, `Core()` |
 | [rop.md](rop.md) | `ROP()`, `call/setregs/find_gadget/chain/dump/migrate`, **SROP** `SigreturnFrame`, **ret2dlresolve** |
 | [fmt.md](fmt.md) | `fmtstr_payload`, `FmtStr`, `fmtstr_split` (+ trỏ sang [`pwnld` fmtstr_pos](../../../tools/pwnld.md#5-ghi-bằng-format-string-fmt)) |
-| [shellcode.md](shellcode.md) | `shellcraft.*`, `asm/disasm`, `constants`, `make_elf` |
+| [shellcode.md](shellcode.md) | `shellcraft.*` (đa arch), `asm/disasm`, `constants`, `make_elf` |
 | [context.md](context.md) | `context(...)`, `gdb.debug/attach`, `log`, `pause/align/more` |
+| [advanced.md](advanced.md) | **DynELF**, **libcdb**, **ret2csu**, **encoders** (né badchar), **gdb api=True** |
+| [ssh.md](ssh.md) | `ssh()`, `process/run/download/upload/libs`, port-forward (bài qua SSH) |
+| [util.md](util.md) | fiddling, `cyclic_metasploit`, **`mbruteforce`** (PoW), proc, net, hashes |
+| [misc.md](misc.md) | vá/dựng ELF, tube↔tube, `listen`, context sâu, `atexit`, `adb`, lệnh `pwn ...` |
 
 ## Khung exploit tối thiểu (dùng xuyên suốt)
 
@@ -43,5 +47,12 @@ p.interactive()
 | **No PIE, Partial RELRO, không leak libc** | **ret2dlresolve** `Ret2dlresolvePayload` ([rop](rop.md#ret2dlresolve)) |
 | **Format string ghi/đọc** | `fmtstr_payload`, `FmtStr` ([fmt](fmt.md)) |
 | **Leak địa chỉ qua output** | `recvuntil/recvline` + `u64(...ljust)` ([tubes](tubes.md), [packing](packing.md)) |
-| **Debug tại chỗ** | `gdb.debug/gdb.attach` ([context](context.md)) |
+| **Debug tại chỗ** | `gdb.debug/gdb.attach`, `api=True` ([context](context.md), [advanced](advanced.md)) |
 | **Core dump leak thanh ghi** | `Core()` ([elf](elf.md#core--đọc-core-dump)) |
+| **Arbitrary read, không có file libc** | **`DynELF`** ([advanced](advanced.md#dynelf--resolve-symbol-không-cần-file-libc)) |
+| **Leak vài offset libc → biết phiên bản** | **`libcdb`** ([advanced](advanced.md#libcdb--nhận-diện-phiên-bản-libc-từ-leak)) |
+| **Thiếu gadget pop (dynamic no-PIE)** | **`ROP.ret2csu`** ([advanced](advanced.md#ropret2csu--gọi-hàm-nhiều-tham-số-khi-thiếu-gadget)) |
+| **Input lọc null / chỉ chữ-số** | **`encoders`** ([advanced](advanced.md#encoders--né-byte-xấu--shellcode-ascii)) |
+| **Service bắt Proof-of-Work** | **`iters.mbruteforce`** ([util](util.md#iters--brute-force-nhất-là-proof-of-work)) |
+| **Challenge qua SSH / lấy libc server** | `ssh()` ([ssh](ssh.md)) |
+| **Pwn ARM/MIPS/Android** | `shellcraft` đa arch ([shellcode](shellcode.md#đa-kiến-trúc-arm--aarch64--mips)), `adb` ([misc](misc.md#adb--android-bài-mobile-pwn)) |
