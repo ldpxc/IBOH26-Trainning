@@ -441,57 +441,186 @@ def GDB():
         lw(f"[pwnld] GDB attach failed: {e}")
 
 
-def leak_all(offset=0x00, until=None, drop=None, Leak=None):
-    leak = 0xDEADBEEF
-    base = 0xCAFEBABE
-    if Leak != None:
-        leak = Leak
-        base = leak - offset
-    elif drop == None:
+# ===== LEAK =====
+# Quy luật 1 dòng:  leak_<vùng>_<kiểu in>(offset, until, ...)
+#   <vùng>  = libc | bin | stack | heap   -> quyết định rebase cái gì
+#   <kiểu>  = p | s                        -> quyết định parse thế nào
+#     _p : binary in bằng %p/%lx/%x -> CHUỖI hex "0x..."  -> int(x, 16)
+#     _s : binary in bằng %s        -> BYTE thô           -> uu64(bytes)
+# Nhìn tên là biết, không còn tham số `drop` mang 2 nghĩa.
+
+
+def _grab_p(until, end):
+    """Đọc 1 token hex kiểu %p: nuốt tới `until`, lấy tới `end`, int base 16."""
+    if until is not None:
         ru(until)
-        leak = uu64(rl()[:-1])
-        base = leak - offset
-    else:
+    return int(ru(end, drop=True), 16)
+
+
+def _grab_s(until, n):
+    """Đọc địa chỉ byte thô kiểu %s: nuốt tới `until`.
+    n=0 -> lấy nguyên 1 dòng bỏ '\\n' (mặc định); n>0 -> lấy đúng n byte."""
+    if until is not None:
         ru(until)
-        leak = int(ru(drop, drop=True), 16)
-        base = leak - offset
+    data = rc(n) if n else rl()[:-1]
+    return uu64(data)
+
+
+def _rebase(tag, leak, offset, rebase):
+    """In log + tính base = leak - offset + gán vào đúng vùng."""
+    base = leak - offset
+    li(f"{tag} LEAK ==== {hex(leak)}")
+    li(f"{tag} BASE ==== {hex(base)}")
+    if rebase:
+        if tag == "BINARY" and context.binary is not None:
+            context.binary.address = base  # = exe.address; exe.sym/exe.got tự đúng
+        elif tag == "LIBC" and LIBC is not None:
+            LIBC.address = base  # libc.sym.system/binsh ... tự đúng
+        elif tag == "STACK":
+            CFG.STACK_BASE = base  # không phải ELF -> lưu CFG.STACK_BASE
+        elif tag == "HEAP":
+            CFG.HEAP_BASE = base  # không phải ELF -> lưu CFG.HEAP_BASE
     return leak, base
+
+
+# ---- %p / %lx / %x : chuỗi hex "0x..." (offset, until, end='\n') ----
+def leak_libc_p(offset=0x00, until=None, end=b"\n", rebase=True):
+    return _rebase("LIBC", _grab_p(until, end), offset, rebase)
+
+
+def leak_bin_p(offset=0x00, until=None, end=b"\n", rebase=True):
+    return _rebase("BINARY", _grab_p(until, end), offset, rebase)
+
+
+def leak_stack_p(offset=0x00, until=None, end=b"\n", rebase=True):
+    return _rebase("STACK", _grab_p(until, end), offset, rebase)
+
+
+def leak_heap_p(offset=0x00, until=None, end=b"\n", rebase=True):
+    return _rebase("HEAP", _grab_p(until, end), offset, rebase)
+
+
+# ---- %s : byte thô (offset, until, n=0 -> cả dòng bỏ '\n') ----
+def leak_libc_s(offset=0x00, until=None, n=0, rebase=True):
+    return _rebase("LIBC", _grab_s(until, n), offset, rebase)
+
+
+def leak_bin_s(offset=0x00, until=None, n=0, rebase=True):
+    return _rebase("BINARY", _grab_s(until, n), offset, rebase)
+
+
+def leak_stack_s(offset=0x00, until=None, n=0, rebase=True):
+    return _rebase("STACK", _grab_s(until, n), offset, rebase)
+
+
+def leak_heap_s(offset=0x00, until=None, n=0, rebase=True):
+    return _rebase("HEAP", _grab_s(until, n), offset, rebase)
+
+
+# ---- Rebase trực tiếp khi bạn đã có sẵn int (parse tay hoặc nguồn khác) ----
+def rebase_libc(leak, offset=0x00, rebase=True):
+    return _rebase("LIBC", leak, offset, rebase)
+
+
+def rebase_bin(leak, offset=0x00, rebase=True):
+    return _rebase("BINARY", leak, offset, rebase)
+
+
+def rebase_stack(leak, offset=0x00, rebase=True):
+    return _rebase("STACK", leak, offset, rebase)
+
+
+def rebase_heap(leak, offset=0x00, rebase=True):
+    return _rebase("HEAP", leak, offset, rebase)
+
+
+# ---- [tương thích ngược] API cũ: leak_<vùng>(offset, until, drop, Leak).
+# Giữ để script cũ chạy; code mới dùng _p/_s. drop!=None -> hex, drop=None -> %s.
+def _legacy(tag, offset, until, drop, Leak, rebase):
+    if Leak is not None:
+        return _rebase(tag, Leak, offset, rebase)
+    if drop is not None:
+        return _rebase(tag, _grab_p(until, drop), offset, rebase)
+    return _rebase(tag, _grab_s(until, 0), offset, rebase)
 
 
 def leak_libc(offset=0x00, until=None, drop=None, Leak=None, rebase=True):
-    leak, base = leak_all(offset, until, drop, Leak)
-    li(f"LIBC LEAK ==== {hex(leak)}")
-    li(f"LIBC BASE ==== {hex(base)}")
-    if rebase and LIBC is not None:
-        LIBC.address = base  # libc.sym.system, libc.sym.binsh ... tự đúng
-    return leak, base
-
-
-def leak_stack(offset=0x00, until=None, drop=None, Leak=None, rebase=True):
-    leak, base = leak_all(offset, until, drop, Leak)
-    li(f"STACK LEAK ==== {hex(leak)}")
-    li(f"STACK BASE ==== {hex(base)}")
-    if rebase:
-        CFG.STACK_BASE = base  # không phải ELF → lưu vào CFG, dùng CFG.STACK_BASE
-    return leak, base
+    return _legacy("LIBC", offset, until, drop, Leak, rebase)
 
 
 def leak_bin(offset=0x00, until=None, drop=None, Leak=None, rebase=True):
-    leak, base = leak_all(offset, until, drop, Leak)
-    li(f"BINARY LEAK ==== {hex(leak)}")
-    li(f"BINARY BASE ==== {hex(base)}")
-    if rebase and context.binary is not None:
-        context.binary.address = base  # = exe.address; exe.sym/exe.got tự đúng
-    return leak, base
+    return _legacy("BINARY", offset, until, drop, Leak, rebase)
+
+
+def leak_stack(offset=0x00, until=None, drop=None, Leak=None, rebase=True):
+    return _legacy("STACK", offset, until, drop, Leak, rebase)
 
 
 def leak_heap(offset=0x00, until=None, drop=None, Leak=None, rebase=True):
-    leak, base = leak_all(offset, until, drop, Leak)
-    li(f"HEAP LEAK ==== {hex(leak)}")
-    li(f"HEAP BASE ==== {hex(base)}")
-    if rebase:
-        CFG.HEAP_BASE = base  # không phải ELF → lưu vào CFG, dùng CFG.HEAP_BASE
-    return leak, base
+    return _legacy("HEAP", offset, until, drop, Leak, rebase)
+
+
+# ===== FMT ghi qua con trỏ CÓ SẴN trên stack =====
+# fmtstr_payload/FmtStr chỉ ghi vào ĐỊA CHỈ (nhúng addr vào buffer). Khi ô stack thứ
+# `pos` ĐÃ chứa sẵn con trỏ đích và bạn muốn ghi *qua* nó (kiểu %pos$hn) thì chúng
+# chịu — dùng hàm này. Điều kiện: stack[pos] trỏ tới nơi cần ghi.
+_FMT_CONV = {1: "hhn", 2: "hn", 4: "n", 8: "lln"}
+_FMT_MASK = {1: 0xFF, 2: 0xFFFF, 4: 0xFFFFFFFF, 8: 0xFFFFFFFFFFFFFFFF}
+
+
+def fmtstr_pos(pos, value, size=2, written=0, star=None, form="short", consumed=0):
+    """Sinh payload ghi `value` (lấy `size` byte thấp) vào *stack[pos].
+
+    pos     : vị trí positional của con trỏ đích trên stack (vd 41 -> %41$hn).
+    value   : giá trị cần ghi (tự lấy `size` byte thấp).
+    size    : 1=%hhn 2=%hn(mặc định) 4=%n 8=%lln — số byte ghi.
+    written : số ký tự printf đã in trước đoạn này (như numbwritten).
+    form    : 'short' (mặc định) -> positional %pos$conv. Ngắn, hợp 1 phát ghi lẻ.
+              'full'  -> tuần tự %c...%conv, KHÔNG dùng '$'. BẮT BUỘC cho phát ghi chạy
+                        TRƯỚC và phải được một %n$ positional sau QUAN SÁT (vd dựng con
+                        trỏ trên stack rồi ghi xuyên qua nó): bất kỳ '$' nào cũng khiến
+                        glibc chụp-trước toàn bộ con trỏ -> short form phá vỡ chuỗi.
+    consumed: (chỉ form='full') số arg printf đã TIÊU THỤ trước đoạn này, để đếm %c cho
+              trúng `pos`. Sau đoạn này: consumed := pos, written := value & mask.
+    star    : (chỉ form='short') lấy ĐỘ RỘNG từ stack[star] bằng %*star$c thay vì in pad
+              trực tiếp; khi đó nhớ nhét `value` vào ô stack[star] (payload khác/buf gửi
+              sau). Dùng khi value quá lớn, không muốn in hàng chục nghìn ký tự.
+
+    Trả về bytes. Một đích/1 lần gọi; nhiều đích thì nối nhiều lần (tự cộng dồn written,
+    và với form='full' cộng dồn cả consumed).
+    """
+    conv = _FMT_CONV[size]
+    mask = _FMT_MASK[size]
+    if form not in ("short", "full"):
+        raise ValueError("form phải là 'short' hoặc 'full'")
+
+    if form == "full":
+        if star is not None:
+            raise ValueError("star sinh %*N$c (có '$') nên chỉ hợp form='short'")
+        k = pos - 1 - consumed  # số directive tiêu thụ trước %conv
+        if k < 0:
+            raise ValueError(
+                f"đã tiêu thụ {consumed} arg, không đếm tuần tự tới pos={pos} được; "
+                "dùng form='short'"
+            )
+        target = value & mask
+        if k == 0:  # pos ngay arg kế -> không chèn width mà không tiêu thụ thêm
+            if (target - written) % (mask + 1):
+                raise ValueError("form='full' k==0: cần written==value (pad từ đoạn trước)")
+            return f"%{conv}".encode()
+        # (k-1) ký %c (mỗi cái in 1 ký tự) + 1 ký %Wc bù cho đủ `target`
+        W = (target - written - (k - 1)) % (mask + 1)
+        if W < 1:
+            W += mask + 1  # %Wc in >=1 ký tự, không hạ về 0 được
+        return b"%c" * (k - 1) + f"%{W}c%{conv}".encode()
+
+    # form == "short"
+    if star is not None:
+        return f"%*{star}$c%{pos}${conv}".encode()
+    pad = (value & mask) - written
+    pad %= mask + 1
+    head = f"%{pad}c" if pad else ""
+    return (head + f"%{pos}${conv}").encode()
 
 
 # ===== Re-export common pwntools names so `from pwnld import *` works as you expect =====
@@ -502,6 +631,22 @@ __all__ = [
     "set_ssh",
     "set_gdbscript",
     "GDB",
+    # leak mới: leak_<vùng>_<p|s>
+    "leak_libc_p",
+    "leak_bin_p",
+    "leak_stack_p",
+    "leak_heap_p",
+    "fmtstr_pos",
+    "leak_libc_s",
+    "leak_bin_s",
+    "leak_stack_s",
+    "leak_heap_s",
+    # rebase trực tiếp từ int có sẵn
+    "rebase_libc",
+    "rebase_bin",
+    "rebase_stack",
+    "rebase_heap",
+    # [tương thích ngược] API cũ
     "leak_libc",
     "leak_stack",
     "leak_bin",
@@ -560,3 +705,251 @@ __all__ = [
     "FmtStr",
     "shellcraft",
 ]
+
+
+# ===== CLI: `pwnld.py --help` in cheatsheet (chỉ khi chạy trực tiếp) =====
+# Cú pháp dòng:  @ = banner đầu | # = tiêu đề khung | ~ = ghi chú (in mờ) | còn lại = code
+_HELP = r"""@pwnld — lớp helper mỏng bọc pwntools. Trong exploit:  from pwnld import *
+
+#1. KHUNG EXPLOIT  (thứ tự chuẩn của 1 script)
+  context.binary = exe = ELF("./chall")
+~   nạp binary; từ đây có exe.sym / exe.got / exe.plt / exe.address.
+  libc = get_libc()
+~   tự tìm file libc trong thư mục hiện tại (local) để có libc.sym.system, binsh...
+  p = start()
+~   MỞ tiến trình/kết nối theo MODE ở dòng lệnh (xem khung 2). Trả về tube, gán vào p.
+  GDB()
+~   chỉ attach GDB khi MODE bật cờ attach; đặt ngay sau start(), trước khi gửi payload.
+  ... (gửi payload) ...
+  ia()
+~   interactive() — giao shell cho bạn gõ tay. Thường đặt cuối.
+
+#2. MODE  ->  chạy:  ./exploit.py <MODE>     (không truyền = 00)
+~   2 chữ số = (ĐÍCH)(GDB).  Chữ 1: 0 local, 1 ssh.  Chữ 2: 0 không attach, 1 attach.
+  00  local,          không GDB      (mặc định, chạy nhanh)
+  01  local,          CÓ GDB         (debug local)
+  10  ssh,            không GDB
+  11  ssh,            CÓ GDB
+  2   remote TCP (netcat) — không attach được, chỉ gửi/nhận
+
+#3. KHAI BÁO ĐÍCH & GDB  (gọi TRƯỚC start())
+  set_remote("host", 1337)
+~   đặt host:port cho MODE 2 (remote TCP).
+  set_ssh("host","user","pass","/path/chall", port=22, keyfile=None)
+~   đặt thông tin SSH cho MODE 10/11.
+  set_gdbscript("b*main\nc")
+~   lệnh gdb chạy khi GDB() attach (đặt breakpoint, lệnh init...).
+
+#4. GỬI / NHẬN  (x nhận str, bytes hay int đều được — tự chuẩn hoá)
+~   GỬI:  s=send  sl=sendline  sa=sendafter  sla=sendlineafter   (+n = thêm \n cuối)
+  sla("prompt> ", payload)
+~     chờ thấy "prompt> " rồi gửi payload kèm xuống dòng  (hay dùng nhất).
+  s(x)   sl(x)   sa(delim, x)
+~   NHẬN:
+  ru(x [,drop])
+~     recvuntil: đọc tới khi gặp x; drop=True để bỏ luôn x khỏi kết quả.
+  rc(n)          đọc đúng n byte       rl()  đọc 1 dòng       ra([t])  đọc tới EOF
+~   TIỆN:  uu64(b)/uu32(b) = unpack có tự chèn \0 cho đủ 8/4 byte (khỏi lo thiếu byte).
+~          li/ls/lw/le = log info/success/warn/error.  flat, p64, cyclic... (từ pwntools).
+
+#5. LEAK + REBASE   tên hàm:  leak_<vùng>_<kiểu>(offset, until, ...)
+~   <vùng> = libc | bin | stack | heap  -> quyết định rebase CÁI GÌ.
+~   <kiểu>  = CHỌN THEO cách binary IN địa chỉ ra (đây là chỗ hay nhầm):
+~     _p  khi binary in bằng %p / %lx / %x  -> ra CHỮ hex "0x55..."  -> int(x,16)
+~     _s  khi binary in bằng %s             -> ra BYTE thô 6 byte    -> uu64(bytes)
+  leak_bin_p(0x1267, "You said: ")
+~     output "You said: 0x55..\n": đọc sau "You said: ", lấy số hex TỚI end -> trừ offset.
+~   end = ký tự THẬT ngay SAU số (mặc định "\n"). Chỉ đổi khi số không kết bằng xuống dòng:
+  leak_bin_p(0x1267, "addr=", end=")")
+~     cho output "addr=0x55..)" — lấy tới ')'.  (end sai/không có trong stream -> TREO!)
+  leak_libc_s(0x1ec980, "data: ", n=6)
+~     binary in %s (byte thô): đọc sau "data: " đúng n=6 byte (n=0 = cả dòng, bỏ '\n').
+  rebase_bin(leak, offset)        rebase_libc / rebase_stack / rebase_heap
+~     khi bạn ĐÃ có số leak (parse tay) -> chỉ cần rebase, không đọc nữa.
+~   stack/heap không phải ELF -> base lưu ở CFG.STACK_BASE / CFG.HEAP_BASE mà dùng.
+~   [API cũ còn chạy] leak_bin(offset, until, drop, Leak): có drop->%p, không drop->%s.
+
+#6. GHI BẰNG FORMAT STRING   (2 hàm cho 2 TÌNH HUỐNG khác nhau)
+  fmtstr_payload(offset, writes, numbwritten=0, write_size='byte')   # của pwntools
+~   DÙNG KHI: bạn BIẾT ĐỊA CHỈ đích (GOT, ret, biến). Nó nhúng addr vào payload rồi %n.
+~   offset      = ô stack nơi CHUỖI payload của bạn bắt đầu (dò %p.%p... hoặc FmtStr).
+~   writes      = dict {địa_chỉ: giá_trị}, ghi NHIỀU đích cùng lúc: {got_a:x, got_b:y}.
+~   numbwritten = số ký tự printf đã in TRƯỚC payload (vd prompt bị %n đếm chung) -> trừ pad.
+~   write_size  = 'byte'|'short'|'int' = ghi theo %hhn|%hn|%n (từng 1|2|4 byte một lần %n).
+~                 'byte' (mặc định) an toàn nhất: pad nhỏ, ít kẹt, nhưng payload DÀI hơn.
+~   trả về bytes; ghi 1/2/4/8 byte tuỳ value, tự tách thành nhiều %n & sắp thứ tự tăng dần.
+~   nâng cao (ít dùng): badbytes=frozenset(b'...') né byte xấu · no_dollars=True khi binary
+~     CẤM ký tự '$' (không dùng %N$) · offset_bytes lệch byte trong ô · strategy/overflows.
+  fmtstr_pos(pos, value, size=2, written=0, star=None, form="short", consumed=0)  # pwnld
+~   DÙNG KHI: ô stack thứ `pos` ĐÃ chứa sẵn con trỏ đích -> ghi XUYÊN qua nó (%pos$hn).
+~     (fmtstr_payload KHÔNG làm được: nó chỉ ghi vào addr do chính nó NHÚNG vào buffer;
+~      ở đây con trỏ đích là của chương trình, nằm sẵn trên stack — ta mượn lại.)
+~   pos      = vị trí positional của Ô STACK đang giữ con trỏ đích. Dò bằng %p: nếu
+~              "%6$p" rò ra con trỏ bạn cần thì pos=6. (value sẽ ghi vào *stack[pos].)
+~   value    = giá trị cần ghi; tự lấy `size` byte thấp (ghi 2 byte -> value & 0xffff).
+~   size     = 1|2|4|8 -> %hhn|%hn|%n|%lln. Nhỏ: pad ít, ít kẹt byte xấu, payload dài;
+~              lớn: 1 phát xong nhưng pad có thể lên hàng chục nghìn ký tự.
+~   written  = số ký tự printf ĐÃ in TRƯỚC đoạn này (prompt in kèm, hoặc %n phát trước) ->
+~              trừ vào pad cho đếm đúng. Nối nhiều phát: written phát sau = TỔNG ký tự các
+~              phát trước đã in (vd phát trước in 0xa8 ký tự -> written=0xa8).
+~   form     = 'short' (mặc định): %<pad>c%pos$hn  — ngắn gọn, hợp 1 phát ghi lẻ.
+~              'full' : %c..%c%<pad>c%hn  — KHÔNG '$', tới `pos` bằng đếm tuần tự. BẮT BUỘC
+~              cho phát ghi phải chạy TRƯỚC rồi bị một %n$ positional sau QUAN SÁT (ghi móc
+~              xích: phát 1 dựng/sửa con trỏ trên stack, phát 2 ghi xuyên con trỏ đó). Lý do:
+~              hễ có '$' là glibc chụp-TRƯỚC mọi con trỏ -> short sẽ ghi bằng con trỏ CŨ (chưa
+~              kịp sửa) -> hỏng chuỗi. Phát ghi CUỐI (không ai quan sát) để 'short' là được.
+~   consumed = (chỉ form='full') số arg printf ĐÃ tiêu thụ trước đoạn này, để đếm %c cho
+~              trúng pos. Sau 1 phát 'full' tới pos: consumed := pos (truyền cho phát kế).
+~   star     = (chỉ form='short') N -> %*N$c%pos$hn: lấy ĐỘ RỘNG từ ô stack[N] thay vì in
+~              pad trực tiếp; khi đó nhớ nhét `value` vào ô stack[N]. Dùng khi value quá lớn.
+~   -> TRẢ VỀ bytes sẵn; nhiều đích thì nối bằng flat()/+ ; KHỎI .encode().
+  # --- VÍ DỤ THỰC TẾ (theo tham số) ---
+  # pos: ghi 1 phát khi con trỏ đích ĐÃ nằm ở ô stack 38 (size=2 mặc định):
+  payload = fmtstr_pos(38, exe.address + 0x2f0)                 # b"%<pad>c%38$hn"
+  # size + written: value lớn -> ghi TỪNG BYTE nhiều ô liên tiếp, cộng dồn written:
+  payload  = fmtstr_pos(38, 0xef, size=1)                       # byte thấp, in 0xef ký tự
+  payload += fmtstr_pos(39, 0x9f, size=1, written=0xef)         # byte kế, trừ 0xef đã in
+  # star: value khổng lồ -> lấy ĐỘ RỘNG từ ô stack[14] (nhớ nhét value thật vào ô 14):
+  payload = fmtstr_pos(38, 0, star=14)                          # b"%*14$c%38$hn"
+  # form/consumed: ghi móc xích 2 tầng (stack-pointer-overwrite):
+  #   phát 1 FULL (chạy trước) dựng con trỏ ô 10 -> saved-rip; phát 2 SHORT ghi xuyên ô 14:
+  payload = flat(fmtstr_pos(10, 0xa8, size=1, form="full"),            # written=0, consumed=0
+                 fmtstr_pos(14, exe.sym.get_shell + 5, written=0xa8))  # in sau 0xa8 ký tự
+  # fmtstr_payload (khi BIẾT địa chỉ đích): off = ô bắt đầu payload (dò %p):
+  payload = fmtstr_payload(6, {exe.got.puts: exe.sym.win})
+  # numbwritten: prompt in sẵn vài ký tự trước payload -> trừ vào pad:
+  payload = fmtstr_payload(6, {exe.got.exit: exe.sym.win}, numbwritten=len("Name: "))
+
+#7. RETRY khi exploit xác suất   from pwnretry import retry, got_shell, got_flag
+  retry(attempt, tries=200)
+~   chạy lại attempt(i) tới khi nó trả True (vd leak 50% đúng, ASLR brute...).
+~   BẪY: binary có sleep/delay trước shell -> got_shell(timeout=>delay),
+~        mặc định 0.3s sẽ bỏ cuộc trước khi shell hiện -> báo trượt oan dù payload đúng.
+"""
+
+
+# Bản đồ chủ đề -> (các) mục #N trong _HELP, và tóm tắt 1 dòng cho trang tổng quan.
+_TOPICS = {
+    "start": (["1", "3"], "khung exploit, cấu hình đích/GDB, start()"),
+    "modes": (["2"], "00/01/10/11/2: local, SSH, remote"),
+    "io": (["4"], "gửi, nhận, unpack, log"),
+    "leaks": (["5"], "leak dạng hex/byte và rebase"),
+    "fmt": (["6"], "fmtstr_payload và fmtstr_pos (ghi qua format string)"),
+    "retry": (["7"], "thử lại exploit có xác suất"),
+}
+
+_OVERVIEW = r"""=pwnld
+~  Helper pwntools cho exploit. Trong script:  from pwnld import *
+
+=Bắt đầu nhanh
+  context.binary = exe = ELF("./chall")
+  p = start()          # chọn mode khi chạy exploit
+  GDB()                # attach nếu mode bật cờ GDB
+  ia()                 # tương tác với tiến trình
+
+=Tra cứu theo chủ đề
+{topics}
+
+~  pwnld.py --help fmt    xem chi tiết một chủ đề
+~  pwnld.py --help all    xem toàn bộ
+"""
+
+
+def _split_sections(text):
+    """Tách _HELP thành {số-mục: khối-text} theo dòng '#N. ...'."""
+    import re as _re
+
+    out, cur, buf = {}, None, []
+    for line in text.strip("\n").splitlines():
+        m = _re.match(r"#(\d+)\.", line)
+        if m:
+            if cur:
+                out[cur] = "\n".join(buf)
+            cur, buf = m.group(1), [line]
+        elif cur is not None:
+            buf.append(line)
+    if cur:
+        out[cur] = "\n".join(buf)
+    return out
+
+
+def _print_help(topic=None):
+    import os, shutil, re as _re
+
+    width = max(40, shutil.get_terminal_size((88, 24)).columns - 2)
+    color = (
+        sys.stdout.isatty()
+        and os.environ.get("TERM") not in (None, "dumb")
+        and "NO_COLOR" not in os.environ
+    )
+    # Tông HackTheBox: xanh lá neon #9FEF00 (truecolor) cho cấu trúc + ĐỎ cho định danh.
+    TITLE = "\033[1;30;48;2;159;239;0m"  # chữ ĐEN đậm / nền xanh HTB #9FEF00 (tương phản cao)
+    BORDER = "\033[38;2;159;239;0m"      # viền xanh HTB #9FEF00
+    GREENB = "\033[1;38;2;159;239;0m"    # chữ xanh HTB đậm (tiêu đề phẳng + tên chủ đề)
+    NOTE = "\033[38;2;130;190;40m"       # ghi chú xanh lá dịu hơn chút (phân cấp, vẫn rõ)
+    CODE = "\033[1;38;2;255;85;85m"      # tên hàm/định danh — đỏ tươi #ff5555
+    R = "\033[0m"
+
+    def frame(title):
+        label = f" {title} "
+        left, right = "╭─", "─╮"
+        fill = "─" * max(0, width - len(left) - len(label) - len(right))
+        if color:
+            return BORDER + left + R + TITLE + label + R + BORDER + fill + right + R
+        return left + label + fill + right
+
+    def render(text):
+        out = []
+        for line in text.strip("\n").splitlines():
+            if line.startswith("@"):  # banner nền xanh (trang 'all')
+                s = line[1:]
+                out.append(TITLE + " " + s.ljust(width - 1) + R if color else s)
+            elif line.startswith("="):  # tiêu đề phẳng (không khung)
+                s = line[1:]
+                out.append(GREENB + s + R if color else s)
+            elif line.startswith(">"):  # dòng chủ đề:  >tên|tóm tắt
+                name, _, summ = line[1:].partition("|")
+                if color:
+                    out.append("  " + GREENB + name.ljust(8) + R + "  " + NOTE + summ + R)
+                else:
+                    out.append(f"  {name.ljust(8)}  {summ}")
+            elif line.startswith("#"):  # khung có viền
+                out.append(frame(line[1:]))
+            elif line.startswith("~"):  # ghi chú mờ
+                out.append(NOTE + line[1:] + R if color else line[1:])
+            else:  # thân: tô đỏ các định danh quen thuộc
+                if color:
+                    line = _re.sub(
+                        r"(leak_[a-z]+_[ps]|rebase_[a-z]+|fmtstr_pos|fmtstr_payload|got_shell|got_flag|get_libc|\bstart\b|\bretry\b|set_[a-z]+|FmtStr|CFG\.[A-Z_]+)",
+                        lambda m: CODE + m.group(0) + R,
+                        line,
+                    )
+                out.append(line)
+        return "\n".join(out)
+
+    topic = (topic or "").lower()
+    if not topic:  # TRANG TỔNG QUAN
+        rows = "\n".join(f">{n}|{d}" for n, (_, d) in _TOPICS.items())
+        print(render(_OVERVIEW.replace("{topics}", rows)))
+        return
+    if topic == "all":  # TOÀN BỘ
+        print(render(_HELP))
+        return
+    if topic in _TOPICS:  # CHI TIẾT 1 CHỦ ĐỀ
+        secs = _split_sections(_HELP)
+        nums, _ = _TOPICS[topic]
+        print(render("\n\n".join(secs[n] for n in nums if n in secs)))
+        return
+    # chủ đề lạ
+    names = " ".join(_TOPICS) + " all"
+    print(render(f"=Không có chủ đề: {topic}\n~  Chủ đề hợp lệ:  {names}"))
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if args and args[0] in ("-h", "--help", "help"):
+        args = args[1:]
+    _topic = args[0] if args else None
+    _print_help(_topic)
+    if _topic is None:
+        print("\n(pwnld là thư viện: `from pwnld import *`. Cờ: --help <chủ đề>|all)")
