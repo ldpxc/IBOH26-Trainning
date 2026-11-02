@@ -3,6 +3,17 @@
 `tube` là kênh IO chung cho `process`, `remote`, `ssh`, `listen`. Mọi hàm `send*/recv*`
 dùng **như nhau** bất kể local hay remote → viết 1 lần, đổi mục tiêu bằng 1 dòng.
 
+> **Cơ chế buffer (nguồn gốc 90% bug IO):** mỗi `recv*` kéo dữ liệu từ một **buffer nội bộ**
+> của tube, không đọc thẳng socket. `recvuntil(b"X")` đọc tới *và gồm cả* `X`, **phần đến sau
+> `X` vẫn nằm lại buffer** cho lần `recv` sau. Hệ quả:
+> - Gọi `recvuntil(b"> ")` rồi `recvline()` → `recvline` lấy đúng phần **sau** prompt. Đúng ý.
+> - Nếu prompt sai 1 ký tự, `recvuntil` đọc mãi tới khi **timeout/EOF** → trông như "treo".
+> - Dữ liệu tới chậm: `recv(n)` trả **những gì đang có ngay** (≤ n), không đợi đủ n.
+>
+> Khi tube đóng (process chết / server ngắt) mà bạn còn đọc → **`EOFError`**. Bọc `try/except
+> EOFError` khi brute/retry. `recv(n, timeout=t)` hết giờ → trả **`b''`** (không raise);
+> `recvn(n, timeout=t)` thiếu byte khi hết giờ → cũng trả **`b''`** (không trả phần lẻ). (đã verify)
+
 ---
 
 ## Mở kênh: `process / remote / ssh / listen`
@@ -120,6 +131,28 @@ with context.local(timeout=0.5):      # đặt timeout cho cả khối
 context.log_level = "debug"           # IN mọi byte gửi/nhận (debug cực mạnh)
 context.log_level = "error"           # tắt log ồn
 ```
+
+---
+
+## Vòng đời tiến trình & lỗi hay gặp
+
+```python
+p.poll()                  # None nếu còn sống; mã thoát nếu đã chết (không chặn)
+p.poll(block=True)        # == p.wait(): chặn tới khi chết, trả exit code
+p.wait_for_close()        # đợi tube đóng
+p.can_recv(timeout=0.1)   # True nếu đang có dữ liệu để đọc (không chặn lâu)
+
+# brute/retry: tube có thể chết giữa chừng -> bắt EOFError
+try:
+    p.sendlineafter(b"> ", payload)
+    leak = u64(p.recvn(6).ljust(8, b"\x00"))
+except EOFError:
+    p.close(); continue    # miss, thử lại (xem exploits/pwn/retry/)
+```
+
+> **send cố định (gotcha):** nếu binary đọc bằng `read(fd, buf, N)` **N byte**, mà bạn
+> `sendline` (thêm `\n`) → `\n` dính vào payload/ở lại buffer, lệch byte kế. Input nhị phân
+> dùng `send`/`sendafter`; chỉ `sendline` khi server đọc **từng dòng** (`fgets`/`scanf("%s")`).
 
 ---
 

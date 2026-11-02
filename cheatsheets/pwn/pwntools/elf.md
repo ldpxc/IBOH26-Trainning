@@ -3,6 +3,16 @@
 Lớp `ELF` cho bạn **tra địa chỉ hàm/GOT/PLT, tìm chuỗi, đọc/ghi section** mà không cần mở
 `objdump/readelf` tay. `Core` đọc core dump để leak thanh ghi.
 
+> **Cơ chế GOT/PLT (hiểu 1 lần dùng mãi):** hàm libc (vd `puts`) không nằm trong binary.
+> - `exe.plt.puts` = đoạn **stub để GỌI** `puts` (code, không ghi được).
+> - `exe.got.puts` = **ô dữ liệu** chứa *địa chỉ thật* của `puts` sau khi loader điền. Ghi được
+>   (nếu RELRO không Full) → đây là **đích của `%n`/ghi-đè**: đổi `got.puts` thành `win`/`system`
+>   là lần gọi `puts` kế tiếp nhảy tới đó.
+> - Vì `got.puts` chứa địa chỉ libc thật → `puts(got.puts)` **leak libc** (in nội dung ô GOT ra).
+>
+> **RELRO** (xem `checksec`): **Partial** = GOT ghi được (đè GOT, ret2dlresolve OK). **Full** =
+> GOT chỉ-đọc sau khi load (phải đổi hướng tấn công: hijack `__free_hook`/`exit_handlers`/FSOP).
+
 ---
 
 ## `ELF(path)` — nạp binary
@@ -60,10 +70,15 @@ ret = next(exe.search(asm("ret"), executable=True))
 ## `.read() / .write()` — đọc/ghi nội dung section
 
 ```python
-exe.read(exe.sym.flag, 32)            # đọc 32 byte tại địa chỉ
-exe.write(exe.sym.key, b"\x00"*8)     # sửa (trên đối tượng ELF, để làm exploit/patch)
-open("patched","wb").write(exe.data)  # lưu ra file đã sửa
+exe.read(exe.sym.flag, 32)            # đọc 32 byte tại địa chỉ (từ ảnh file, KHÔNG phải tiến trình đang chạy)
+exe.write(exe.sym.key, b"\x00"*8)     # sửa trên BẢN SAO in-memory của ELF (không đụng file gốc)
+exe.save("patched")                   # ghi bản đã sửa ra file (hoặc open(...).write(exe.data))
+# tìm nhanh địa chỉ nhiều thứ:
+exe.symbols   exe.got   exe.plt       # dict đầy đủ
+exe.functions['main'].size            # kích thước hàm (từ symbol table)
 ```
+> `exe.read/write` thao tác trên **ảnh tĩnh của file** (giá trị khởi tạo), không phải RAM tiến
+> trình đang chạy. Muốn đọc RAM thật → dùng tube (`recv` sau leak), `Core`, hoặc `gdb`.
 
 ---
 
@@ -101,6 +116,12 @@ core.read(core.rsp, 8)                 # đọc bộ nhớ
 off = cyclic_find(core.read(core.rsp, 8), n=8)   # offset tới chỗ control RSP
 canary = core.read(core.rbp - 8, 8)
 ```
+
+> **Để có core:** cần `ulimit -c unlimited` và `core_pattern` ghi file cạnh (hoặc dùng
+> `p.corefile` — pwntools tự lo). Nếu `core_pattern` đẩy sang `systemd-coredump`/`apport` thì
+> không thấy file `./core` — sửa tạm: `echo core | sudo tee /proc/sys/kernel/core_pattern`.
+> `Core` còn có `.fault_addr` (địa chỉ gây SIGSEGV), `.maps` (bản đồ vùng nhớ), `.libc`/`.exe`
+> (các mapping đã nhận diện) và `.getenv("NAME")` (đọc biến môi trường lúc crash).
 
 **Bản làm tay:** mở core bằng gdb, `info registers`, `x/gx $rsp` — thủ công từng bước.
 

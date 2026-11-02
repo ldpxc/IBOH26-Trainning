@@ -2,6 +2,12 @@
 
 Đổi số ↔ bytes, dựng payload, tìm offset, hexdump, xor. Đây là nhóm dùng **nhiều nhất**.
 
+> **Cơ chế little-endian (phải thuộc):** x86/x64 lưu byte **thấp trước**. Địa chỉ `0x401234`
+> nằm trong bộ nhớ là `34 12 40 00 00 00 00 00`. Vì vậy **không bao giờ** viết địa chỉ bằng
+> tay — `p64` xếp byte đúng chiều cho bạn. `p*`/`u*` lấy mặc định độ rộng & endian từ
+> `context` (set `context.binary = ELF(...)` là xong): 32-bit → số đóng gói 4 byte, 64-bit → 8
+> byte (đã verify: `flat(0x41)` ra 4 byte khi `bits=32`, 8 byte khi `bits=64`).
+
 ---
 
 ## `p64 / p32 / p16 / p8` — số → bytes
@@ -89,6 +95,17 @@ flat({0: b'HEAD', 8: 0xdeadbeef}, length=24)
 # đổi filler thành \x00, đổi endian
 flat({16: 0x41}, length=24, filler=b'\x00', endianness='big')
 ```
+
+**Cơ chế cần nhớ:**
+- `flat` **phẳng hoá đệ quy** list/tuple lồng nhau — tiện gom theo nhóm (đã verify
+  `flat([a,[b,c]]) == flat(a,b,c)`):
+  ```python
+  flat([cyclic(40), [pop_rdi, binsh], exe.plt.system])   # list lồng vẫn nối đúng thứ tự
+  ```
+- Dạng **dict** `{offset: value}`: đặt từng mảnh tại **byte offset tuyệt đối**, khoảng trống
+  giữa chúng được lấp bằng `filler` (mặc định = **cyclic** `b'aaaabaaa...'`, KHÔNG phải `'AAAA'`).
+  Hai mảnh **đè lên nhau** → `flat` ném `ValueError` (đã verify) — chống tự ghi lộn.
+- Số tự `p64`/`p32` theo `context`; `bytes` giữ nguyên; `str` phải tự encode.
 
 **Bản làm tay:**
 ```python
