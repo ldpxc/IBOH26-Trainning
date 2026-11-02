@@ -28,6 +28,8 @@
 | **Canary bypass** | T4 | leak canary (đè byte \0) / brute forking + **writeup pwnld verify ra shell** | [`pwn/canary.md`](pwn/canary.md) |
 | **SROP** | T4 | sigreturn frame set mọi thanh ghi 1 phát + **writeup pwnld verify ra shell** + bài tập | [`pwn/srop.md`](pwn/srop.md) |
 | **Heap** | T6–T7 | allocator, UAF/double-free/tcache poisoning, khác biệt glibc + **2 writeup verify shell (2.31)** | [`pwn/heap.md`](pwn/heap.md) |
+| **Heap trung cấp** | T7 | fastbin dup/unsafe unlink/tcache stashing/large bin/house of spirit (**verify how2heap 2.39**) | [`pwn/heap_intermediate.md`](pwn/heap_intermediate.md) |
+| **Heap nâng cao** | T8 | safe-linking/tcache-key + house of botcake/einherjar/lore/force (**verify 2.39**) | [`pwn/heap_advanced.md`](pwn/heap_advanced.md) |
 | **Hook overwrite** | T10 | `__free_hook`/exit-handler/FSOP + **writeup verify shell (2.23)** + khác biệt glibc | [`pwn/hook_overwrite.md`](pwn/hook_overwrite.md) |
 
 > Khác với `pwn/pwntools/` (tra nhanh API): mục này là **bài giảng** — hiểu *tại sao*, dựng chain
@@ -74,8 +76,8 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 | **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | **[canary.md](pwn/canary.md)** · **[srop.md](pwn/srop.md)** (học sâu), [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
 | **T5** | Shellcoding (ORW seccomp, alphanumeric) | **[seccomp_orw.md](pwn/seccomp_orw.md)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
 | **T6** | Heap intro (UAF, double free, tcache poisoning) | **[heap.md](pwn/heap.md)** (học sâu) |
-| **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | **[heap.md](pwn/heap.md)** |
-| **T8** | Heap nâng cao (safe-linking, house of …) | *(chưa có)* |
+| **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | **[heap_intermediate.md](pwn/heap_intermediate.md)** (học sâu) |
+| **T8** | Heap nâng cao (safe-linking, house of …) | **[heap_advanced.md](pwn/heap_advanced.md)** (học sâu) |
 | **T9** | FILE / FSOP | *(chưa có)* |
 | **T10** | Hijack control-flow (exit handlers, largebin→write) | **[hook_overwrite.md](pwn/hook_overwrite.md)** (học sâu) |
 | **T11+** | Kernel / misc (stretch) | *(chưa có)* |
