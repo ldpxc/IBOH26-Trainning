@@ -151,6 +151,9 @@ rop.migrate(fake_stack)          # dựng: ... ; leave; ret -> rsp = fake_stack
 
 ## SROP — `SigreturnFrame`
 
+> **Học sâu cơ chế (signal/sigreturn, 2-frame, "read trả 15", writeup verify):**
+> [`../srop.md`](../srop.md). Mục này chỉ tra nhanh API.
+
 **Công dụng:** khi **gadget quá ít** nhưng có `syscall` + điều khiển được `rax=15` (sigreturn):
 dựng **một frame** set TẤT CẢ thanh ghi cùng lúc. **Dạng bài:** cực tối giản gadget, shellcode-less.
 
