@@ -23,6 +23,7 @@
 | **ret2csu** | T3 | 2 gadget csu, mapping, ràng buộc + **writeup pwnld verify ra shell** + bài tập | [`pwn/ret2csu.md`](pwn/ret2csu.md) |
 | **Stack pivot** | T3 | rẽ `rsp` sang bss (leave;ret, pop rsp…) + **demo verify ra shell** + 2 cạm bẫy | [`pwn/stack_pivot.md`](pwn/stack_pivot.md) |
 | **ret2shellcode** | T1/T5 | NX off, nhồi shellcode + nhảy (leak / `call rax`) + **verify ra shell** | [`pwn/ret2shellcode.md`](pwn/ret2shellcode.md) |
+| **Seccomp / ORW** | T5 | đọc filter + open-read-write shellcode (execve bị cấm) + **verify đọc flag** | [`pwn/seccomp_orw.md`](pwn/seccomp_orw.md) |
 | **Canary bypass** | T4 | leak canary (đè byte \0) / brute forking + **writeup pwnld verify ra shell** | [`pwn/canary.md`](pwn/canary.md) |
 | **SROP** | T4 | sigreturn frame set mọi thanh ghi 1 phát + **writeup pwnld verify ra shell** + bài tập | [`pwn/srop.md`](pwn/srop.md) |
 
@@ -68,7 +69,7 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 | **T2** | Format string (leak, GOT overwrite) | **[fmtstr.md](pwn/fmtstr.md)** · [fmt](pwn/pwntools/fmt.md) · [pwnld `fmtstr_pos`](pwn/pwntools/pwnld.md) |
 | **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | **[ret2libc.md](pwn/ret2libc.md)** · **[ret2csu.md](pwn/ret2csu.md)** · **[stack_pivot.md](pwn/stack_pivot.md)** (học sâu), [rop](pwn/pwntools/rop.md) |
 | **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | **[canary.md](pwn/canary.md)** · **[srop.md](pwn/srop.md)** (học sâu), [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
-| **T5** | Shellcoding (ORW seccomp, alphanumeric) | [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
+| **T5** | Shellcoding (ORW seccomp, alphanumeric) | **[seccomp_orw.md](pwn/seccomp_orw.md)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
 | **T6** | Heap intro (UAF, double free, tcache poisoning) | *(chưa có — điền khi giải)* |
 | **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | *(chưa có)* |
 | **T8** | Heap nâng cao (safe-linking, house of …) | *(chưa có)* |
