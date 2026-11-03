@@ -54,7 +54,7 @@ Tcache poisoning là **kết quả cuối** của hầu hết bài: dù vào b�
 | **2.26** | thêm **tcache** | tcache poisoning thành đường chính |
 | **2.29** | **tcache key** (chống double-free) | double-free vào tcache bị phát hiện → phải bypass (free qua trung gian / sửa key) |
 | **2.32** | **safe-linking** | `fd` bị **mã hoá**: `fd_lưu = (địa_chỉ_chunk >> 12) XOR fd_thật` → phải mã hoá khi poison |
-| **2.34** | **bỏ `__free_hook`/`__malloc_hook`** | không ghi hook được nữa → chuyển `__free_hook`→ FSOP/`exit` handlers/`_IO` |
+| **2.34** | allocator **ngừng GỌI `__free_hook`/`__malloc_hook`** (symbol có thể vẫn resolve được nhưng vô dụng) | ghi hook không còn tác dụng → chuyển FSOP/`exit` handlers/`_IO` |
 
 **Hệ quả thực tế:** bài local là **2.31** → **có tcache key** (double-free cần lách) nhưng **CHƯA
 safe-linking** (ghi `fd = &__free_hook` thẳng, raw) và **còn `__free_hook`**. Trên máy bạn
