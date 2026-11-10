@@ -32,17 +32,51 @@ import itertools
 import os
 import re
 import signal
+import sys
 import threading
 import time
 
 from pwn import log, remote, u32, u64  # pwntools (đã có sẵn trong môi trường)
 
-__all__ = ["retry", "retry_parallel", "got_shell", "got_flag", "marker", "Session", "AttemptTimeout"]
+__all__ = ["retry", "retry_parallel", "got_shell", "got_flag", "marker",
+           "Session", "AttemptTimeout", "make_flag_pattern", "pull_flag", "emit_flag"]
 
 # log ngắn gọn
 li = log.info
 ls = log.success
 lw = log.warning
+
+
+_emitted_flags = set()
+
+
+def emit_flag(flag):
+    """Phát cờ theo giao thức chuẩn [FLAG] <flag> ra stdout để Runner bắt tức thời."""
+    global _emitted_flags
+    try:
+        if not flag or isinstance(flag, bool):
+            return
+        if hasattr(flag, 'recv') or hasattr(flag, 'close'):  # tube object
+            return
+        if isinstance(flag, (bytes, bytearray)):
+            s = flag.decode('utf-8', errors='replace')
+        else:
+            s = str(flag)
+        s = s.strip()
+        if s.endswith("\\n'"): s = s[:-3]
+        elif s.endswith("\\r\\n'"): s = s[:-5]
+        elif s.endswith("'") and not s.startswith("'"): s = s[:-1]
+        elif s.endswith('"') and not s.startswith('"'): s = s[:-1]
+        s = s.strip()
+        if not s or s.startswith("__OK_") or (s.startswith("<") and s.endswith(">")):
+            return
+        if s in _emitted_flags:
+            return
+        _emitted_flags.add(s)
+        sys.stdout.write(f"\n[FLAG] {s}\n")
+        sys.stdout.flush()
+    except Exception:
+        pass
 
 
 class AttemptTimeout(Exception):
@@ -125,7 +159,7 @@ def _live_tube(p):
         return None
 
 
-def got_shell(p=None, mark=None, timeout=0.3, probe=b"echo %s"):
+def got_shell(p=None, mark=None, timeout=0.8, probe=b"echo %s"):
     """Kiểm tra tube `p` đã là shell chưa (mặc định dùng tube pwnld đang chạy).
 
     Gửi `echo MARK`; nếu MARK được in lại → đúng là shell → trả MARK (truthy).
@@ -166,10 +200,112 @@ def got_flag(pattern, p=None, timeout=0.6):
         return None
     m = pat.search(data)
     if m:
-        return m.group(0)
-    fallback_pat = re.compile(rb"IBOH26_[a-zA-Z0-9_\-+/=]+|[a-zA-Z0-9_\-]+{[^}\n\r]+}")
-    m2 = fallback_pat.search(data)
-    return m2.group(0) if m2 else None
+        flag_val = m.group(0)
+    else:
+        fallback_pat = re.compile(rb"IBOH26_[a-zA-Z0-9_\-+/=]+|[a-zA-Z0-9_\-]+{[^}\n\r]+}")
+        m2 = fallback_pat.search(data)
+        flag_val = m2.group(0) if m2 else None
+    if flag_val:
+        emit_flag(flag_val)
+    return flag_val
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Dò flag KIỂU DỄ: khai báo bằng cặp (begin, end) thay vì phải viết regex
+# ────────────────────────────────────────────────────────────────────────
+def make_flag_pattern(begin=None, end=b"\n", regex=None, require_end=False):
+    r"""Tạo regex dò flag từ cặp (begin, end) THÂN THIỆN cho người mới.
+
+    Ý tưởng: thay vì bắt bạn viết regex, chỉ cần chỉ ra flag "bắt đầu từ đâu"
+    và "kết thúc ở đâu", đều là bytes cho dễ gõ:
+
+      begin : bytes MỞ ĐẦU — LÀ MỘT PHẦN của flag nên SẼ ĐƯỢC LẤY.   vd b"flag{"
+      end   : bytes NGAY SAU ký tự cuối của flag — KHÔNG lấy, chỉ làm mốc. vd b"\n"
+      regex : nếu truyền (bytes / str / Pattern) thì dùng THẲNG, bỏ qua begin/end.
+
+    Chuỗi gõ sao cũng được:
+      - đọc được:        b"flag{"        (tường minh)
+      - không đọc được:  b"\x99\xaa"     (byte thô)
+
+    Flag lấy được = [begin ... ngay TRƯỚC lần xuất hiện đầu tiên của end).
+    Ví dụ flag `flag{ab_cd}` nằm trên 1 dòng:
+        make_flag_pattern(b"flag{", b"\n")  → bắt trọn  b"flag{ab_cd}"
+        make_flag_pattern(b"flag{", b"}")   → bắt  b"flag{ab_cd"  (end bị loại!)
+    Muốn lấy cả dấu `}` thì để end là thứ đứng SAU nó (thường là b"\n").
+
+    require_end=True: CHỈ khớp khi mốc `end` ĐÃ xuất hiện trong dữ liệu → dùng để
+    biết flag đã nhận ĐỦ (không khớp hụt lúc flag còn đang stream dở).
+    """
+    if regex is not None:
+        if isinstance(regex, re.Pattern):
+            return regex
+        return re.compile(_b(regex), re.DOTALL)
+    if begin is None:
+        return _normalize_flag_pattern(None)
+    begin = _b(begin)
+    end = _b(end)
+    if not end:
+        # không có mốc kết thúc -> lấy begin + chuỗi ký tự "không-trắng" liền sau
+        return re.compile(re.escape(begin) + rb"\S*", re.DOTALL)
+    # begin (được lấy) + mọi byte cho tới NGAY TRƯỚC lần đầu gặp end (end bị loại)
+    body = re.escape(begin) + rb"(?:(?!" + re.escape(end) + rb").)*"
+    if require_end:
+        body += rb"(?=" + re.escape(end) + rb")"   # bắt buộc end có mặt mới khớp
+    return re.compile(body, re.DOTALL)
+
+
+def pull_flag(flag_cmd=None, begin=None, end=b"\n", regex=None, p=None,
+              timeout=2.0, prehit=None, poll=0.03):
+    r"""Lấy flag qua tube ĐANG sống: gửi `flag_cmd` rồi đọc output và dò theo pattern.
+
+      flag_cmd : lệnh gửi vào (shell) để in flag. vd b"cat /home/user/flag.txt".
+                 None = không gửi gì, chỉ đọc những gì có sẵn (+ prehit).
+      begin/end/regex : cách mô tả flag — xem make_flag_pattern().
+      prehit   : bytes đã có sẵn (vd giá trị attempt() trả về) cũng đem dò luôn.
+      timeout  : TỔNG thời gian chờ tối đa (giây). poll: nhịp đọc nhỏ giọt.
+
+    DỪNG NGAY khi flag đã đủ (thấy mốc end) — không ngồi chờ hết `timeout` như
+    recvrepeat, nên gần như không còn độ trễ. Trả về: bytes flag hoặc None.
+    """
+    # pat_done: khớp khi flag ĐÃ ĐỦ (có end) -> điều kiện dừng sớm.
+    # pat_loose: dự phòng (flag có thể ở cuối, thiếu end) -> dò nốt khi hết giờ/EOF.
+    if regex is not None:
+        pat_done = pat_loose = make_flag_pattern(regex=regex)
+    else:
+        pat_done = make_flag_pattern(begin, end, require_end=True)
+        pat_loose = make_flag_pattern(begin, end)
+
+    p = _live_tube(p)
+    data = bytes(prehit) if isinstance(prehit, (bytes, bytearray)) else b""
+
+    if p is not None and flag_cmd is not None:
+        try:
+            p.sendline(_b(flag_cmd))
+        except Exception:
+            pass
+
+    m = pat_done.search(data)
+    if m is None and p is not None:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                chunk = p.recv(timeout=poll)   # trả ngay khi có byte, b'' nếu lặng
+            except EOFError:
+                break
+            except Exception:
+                break
+            if chunk:
+                data += chunk
+                m = pat_done.search(data)
+                if m:
+                    break
+
+    if m is None:
+        m = pat_loose.search(data)   # chưa thấy end: lấy tạm phần khớp được (nếu có)
+    flag_val = m.group(0) if m else None
+    if flag_val:
+        emit_flag(flag_val)
+    return flag_val
 
 
 # ────────────────────────────────────────────────────────────────────────
@@ -316,8 +452,10 @@ def _close_miss(close):
 # Vòng lặp chính (tuần tự)
 # ────────────────────────────────────────────────────────────────────────
 def retry(attempt, tries=100, budget=None, attempt_timeout=2.0, on_hit="interactive",
-          close=True, log_every=1, reraise=False):
-    """Chạy `attempt(i)` tới khi trúng. Trả (kết_quả, số_lần_đã_thử).
+          close=True, log_every=1, reraise=False,
+          flag_cmd=None, flag_begin=None, flag_end=b"\n", flag_regex=None,
+          flag_timeout=1.0, flag_required=False):
+    r"""Chạy `attempt(i)` tới khi trúng. Trả (kết_quả, số_lần_đã_thử).
 
     attempt(i) -> truthy nếu TRÚNG (vd True / flag bytes / tube), falsy nếu trượt.
                   Hàm tự mở tiến trình mới (start()) và thử đúng 1 lần.
@@ -333,6 +471,23 @@ def retry(attempt, tries=100, budget=None, attempt_timeout=2.0, on_hit="interact
               False → không đóng (attempt tự lo).
     log_every: in "trượt @ i" mỗi `log_every` lần (0 = im lặng).
     reraise : True → lỗi trong attempt ném ra ngay; False → coi như trượt rồi đi tiếp.
+
+    ── TỰ LẤY FLAG RỒI DỪNG (không treo interactive) ──────────────────────────
+    Khi khai báo cách mô tả flag, mỗi lần TRÚNG pwnretry sẽ tự:
+      1. (nếu là shell) gửi `flag_cmd` vào tube rồi đọc output;
+      2. gộp cả giá trị attempt() trả về (nếu là bytes) để dò;
+      3. khớp theo pattern → in flag và `return (flag, i)` NGAY, không interactive.
+
+    flag_cmd  : lệnh in flag khi đã có shell. vd b"cat /home/user/flag.txt".
+                None = không gửi lệnh (dùng cho retry mà attempt() tự trả flag bytes).
+    flag_begin: bytes mở đầu flag (ĐƯỢC lấy).      vd b"flag{"  hay  b"\x99\xaa"
+    flag_end  : bytes ngay sau ký tự cuối (KHÔNG lấy). mặc định b"\n".
+    flag_regex: regex thô thay cho begin/end (nếu bạn tự tin viết regex).
+    flag_timeout : giây đọc output sau khi gửi flag_cmd.
+    flag_required: True  → trúng nhưng CHƯA thấy flag thì coi như TRƯỢT, brute tiếp
+                           (hợp cho brute 1/256 hay bị shell "hụt");
+                   False → chưa thấy flag thì rơi về on_hit (interactive) để tự xem.
+    (Không khai báo begin/regex/cmd nào → hành xử y như cũ: on_hit/interactive.)
     """
     t0 = time.time()
     counter = range(1, tries + 1) if tries else itertools.count(1)
@@ -393,7 +548,27 @@ def retry(attempt, tries=100, budget=None, attempt_timeout=2.0, on_hit="interact
 
             if res:
                 hit = res
+                want_flag = (flag_cmd is not None or flag_begin is not None
+                             or flag_regex is not None)
+                if not want_flag and isinstance(res, (str, bytes, bytearray)):
+                    emit_flag(res)
                 ls(f"[retry] TRÚNG @ try {i} (sau {time.time() - t0:.1f}s)")
+                if want_flag:
+                    flag = pull_flag(
+                        flag_cmd, flag_begin, flag_end, flag_regex,
+                        p=_live_tube(None), timeout=flag_timeout,
+                        prehit=res if isinstance(res, (bytes, bytearray)) else None,
+                    )
+                    if flag:
+                        ls(f"[retry] 🚩 FLAG @ try {i}: {flag.decode(errors='replace')}")
+                        return flag, i          # xong việc -> dừng, KHÔNG interactive
+                    if flag_required:
+                        lw(f"[retry] try {i}: trúng nhưng CHƯA thấy flag -> coi như trượt, thử tiếp")
+                        hit = None
+                        if close is not False:
+                            _close_miss(close)
+                        continue
+                    lw("[retry] trúng nhưng không bắt được flag -> rơi về on_hit để bạn tự xem")
                 break
             if close is not False:
                 _close_miss(close)

@@ -101,6 +101,20 @@ def rr():
 
 
 def ia():
+    import os, sys
+    # Khi chạy trong Attack Console hoặc script automation (không có interactive TTY / có AUTO_FLAG/TARGET_HOST):
+    if not sys.stdin.isatty() or os.environ.get("AUTO_FLAG") == "1" or os.environ.get("TARGET_HOST"):
+        try:
+            rem = p.recvall(timeout=3)
+            if rem:
+                try:
+                    sys.stdout.buffer.write(rem)
+                    sys.stdout.buffer.flush()
+                except Exception:
+                    print(rem.decode(errors="ignore"), flush=True)
+            return rem
+        except Exception:
+            return b""
     return p.interactive()
 
 
@@ -147,6 +161,9 @@ def _parse_mode():
         modes = {"00": (0, 0), "01": (0, 1), "10": (1, 0), "11": (1, 1), "2": (2, 0)}
         if sys.argv[1] in modes:
             return modes[sys.argv[1]]
+    import os
+    if os.environ.get("PWN_MODE") in ("2", "remote") or os.environ.get("AUTO_FLAG") == "1" or os.environ.get("TARGET_HOST"):
+        return 2, 0
     log.warn("Usage: ./exploit <00|01|10|11|2> ; defaulting to 00 (local, no attach).")
     return 0, 0
 
