@@ -1,0 +1,475 @@
+#!/usr/bin/env python3
+"""pwnretry — khung vòng-lặp brute/retry cho pwn khi MỖI LẦN CHẠY MỘT KHÁC.
+
+Rất nhiều bài phải chạy đi chạy lại mới trúng:
+  - ASLR / địa chỉ stack đổi mỗi lần  → thỉnh thoảng mới "khớp".
+  - Partial overwrite: ghi đè 1 nửa byte (1/16) hay 1 byte (1/256) → đoán.
+  - Stack canary / con trỏ random → brute từng byte.
+  - Race condition, heap feng-shui hên-xui, leak lúc được lúc không.
+
+Mọi bài kiểu đó chung một bộ KHUNG: lặp N lần → mỗi lần mở tiến trình MỚI →
+thử khai thác → kiểm tra trúng chưa → trúng thì dừng (vào shell / lấy flag),
+trượt thì ĐÓNG tube cho sạch fd rồi thử tiếp. pwnretry lo đúng phần khung đó.
+Bạn chỉ viết 1 hàm `attempt(i)` = "thử đúng 1 lần", trả truthy nếu trúng.
+
+Đi kèm pwnld (`from pwnld import *`): trong `attempt` cứ gọi `start()` như thường,
+pwnretry tự biết tube hiện hành (`pwnld.p`) để đóng khi trượt / vào shell khi trúng.
+
+    from pwnld import *
+    from pwnretry import retry, got_shell
+
+    def attempt(i):
+        start()                      # tiến trình mới mỗi lần
+        ru("leak: "); leak = int(rl(),16)
+        sla("name: ", payload(leak))
+        return got_shell()           # gửi "echo MARK", trúng → True
+
+    retry(attempt, tries=256)        # chạy tới khi ra shell, rồi interactive()
+
+Xem README.md để biết bài nào dùng hàm nào.
+"""
+import itertools
+import os
+import re
+import signal
+import threading
+import time
+
+from pwn import log, remote, u32, u64  # pwntools (đã có sẵn trong môi trường)
+
+__all__ = ["retry", "retry_parallel", "got_shell", "got_flag", "marker", "Session", "AttemptTimeout"]
+
+# log ngắn gọn
+li = log.info
+ls = log.success
+lw = log.warning
+
+
+class AttemptTimeout(Exception):
+    """Ném ra khi một lần thử attempt(i) chạy quá thời gian (attempt_timeout)."""
+    pass
+
+
+def _attempt_alarm_handler(signum, frame):
+    raise AttemptTimeout("Attempt exceeded timeout")
+
+
+def _b(x, encoding="utf-8"):
+    """Ép về bytes an toàn (giống pwnld._b). None -> b''."""
+    if x is None:
+        return b""
+    if isinstance(x, (bytes, bytearray)):
+        return bytes(x)
+    if isinstance(x, str):
+        return x.encode(encoding)
+    return str(x).encode(encoding)
+
+
+def uu32(x):
+    return u32(x.ljust(4, b"\x00"))
+
+
+def uu64(x):
+    return u64(x.ljust(8, b"\x00"))
+
+
+def _normalize_flag_pattern(pattern):
+    """Mở rộng regex thông minh nếu pattern chỉ là tiền tố (vd rb'IBOH26_', rb'flag{')."""
+    if pattern is None:
+        return re.compile(rb'[a-zA-Z0-9_\-]+{[^}\n\r]+}|IBOH26_[a-zA-Z0-9_\-+/=]+')
+    if isinstance(pattern, str):
+        pat_bytes = pattern.encode()
+    elif isinstance(pattern, bytes):
+        pat_bytes = pattern
+    else:
+        pat_bytes = getattr(pattern, 'pattern', b'')
+        if isinstance(pat_bytes, str):
+            pat_bytes = pat_bytes.encode()
+
+    if pat_bytes.endswith(b'_') or pat_bytes.endswith(b':') or pat_bytes.endswith(b'=') or pat_bytes.endswith(b'{'):
+        if pat_bytes.endswith(b'{'):
+            pat_bytes = pat_bytes[:-1] + rb'\{[^}\n\r]+\}'
+        else:
+            pat_bytes = pat_bytes + rb'[a-zA-Z0-9_\-+/=]+'
+    try:
+        return re.compile(pat_bytes)
+    except Exception:
+        return re.compile(re.escape(pat_bytes) + rb'[a-zA-Z0-9_\-+/=]+')
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Tiện ích phát hiện "đã trúng chưa"
+# ────────────────────────────────────────────────────────────────────────
+def marker(tag=b"OK"):
+    """Marker DUY NHẤT cho tiến trình script hiện tại (gắn PID script).
+
+    Mục đích: phân biệt "process vẫn là binary gốc" vs "process đã thành /bin/sh".
+    Binary gốc nhận gì cũng in kiểu riêng của nó → KHÔNG có marker trong output;
+    còn /bin/sh nhận `echo __OK_PID__` → in lại marker → có trong output.
+    Gắn PID để không trùng với output rác của lần chạy trước còn trong buffer.
+    """
+    if isinstance(tag, str):
+        tag = tag.encode()
+    return b"__%s_%d__" % (tag, os.getpid())
+
+
+def _live_tube(p):
+    """Trả tube đang hoạt động: p nếu được truyền, ngược lại pwnld.p (nếu có)."""
+    if p is not None:
+        return p
+    try:
+        import pwnld
+
+        return pwnld.p
+    except Exception:
+        return None
+
+
+def got_shell(p=None, mark=None, timeout=0.3, probe=b"echo %s"):
+    """Kiểm tra tube `p` đã là shell chưa (mặc định dùng tube pwnld đang chạy).
+
+    Gửi `echo MARK`; nếu MARK được in lại → đúng là shell → trả MARK (truthy).
+    Trượt / pipe đứt → trả None. Bọc sẵn EOFError nên gọi trong attempt rất gọn.
+
+    probe: lệnh thăm dò; `%s` sẽ được thay bằng marker. Nếu shell không có `echo`
+           nhưng có cách khác in marker, đổi probe (vd b"/bin/echo %s").
+    """
+    p = _live_tube(p)
+    if p is None:
+        raise ValueError("got_shell(): không có tube. Truyền p=... hoặc dùng pwnld.start().")
+    if mark is None:
+        mark = marker()
+    payload = (probe % mark) if b"%s" in probe else probe
+    try:
+        p.sendline(payload)
+        data = p.recvrepeat(timeout)  # nhận hết trong `timeout`s, không block vô hạn
+    except EOFError:
+        return None
+    return mark if (data and mark in data) else None
+
+
+def got_flag(pattern, p=None, timeout=0.6):
+    """Đọc output và dò flag theo regex. Trả bytes flag hoặc None.
+    Tự động mở rộng pattern nếu chỉ là tiền tố (ví dụ rb'IBOH26_', rb'flag{').
+    """
+    p = _live_tube(p)
+    if p is None:
+        raise ValueError("got_flag(): không có tube. Truyền p=... hoặc dùng pwnld.start().")
+    pat = _normalize_flag_pattern(pattern)
+    try:
+        data = p.recvrepeat(timeout)
+    except (EOFError, Exception):
+        data = b""
+    if not data:
+        data = getattr(p, "buffer", b"")
+    if not data:
+        return None
+    m = pat.search(data)
+    if m:
+        return m.group(0)
+    fallback_pat = re.compile(rb"IBOH26_[a-zA-Z0-9_\-+/=]+|[a-zA-Z0-9_\-]+{[^}\n\r]+}")
+    m2 = fallback_pat.search(data)
+    return m2.group(0) if m2 else None
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Session — tube RIÊNG với API giống macro pwnld (dùng cho brute SONG SONG)
+# ────────────────────────────────────────────────────────────────────────
+class Session:
+    """Bọc một tube riêng, cung cấp đúng tên macro như pwnld (sla/ru/rl/...).
+
+    Mỗi luồng trong retry_parallel tạo 1 Session → mỗi luồng có tube riêng, không
+    giẫm lên biến toàn cục `p` của pwnld. Nhờ tên method trùng macro pwnld, code
+    viết kiểu pwnld chỉ cần thêm tiền tố `t.` là chạy song song được.
+
+        def attempt(i):
+            t = Session()                 # remote(CFG.HOST, CFG.PORT)
+            try:
+                t.sla("name: ", payload)
+                leak = int(t.rl(), 16)
+                return t.got_flag(rb"flag\\{.*?\\}")
+            finally:
+                t.close()
+
+    Session() không tham số → lấy HOST/PORT từ pwnld.CFG (chỉ ĐỌC, an toàn đa luồng).
+    """
+
+    def __init__(self, host=None, port=None, io=None, timeout=None):
+        if io is not None:
+            self.io = io
+        else:
+            if host is None or port is None:
+                import pwnld  # chỉ đọc CFG.HOST/PORT, không đụng pwnld.p
+                host = host if host is not None else pwnld.CFG.HOST
+                port = port if port is not None else pwnld.CFG.PORT
+            self.io = remote(host, int(port), timeout=timeout)
+
+    # gửi
+    def s(self, d):
+        return self.io.send(_b(d))
+
+    sn = s
+
+    def sl(self, d):
+        return self.io.sendline(_b(d))
+
+    sln = sl
+
+    def sa(self, delim, d):
+        return self.io.sendafter(_b(delim), _b(d))
+
+    sna = sa
+
+    def sla(self, delim, d):
+        return self.io.sendlineafter(_b(delim), _b(d))
+
+    slna = sla
+
+    # nhận
+    def ru(self, x, drop=False):
+        return self.io.recvuntil(_b(x), drop=drop)
+
+    def rc(self, n):
+        return self.io.recv(n)
+
+    def ra(self, timeout=0):
+        return self.io.recvall(timeout=timeout)
+
+    def rl(self):
+        return self.io.recvline()
+
+    def rr(self):
+        return self.io.recvrepeat(0.2)
+
+    # phát hiện trúng
+    def got_shell(self, mark=None, timeout=0.3, probe=b"echo %s"):
+        return got_shell(self.io, mark=mark, timeout=timeout, probe=probe)
+
+    def got_flag(self, pattern, timeout=1.0):
+        return got_flag(pattern, self.io, timeout=timeout)
+
+    # leak (giống pwnld.leak_*): đọc tới `until`, bóc số hex
+    def _leak(self, offset=0x00, until=None, drop=None, Leak=None, rebase=True):
+        # rebase: nhận cho khớp pwnld.leak_* nhưng bỏ qua — đa luồng không rebase
+        # context.binary/libc chung (mỗi luồng tube riêng). Dùng base trả về.
+        if Leak is not None:
+            leak = Leak
+        elif drop is None:
+            self.ru(until)
+            leak = uu64(self.rl()[:-1])
+        else:
+            self.ru(until)
+            leak = int(self.ru(drop, drop=True), 16)
+        return leak, leak - offset
+
+    def leak_libc(self, offset=0x00, until=None, drop=None, Leak=None, rebase=True):
+        return self._leak(offset, until, drop, Leak, rebase)
+
+    leak_stack = leak_libc
+    leak_bin = leak_libc
+    leak_heap = leak_libc
+    leak_all = leak_libc
+
+    def interactive(self):
+        return self.io.interactive()
+
+    def close(self):
+        try:
+            self.io.close()
+        except Exception:
+            pass
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Dọn tube khi trượt
+# ────────────────────────────────────────────────────────────────────────
+def _close_miss(close):
+    """close: True → đóng pwnld.p; callable → gọi nó; tube → đóng tube đó."""
+    if close is True:
+        tube = _live_tube(None)
+    elif callable(close):
+        try:
+            close()
+        except Exception:
+            pass
+        return
+    else:
+        tube = close  # giả định là tube
+    if tube is not None:
+        try:
+            if hasattr(tube, "proc") and tube.proc:
+                try:
+                    tube.proc.kill()
+                except Exception:
+                    pass
+            tube.close()
+        except Exception:
+            pass
+    try:
+        import pwnld
+        pwnld.p = None
+    except Exception:
+        pass
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Vòng lặp chính (tuần tự)
+# ────────────────────────────────────────────────────────────────────────
+def retry(attempt, tries=100, budget=None, attempt_timeout=2.0, on_hit="interactive",
+          close=True, log_every=1, reraise=False):
+    """Chạy `attempt(i)` tới khi trúng. Trả (kết_quả, số_lần_đã_thử).
+
+    attempt(i) -> truthy nếu TRÚNG (vd True / flag bytes / tube), falsy nếu trượt.
+                  Hàm tự mở tiến trình mới (start()) và thử đúng 1 lần.
+                  KHÔNG tự interactive() — để on_hit lo (tránh gọi 2 lần).
+    tries   : số lần tối đa. None/0 = vô hạn (dừng bằng budget hoặc Ctrl-C).
+    budget  : giây tối đa (None = vô hạn). Hết giờ thì dừng.
+    attempt_timeout: giây tối đa cho MỖI lần thử (mặc định 2.0s). Nếu attempt bị treo/kẹt
+                     socket quá thời gian này, watchdog tự ngắt và thử lại ngay lập tức!
+    on_hit  : "interactive" → vào shell (p.interactive()) rồi return;
+              "return"      → chỉ return kết quả (vd đã có flag);
+              callable(res) → gọi hàm đó với kết quả.
+    close   : True → tự đóng pwnld.p sau mỗi lần TRƯỢT; callable → gọi để tự đóng;
+              False → không đóng (attempt tự lo).
+    log_every: in "trượt @ i" mỗi `log_every` lần (0 = im lặng).
+    reraise : True → lỗi trong attempt ném ra ngay; False → coi như trượt rồi đi tiếp.
+    """
+    t0 = time.time()
+    counter = range(1, tries + 1) if tries else itertools.count(1)
+    hit = None
+    i = 0
+
+    # Tự động gán context.timeout cho pwntools nếu chưa được đặt
+    if attempt_timeout:
+        try:
+            from pwn import context
+            if context.timeout is None or context.timeout > attempt_timeout:
+                context.timeout = float(attempt_timeout)
+        except Exception:
+            pass
+
+    use_alarm = (
+        attempt_timeout
+        and hasattr(signal, "SIGALRM")
+        and hasattr(signal, "setitimer")
+        and threading.current_thread() is threading.main_thread()
+    )
+
+    try:
+        for i in counter:
+            if budget and time.time() - t0 > budget:
+                lw(f"[retry] hết budget {budget}s @ try {i - 1}")
+                i -= 1
+                break
+
+            old_handler = None
+            if use_alarm:
+                try:
+                    old_handler = signal.signal(signal.SIGALRM, _attempt_alarm_handler)
+                    signal.setitimer(signal.ITIMER_REAL, float(attempt_timeout))
+                except Exception:
+                    use_alarm = False
+
+            try:
+                res = attempt(i)
+            except AttemptTimeout:
+                lw(f"[retry] try {i} bị kẹt/treo quá {attempt_timeout}s -> watchdog ngắt để thử lại ngay")
+                res = None
+            except EOFError:
+                res = None
+            except Exception as e:
+                if reraise:
+                    raise
+                lw(f"[retry] try {i} lỗi: {e!r}")
+                res = None
+            finally:
+                if use_alarm:
+                    try:
+                        signal.setitimer(signal.ITIMER_REAL, 0)
+                        if old_handler is not None:
+                            signal.signal(signal.SIGALRM, old_handler)
+                    except Exception:
+                        pass
+
+            if res:
+                hit = res
+                ls(f"[retry] TRÚNG @ try {i} (sau {time.time() - t0:.1f}s)")
+                break
+            if close is not False:
+                _close_miss(close)
+            if log_every and i % log_every == 0:
+                li(f"[retry] trượt @ {i}")
+    except KeyboardInterrupt:
+        lw(f"[retry] dừng tay @ try {i}")
+
+    if hit:
+        if on_hit == "interactive":
+            tube = _live_tube(None)
+            if tube is None and hasattr(hit, "interactive"):
+                tube = hit
+            if tube is not None:
+                tube.interactive()
+        elif callable(on_hit):
+            on_hit(hit)
+    else:
+        lw(f"[retry] {i} lần, chưa trúng")
+    return hit, i
+
+
+# ────────────────────────────────────────────────────────────────────────
+# Vòng lặp song song (nhiều luồng) — tăng tốc brute remote khi RTT lớn
+# ────────────────────────────────────────────────────────────────────────
+def retry_parallel(attempt, tries=256, workers=8, budget=None):
+    """Như retry nhưng chạy `workers` luồng song song. Trả (kết_quả, số_lần_đã_chạy).
+
+    Hữu ích khi brute remote mà mỗi lần tốn RTT lớn (1/256 * 0.3s = rất lâu nếu
+    tuần tự). Dừng mọi luồng ngay khi 1 luồng trúng.
+
+    RÀNG BUỘC QUAN TRỌNG: `attempt` KHÔNG được dùng biến toàn cục của pwnld
+    (p, start(), GDB()...) vì chúng không an toàn đa luồng. Trong attempt phải TỰ
+    mở tube riêng (vd `io = remote(HOST, PORT)`), tự dùng io.*, tự đóng io.
+    attempt(i) -> truthy nếu trúng (nên trả luôn dữ liệu, vd flag bytes).
+
+    Không có on_hit="interactive" (nhiều tube cùng lúc) → chỉ trả kết quả.
+    """
+    stop = threading.Event()
+    lock = threading.Lock()
+    state = {"hit": None, "runs": 0}
+    idx = itertools.count(1)
+    t0 = time.time()
+
+    def worker():
+        while not stop.is_set():
+            if budget and time.time() - t0 > budget:
+                return
+            i = next(idx)
+            if tries and i > tries:
+                return
+            with lock:
+                state["runs"] += 1
+            try:
+                res = attempt(i)
+            except Exception:
+                res = None
+            if res and not stop.is_set():
+                with lock:
+                    if state["hit"] is None:
+                        state["hit"] = res
+                stop.set()
+                return
+
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(workers)]
+    for t in threads:
+        t.start()
+    try:
+        for t in threads:
+            t.join()
+    except KeyboardInterrupt:
+        stop.set()
+        lw("[retry_parallel] dừng tay")
+
+    if state["hit"]:
+        ls(f"[retry_parallel] TRÚNG sau {state['runs']} lần ({time.time() - t0:.1f}s)")
+    else:
+        lw(f"[retry_parallel] {state['runs']} lần, chưa trúng")
+    return state["hit"], state["runs"]
