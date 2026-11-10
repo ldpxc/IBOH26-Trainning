@@ -3,6 +3,12 @@
 Bản sao để dành. Bản đang chạy thật nằm ở `~/hoc/CTF/Tools/pwnld/` và được symlink
 vào `~/.local/bin/`. Sửa bản chạy → nhớ copy lại vào đây.
 
+## [`adflag.py`](adflag.py) / [`adflag.md`](adflag.md)
+
+Thư viện siêu nhẹ dành cho toàn đội (**Web / Crypto / Rev / Misc**) để tự động lấy target và nộp flag tức thì về Attack Console theo chuẩn `[FLAG] <flag>`.
+- Xem hướng dẫn chi tiết từng trường hợp tại: **[`adflag.md`](adflag.md)**.
+- Dùng nhanh: `from adflag import submit; submit(r.text)`.
+
 ## [`pwnld.py`](pwnld.py)
 
 Lớp helper mỏng bọc pwntools (`from pwnld import *`). Tra cứu nhanh trong terminal:
