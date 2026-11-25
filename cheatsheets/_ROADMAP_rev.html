@@ -1,0 +1,445 @@
+<title>Reverse Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: cột ~820px; phases là bậc thang + mục Công cụ riêng. Tông gạch nung / đá phiến, xanh cho mốc & công cụ */
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--warn:#b8860b;
+  --p0:#6b665b;--p1:#2f7d4f;--p2:#3a6ea5;--p3:#8a5cc0;--p4:#b23a1e;--p5:#c0392b;--p6:#9c27b0;--p7:#1d1b17;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:820px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--warn:#d9b55f;
+  --p0:#a39d8f;--p1:#67c08a;--p2:#7fb0e0;--p3:#b79be0;--p4:#e86a48;--p5:#e8705f;--p6:#ce93d8;--p7:#e8e4d8;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--warn:#d9b55f;
+  --p0:#a39d8f;--p1:#67c08a;--p2:#7fb0e0;--p3:#b79be0;--p4:#e86a48;--p5:#e8705f;--p6:#ce93d8;--p7:#e8e4d8;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 26px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(32px,7vw,52px);line-height:1.0;margin:.3em 0 .25em;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:17px;max-width:60ch}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:18px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.badge{font-family:var(--font-mono);font-size:10.5px;padding:2px 7px;border-radius:999px;font-weight:700;white-space:nowrap}
+.b-have{background:var(--ok-soft);color:var(--ok)}.b-todo{background:var(--surface-2);color:var(--muted)}
+.os{font-size:11px;padding:1px 6px;border-radius:5px;background:var(--surface-2);color:var(--muted);font-family:var(--font-mono);white-space:nowrap}
+
+.progwrap{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:16;background:var(--bg)}
+.progrow{display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
+.bar{flex:1;height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden;min-width:0}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:999px;transition:width .3s}
+.resetbtn{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:4px 9px;border-radius:7px;cursor:pointer}
+
+.phasenav{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.phasenav a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--fg);border:1px solid var(--line);padding:5px 9px;border-radius:8px;background:var(--surface);display:inline-flex;gap:6px;align-items:center}
+.phasenav a:hover{border-color:var(--accent)}
+.phasenav a .n{width:16px;height:16px;border-radius:4px;display:inline-block}
+
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0}
+.phase{padding-block:26px;border-bottom:1px solid var(--line)}
+.phase-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pnum{font-family:var(--font-mono);font-weight:700;color:#fff;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.phase-head .lvl{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.pbar{height:6px;background:var(--surface-2);border-radius:999px;overflow:hidden;margin:12px 0 2px}
+.pbar i{display:block;height:100%;width:0;border-radius:999px;transition:width .3s}
+.milestone{background:var(--mem-soft);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:14px;margin:14px 0}
+.milestone b{color:var(--mem)}
+.goal{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:10px 13px;font-size:14px;margin:14px 0}
+h3{font-family:var(--font-head);font-weight:600;margin:20px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-size:13px}
+
+.rows{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:8px 0}
+.row{display:grid;grid-template-columns:26px 1fr auto;gap:10px;padding:11px 14px;background:var(--surface);align-items:start}
+.row:hover{background:var(--surface-2)}
+.row input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex:none}
+.row .main{min-width:0}
+.row .tname{font-weight:600;font-size:15px}
+.row .tname code{font-family:var(--font-mono);font-size:.85em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.row .desc{font-size:13.5px;color:var(--muted);margin-top:1px}
+.row.done .tname{text-decoration:line-through;text-decoration-color:var(--muted);opacity:.7}
+.row .rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+
+.flow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.flow h4{font-family:var(--font-head);margin:0 0 6px;font-size:16px}
+.chain{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-2);border-radius:8px;padding:9px 11px;overflow-x:auto;white-space:nowrap}
+.chain b{color:var(--accent)}
+.flow p{margin:8px 0 0;font-size:14px;color:var(--muted)}
+figure{margin:18px 0}figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:12.5px;color:var(--muted);text-align:center;margin-top:8px}
+
+.toolgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:12px 0}
+.toolcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.toolcard h4{font-family:var(--font-head);margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:7px}
+.toollist{display:flex;flex-direction:column;gap:7px}
+.tool{font-size:13.5px;line-height:1.45}
+.tool b{font-weight:600}
+.tool .os{margin-left:4px}
+.tool .pp{color:var(--muted)}
+
+.ttoggle{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:30;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:24px 42px;color:var(--muted);font-size:13px}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Lộ trình · Reverse Engineering</div>
+    <h1>Reverse Roadmap</h1>
+    <p class="sub">Từ newbie tới expert, cho <strong>cả Linux và Windows</strong>: 8 chặng, ~55 kỹ năng, một mục <strong>Công cụ</strong> đầy đủ, và quy trình phân tích thực chiến. Đủ để mổ xẻ crackme, malware, firmware và binary bị bảo vệ nặng.</p>
+    <div class="legend">
+      <span><span class="badge b-have">✓ có bài</span> đã có cheatsheet nhà</span>
+      <span><span class="badge b-todo">○ chưa</span> sẽ viết sau</span>
+      <span><span class="os">🐧 Linux</span> <span class="os">🪟 Windows</span> <span class="os">⛓ cả hai</span></span>
+    </div>
+    <nav class="phasenav" id="phasenav"></nav>
+  </div>
+</header>
+
+<div class="progwrap">
+  <div class="wrap">
+    <div class="progrow">
+      <span id="pctlabel" style="min-width:132px">Tiến độ: 0 / 0 (0%)</span>
+      <span class="bar"><i id="bar"></i></span>
+      <button class="resetbtn" id="resetBtn">reset</button>
+    </div>
+  </div>
+</div>
+
+<main id="main"></main>
+
+<section class="phase" id="flow">
+ <div class="wrap">
+  <div class="phase-head"><span class="pnum" style="background:var(--accent)">⇄</span><div><h2>Quy trình phân tích</h2><div class="lvl">Thứ tự ra tay khi cầm một file lạ</div></div></div>
+  <p style="color:var(--muted);font-size:15px;margin:14px 0">Reverse không phải "đọc asm từ trên xuống" mà là một <strong>vòng lặp</strong>: khảo sát nhanh → tĩnh → động → gỡ rối bảo vệ → ghi lại. Dưới đây là đường đi chuẩn và vài kịch bản điển hình.</p>
+
+  <figure>
+  <svg viewBox="0 0 760 92" role="img" aria-label="Quy trình reverse: triage tới phân tích tĩnh tới phân tích động tới gỡ obfuscation tới tài liệu hóa, lặp lại" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs><marker id="rk" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker></defs>
+    <rect x="4"   y="26" width="128" height="40" rx="8" stroke-width="1.5"/>
+    <rect x="160" y="26" width="128" height="40" rx="8" stroke-width="1.5"/>
+    <rect x="316" y="26" width="128" height="40" rx="8" stroke-width="1.5"/>
+    <rect x="472" y="26" width="140" height="40" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <rect x="640" y="26" width="116" height="40" rx="8" stroke-width="1.5"/>
+    <text x="68"  y="44" font-size="11.5" text-anchor="middle" fill="currentColor" stroke="none">Triage</text>
+    <text x="68"  y="58" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.6">file, DIE, strings</text>
+    <text x="224" y="44" font-size="11.5" text-anchor="middle" fill="currentColor" stroke="none">Tĩnh</text>
+    <text x="224" y="58" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.6">Ghidra/IDA</text>
+    <text x="380" y="44" font-size="11.5" text-anchor="middle" fill="currentColor" stroke="none">Động</text>
+    <text x="380" y="58" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.6">gdb/x64dbg</text>
+    <text x="542" y="44" font-size="11" text-anchor="middle" fill="#e8663e" stroke="none">Gỡ obfuscation</text>
+    <text x="542" y="58" font-size="9.5" text-anchor="middle" fill="#e8663e" stroke="none">unpack/deobf</text>
+    <text x="698" y="48" font-size="11" text-anchor="middle" fill="currentColor" stroke="none">Tài liệu</text>
+    <line x1="132" y1="46" x2="156" y2="46" stroke="currentColor" stroke-width="1.5" marker-end="url(#rk)"/>
+    <line x1="288" y1="46" x2="312" y2="46" stroke="currentColor" stroke-width="1.5" marker-end="url(#rk)"/>
+    <line x1="444" y1="46" x2="468" y2="46" stroke="currentColor" stroke-width="1.5" marker-end="url(#rk)"/>
+    <line x1="612" y1="46" x2="636" y2="46" stroke="currentColor" stroke-width="1.5" marker-end="url(#rk)"/>
+    <path d="M380,66 L380,82 L224,82 L224,68" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#rk)"/>
+    <text x="300" y="92" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.6">lặp lại khi hiểu thêm</text>
+  </svg>
+  <figcaption>Tĩnh và động bổ trợ nhau — thấy gì ở động quay lại chú thích ở tĩnh, cứ thế vòng lại.</figcaption>
+  </figure>
+
+  <div class="flow"><h4>Kịch bản 1 · CTF reverse: ELF bị strip, kiểm tra flag</h4>
+    <div class="chain">file + DIE → Ghidra tìm hàm so sánh → nhận ra <b>transform (XOR/add/perm)</b> → viết <b>z3</b> giải ngược input → flag</div></div>
+  <div class="flow"><h4>Kịch bản 2 · Malware Windows đóng gói (packed)</h4>
+    <div class="chain">DIE thấy UPX/packer → x64dbg chạy tới <b>OEP</b> → <b>Scylla</b> dump + rebuild IAT → phân tích PE đã giải nén</div></div>
+  <div class="flow"><h4>Kịch bản 3 · Crackme .NET</h4>
+    <div class="chain">DIE thấy .NET → <b>de4dot</b> gỡ obfuscation → <b>dnSpyEx</b> đọc IL/C# → sửa/patch ngay trong dnSpy</div></div>
+  <div class="flow"><h4>Kịch bản 4 · Firmware router</h4>
+    <div class="chain"><b>binwalk</b> tách filesystem → tìm binary ARM/MIPS → Ghidra (chọn đúng kiến trúc) → <b>qemu-user</b> chạy thử</div></div>
+ </div>
+</section>
+
+<section class="phase" id="tools">
+ <div class="wrap">
+  <div class="phase-head"><span class="pnum" style="background:var(--mem)">🧰</span><div><h2>Công cụ</h2><div class="lvl">Bộ đồ nghề đầy đủ, gắn thẻ nền tảng</div></div></div>
+  <p style="color:var(--muted);font-size:15px;margin:14px 0">Thẻ: <span class="os">🐧 Linux</span> <span class="os">🪟 Windows</span> <span class="os">⛓ cả hai</span>. Cài tối thiểu để bắt đầu: <strong>Ghidra + gdb/pwndbg + x64dbg + DIE</strong>, rồi mở rộng theo nhu cầu.</p>
+  <div class="toolgrid" id="toolgrid"></div>
+ </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Reverse Roadmap.</strong> Tiến độ tick lưu trong trình duyệt này. Thứ tự Phase là xương sống; mục Quy trình và Công cụ là phần biến kiến thức thành thao tác thật trên cả Linux lẫn Windows.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập, CTF và nghiên cứu an ninh hợp pháp. Phân tích malware luôn làm trong máy ảo cách ly.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("revrm-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("revrm-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var PHASES=[
+    {id:"p0",color:"var(--p0)",lvl:"Newbie · bắt buộc",title:"Nền tảng",
+     goal:"Chưa reverse gì — đây là nền để asm và decompiler không như chữ Hán.",
+     groups:[
+      {h:"Kiến thức máy tính",items:[
+        {t:"Số học máy",d:"hex/binary, bit ops, endianness, số bù 2, kiểu dữ liệu & kích thước"},
+        {t:"C/C++ đủ đọc",d:"con trỏ, struct, mảng, con trỏ hàm, lớp/vtable"},
+        {t:"Assembly x86 / x86-64",d:"thanh ghi, flags, lệnh phổ biến, cách stack hoạt động"},
+        {t:"Calling conventions",d:"cdecl/stdcall/fastcall (Win32), SysV & Win64 (x64)"},
+        {t:"OS cơ bản",d:"process/thread, bố cục bộ nhớ, syscall"},
+      ]},
+      {h:"Đọc mã compiler sinh ra",items:[
+        {t:"Prologue / epilogue hàm",d:"push rbp; mov rbp,rsp... nhận ra ranh giới hàm"},
+        {t:"if / loop / switch",d:"nhận dạng rẽ nhánh, vòng lặp, jump table của switch"},
+        {t:"struct / mảng / vtable",d:"truy cập trường = base+offset; gọi hàm ảo"},
+        {t:"Định dạng file",d:"ELF (Linux), PE (Windows), Mach-O (sơ)"},
+      ]}]},
+    {id:"p1",color:"var(--p1)",lvl:"Beginner",title:"Phân tích tĩnh",
+     goal:"Sau chặng này: đọc hiểu logic một binary nhỏ chỉ bằng disassembler/decompiler.",
+     milestone:"Đổi tên + đặt kiểu + chú thích là 80% công việc tĩnh.",
+     groups:[{h:"",items:[
+        {t:"Disasm vs decompile",d:"khác nhau giữa asm thô và pseudo-C"},
+        {t:"Nhận diện hàm & cross-reference",d:"xref tới/từ, dò luồng gọi"},
+        {t:"strings / imports / exports",d:"manh mối nhanh nhất về hành vi"},
+        {t:"Điều hướng Ghidra / IDA 9.1 Pro / Binary Ninja",d:"rename, retype, comment, graph view"},
+        {t:"Nhận diện control flow từ asm",d:"dựng lại if/loop/switch trong đầu"},
+        {t:"FLIRT / signatures",d:"tự nhận ra hàm thư viện đã biết"},
+        {t:"Hằng số & crypto constants",d:"magic number tiết lộ thuật toán (MD5/AES...)"},
+     ]}]},
+    {id:"p2",color:"var(--p2)",lvl:"Beginner → Intermediate",title:"Phân tích động",
+     goal:"Sau chặng này: chạy, đặt breakpoint, xem giá trị thật khi tĩnh bế tắc.",
+     groups:[
+      {h:"Debugger",items:[
+        {t:"gdb + pwndbg/gef",d:"🐧 breakpoint, step, xem thanh ghi/bộ nhớ/stack"},
+        {t:"x64dbg / x32dbg",d:"🪟 debugger user-mode chủ lực cho Windows"},
+        {t:"WinDbg (+ TTD)",d:"🪟 mạnh, có time-travel debugging ghi/tua lại"},
+      ]},
+      {h:"Trace & patch",items:[
+        {t:"strace / ltrace",d:"🐧 xem syscall & gọi thư viện"},
+        {t:"Procmon / API Monitor",d:"🪟 theo dõi file/registry/API realtime"},
+        {t:"Patch & live edit",d:"NOP, lật điều kiện, sửa thanh ghi lúc chạy"},
+      ]}]},
+    {id:"p3",color:"var(--p3)",lvl:"Intermediate",title:"Crackme & khôi phục thuật toán",
+     goal:"Sau chặng này: giải crackme, viết keygen, giải flag-checker CTF.",
+     milestone:"Hiểu thuật toán đủ để viết KEYGEN mới là mốc 'biết reverse'.",
+     groups:[{h:"",items:[
+        {t:"Serial / password check",d:"lần theo đường kiểm tra, tìm chỗ so sánh"},
+        {t:"Patch jump",d:"NOP/flip điều kiện để bẻ khóa (nhanh nhưng 'bẩn')"},
+        {t:"Khôi phục thuật toán → keygen",d:"dựng lại hàm sinh key, viết generator"},
+        {t:"CTF flag-checker",d:"XOR/add/hoán vị/so khớp bảng — mẫu hay gặp"},
+        {t:"Giải ràng buộc bằng z3",d:"để máy tự tìm input thỏa điều kiện"},
+     ]},{h:"Vá binary (patching)",items:[
+        {t:"Patch byte: NOP / lật nhánh",d:"je↔jne, vô hiệu kiểm tra, đổi hằng số"},
+        {t:"Assemble & patch trong Ghidra / IDA 9.1 Pro",d:"sửa lệnh rồi xuất file đã vá"},
+        {t:"keystone / capstone",d:"tự động assemble/disassemble khi vá bằng script"},
+        {t:"Vá trên đĩa",d:"hex editor, dd, LIEF (PE/ELF), patchelf"},
+        {t:"Trampoline / code cave",d:"chèn code mới vào vùng trống, detour (e9patch)"},
+        {t:"Vá giữ chức năng",d:"sửa logic mà binary vẫn chạy đúng — dùng cả trong Attack-Defense"},
+     ]}]},
+    {id:"p4",color:"var(--p4)",lvl:"Intermediate → Advanced",title:"Obfuscation & chống phân tích",
+     goal:"Sau chặng này: tháo gỡ binary cố tình chống bạn.",
+     groups:[
+      {h:"Chống phân tích",items:[
+        {t:"Anti-debugging",d:"ptrace (🐧), IsDebuggerPresent/PEB/timing/int3 (🪟) — và cách né"},
+        {t:"Anti-VM / anti-sandbox",d:"phát hiện máy ảo, hành vi khác khi bị soi"},
+      ]},
+      {h:"Packer & làm rối",items:[
+        {t:"Unpacking (UPX & custom)",d:"chạy tới OEP, dump, dựng lại IAT (Scylla)"},
+        {t:"Control-flow flattening + opaque predicate",d:"làm phẳng luồng, nhánh giả"},
+        {t:"API / string obfuscation",d:"giải tên hàm/chuỗi lúc chạy (dynamic resolve)"},
+        {t:"Self-modifying code",d:"code tự sửa lúc chạy — phải debug động"},
+     ]}]},
+    {id:"p5",color:"var(--p5)",lvl:"Advanced",title:"Gỡ rối nâng cao & tự động hóa",
+     goal:"Sau chặng này: xử lý VM-protector và để máy làm phần nặng.",
+     milestone:"Đây là ranh giới analyst chuyên nghiệp.",
+     groups:[{h:"",items:[
+        {t:"VM-based protector",d:"VMProtect/Themida/Tigress: hiểu handler, lift bytecode về IR"},
+        {t:"Symbolic / concolic execution",d:"angr, Triton, miasm để tự khám phá đường chạy"},
+        {t:"Emulation",d:"Unicorn / Qiling chạy từng đoạn code tách rời"},
+        {t:"IR & lifting",d:"P-code (Ghidra), Microcode (Hex-Rays), BNIL, VEX"},
+        {t:"Viết script/plugin decompiler",d:"tự động hóa trên Ghidra / IDA 9.1 Pro / BN"},
+     ]}]},
+    {id:"p6",color:"var(--p6)",lvl:"Expert",title:"Chuyên sâu theo nền tảng",
+     goal:"Sau chặng này: thạo cả hệ sinh thái Windows và Linux, cùng mã quản lý & firmware.",
+     groups:[
+      {h:"Windows 🪟",items:[
+        {t:"PE sâu + TLS callback",d:"entry ẩn chạy trước main"},
+        {t:"SEH / VEH / exception",d:"luồng điều khiển qua xử lý ngoại lệ"},
+        {t:".NET reversing",d:"dnSpyEx đọc IL/C#, de4dot gỡ rối; so native vs managed"},
+        {t:"Driver / kernel RE",d:".sys, WDM/WDF, IOCTL"},
+      ]},
+      {h:"Linux 🐧",items:[
+        {t:"ELF sâu + shared lib",d:"GOT/PLT, LD_PRELOAD hook/trace"},
+        {t:"Kernel module .ko",d:"reverse driver nhân Linux"},
+      ]},
+      {h:"Mã quản lý & khác ⛓",items:[
+        {t:"Java / Android",d:"JADX, CFR, smali; Frida hook runtime"},
+        {t:"Python đóng gói",d:"gỡ pyinstaller, decompile .pyc"},
+        {t:"Firmware / embedded",d:"binwalk tách, ARM/MIPS, bare-metal"},
+     ]}]},
+    {id:"p7",color:"var(--p7)",lvl:"Master",title:"Chuyên gia & chuyên ngành",
+     goal:"Mức nghiên cứu: malware thực chiến, tự động gỡ rối, phần cứng.",
+     groups:[{h:"",items:[
+        {t:"Malware RE",d:"phân tích hành vi, C2, YARA, unpack an toàn trong sandbox"},
+        {t:"Tự động deobfuscation / synthesis",d:"nghiên cứu gỡ rối quy mô lớn, tổng hợp chương trình"},
+        {t:"Firmware / secure boot / TEE",d:"phần cứng, boot chain, vùng tin cậy"},
+        {t:"Game hacking / DRM",d:"chống cheat, bảo vệ bản quyền"},
+        {t:"Đóng góp công cụ",d:"viết plugin Ghidra/IDA, chia sẻ script"},
+     ]}]},
+  ];
+
+  var TOOLS=[
+    {h:"🔎 Disassembler & Decompiler", items:[
+      ["Ghidra","⛓","miễn phí, mạnh nhất nhóm free, có decompiler + P-code"],
+      ["IDA 9.1 Pro / IDA Free","⛓","chuẩn công nghiệp; Hex-Rays decompiler (bản Pro)"],
+      ["Binary Ninja","⛓","API & IL (BNIL) rất hợp tự động hóa"],
+      ["radare2 / rizin + Cutter","⛓","mã nguồn mở, mạnh trên dòng lệnh; Cutter là GUI"],
+      ["objdump / Hopper","⛓","objdump nhanh gọn; Hopper trên macOS"],
+    ]},
+    {h:"🐞 Debugger", items:[
+      ["gdb + pwndbg / gef / peda","🐧","debugger Linux + plugin hiện đại"],
+      ["lldb","⛓","thay thế gdb, mặc định trên macOS"],
+      ["x64dbg / x32dbg","🪟","debugger user-mode chủ lực cho Windows"],
+      ["WinDbg (+ TTD)","🪟","mạnh; Time-Travel Debugging ghi & tua lại"],
+      ["OllyDbg / Immunity","🪟","cổ điển 32-bit (tham khảo/bài cũ)"],
+    ]},
+    {h:"⚙️ Instrumentation động", items:[
+      ["Frida","⛓","hook & sửa hàm lúc chạy (cả mobile)"],
+      ["Intel Pin / DynamoRIO","⛓","tracing/instrumentation mức lệnh"],
+      ["Unicorn Engine","⛓","emulate CPU để chạy đoạn code tách rời"],
+      ["Qiling","⛓","emulate cả môi trường OS/syscall"],
+      ["Valgrind","🐧","theo dõi bộ nhớ, dò hành vi"],
+    ]},
+    {h:"🤖 Symbolic & tự động", items:[
+      ["angr","⛓","symbolic/concolic execution, giải path tự động"],
+      ["Triton","⛓","taint + symbolic, hợp gỡ VM-protector"],
+      ["miasm","⛓","reverse + emulate + lifting IR"],
+      ["z3","⛓","SMT solver: giải ràng buộc input/flag"],
+    ]},
+    {h:"📦 Packer & giải nén", items:[
+      ["Detect It Easy (DIE)","⛓","nhận diện packer/compiler/entropy"],
+      ["UPX","⛓","đóng/giải gói phổ biến (-d để bung)"],
+      ["Scylla","🪟","dump process + dựng lại IAT sau khi tới OEP"],
+      ["ScyllaHide","🪟","ẩn debugger khỏi anti-debug"],
+      ["PE-bear / CFF Explorer","🪟","soi & sửa cấu trúc PE"],
+    ]},
+    {h:"📄 Soi file & binary", items:[
+      ["file / strings","⛓","nhận dạng nhanh + rút chuỗi"],
+      ["readelf / nm / objdump","🐧","mổ ELF, bảng symbol, disasm"],
+      ["pefile / LIEF","⛓","thư viện đọc/sửa PE/ELF bằng script"],
+      ["binwalk","⛓","tách firmware, tìm file nhúng"],
+    ]},
+    {h:"🪟 Giám sát Windows", items:[
+      ["Procmon","🪟","theo dõi file/registry/process realtime"],
+      ["Process Hacker / System Informer","🪟","soi process, handle, memory"],
+      ["API Monitor","🪟","log lời gọi API Win32"],
+      ["Regshot / Autoruns","🪟","so sánh registry, điểm tự khởi động"],
+    ]},
+    {h:"🧬 .NET / Java / Python", items:[
+      ["dnSpyEx / ILSpy","🪟","đọc & sửa .NET (IL ↔ C#)"],
+      ["de4dot","🪟","gỡ obfuscation .NET"],
+      ["JADX / CFR / Procyon","⛓","decompile Java / Android"],
+      ["decompyle3 / pycdc / uncompyle6","⛓","decompile Python .pyc"],
+    ]},
+    {h:"🧷 Diff, patch & malware", items:[
+      ["BinDiff / Diaphora","⛓","so khớp 2 binary (patch-diff, tìm hàm)"],
+      ["YARA / CAPA / FLOSS","⛓","nhận diện mẫu, năng lực, giải chuỗi malware"],
+      ["CAPE / Cuckoo / Any.run","⛓","sandbox chạy malware an toàn"],
+      ["Wireshark","⛓","phân tích lưu lượng C2"],
+    ]},
+    {h:"🩹 Vá & assemble", items:[
+      ["keystone / capstone","⛓","engine assemble/disassemble để vá bằng script"],
+      ["LIEF","⛓","chỉnh sửa PE/ELF/Mach-O"],
+      ["e9patch","🐧","vá tĩnh x86-64, chèn code giữ chức năng"],
+      ["patchelf","🐧","sửa interpreter/rpath (ELF)"],
+      ["Ghidra / IDA 9.1 Pro / x64dbg patch","⛓","vá & export trong GUI"],
+      ["HxD / hex editor","⛓","vá byte thô trên đĩa"],
+    ]},
+    {h:"🧮 Tiện ích", items:[
+      ["CyberChef","⛓","giải mã/encode nhanh (XOR, base64, crypto)"],
+      ["HxD / hex editor","⛓","xem & sửa byte thô"],
+      ["Compiler Explorer (godbolt)","⛓","học mẫu asm ↔ C để đọc nhanh hơn"],
+      ["qemu-user / gdb-multiarch","🐧","chạy & debug binary khác kiến trúc"],
+    ]},
+  ];
+
+  // render phases
+  var main=document.getElementById("main"), nav=document.getElementById("phasenav");
+  var store={};try{store=JSON.parse(localStorage.getItem("revrm-done")||"{}");}catch(e){store={};}
+  PHASES.forEach(function(ph,pi){
+    var a=document.createElement("a");a.href="#"+ph.id;
+    a.innerHTML='<span class="n" style="background:'+ph.color+'"></span>'+pi+' · '+ph.title;nav.appendChild(a);
+    var sec=document.createElement("section");sec.className="phase";sec.id=ph.id;
+    var html='<div class="wrap"><div class="phase-head"><span class="pnum" style="background:'+ph.color+'">'+pi+'</span>'
+      +'<div><h2>'+ph.title+'</h2><div class="lvl">'+ph.lvl+'</div></div></div>'
+      +'<div class="pbar"><i data-pbar="'+ph.id+'" style="background:'+ph.color+'"></i></div>'
+      +'<div class="goal">'+ph.goal+'</div>';
+    if(ph.milestone) html+='<div class="milestone"><b>Mốc:</b> '+ph.milestone+'</div>';
+    ph.groups.forEach(function(g){
+      if(g.h) html+='<h3>'+g.h+'</h3>';
+      html+='<div class="rows">';
+      g.items.forEach(function(it){
+        var key=ph.id+"|"+it.t, checked=store[key]?"checked":"";
+        var badge=it.h?'<span class="badge b-have">✓ '+(it.file||'có bài')+'</span>':'<span class="badge b-todo">○ chưa</span>';
+        html+='<label class="row'+(store[key]?' done':'')+'">'
+          +'<input type="checkbox" data-key="'+key.replace(/"/g,'')+'" '+checked+'>'
+          +'<span class="main"><span class="tname">'+it.t+'</span><span class="desc">'+it.d+'</span></span>'
+          +'<span class="rt">'+badge+'</span></label>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';sec.innerHTML=html;main.appendChild(sec);
+  });
+
+  // render tools
+  var tg=document.getElementById("toolgrid");
+  TOOLS.forEach(function(grp){
+    var c=document.createElement("div");c.className="toolcard";
+    var h='<h4>'+grp.h+'</h4><div class="toollist">';
+    grp.items.forEach(function(t){
+      h+='<div class="tool"><b>'+t[0]+'</b><span class="os">'+t[1]+'</span> <span class="pp">— '+t[2]+'</span></div>';
+    });
+    h+='</div>';c.innerHTML=h;tg.appendChild(c);
+  });
+
+  // progress
+  var boxes=[].slice.call(document.querySelectorAll('input[type=checkbox][data-key]'));
+  var bar=document.getElementById("bar"), label=document.getElementById("pctlabel");
+  function save(){try{localStorage.setItem("revrm-done",JSON.stringify(store));}catch(e){}}
+  function updateProg(){
+    var done=boxes.filter(function(b){return b.checked;}).length, total=boxes.length;
+    var pct=total?Math.round(done/total*100):0;
+    bar.style.width=pct+"%";label.textContent="Tiến độ: "+done+" / "+total+" ("+pct+"%)";
+    PHASES.forEach(function(ph){
+      var pb=document.querySelector('[data-pbar="'+ph.id+'"]');
+      var gs=boxes.filter(function(b){return b.getAttribute("data-key").indexOf(ph.id+"|")===0;});
+      var gd=gs.filter(function(b){return b.checked;}).length;
+      if(pb) pb.style.width=(gs.length?Math.round(gd/gs.length*100):0)+"%";
+    });
+  }
+  boxes.forEach(function(b){b.addEventListener("change",function(){
+    var k=b.getAttribute("data-key");if(b.checked)store[k]=1;else delete store[k];
+    b.closest(".row").classList.toggle("done",b.checked);save();updateProg();
+  });});
+  document.getElementById("resetBtn").addEventListener("click",function(){
+    store={};save();boxes.forEach(function(b){b.checked=false;b.closest(".row").classList.remove("done");});updateProg();
+  });
+  updateProg();
+})();
+</script>

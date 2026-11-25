@@ -1,0 +1,492 @@
+<title>angr & Symbolic</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.tree{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.tree input{font-family:var(--font-mono);font-size:14px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);width:110px}
+.tree button{font-family:var(--font-mono);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer}
+.tree .out{margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+.tree .good{color:var(--ok);font-weight:700}.tree .bad{color:var(--danger);font-weight:700}
+.tree .cons{color:var(--mem)}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN/REV · Phase 5 · Tự động</div>
+    <h1>angr &amp; Symbolic</h1>
+    <p class="sub"><strong>Thực thi tượng trưng</strong> (symbolic execution): thay vì chạy với input cụ thể, coi input là <mark>biến ký hiệu</mark> rồi để máy giải (SMT solver) tìm giá trị khiến chương trình đi tới đích — vd in "Correct!". <code>angr</code> tự động dò đường qua hàng trăm phép so sánh. Bài này: tìm địa chỉ đích thật, viết script angr giải, và né bùng nổ đường đi.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung–Cao (Phase 5)</span>
+      <span class="chip"><b>Dùng cho:</b> crackme, license check, flag check</span>
+      <span class="chip"><b>Cần trước:</b> đọc asm cơ bản</span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Cây đường đi</a><a href="#s4">04 Mẫu script</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Script thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Symbolic execution:</strong> input = biến ký hiệu (chưa biết giá trị). Mỗi lệnh <code>if</code> tách thành 2 nhánh kèm <em>ràng buộc</em> (constraint). Khi tới đích, gom tất cả ràng buộc trên đường đó, giao cho SMT solver (Z3) giải ngược ra input cụ thể.</p>
+    <p><strong>angr:</strong> framework Python làm việc đó tự động. Khai báo: tìm địa chỉ "win" (<code>find=</code>), tránh địa chỉ "fail" (<code>avoid=</code>) → angr trả input.</p>
+    <p><strong>Dùng khi:</strong> crackme nhiều phép kiểm (so sánh từng byte, biến đổi phức tạp) mà reverse tay quá mệt.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>find = địa chỉ "Correct", avoid = "Wrong" → angr giải ngược ra input.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Tìm địa chỉ find/avoid</span>
+<pre><code># trong IDA/gdb: địa chỉ sau "Correct!"/"You win" = find
+# địa chỉ sau "Wrong"/"Try again" = avoid
+# vd find=0x4011d5, avoid=0x4011e9</code></pre></div>
+      <div class="combat-row"><span class="lab">🐍 Script angr tối giản</span>
+<pre><code>import angr
+p = angr.Project("./crackme")
+s = p.factory.entry_state()
+sm = p.factory.simulation_manager(s)
+sm.explore(find=0x4011d5, avoid=0x4011e9)
+print(sm.found[0].posix.dumps(0))   # input (stdin)</code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 find bằng chuỗi (không cần addr)</span>
+<pre><code>sm.explore(find=lambda s: b"Correct" in s.posix.dumps(1))</code></pre></div>
+      <div class="combat-row"><span class="lab">💣 Né bùng nổ đường đi</span>
+        <p>Dùng <code>claripy.BVS</code> input độ dài cố định; hook/bỏ qua hàm phức tạp; <code>veritesting=True</code>; chỉ ký hiệu hoá đúng bộ nhớ cần.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>Input qua stdin → <code>posix.dumps(0)</code>. Qua argv → <code>angr.claripy.BVS</code> + arg. Đặt độ dài flag đúng. angr chậm với vòng lặp/crypto nặng.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Chạy với "giá trị chưa biết"</h2>
+  <p>Chạy thường: input = "hello" → CPU tính ra kết quả cụ thể. <span class="mem-term">Thực thi tượng trưng</span> thay input bằng một <em>biến ký hiệu</em> X (chưa gán giá trị). Khi gặp <code>if (X[0] == 'f')</code>, máy không biết đúng/sai → <strong>tách 2 nhánh</strong>: nhánh "đúng" mang ràng buộc <code>X[0]=='f'</code>, nhánh "sai" mang <code>X[0]!='f'</code>. Cứ thế mỗi nhánh tích luỹ một <span class="mem-term">path constraint</span> (tập điều kiện). Tới đích "Correct", ta có cả danh sách ràng buộc; <span class="mem-term">SMT solver</span> (Z3) giải hệ đó ra X cụ thể = flag. <code>angr</code> tự động hoá toàn bộ.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">symbolic var</div><p>Biến input chưa gán giá trị.</p></div>
+    <div class="card"><div class="term">path constraint</div><p>Tập điều kiện trên 1 đường.</p></div>
+    <div class="card"><div class="term">SMT solver</div><p>Z3 giải hệ ràng buộc.</p></div>
+    <div class="card"><div class="term">state</div><p>Ảnh chụp máy tại 1 điểm.</p></div>
+    <div class="card"><div class="term">simgr</div><p>Quản lý tập state đang khám phá.</p></div>
+    <div class="card"><div class="term">path explosion</div><p>Số nhánh bùng nổ (2^n).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Reverse tay quá mệt</h2>
+  <p>Nhiều crackme kiểm input bằng chuỗi phép biến đổi + so sánh: <code>for i: if (input[i]^k[i] != tgt[i]) fail;</code>, hay bảng tra, phép toán rối. Reverse tay 30 phép kiểm là cực hình. Symbolic execution lật ngược vấn đề: bạn chỉ cần chỉ ra <em>điểm đến mong muốn</em> (nơi in "Correct"), máy tự tìm input thoả. Với crackme vừa phải, angr giải trong vài giây đến vài phút — nhanh hơn reverse tay rất nhiều. Đây là công cụ "cầu dao" khi bí.</p>
+ </div>
+</section>
+
+<!-- 03 Cây -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / CÂY ĐƯỜNG ĐI · MỤC LÕI</div>
+  <h2>Mỗi if tách đôi</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 560 170" role="img" aria-label="cây nhánh: mỗi if tách 2, đường tới Correct gom ràng buộc X0=f, X1=l" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10">
+    <circle cx="280" cy="22" r="13" stroke-width="1.5" stroke="var(--mem)"/><text x="280" y="26" text-anchor="middle" fill="var(--mem)" stroke="none">X</text>
+    <text x="280" y="50" text-anchor="middle" fill="currentColor" stroke="none" opacity=".7">if X0=='f'</text>
+    <line x1="270" y1="33" x2="180" y2="66" stroke="#2f7d4f" stroke-width="1.3"/><text x="205" y="52" fill="#2f7d4f" stroke="none">==</text>
+    <line x1="290" y1="33" x2="400" y2="66" stroke="#e8663e" stroke-width="1.3"/><text x="350" y="52" fill="#e8663e" stroke="none">≠</text>
+    <circle cx="175" cy="78" r="12" stroke-width="1.4" stroke="#2f7d4f"/>
+    <circle cx="405" cy="78" r="12" stroke-width="1.4" stroke="#e8663e"/><text x="405" y="100" text-anchor="middle" fill="#e8663e" stroke="none">avoid</text>
+    <text x="175" y="104" text-anchor="middle" fill="currentColor" stroke="none" opacity=".7">if X1=='l'</text>
+    <line x1="166" y1="88" x2="120" y2="120" stroke="#2f7d4f" stroke-width="1.3"/>
+    <line x1="184" y1="88" x2="230" y2="120" stroke="#e8663e" stroke-width="1.3"/>
+    <rect x="80" y="122" width="90" height="26" rx="6" stroke-width="1.6" stroke="#2f7d4f"/><text x="125" y="139" text-anchor="middle" fill="#2f7d4f" stroke="none">Correct (find)</text>
+    <circle cx="230" cy="132" r="11" stroke-width="1.3" stroke="#e8663e"/>
+    <text x="280" y="166" text-anchor="middle" fill="currentColor" stroke="none" opacity=".72">Đường tới "Correct" gom ràng buộc: X0=='f' ∧ X1=='l' → solver ra "fl..."</text>
+    </g>
+  </svg>
+  <figcaption>Mỗi if tách 2 nhánh + ràng buộc. Đường tới find gom hết → Z3 giải ra input.</figcaption>
+  </figure>
+  <h3>Code crackme mẫu (C) &amp; địa chỉ thật</h3>
+  <pre><code><span class="c">// crackme.c — gcc crackme.c -o crackme -no-pie</span>
+<span class="k">char</span> buf[<span class="d">16</span>]; read(<span class="d">0</span>, buf, <span class="d">16</span>);
+<span class="k">for</span>(<span class="k">int</span> i=<span class="d">0</span>; i&lt;<span class="d">8</span>; i++)
+   <span class="k">if</span> ((buf[i] ^ key[i]) != enc[i]) { puts(<span class="s">"Wrong"</span>); _exit(<span class="d">1</span>); }  <span class="c">// 0x4011e9 = avoid</span>
+puts(<span class="s">"Correct!"</span>);   <span class="c">// 0x4011d5 = find</span>
+<span class="c"># objdump: địa chỉ ngay sau lea "Correct!" = 0x4011d5 (find)</span>
+<span class="c">#          ngay sau lea "Wrong"    = 0x4011e9 (avoid)</span></code></pre>
+  <div class="note"><span class="tag">Lấy địa chỉ</span>Mở binary trong IDA/Ghidra/objdump; tìm chuỗi "Correct!"/"Wrong"; click tới chỗ dùng; lấy địa chỉ block in ra. <code>find</code> = nơi in thành công, <code>avoid</code> = nơi in thất bại. no-PIE → địa chỉ cố định (0x40xxxx).</div>
+ </div>
+</section>
+
+<!-- 04 Mẫu script -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / CÁC MẪU SCRIPT</div>
+  <h2>3 cách cấp input</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>stdin (phổ biến)</h4>
+    <p><code>entry_state()</code> + <code>explore(find,avoid)</code> → <code>found[0].posix.dumps(0)</code>. angr tự ký hiệu hoá stdin.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>argv (tham số dòng lệnh)</h4>
+    <p><code>flag=claripy.BVS('flag',8*16)</code>; <code>entry_state(args=['./c',flag])</code>; sau khi find: <code>found.solver.eval(flag,cast_to=bytes)</code>.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Nạp state giữa chừng (blank_state)</h4>
+    <p>Bỏ qua phần setup phức tạp: <code>blank_state(addr=0x401180)</code>, nhét biến ký hiệu vào bộ nhớ buffer, rồi explore. Tránh path explosion ở đoạn không liên quan.</p></div></div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Mini solver: giải ngược XOR check</h2>
+  <p>Crackme mẫu: <code>input[i] ^ key[i] == enc[i]</code>. Biết key &amp; enc → solver giải <code>input[i] = enc[i] ^ key[i]</code>. Nhập enc (hex) &amp; key (hex) → ra flag (như angr nhưng thủ công cho 1 phép XOR).</p>
+  <div class="lab">
+    <div class="tree" id="tr">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div><label style="font-size:11px;color:var(--muted);display:block">enc (hex)</label><input id="encIn" value="1e0a000d4b1d1c17" style="width:180px"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block">key (hex)</label><input id="keyIn" value="6b6b6b6b6b6b6b6b" style="width:180px"></div>
+        <button id="solveBtn">Giải (XOR)</button>
+      </div>
+      <div class="out" id="trOut"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>find, avoid, dạng input</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Địa chỉ find/avoid</h4>
+    <pre><code><span class="p">$</span> objdump -d ./crackme | grep -A3 Correct   <span class="c"># địa chỉ block in</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Input vào đâu?</h4>
+    <pre><code><span class="c"># stdin (read/scanf) / argv / file ? quyết cách ký hiệu hoá</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Độ dài flag</h4>
+    <pre><code><span class="c"># read(0,buf,16) → flag 16 byte. Đặt BVS đúng độ dài.</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Script thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / SCRIPT ĐẦY ĐỦ</div>
+  <h2>angr giải crackme (địa chỉ thật)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · stdin find/avoid</button>
+    <button class="tab" data-t="b">B · argv + BVS</button>
+    <button class="tab" data-t="c">C · né path explosion</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — crackme đọc stdin, in "Correct!"/"Wrong". no-PIE.</span>
+<span class="k">import</span> angr
+proj = angr.Project(<span class="s">"./crackme"</span>, auto_load_libs=<span class="k">False</span>)
+
+state = proj.factory.entry_state(
+    stdin=angr.SimFile)                    <span class="c"># ký hiệu hoá stdin</span>
+simgr = proj.factory.simulation_manager(state)
+
+FIND  = <span class="d">0x4011d5</span>                           <span class="c"># sau puts("Correct!")</span>
+AVOID = <span class="d">0x4011e9</span>                           <span class="c"># sau puts("Wrong")</span>
+simgr.explore(find=FIND, avoid=AVOID)
+
+<span class="k">if</span> simgr.found:
+    sol = simgr.found[<span class="d">0</span>]
+    flag = sol.posix.dumps(<span class="d">0</span>)             <span class="c"># input stdin đã giải</span>
+    print(<span class="s">"FLAG:"</span>, flag)                   <span class="c"># vd b"fl4g{...}"</span>
+<span class="k">else</span>:
+    print(<span class="s">"không tìm thấy — kiểm find/avoid"</span>)</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>FIND=0x4011d5, AVOID=0x4011e9 là của crackme mẫu no-PIE — lấy từ objdump chuỗi "Correct"/"Wrong" của binary CỦA BẠN. Nếu PIE: dùng <code>proj.loader.main_object.min_addr</code> + offset, hoặc find bằng lambda chuỗi output. <code>auto_load_libs=False</code> tăng tốc.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># BẢN B — flag qua argv[1]. Dùng BVS độ dài cố định.</span>
+<span class="k">import</span> angr, claripy
+proj = angr.Project(<span class="s">"./crackme"</span>, auto_load_libs=<span class="k">False</span>)
+
+FLAG_LEN = <span class="d">16</span>
+flag = claripy.BVS(<span class="s">"flag"</span>, FLAG_LEN*<span class="d">8</span>)       <span class="c"># 16 byte ký hiệu</span>
+state = proj.factory.entry_state(args=[<span class="s">"./crackme"</span>, flag])
+
+<span class="c"># ràng buộc: mỗi byte in được (printable) để flag đẹp</span>
+<span class="k">for</span> b <span class="k">in</span> flag.chop(<span class="d">8</span>):
+    state.solver.add(b &gt;= <span class="d">0x20</span>, b &lt;= <span class="d">0x7e</span>)
+
+simgr = proj.factory.simulation_manager(state)
+simgr.explore(find=<span class="d">0x4011d5</span>, avoid=<span class="d">0x4011e9</span>)
+<span class="k">if</span> simgr.found:
+    print(simgr.found[<span class="d">0</span>].solver.eval(flag, cast_to=<span class="k">bytes</span>))</code></pre>
+<div class="note tip"><span class="tag">Printable constraint</span>Thêm <code>0x20≤b≤0x7e</code> giúp solver trả flag chữ-in-được thay vì byte rác thoả toán học. Rất hay cần cho crackme flag dạng text.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c">
+<pre><code><span class="c"># BẢN C — path explosion: vòng lặp/hàm nặng. Né bằng blank_state + hook.</span>
+<span class="k">import</span> angr, claripy
+proj = angr.Project(<span class="s">"./crackme"</span>, auto_load_libs=<span class="k">False</span>)
+
+<span class="c"># bắt đầu NGAY tại hàm check (bỏ qua setup), 0x401180</span>
+CHECK = <span class="d">0x401180</span>; BUF = <span class="d">0x404080</span>
+state = proj.factory.blank_state(addr=CHECK)
+flag = claripy.BVS(<span class="s">"flag"</span>, <span class="d">8</span>*<span class="d">16</span>)
+state.memory.store(BUF, flag)              <span class="c"># nhét flag ký hiệu vào buffer</span>
+state.regs.rdi = BUF                        <span class="c"># tham số trỏ buffer (tuỳ ABI)</span>
+
+simgr = proj.factory.simulation_manager(state)
+simgr.explore(find=<span class="d">0x4011d5</span>, avoid=<span class="d">0x4011e9</span>)
+<span class="c"># hook hàm chậm (vd strlen) để angr không mô phỏng sâu:</span>
+<span class="c"># proj.hook_symbol("strlen", angr.SIM_PROCEDURES['libc']['strlen']())</span>
+<span class="k">if</span> simgr.found:
+    print(simgr.found[<span class="d">0</span>].solver.eval(flag, cast_to=<span class="k">bytes</span>))
+<span class="c"># thêm: simgr.explore(..., veritesting=True) gộp nhánh, giảm nổ</span></code></pre>
+<div class="note"><span class="tag">Né bùng nổ</span><code>blank_state(addr=)</code> bỏ qua đoạn không liên quan; ký hiệu hoá đúng buffer cần. <code>SimProcedure</code>/<code>hook</code> thay hàm thư viện bằng mô hình nhanh. <code>veritesting=True</code> gộp nhánh. Giới hạn độ dài input.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>found rỗng</h4><p>Sai find/avoid, hoặc avoid chặn mất đường. Bỏ avoid thử lại.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Chạy mãi không xong</h4><p>Path explosion. blank_state, hook hàm, veritesting, giới hạn độ dài.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Flag byte rác</h4><p>Thiếu printable constraint. Thêm 0x20≤b≤0x7e.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">angr</div><h4>Symbolic engine</h4><p>Project/state/simgr/explore.</p></div>
+    <div class="card"><div class="term">claripy</div><h4>BVS/solver</h4><p>Biến ký hiệu + Z3.</p></div>
+    <div class="card"><div class="term">IDA/Ghidra</div><h4>Tìm find/avoid</h4><p>Địa chỉ block in.</p></div>
+    <div class="card"><div class="term">angr-management</div><h4>GUI</h4><p>Xem đồ thị trạng thái.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi angr không ra</h2>
+  <div class="grid">
+    <div class="card"><h4>found rỗng</h4><p>find sai địa chỉ. Dùng lambda chuỗi output.</p></div>
+    <div class="card"><h4>Quá chậm/OOM</h4><p>Path explosion. blank_state + hook + veritesting.</p></div>
+    <div class="card"><h4>PIE</h4><p>Địa chỉ đổi. Dùng offset + base, hay lambda.</p></div>
+    <div class="card"><h4>Flag rác</h4><p>Thêm printable/null constraint.</p></div>
+    <div class="card"><h4>Syscall lạ</h4><p>angr thiếu SimProcedure. Hook thủ công.</p></div>
+    <div class="card"><h4>Input sai kênh</h4><p>stdin vs argv vs file. Ký hiệu hoá đúng nguồn.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Khi nào dùng angr</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Bài toán</th><th>angr hợp?</th></tr></thead>
+    <tbody>
+      <tr><td>crackme nhiều so sánh byte</td><td class="yes">lý tưởng</td></tr>
+      <tr><td>XOR/add/sub đơn giản</td><td class="yes">nhanh (hoặc giải tay)</td></tr>
+      <tr><td>Hash/crypto mạnh (SHA, AES)</td><td class="no">bùng nổ — angr bó tay</td></tr>
+      <tr><td>Vòng lặp lớn/không biên</td><td class="maybe">cần hook/giới hạn</td></tr>
+      <tr><td>Tìm input gây crash (pwn)</td><td class="maybe">được, nhưng chậm</td></tr>
+      <tr><td>Giải mê cung/VM bytecode</td><td class="yes">rất mạnh</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Kiến trúc</span>angr hỗ trợ x86/x64/ARM/MIPS/PPC qua VEX IR — dùng cùng API, chỉ khác địa chỉ find/avoid. Không phụ thuộc glibc version (nó mô phỏng syscall). Crypto nặng vẫn là giới hạn chung của mọi symbolic engine.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · find/avoid cơ bản</div><p>angr_ctf 00-03: stdin, địa chỉ find/avoid.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · BVS + constraint</div><p>argv, printable, độ dài cố định.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · path explosion</div><p>blank_state, hook, veritesting giải crackme vòng lặp.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">symbolic var</div><p>Input chưa gán.</p></div>
+    <div class="card"><div class="term">constraint</div><p>Điều kiện đường đi.</p></div>
+    <div class="card"><div class="term">SMT/Z3</div><p>Solver giải ràng buộc.</p></div>
+    <div class="card"><div class="term">find/avoid</div><p>Địa chỉ win/fail.</p></div>
+    <div class="card"><div class="term">BVS</div><p>Bit-vector ký hiệu.</p></div>
+    <div class="card"><div class="term">path explosion</div><p>Bùng nổ nhánh 2^n.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>angr_ctf (jakespringer) — bộ bài tập chuẩn. docs.angr.io. Cùng họ: Triton, KLEE, SymCC.</li>
+    <li>Dùng phối hợp reverse tay: angr giải phần khó, hiểu cấu trúc để đặt find/avoid đúng.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · Tự động.</strong> Symbolic execution: input = biến ký hiệu, mỗi if tách nhánh + ràng buộc, Z3 giải ngược. angr: find=địa chỉ "Correct", avoid="Wrong" → ra flag. Né path explosion bằng blank_state/hook/veritesting. Bó tay với crypto mạnh.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("angr-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("angr-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var encIn=document.getElementById("encIn"),keyIn=document.getElementById("keyIn"),out=document.getElementById("trOut");
+  function toBytes(s){s=(s||"").replace(/[^0-9a-fA-F]/g,"");var a=[];for(var i=0;i+1<s.length;i+=2)a.push(parseInt(s.substr(i,2),16));return a;}
+  function solve(){
+    var enc=toBytes(encIn.value),key=toBytes(keyIn.value);
+    if(!enc.length){out.textContent="nhập enc hex";return;}
+    var n=Math.min(enc.length,key.length||enc.length);
+    var flag="",hexs=[],cons=[];
+    for(var i=0;i<n;i++){
+      var k=key.length?key[i%key.length]:0;
+      var b=enc[i]^k; hexs.push(b.toString(16).padStart(2,"0"));
+      cons.push("X"+i+"="+ "0x"+enc[i].toString(16)+"^0x"+k.toString(16));
+      flag += (b>=0x20&&b<=0x7e)?String.fromCharCode(b):".";
+    }
+    out.innerHTML='<div class="cons">ràng buộc mỗi byte: input[i] = enc[i] ^ key[i]</div>'+
+      '<div style="margin-top:6px">flag (hex): <b>'+hexs.join("")+'</b></div>'+
+      '<div class="good" style="margin-top:4px">flag: '+flag+'</div>'+
+      '<div style="opacity:.7;margin-top:4px;font-size:11px">angr làm điều này tự động cho MỌI phép biến đổi, không chỉ XOR.</div>';
+  }
+  document.getElementById("solveBtn").addEventListener("click",solve);
+  encIn.addEventListener("input",solve);keyIn.addEventListener("input",solve);solve();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

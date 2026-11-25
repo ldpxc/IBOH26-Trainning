@@ -1,0 +1,568 @@
+<title>Pwn Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: cột đọc ~820px; các phase là "bậc thang". Tông gạch nung / đá phiến, xanh cho mốc & tiến độ */
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --p0:#6b665b;--p1:#2f7d4f;--p2:#3a6ea5;--p3:#8a5cc0;--p4:#b23a1e;--p5:#c0392b;--p6:#9c27b0;--p7:#1d1b17;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:820px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--warn:#d9b55f;--warn-soft:#2e2713;
+  --p0:#a39d8f;--p1:#67c08a;--p2:#7fb0e0;--p3:#b79be0;--p4:#e86a48;--p5:#e8705f;--p6:#ce93d8;--p7:#e8e4d8;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--warn:#d9b55f;--warn-soft:#2e2713;
+  --p0:#a39d8f;--p1:#67c08a;--p2:#7fb0e0;--p3:#b79be0;--p4:#e86a48;--p5:#e8705f;--p6:#ce93d8;--p7:#e8e4d8;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 26px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(32px,7vw,52px);line-height:1.0;margin:.3em 0 .25em;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:17px;max-width:60ch}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:18px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+.badge{font-family:var(--font-mono);font-size:10.5px;padding:2px 7px;border-radius:999px;font-weight:700;white-space:nowrap}
+.b-have{background:var(--ok-soft);color:var(--ok)}
+.b-todo{background:var(--surface-2);color:var(--muted)}
+
+/* Progress */
+.progwrap{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:16;background:var(--bg)}
+.progrow{display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:12.5px;color:var(--muted)}
+.bar{flex:1;height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden;min-width:0}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--p1),var(--p2));border-radius:999px;transition:width .3s}
+.resetbtn{font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:4px 9px;border-radius:7px;cursor:pointer}
+
+/* Phase nav */
+.phasenav{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.phasenav a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--fg);border:1px solid var(--line);padding:5px 9px;border-radius:8px;background:var(--surface);display:inline-flex;gap:6px;align-items:center}
+.phasenav a:hover{border-color:var(--accent)}
+.phasenav a .n{width:16px;height:16px;border-radius:4px;display:inline-block}
+
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0}
+.phase{padding-block:26px;border-bottom:1px solid var(--line)}
+.phase-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pnum{font-family:var(--font-mono);font-weight:700;color:#fff;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.phase-head .lvl{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.pbar{height:6px;background:var(--surface-2);border-radius:999px;overflow:hidden;margin:12px 0 2px}
+.pbar i{display:block;height:100%;width:0;border-radius:999px;transition:width .3s}
+.milestone{background:var(--mem-soft);border:1px solid var(--line);border-radius:10px;padding:10px 13px;font-size:14px;margin:14px 0}
+.milestone b{color:var(--mem)}
+.goal{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;padding:10px 13px;font-size:14px;margin:14px 0}
+
+h3{font-family:var(--font-head);font-weight:600;font-size:16px;margin:20px 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-size:13px}
+
+.rows{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:8px 0}
+.row{display:grid;grid-template-columns:26px 1fr auto;gap:10px;padding:11px 14px;background:var(--surface);align-items:start}
+.row:hover{background:var(--surface-2)}
+.row input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex:none}
+.row .main{min-width:0}
+.row .tname{font-weight:600;font-size:15px}
+.row .tname code{font-family:var(--font-mono);font-size:.85em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.row .desc{font-size:13.5px;color:var(--muted);margin-top:1px}
+.row .desc .pre{color:var(--mem);font-family:var(--font-mono);font-size:11.5px}
+.row.done .tname{text-decoration:line-through;text-decoration-color:var(--muted);opacity:.7}
+.row .rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+
+/* Combos */
+.combo{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:12px 0}
+.combo h4{font-family:var(--font-head);margin:0 0 6px;font-size:16px}
+.chain{font-family:var(--font-mono);font-size:12.5px;color:var(--fg);background:var(--surface-2);border-radius:8px;padding:9px 11px;overflow-x:auto;white-space:nowrap}
+.chain b{color:var(--accent)}
+.combo p{margin:8px 0 0;font-size:14px;color:var(--muted)}
+
+figure{margin:18px 0}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:12.5px;color:var(--muted);text-align:center;margin-top:8px}
+
+.train{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0}
+.tcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.tcard h4{font-family:var(--font-head);margin:0 0 4px;font-size:15px}
+.tcard p{margin:0;font-size:13.5px;color:var(--muted)}
+.tcard a{color:var(--accent);text-underline-offset:2px}
+.toolgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:12px 0}
+.toolcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+.toolcard h4{font-family:var(--font-head);margin:0 0 8px;font-size:15px;display:flex;align-items:center;gap:7px}
+.toollist{display:flex;flex-direction:column;gap:7px}
+.tool{font-size:13.5px;line-height:1.45}
+.tool b{font-weight:600}
+.tool .pp{color:var(--muted)}
+.os{font-size:11px;padding:1px 6px;border-radius:5px;background:var(--surface-2);color:var(--muted);font-family:var(--font-mono);white-space:nowrap;margin-left:4px}
+
+.ttoggle{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:30;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:24px 42px;color:var(--muted);font-size:13px}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Lộ trình · Binary Exploitation</div>
+    <h1>Pwn Roadmap</h1>
+    <p class="sub">Từ newbie tới expert: 8 chặng, ~75 kỹ thuật trên <strong>mọi kiến trúc</strong> (x86-64/32, ARM, MIPS, RISC-V), và quan trọng nhất — <strong>cách ghép chúng lại</strong>. Học hết là đủ sức đấu các giải khắc nghiệt nhất và làm việc như một chuyên gia pwn thực thụ.</p>
+    <div class="legend">
+      <span><span class="badge b-have">✓ có bài</span> đã có cheatsheet nhà</span>
+      <span><span class="badge b-todo">○ chưa</span> sẽ viết sau</span>
+      <span><span class="dot" style="background:var(--mem)"></span> prereq = cần trước</span>
+    </div>
+    <nav class="phasenav" id="phasenav"></nav>
+  </div>
+</header>
+
+<div class="progwrap">
+  <div class="wrap">
+    <div class="progrow">
+      <span id="pctlabel" style="min-width:132px">Tiến độ: 0 / 0 (0%)</span>
+      <span class="bar"><i id="bar"></i></span>
+      <button class="resetbtn" id="resetBtn">reset</button>
+    </div>
+  </div>
+</div>
+
+<main id="main"></main>
+
+<section class="phase" id="arch">
+ <div class="wrap">
+  <div class="phase-head"><span class="pnum" style="background:var(--mem)">⚙</span><div><h2>Kiến trúc &amp; ABI</h2><div class="lvl">Cùng kỹ thuật, khác chi tiết theo kiến trúc</div></div></div>
+  <p style="color:var(--muted);font-size:15px;margin:14px 0">Mọi kỹ thuật trong roadmap đều áp dụng được cho nhiều kiến trúc — nhưng <strong>bốn thứ thay đổi</strong>: (1) tham số hàm truyền ở đâu, (2) cách gọi syscall + số hiệu, (3) kích thước con trỏ &amp; endianness (chọn <code>p32</code> hay <code>p64</code>), (4) gadget. Học x86-64 trước, rồi ánh xạ sang kiến trúc khác bằng bảng này.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kiến trúc</th><th>Tham số hàm (ABI)</th><th>Syscall</th><th>Con trỏ / Endian</th><th>Lưu ý pwn</th></tr></thead>
+    <tbody>
+      <tr><td><b>x86-64</b> (AMD64)</td><td><code>rdi rsi rdx rcx r8 r9</code> · trả về <code>rax</code></td><td><code>syscall</code> · số ở <code>rax</code></td><td>8 byte · little</td><td>Mặc định CTF, nhiều gadget. <code>p64</code>, căn stack 16B.</td></tr>
+      <tr><td><b>x86</b> 32-bit (i386)</td><td>Tham số đẩy trên <b>STACK</b></td><td><code>int 0x80</code> · số ở <code>eax</code> (arg: ebx,ecx,edx…)</td><td>4 byte · little</td><td><code>p32</code>. ROP/ret2dlresolve khác vì arg nằm trên stack.</td></tr>
+      <tr><td><b>ARM64</b> (AArch64)</td><td><code>x0–x7</code> · trả về <code>x0</code></td><td><code>svc #0</code> · số ở <code>x8</code></td><td>8 byte · little</td><td>Lệnh 4 byte cố định, PC-relative; gadget hiếm hơn.</td></tr>
+      <tr><td><b>ARM32</b> (+Thumb)</td><td><code>r0–r3</code></td><td><code>svc</code> · số ở <code>r7</code></td><td>4 byte · little</td><td>Chế độ Thumb lệnh 2 byte; bit 0 của PC chọn ARM/Thumb.</td></tr>
+      <tr><td><b>MIPS</b></td><td><code>$a0–$a3</code></td><td><code>syscall</code> · số ở <code>$v0</code></td><td>4/8 byte · thường <b>big</b></td><td>Branch delay slot; lo cache coherency khi chạy shellcode.</td></tr>
+      <tr><td><b>RISC-V</b></td><td><code>a0–a7</code></td><td><code>ecall</code> · số ở <code>a7</code></td><td>4/8 byte · little</td><td>Xuất hiện trong CTF mới; ABI gọn, dễ học sau x86-64.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="milestone"><b>Mẹo công cụ:</b> đặt <code>context.arch='aarch64'</code> / <code>'arm'</code> / <code>'mips'</code> / <code>'i386'</code> trong pwntools là tự đổi <code>p32/p64</code>, <code>shellcraft</code>, assembler. Chạy binary khác kiến trúc bằng <code>qemu-user</code> + <code>gdb-multiarch</code>.</div>
+ </div>
+</section>
+
+<section class="phase" id="tools">
+ <div class="wrap">
+  <div class="phase-head"><span class="pnum" style="background:var(--mem)">🧰</span><div><h2>Công cụ</h2><div class="lvl">Bộ đồ nghề pwn, gom một chỗ</div></div></div>
+  <p style="color:var(--muted);font-size:15px;margin:14px 0">Pwn gần như toàn Linux. Thẻ: <span class="os">🐧 Linux</span> <span class="os">⛓ cross</span>. Cài tối thiểu để bắt đầu: <strong>pwntools + gdb/pwndbg + ROPgadget + one_gadget</strong>.</p>
+  <div class="toolgrid">
+    <div class="toolcard"><h4>🧩 Khung &amp; debug</h4><div class="toollist">
+      <div class="tool"><b>pwntools</b><span class="os">🐧</span> <span class="pp">— thư viện exploit: ELF/ROP/process/remote, p64, cyclic, shellcraft</span></div>
+      <div class="tool"><b>gdb + pwndbg / GEF / peda</b><span class="os">🐧</span> <span class="pp">— debug + soi heap/bins/telescope/vmmap</span></div>
+      <div class="tool"><b>pwnld / pwnretry</b><span class="os">🐧</span> <span class="pp">— helper nhà: start() chọn mode, retry() cho exploit xác suất</span></div>
+      <div class="tool"><b>gdb-multiarch + qemu-user</b><span class="os">🐧</span> <span class="pp">— chạy & debug binary khác kiến trúc (ARM/MIPS…)</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🧱 Gadget &amp; ROP</h4><div class="toollist">
+      <div class="tool"><b>ROPgadget / ropper</b><span class="os">🐧</span> <span class="pp">— tìm gadget, dựng chain</span></div>
+      <div class="tool"><b>one_gadget</b><span class="os">🐧</span> <span class="pp">— tìm "magic" execve('/bin/sh') một phát trong libc</span></div>
+      <div class="tool"><b>pwntools ROP</b><span class="os">🐧</span> <span class="pp">— tự ghép chain, ret2dlresolve, flat()</span></div>
+    </div></div>
+    <div class="toolcard"><h4>📄 Soi &amp; vá binary</h4><div class="toollist">
+      <div class="tool"><b>checksec</b><span class="os">🐧</span> <span class="pp">— xem NX/PIE/Canary/RELRO</span></div>
+      <div class="tool"><b>readelf / objdump / nm</b><span class="os">🐧</span> <span class="pp">— mổ ELF, symbol, disasm</span></div>
+      <div class="tool"><b>patchelf / pwninit</b><span class="os">🐧</span> <span class="pp">— gắn đúng libc/loader cho binary challenge</span></div>
+      <div class="tool"><b>file / strings</b><span class="os">🐧</span> <span class="pp">— nhận dạng nhanh</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🧱 Heap &amp; libc</h4><div class="toollist">
+      <div class="tool"><b>pwndbg (bins / heap / vis)</b><span class="os">🐧</span> <span class="pp">— soi chunk/bin trực quan</span></div>
+      <div class="tool"><b>libc-database / libc.rip</b><span class="os">⛓</span> <span class="pp">— tra libc từ byte leak, lấy offset</span></div>
+      <div class="tool"><b>glibc-all-in-one</b><span class="os">🐧</span> <span class="pp">— tải & đổi nhiều phiên bản glibc để test</span></div>
+      <div class="tool"><b>how2heap (shellphish)</b><span class="os">⛓</span> <span class="pp">— demo mọi "House of"</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🔒 Seccomp &amp; syscall</h4><div class="toollist">
+      <div class="tool"><b>seccomp-tools</b><span class="os">🐧</span> <span class="pp">— dump & đọc bộ lọc seccomp</span></div>
+      <div class="tool"><b>strace / ltrace</b><span class="os">🐧</span> <span class="pp">— xem syscall & gọi thư viện</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🤖 Tự động &amp; symbolic</h4><div class="toollist">
+      <div class="tool"><b>angr</b><span class="os">⛓</span> <span class="pp">— symbolic execution, giải input/đường chạy</span></div>
+      <div class="tool"><b>z3</b><span class="os">⛓</span> <span class="pp">— SMT solver cho ràng buộc</span></div>
+      <div class="tool"><b>cyclic / flat / shellcraft</b><span class="os">🐧</span> <span class="pp">— offset, dựng payload, sinh shellcode (pwntools)</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🌐 Remote &amp; môi trường</h4><div class="toollist">
+      <div class="tool"><b>ncat / socat</b><span class="os">🐧</span> <span class="pp">— kết nối service remote</span></div>
+      <div class="tool"><b>tmux</b><span class="os">🐧</span> <span class="pp">— nhiều pane khi debug</span></div>
+      <div class="tool"><b>Docker</b><span class="os">🐧</span> <span class="pp">— tái tạo đúng môi trường challenge (libc/kernel)</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🧮 Kernel pwn</h4><div class="toollist">
+      <div class="tool"><b>qemu + gdb</b><span class="os">🐧</span> <span class="pp">— chạy & debug kernel/máy ảo challenge</span></div>
+      <div class="tool"><b>extract-vmlinux / vmlinux-to-elf</b><span class="os">🐧</span> <span class="pp">— lấy ELF từ bzImage để tìm gadget/symbol</span></div>
+      <div class="tool"><b>pahole</b><span class="os">🐧</span> <span class="pp">— xem offset trường struct kernel (cred, tty_struct…)</span></div>
+      <div class="tool"><b>ropper trên vmlinux</b><span class="os">🐧</span> <span class="pp">— gadget trong kernel</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🩹 Vá binary</h4><div class="toollist">
+      <div class="tool"><b>LIEF</b><span class="os">⛓</span> <span class="pp">— đọc/sửa PE/ELF bằng script</span></div>
+      <div class="tool"><b>keystone</b><span class="os">⛓</span> <span class="pp">— assembler: sinh byte lệnh để vá</span></div>
+      <div class="tool"><b>e9patch</b><span class="os">🐧</span> <span class="pp">— vá tĩnh x86-64, chèn trampoline giữ chức năng</span></div>
+      <div class="tool"><b>patchelf</b><span class="os">🐧</span> <span class="pp">— đổi interpreter/rpath/libc</span></div>
+      <div class="tool"><b>Ghidra / IDA 9.1 Pro patch</b><span class="os">⛓</span> <span class="pp">— sửa lệnh & export trong GUI</span></div>
+      <div class="tool"><b>HxD / dd</b><span class="os">⛓</span> <span class="pp">— vá byte thủ công</span></div>
+    </div></div>
+    <div class="toolcard"><h4>🧰 Tiện ích</h4><div class="toollist">
+      <div class="tool"><b>CyberChef</b><span class="os">⛓</span> <span class="pp">— decode nhanh (xor/base64/hex)</span></div>
+      <div class="tool"><b>Compiler Explorer (godbolt)</b><span class="os">⛓</span> <span class="pp">— xem asm ↔ C</span></div>
+      <div class="tool"><b>Ghidra / IDA 9.1 Pro</b><span class="os">⛓</span> <span class="pp">— reverse binary pwn khi không có nguồn</span></div>
+    </div></div>
+  </div>
+ </div>
+</section>
+
+<section class="phase" id="combos">
+ <div class="wrap">
+  <div class="phase-head"><span class="pnum" style="background:var(--accent)">&#10022;</span><div><h2>Kết hợp kỹ thuật (combos)</h2><div class="lvl">Trái tim của pwn thực chiến</div></div></div>
+  <p style="color:var(--muted);font-size:15px;margin:14px 0">Một challenge khó hiếm khi là một kỹ thuật đơn. Nó là một <strong>chuỗi</strong>: lỗi → primitive (đọc/ghi) → leak → điều khiển luồng → RCE. Dưới đây là các chuỗi kinh điển bạn phải thuộc như phản xạ.</p>
+
+  <div class="combo"><h4>1 · Có leak → ret2libc (nền tảng)</h4>
+    <div class="chain">overflow → <b>leak libc</b> (puts@plt(puts@got)) → tính base → ret: <b>system("/bin/sh")</b> / one_gadget</div>
+    <p>Combo đầu tiên mọi người học. Khóa học: Phase 2.</p></div>
+
+  <div class="combo"><h4>2 · Không có leak → ret2dlresolve hoặc ret2csu→leak</h4>
+    <div class="chain">overflow → <b>stage1</b> read khối giả vào .bss → <b>ret2dlresolve</b> → system &nbsp;|&nbsp; hoặc ret2csu set rdi/rsi/rdx → leak → ret2libc</div>
+    <p>Khi binary câm, không in gì để leak. Phase 2.</p></div>
+
+  <div class="combo"><h4>3 · Overflow nhỏ → stack pivot → ROP dài</h4>
+    <div class="chain">overflow chỉ đủ 2–3 gadget → <b>pivot</b> (leave;ret / pop rsp) về .bss/heap đã nạp sẵn → chạy ROP chain dài</div>
+    <p>Khi không gian tràn hẹp. Phase 2 (+ setcontext để pivot mạnh hơn).</p></div>
+
+  <div class="combo"><h4>4 · Format string → leak tất + ghi</h4>
+    <div class="chain"><b>%p/%s</b> leak canary + libc + PIE cùng lúc → <b>%n</b> ghi GOT / return addr / <b>fini_array</b> → RCE</div>
+    <p>Fmt vừa là mắt đọc vừa là tay ghi. Phase 3.</p></div>
+
+  <div class="combo"><h4>5 · Heap cổ điển (có hook, ≤2.33) → tcache poison → hook</h4>
+    <div class="chain">UAF/overflow → <b>tcache poisoning</b> ghi fd → malloc trả về <b>__free_hook</b> → đặt system → free("/bin/sh")</div>
+    <p>Đường nhanh trên glibc cũ. Phase 4D.</p></div>
+
+  <div class="combo"><h4>6 · Heap hiện đại (hookless, 2.34+) → FSOP</h4>
+    <div class="chain">UAF → leak libc (unsorted bin) → <b>tcache poison</b> _IO_2_1_stdout_ → <b>House of Apple 2</b> (FSOP) → system</div>
+    <p>Khi __free_hook/__malloc_hook đã bị xóa. Phase 4F–4G. Đây là combo "mặc định" của CTF hiện đại.</p>
+    <figure>
+    <svg viewBox="0 0 760 118" role="img" aria-label="Chuỗi heap hiện đại: bug tới leak libc qua unsorted bin, tới ghi đè con trỏ FILE của stdout, tới FSOP House of Apple 2, tới system" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+      <defs><marker id="rk" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker>
+      <marker id="rkA" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker></defs>
+      <rect x="6"   y="40" width="132" height="42" rx="8" stroke-width="1.5"/>
+      <rect x="166" y="40" width="150" height="42" rx="8" stroke-width="1.5"/>
+      <rect x="344" y="40" width="166" height="42" rx="8" stroke-width="1.5"/>
+      <rect x="538" y="40" width="150" height="42" rx="8" stroke-width="1.7" stroke="#e8663e"/>
+      <rect x="716" y="40" width="40" height="42" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+      <text x="72"  y="57" font-size="11.5" text-anchor="middle" fill="currentColor" stroke="none">UAF / overflow</text>
+      <text x="72"  y="72" font-size="10" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">(bug ban đầu)</text>
+      <text x="241" y="57" font-size="11.5" text-anchor="middle" fill="currentColor" stroke="none">leak libc</text>
+      <text x="241" y="72" font-size="10" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">unsorted bin fd</text>
+      <text x="427" y="57" font-size="11" text-anchor="middle" fill="currentColor" stroke="none">tcache poison</text>
+      <text x="427" y="72" font-size="10" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">→ _IO_2_1_stdout_</text>
+      <text x="613" y="57" font-size="11.5" text-anchor="middle" fill="#e8663e" stroke="none">House of Apple 2</text>
+      <text x="613" y="72" font-size="10" text-anchor="middle" fill="#e8663e" stroke="none">FSOP</text>
+      <text x="736" y="63" font-size="11" text-anchor="middle" fill="#e8663e" stroke="none">sh</text>
+      <line x1="138" y1="61" x2="162" y2="61" stroke="currentColor" stroke-width="1.5" marker-end="url(#rk)"/>
+      <line x1="316" y1="61" x2="340" y2="61" stroke="currentColor" stroke-width="1.5" marker-end="url(#rk)"/>
+      <line x1="510" y1="61" x2="534" y2="61" stroke="#e8663e" stroke-width="1.6" marker-end="url(#rkA)"/>
+      <line x1="688" y1="61" x2="712" y2="61" stroke="#e8663e" stroke-width="1.6" marker-end="url(#rkA)"/>
+    </svg>
+    <figcaption>Combo heap "mặc định" thời glibc 2.34+: không còn hook, nên đích cuối là cấu trúc FILE của stdout (FSOP).</figcaption>
+    </figure>
+  </div>
+
+  <div class="combo"><h4>7 · Leakless heap (không leak nổi)</h4>
+    <div class="chain"><b>House of Water / Tangerine</b> khống chế tcache_perthread_struct → bypass safe-linking → FSOP không cần leak</div>
+    <p>Khi binary không cho leak bất cứ gì. Phase 4H — đỉnh của heap.</p></div>
+
+  <div class="combo"><h4>8 · Dưới seccomp → ORW</h4>
+    <div class="chain">RCE nhưng bị chặn execve → ROP/heap → <b>mprotect</b> vùng shellcode → <b>open/read/write</b> flag (ORW)</div>
+    <p>Đọc filter bằng seccomp-tools trước. Phase 5.</p></div>
+
+  <div class="combo"><h4>9 · Blind (không có binary)</h4>
+    <div class="chain"><b>BROP</b>: brute canary → tìm stop/brop gadget → leak .text → dump binary remote → ret2libc</div>
+    <p>Chỉ có service remote, không file. Phase 5.</p></div>
+
+  <div class="combo"><h4>10 · Kernel: UAF → cross-cache → đối tượng mạnh → root</h4>
+    <div class="chain">UAF slab → <b>cross-cache</b> reclaim thành <b>pipe_buffer / msg_msg</b> → arbitrary RW → ghi <b>modprobe_path</b> / đổi <b>cred</b> → root</div>
+    <p>Mẫu kernel CTF hiện đại. Phase 6.</p></div>
+ </div>
+</section>
+
+<section class="phase" id="train">
+ <div class="wrap">
+  <div class="phase-head"><span class="pnum" style="background:var(--mem)">▦</span><div><h2>Luyện ở đâu</h2><div class="lvl">Sân tập theo từng chặng</div></div></div>
+  <div class="train">
+    <div class="tcard"><h4>Nền tảng → ROP</h4><p><a href="https://ropemporium.com" target="_blank" rel="noopener">ROP Emporium</a> · <a href="https://pwn.college" target="_blank" rel="noopener">pwn.college</a> · <a href="https://pwnable.kr" target="_blank" rel="noopener">pwnable.kr</a></p></div>
+    <div class="tcard"><h4>Trung–cao</h4><p><a href="https://pwnable.tw" target="_blank" rel="noopener">pwnable.tw</a> · <a href="https://pwnable.xyz" target="_blank" rel="noopener">pwnable.xyz</a> · <a href="https://exploit.education" target="_blank" rel="noopener">exploit.education</a></p></div>
+    <div class="tcard"><h4>Heap chuyên sâu</h4><p><a href="https://github.com/shellphish/how2heap" target="_blank" rel="noopener">how2heap (shellphish)</a> — mọi "House of".</p></div>
+    <div class="tcard"><h4>Kernel</h4><p><a href="https://pawnyable.cafe" target="_blank" rel="noopener">pawnyable.cafe</a> · <a href="https://google.github.io/security-research/kernelctf/rules.html" target="_blank" rel="noopener">kernelCTF</a> · Kernel-Exploit-Dojo.</p></div>
+    <div class="tcard"><h4>Giải đấu đỉnh</h4><p>DEF CON CTF · HITCON · Google CTF · PlaidCTF · 0CTF/TCTF — theo <a href="https://ctftime.org" target="_blank" rel="noopener">CTFtime</a>.</p></div>
+    <div class="tcard"><h4>Tự tìm bug</h4><p>Fuzzing (AFL++, libFuzzer), patch-diffing CVE để lên n-day.</p></div>
+  </div>
+  <div class="goal" style="margin-top:16px"><strong>Nhịp học đề xuất:</strong> mỗi kỹ thuật = đọc cơ chế → tự dựng tay 1 lần (how2heap/ir0nstone) → giải 2–3 bài thật → ghi lại combo. Đừng nhảy cóc qua heap internals; đó là chỗ phân loại expert với amateur.</div>
+ </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Pwn Roadmap.</strong> Tiến độ tick ở trên lưu trong trình duyệt này. Thứ tự Phase là xương sống; "combos" là thứ biến danh sách kỹ thuật thành năng lực giải đề thật.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp. Sau pwn sẽ tới roadmap reverse.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pwnrm-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("pwnrm-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  // ---- DATA ----
+  // h = đã có cheatsheet nhà ; p = prereq ; file = tên file nhà
+  var PHASES=[
+    {id:"p0",color:"var(--p0)",lvl:"Newbie · bắt buộc",title:"Nền tảng",
+     goal:"Chưa pwn gì cả — đây là bộ công cụ & kiến thức để kỹ thuật sau không như phép thuật.",
+     groups:[
+      {h:"Kiến thức",items:[
+        {t:"C đủ đọc",d:"con trỏ, struct, mảng, con trỏ hàm, cấp phát bộ nhớ"},
+        {t:"x86-64 assembly",d:"thanh ghi, lệnh cơ bản, cách stack hoạt động, lệnh call/ret"},
+        {t:"Mô hình bộ nhớ tiến trình",d:".text/.data/.bss/heap/stack, mmap, virtual memory"},
+        {t:"Calling convention SysV",d:"rdi,rsi,rdx,rcx,r8,r9 · trả về rax · stack căn 16 byte"},
+        {t:"Syscall",d:"số hiệu trong rax, lệnh syscall, khác call hàm thường"},
+        {t:"Định dạng ELF",d:"sections, symbols, PLT/GOT, relocation, .dynamic"},
+        {t:"Tổng quan mitigation",d:"NX, ASLR, PIE, Stack Canary, RELRO, FORTIFY"},
+      ]},
+      {h:"Công cụ",items:[
+        {t:"gdb + pwndbg/gef",d:"breakpoint, telescope, vmmap, soi thanh ghi/stack"},
+        {t:"pwntools",d:"ELF/ROP/process/remote, p64, flat, cyclic, shellcraft"},
+        {t:"checksec / readelf / objdump / nm",d:"soi bảo vệ và cấu trúc file"},
+        {t:"Ghidra / IDA / radare2",d:"dịch ngược khi không có mã nguồn"},
+        {t:"ROPgadget / ropper / one_gadget",d:"tìm gadget và magic one-shot"},
+        {t:"strace / ltrace / seccomp-tools",d:"xem syscall, thư viện, bộ lọc seccomp"},
+      ]},
+      {h:"Kiến trúc & ABI",items:[
+        {t:"x86-64 (AMD64)",d:"học đầu tiên, mặc định CTF: tham số rdi,rsi,rdx,rcx,r8,r9 · syscall"},
+        {t:"x86 32-bit (i386)",d:"tham số trên STACK, syscall int 0x80 (số ở eax), dùng p32"},
+        {t:"ARM / AArch64",d:"tham số x0–x7, syscall svc #0 (số ở x8), lệnh 4 byte cố định"},
+        {t:"ARM32 + Thumb",d:"tham số r0–r3; chế độ Thumb lệnh 2 byte, bit 0 của PC chọn chế độ"},
+        {t:"MIPS / RISC-V",d:"embedded & CTF mới: delay slot (MIPS), ecall a7 (RISC-V), hay big-endian"},
+        {t:"Khác biệt ABI ảnh hưởng gì",d:"gadget · số syscall · endianness (p32/p64) · nơi truyền tham số — xem bảng kiến trúc"},
+      ]},
+     ]},
+    {id:"p1",color:"var(--p1)",lvl:"Beginner",title:"Stack cơ bản",
+     goal:"Sau chặng này: giải được đa số bài ret2win và tràn stack đơn giản.",
+     milestone:"Điều khiển được RIP = thắng một nửa.",
+     groups:[{h:"",items:[
+        {t:"Buffer overflow → control RIP",d:"nhập quá dài, đè return address"},
+        {t:"ret2win",d:"nhảy về hàm 'thắng' có sẵn trong file"},
+        {t:"Tìm offset",d:"cyclic / de Bruijn, đọc vị trí crash"},
+        {t:"ret2shellcode",d:"NX off: nhét shellcode rồi nhảy vào",h:1,file:"ret2shellcode.md"},
+        {t:"Integer bugs",d:"tràn số, dấu/không dấu dẫn tới overflow/OOB",h:1,file:"integer_bugs.md"},
+        {t:"OOB read/write",d:"đọc/ghi ngoài biên mảng",h:1,file:"oob.md"},
+     ]}]},
+    {id:"p2",color:"var(--p2)",lvl:"Beginner → Intermediate",title:"Vượt NX & ASLR: ROP + leak",
+     goal:"Sau chặng này: giải được phần lớn bài ret2libc / ROP, có hoặc không có leak.",
+     milestone:"Đây là 'bánh mì & bơ' của pwn — luyện tới mức phản xạ.",
+     groups:[
+      {h:"ROP & gọi libc",items:[
+        {t:"PLT/GOT + lazy binding",d:"hiểu cơ chế nối hàm libc lúc chạy"},
+        {t:"ret2libc",d:"gọi system('/bin/sh') trong libc",h:1,file:"ret2libc.md"},
+        {t:"Kỹ thuật leak",d:"puts/write(GOT) → tính libc base",h:1,file:"leak_techniques.md"},
+        {t:"ROP chain + gadget hunting",d:"ghép gadget, căn stack 16 byte"},
+        {t:"ret2csu",d:"set rdi/rsi/rdx khi thiếu pop (lưu edi 32-bit)",h:1,file:"ret2csu.md"},
+        {t:"ret2dlresolve",d:"gọi system không cần leak libc",h:1,file:"ret2dlresolve.md"},
+        {t:"ret2syscall / mprotect",d:"tự gọi syscall, bật thực thi vùng shellcode"},
+      ]},
+      {h:"Pivot & frame",items:[
+        {t:"Stack pivot",d:"leave;ret / pop rsp → dời stack về bss/heap",h:1,file:"stack_pivot.md"},
+        {t:"SROP",d:"sigreturn giả: điều khiển MỌI thanh ghi 1 phát",h:1,file:"srop.md"},
+        {t:"setcontext",d:"setcontext+53: nạp cả context, pivot mạnh",h:1,file:"setcontext.md"},
+        {t:"function reuse / rbp",d:"tái dụng hàm nhập khi cạn gadget",h:1,file:"function_reuse_rbp.md"},
+      ]},
+      {h:"Vượt canary & PIE",items:[
+        {t:"Stack canary",d:"leak / brute fork / bypass",h:1,file:"canary.md"},
+        {t:"PIE base leak + partial overwrite",d:"ghi đè 1-2 byte né ASLR",h:1,file:"partial_overwrite.md"},
+      ]}]},
+    {id:"p3",color:"var(--p3)",lvl:"Intermediate",title:"Format string",
+     goal:"Sau chặng này: biến một %n thành đọc-ghi tùy ý, leak mọi thứ.",
+     groups:[{h:"",items:[
+        {t:"Leak bằng fmt",d:"%p/%s dò offset, lấy canary+libc+PIE",h:1,file:"fmtstr.md"},
+        {t:"Ghi tùy ý bằng %n",d:"%n/%hn/%hhn, fmtstr_payload",h:1,file:"fmtstr.md"},
+        {t:"Đích ghi: GOT / ret / exit handlers",d:"fini_array, __exit_funcs",h:1,file:"exit_handlers.md"},
+        {t:"Partial overwrite combo",d:"ghi lẻ byte né random",h:1,file:"partial_overwrite.md"},
+     ]}]},
+    {id:"p4",color:"var(--p4)",lvl:"Intermediate → Advanced",title:"Heap (glibc)",
+     goal:"Sau chặng này: giải heap CTF hiện đại trên mọi phiên bản glibc. Đây là chặng DÀI nhất.",
+     milestone:"Heap internals là ranh giới phân loại expert — đừng nhảy cóc.",
+     groups:[
+      {h:"4A · Internals",items:[
+        {t:"Chunk & bins",d:"fast/tcache/unsorted/small/large, top chunk, malloc/free flow",h:1,file:"heap.md"},
+        {t:"tcache (2.26+) & key (2.29+)",d:"cơ chế cache mỗi luồng, chống double-free"},
+        {t:"safe-linking (2.32+)",d:"mã hóa fd của tcache/fastbin"},
+      ]},
+      {h:"4B · Lớp lỗi",items:[
+        {t:"UAF",d:"dùng sau khi free",h:1,file:"heap_intermediate.md"},
+        {t:"Double free",d:"free hai lần"},
+        {t:"Heap overflow",d:"tràn chunk đè metadata chunk kế"},
+        {t:"Off-by-one / null-byte poison",d:"ghi lố 1 byte, gộp chunk"},
+      ]},
+      {h:"4C · Kỹ thuật cổ điển",items:[
+        {t:"tcache poisoning",d:"ghi fd → malloc trả địa chỉ tùy ý",h:1,file:"heap_intermediate.md"},
+        {t:"fastbin dup",d:"double free qua fastbin"},
+        {t:"unsorted bin attack",d:"ghi một con trỏ libc vào đích"},
+        {t:"unsafe unlink",d:"giả con trỏ fd/bk để ghi"},
+        {t:"House of Spirit/Einherjar/Lore/Force",d:"các house nền tảng (Force chỉ ≤2.28)"},
+      ]},
+      {h:"4D · Hook (≤ 2.33)",items:[
+        {t:"__free_hook / __malloc_hook",d:"ghi = system/one_gadget",h:1,file:"hook_overwrite.md"},
+      ]},
+      {h:"4E · Nâng cao",items:[
+        {t:"large bin attack",d:"ghi con trỏ qua large bin",h:1,file:"heap_advanced.md"},
+        {t:"tcache stashing unlink",d:"lợi dụng smallbin→tcache"},
+        {t:"House of Orange",d:"không free vẫn tạo được chunk tự do → FSOP"},
+      ]},
+      {h:"4F · FILE / FSOP",items:[
+        {t:"_IO_FILE & vtable",d:"cấu trúc FILE, bảng hàm ảo",h:1,file:"fsop.md"},
+        {t:"FSOP cơ bản",d:"giả stream để ép gọi hàm",h:1,file:"fsop.md"},
+        {t:"House of Husk",d:"printf qua printf_function_table",h:1,file:"house_of_husk.md"},
+        {t:"_IO_str_jumps / wide data",d:"vòng né vtable check"},
+      ]},
+      {h:"4G · Kỷ nguyên hookless (2.34+)",items:[
+        {t:"House of Apple 2",d:"FSOP hiện đại, đích mặc định ngày nay"},
+        {t:"House of Cat / Emma / Pig",d:"các biến thể FSOP qua setcontext/_IO_wfile"},
+        {t:"exit handlers + pointer guard",d:"__run_exit_handlers, giải mã con trỏ",h:1,file:"exit_handlers.md"},
+      ]},
+      {h:"4H · Leakless (đỉnh heap)",items:[
+        {t:"House of Water",d:"khống chế tcache_perthread_struct, bypass safe-linking"},
+        {t:"House of Tangerine / Botcake",d:"tạo overlap cho tcache poison không leak"},
+        {t:"Version matrix 2.23→2.39",d:"biết mỗi bản khác gì để chọn hướng"},
+      ]}]},
+    {id:"p5",color:"var(--p5)",lvl:"Advanced",title:"Nâng cao userland & kết hợp",
+     goal:"Sau chặng này: giải bài ghép nhiều kỹ thuật, có sandbox, hoặc không có binary.",
+     groups:[{h:"",items:[
+        {t:"seccomp + ORW",d:"đọc filter, mprotect, open/read/write flag",h:1,file:"seccomp_orw.md"},
+        {t:"Shellcode nâng cao",d:"egghunt, alphanumeric, không gian hẹp, SROP-chain",h:1,file:"shellcode_advanced.md"},
+        {t:"Race condition / TOCTOU",d:"double-fetch, cửa sổ đua",h:1,file:"race_condition.md"},
+        {t:"BROP (blind ROP)",d:"không có file, brute remote để dump binary",h:1,file:"brop.md"},
+        {t:"angr / symbolic execution",d:"giải input, tìm đường tự động"},
+        {t:"Tự động hóa exploit",d:"pwntools ROP, flat, template, retry ASLR"},
+        {t:"C++ pwn",d:"vtable, exception, con trỏ hàm thành viên"},
+     ]},{h:"Vá binary (phòng thủ / Attack-Defense)",items:[
+        {t:"Vá lỗ hổng giữ chức năng (AD)",d:"sửa service để chặn exploit mà vẫn pass SLA"},
+        {t:"NOP / đổi nhánh / thay hàm nguy hiểm",d:"gets→đọc giới hạn, vô hiệu call gây tràn"},
+        {t:"Thêm kiểm tra qua trampoline / detour",d:"chèn code vá bằng e9patch / LIEF / code cave"},
+        {t:"patchelf",d:"đổi interpreter/rpath/libc cho binary"},
+        {t:"Vá bằng Ghidra / IDA 9.1 Pro / keystone",d:"assemble lệnh mới rồi export binary"},
+        {t:"Kiểm thử vá",d:"đảm bảo chặn PoC VÀ không hỏng chức năng"},
+     ]}]},
+    {id:"p6",color:"var(--p6)",lvl:"Expert",title:"Kernel pwn (Linux)",
+     goal:"Sau chặng này: giải kernel CTF — leo thang lên root từ userland.",
+     milestone:"Chuyển từ 'chiếm 1 tiến trình' sang 'chiếm cả máy'.",
+     groups:[
+      {h:"Nền & mitigation",items:[
+        {t:"LKM / char device / ioctl",d:"giao diện tấn công: /dev, copy_to/from_user",h:1,file:"kernel_pwn.md"},
+        {t:"slab/slub, kmalloc, kmalloc-cg",d:"bộ cấp phát kernel"},
+        {t:"KASLR/SMEP/SMAP/KPTI/canary/CFI",d:"các hàng rào kernel"},
+      ]},
+      {h:"Data-only (dễ ổn định)",items:[
+        {t:"cred overwrite",d:"commit_creds(prepare_kernel_cred(0))"},
+        {t:"modprobe_path / core_pattern",d:"ghi đường dẫn → chạy script root"},
+      ]},
+      {h:"Heap spray & control-flow",items:[
+        {t:"msg_msg / pipe_buffer / tty_struct",d:"đối tượng spray kinh điển"},
+        {t:"kernel ROP/JOP + KPTI trampoline",d:"swapgs_restore_regs_and_return_to_usermode"},
+        {t:"userfaultfd / FUSE kéo dài race",d:"ổn định hóa UAF"},
+      ]},
+      {h:"Hiện đại",items:[
+        {t:"cross-cache attack",d:"tái chiếm slab thành đối tượng mạnh"},
+        {t:"DirtyCred / Dirty Pipe / dirty pagetable",d:"lớp kỹ thuật data-only mạnh"},
+        {t:"io_uring / eBPF / nftables",d:"bề mặt tấn công hiện đại, page spray, SLUBStick"},
+      ]}]},
+    {id:"p7",color:"var(--p7)",lvl:"Master",title:"Đỉnh: browser / VM / real-world",
+     goal:"Mức top-tier: đủ để chơi DEF CON CTF finals và nghiên cứu lỗ hổng thật.",
+     groups:[{h:"",items:[
+        {t:"JS engine pwn (V8/JSC/SpiderMonkey)",d:"type confusion, OOB array, addrof/fakeobj, JIT spray"},
+        {t:"Hypervisor / VM escape",d:"QEMU device emulation, thoát sandbox máy ảo"},
+        {t:"Cross-arch",d:"ARM/AArch64, MIPS, RISC-V — gadget & convention khác"},
+        {t:"Windows pwn",d:"cơ chế khác: SEH, heap Windows (tùy chọn)"},
+        {t:"Real-world / CVE",d:"patch-diff, n-day→1-day, fuzzing tự tìm bug"},
+     ]}]},
+  ];
+
+  // ---- RENDER ----
+  var main=document.getElementById("main"), nav=document.getElementById("phasenav");
+  var allBoxes=[];
+  var store={};
+  try{store=JSON.parse(localStorage.getItem("pwnrm-done")||"{}");}catch(e){store={};}
+
+  PHASES.forEach(function(ph,pi){
+    var a=document.createElement("a");a.href="#"+ph.id;
+    a.innerHTML='<span class="n" style="background:'+ph.color+'"></span>'+pi+' · '+ph.title;
+    nav.appendChild(a);
+
+    var sec=document.createElement("section");sec.className="phase";sec.id=ph.id;
+    var html='<div class="wrap"><div class="phase-head"><span class="pnum" style="background:'+ph.color+'">'+pi+'</span>'
+      +'<div><h2>'+ph.title+'</h2><div class="lvl">'+ph.lvl+'</div></div></div>'
+      +'<div class="pbar"><i data-pbar="'+ph.id+'" style="background:'+ph.color+'"></i></div>'
+      +'<div class="goal">'+ph.goal+'</div>';
+    if(ph.milestone) html+='<div class="milestone"><b>Mốc:</b> '+ph.milestone+'</div>';
+    ph.groups.forEach(function(g){
+      if(g.h) html+='<h3>'+g.h+'</h3>';
+      html+='<div class="rows">';
+      g.items.forEach(function(it){
+        var key=ph.id+"|"+it.t;
+        var checked=store[key]?"checked":"";
+        var badge=it.h?'<span class="badge b-have">✓ '+(it.file||'có bài')+'</span>':'<span class="badge b-todo">○ chưa</span>';
+        html+='<label class="row'+(store[key]?' done':'')+'" data-ph="'+ph.id+'">'
+          +'<input type="checkbox" data-key="'+key.replace(/"/g,'')+'" '+checked+'>'
+          +'<span class="main"><span class="tname">'+it.t+'</span>'
+          +'<span class="desc">'+it.d+'</span></span>'
+          +'<span class="rt">'+badge+'</span></label>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+    sec.innerHTML=html;
+    // chèn trước section combos
+    main.appendChild(sec);
+  });
+
+  // progress
+  var boxes=[].slice.call(document.querySelectorAll('input[type=checkbox][data-key]'));
+  var bar=document.getElementById("bar"), label=document.getElementById("pctlabel");
+  function save(){try{localStorage.setItem("pwnrm-done",JSON.stringify(store));}catch(e){}}
+  function updateProg(){
+    var done=boxes.filter(function(b){return b.checked;}).length, total=boxes.length;
+    var pct=total?Math.round(done/total*100):0;
+    bar.style.width=pct+"%"; label.textContent="Tiến độ: "+done+" / "+total+" ("+pct+"%)";
+    PHASES.forEach(function(ph){
+      var pb=document.querySelector('[data-pbar="'+ph.id+'"]');
+      var gs=boxes.filter(function(b){return b.getAttribute("data-key").indexOf(ph.id+"|")===0;});
+      var gd=gs.filter(function(b){return b.checked;}).length;
+      if(pb) pb.style.width=(gs.length?Math.round(gd/gs.length*100):0)+"%";
+    });
+  }
+  boxes.forEach(function(b){
+    b.addEventListener("change",function(){
+      var k=b.getAttribute("data-key");
+      if(b.checked)store[k]=1;else delete store[k];
+      b.closest(".row").classList.toggle("done",b.checked);
+      save();updateProg();
+    });
+  });
+  document.getElementById("resetBtn").addEventListener("click",function(){
+    store={};save();boxes.forEach(function(b){b.checked=false;b.closest(".row").classList.remove("done");});updateProg();
+  });
+  updateProg();
+})();
+</script>

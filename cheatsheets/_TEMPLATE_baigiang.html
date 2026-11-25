@@ -1,0 +1,281 @@
+<title>Template Bài Giảng</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: khung trống theo chuẩn 2 lớp. Combat Card (cam) ở đầu + 12 mục giảng sâu. Ô xanh nét đứt = hướng dẫn, xóa khi điền xong */
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--guide:#3a6ea5;--guide-soft:#dce8f4;--danger:#c0392b;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--guide:#7fb0e0;--guide-soft:#1f2c3a;--danger:#e8705f;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--guide:#7fb0e0;--guide-soft:#1f2c3a;--danger:#e8705f;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:38px 26px}
+.kicker{font-family:var(--font-mono);font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.03;margin:.3em 0 .3em;letter-spacing:-.015em}
+.fill{color:var(--accent);background:var(--accent-soft);padding:0 6px;border-radius:5px;font-family:var(--font-mono);font-size:.92em;font-weight:600}
+.sub{color:var(--muted);font-size:16px}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,25px);margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:17px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.1em}
+p{margin:10px 0}a{color:var(--accent)}
+code{font-family:var(--font-mono);font-size:.87em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.55;padding:14px;border-radius:11px;overflow-x:auto;margin:12px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}
+
+.guide{background:var(--guide-soft);border:1px dashed var(--guide);border-radius:11px;padding:12px 14px;margin:12px 0;font-size:14px}
+.guide .gtag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--guide);font-weight:700;display:block;margin-bottom:5px}
+.guide .must{color:var(--accent);font-weight:600}.guide .trap{color:var(--danger);font-weight:600}
+.guide ul{margin:6px 0 0;padding-left:20px}.guide li{margin:3px 0}
+.ph{border:1px dashed var(--line);border-radius:10px;padding:13px 15px;margin:12px 0;color:var(--muted);font-style:italic;background:var(--surface)}
+.ph::before{content:"✎ ";font-style:normal;color:var(--accent)}
+
+.combatcard{border:2px solid var(--accent);border-radius:13px;overflow:hidden;margin:16px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:9px 15px;font-size:15px}
+.combatcard .cb{padding:4px 15px 12px;background:var(--surface)}
+.cslot{padding:11px 0;border-bottom:1px solid var(--line)}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.cslot .hint{font-size:12.5px;color:var(--muted);font-style:italic}
+
+.howto{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:15px 17px;margin-top:16px}
+.howto h4{font-family:var(--font-head);margin:0 0 8px;font-size:15px}
+.howto ol{margin:0;padding-left:20px;font-size:14px}.howto li{margin:5px 0}
+.checklist{background:var(--accent-soft);border:1px solid var(--line);border-radius:13px;padding:15px 17px;margin:14px 0}
+.checklist label{display:flex;gap:9px;align-items:flex-start;font-size:14px;margin:7px 0}
+.checklist input{margin-top:4px;accent-color:var(--accent);flex:none}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:24px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Template · bám chuẩn 2 lớp</div>
+    <h1><span class="fill">[Tên kỹ thuật]</span></h1>
+    <p class="sub"><span class="fill">[Một câu: kỹ thuật là gì, khai thác lỗi gì, để làm được gì]</span></p>
+    <div class="howto">
+      <h4>Cách dùng template</h4>
+      <ol>
+        <li>Điền mọi chỗ <span class="fill">[nền cam]</span> và khối <span style="font-style:italic;color:var(--muted)">✎ in nghiêng</span>.</li>
+        <li>Đọc <strong>ô xanh nét đứt</strong> ("viết gì") rồi <strong>xóa nó</strong> khi điền xong.</li>
+        <li><strong>Luôn làm COMBAT CARD trước</strong> — đó là thứ người ta đọc khi thi.</li>
+        <li>Chạy qua checklist cuối trang trước khi coi là xong. Chuẩn đầy đủ: <code>_CHUAN_VIET_BAIGIANG.html</code>.</li>
+      </ol>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- TL;DR -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> lỗi / hậu quả / khai thác để làm gì — 3 câu + "nếu chỉ nhớ một điều". <span class="trap">Bẫy:</span> KHÔNG dùng thuật ngữ ở đây.</div>
+  <div class="ph">Điền 3 câu tóm tắt + câu chốt.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">⚡ / COMBAT CARD — LÀM TRƯỚC TIÊN</div>
+  <h2>Khối đọc-khi-thi</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> tự đủ để giải một bài điển hình mà KHÔNG cần đọc phần dưới. Mỗi ô ngắn gọn, bấm là làm. <span class="trap">Bẫy:</span> đừng giảng lý thuyết ở đây — để dành phần dưới.</div>
+  <div class="combatcard">
+    <div class="ch">⚡ COMBAT CARD — [tên kỹ thuật]</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span><span class="fill">[các dấu hiệu cô đọng → đúng là kỹ thuật này]</span><div class="hint">vd: checksec thấy X + có Y + thiếu Z</div></div>
+      <div class="cslot"><span class="lab">✅ Điều kiện bắt buộc</span><span class="fill">[PIE/RELRO/canary/libc… cần gì — một dòng]</span></div>
+      <div class="cslot"><span class="lab">🔧 Lệnh lấy số</span><span class="fill">[2–3 lệnh lấy offset/địa chỉ cần]</span></div>
+      <div class="cslot"><span class="lab">⚡ Skeleton — dán chạy ngay</span>
+<pre><code><span class="c"># [exploit mẫu gọn nhất, chỉ cần điền OFFSET/host]</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+<span class="c"># ...</span></code></pre></div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha</span><span class="fill">[các lỗi hay vướng + sửa 1 dòng]</span> · kết: "chưa hiểu? đọc tiếp dưới".</div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> giải thích cơ chế nền NGAY trong bài, mỗi khái niệm + 1 ẩn dụ đời thường. <span class="trap">Bẫy:</span> mục bị cắt nhiều nhất → nguyên nhân #1 gây điểm mù.</div>
+  <div class="ph">Các khái niệm nền + ẩn dụ.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO KỸ THUẬT RA ĐỜI</div>
+  <h2>Nó giải bế tắc gì?</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> kể như câu chuyện — cách cũ bí ở đâu, kỹ thuật này gỡ thế nào.</div>
+  <div class="ph">Câu chuyện động cơ.</div>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ · MỤC LÕI</div>
+  <h2>Chuyện gì xảy ra bên trong</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span>
+    <ul>
+      <li><span class="must">Sơ đồ</span> SVG trước→sau (màu cam = phần kẻ tấn công kiểm soát).</li>
+      <li><span class="must">Struct/code C</span> KHÔNG để trần → kèm "dịch sang tiếng người" + <strong>bảng-byte</strong> (byte|ô|chứa gì|giá trị) + dòng <code>p64/p32</code>.</li>
+      <li><span class="must">Ví dụ bằng SỐ THẬT</span> đi hết chuỗi (số nhất quán, địa chỉ thật-thấp vs giả-cao).</li>
+    </ul>
+  </div>
+  <div class="ph">Sơ đồ + mổ struct (bảng byte) + ví dụ số thật.</div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">04 / MINH HỌA TƯƠNG TÁC</div>
+  <h2>Tự tay thử</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> widget kéo/bấm minh họa đúng cơ chế mục 03. <span class="trap">Bẫy:</span> minh họa cơ chế, không trang trí.</div>
+  <div class="ph">Widget tương tác (JS).</div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">05 / ĐIỀU KIỆN CẦN</div>
+  <h2>Dấu hiệu / thông tin phải đạt</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> bảng điều kiện (PIE/RELRO/canary/libc…), cái nào bắt buộc, cái nào không, kèm vì sao.</div>
+  <div class="ph">Bảng điều kiện + giải thích.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Lấy từng số trong GDB/readelf</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> lệnh cụ thể + cách đọc output (dòng nào, số đó nghĩa gì). <span class="trap">Bẫy:</span> đừng dán hex rồi bỏ đó.</div>
+  <div class="ph">Các bước lấy info, mỗi bước: lệnh → output → diễn giải.</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">07 / VÍ DỤ THỰC TẾ</div>
+  <h2>Giải một challenge từ đầu đến shell</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> source + bảng "lấy từng số bằng lệnh gì" + <strong>3 bản exploit</strong>: (A) thủ công hiểu cơ chế · (B) pwntools tiện ích (bản chắc) · (C) pwnld+pwnretry. Nói rõ bản nào chạy chắc.</div>
+  <div class="ph">Source challenge + luồng + 3 tab exploit.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> chỉ công cụ bài này đụng tới, mỗi cái 1 dòng + lệnh.</div>
+  <div class="ph">Liệt kê công cụ.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">09 / LỖI THƯỜNG GẶP</div>
+  <h2>Khi không ra shell</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> triệu chứng → nguyên nhân → cách sửa.</div>
+  <div class="ph">Danh sách lỗi & cách gỡ.</div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">10 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> bảng ✅/❌ + vì sao (cái gì chặn kỹ thuật).</div>
+  <div class="ph">Bảng nhận diện.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">11 / BÀI TẬP</div>
+  <h2>Luyện theo lộ trình</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> 3 mức (làm lại / đổi 1 biến / tự nghĩ), gợi ý ẩn trong &lt;details&gt;.</div>
+  <div class="ph">3 bài tập tăng dần.</div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="guide"><span class="gtag">▚ Viết gì</span><span class="must">Phải có:</span> mọi từ chuyên ngành trong bài (1 câu/từ) + 3–5 link. <span class="trap">Bẫy:</span> glossary phải khớp từ đã dùng.</div>
+  <div class="ph">Thuật ngữ + link.</div>
+ </div>
+</section>
+
+<!-- Checklist -->
+<section class="block">
+ <div class="wrap">
+  <div class="secnum">✓ / TRƯỚC KHI XONG</div>
+  <h2>Checklist chất lượng</h2>
+  <div class="checklist">
+    <label><input type="checkbox"> <span><b>COMBAT:</b> đọc riêng Combat Card 30s có đủ giải một bài điển hình?</span></label>
+    <label><input type="checkbox"> <span><b>Từ lạ:</b> mọi thuật ngữ định nghĩa trước lần dùng đầu?</span></label>
+    <label><input type="checkbox"> <span><b>Struct:</b> mọi code C/struct có bảng-byte + dòng pwntools, không để trần?</span></label>
+    <label><input type="checkbox"> <span><b>Số thật:</b> mỗi cơ chế có ví dụ bằng số thật đi hết chuỗi?</span></label>
+    <label><input type="checkbox"> <span><b>Hình:</b> mỗi khái niệm trừu tượng có ≥1 sơ đồ (đúng quy ước màu)?</span></label>
+    <label><input type="checkbox"> <span><b>Output:</b> mọi hex/log/lệnh đều được giải nghĩa?</span></label>
+    <label><input type="checkbox"> <span><b>3 bản:</b> ví dụ thực tế có đủ 3 bản exploit?</span></label>
+    <label><input type="checkbox"> <span><b>Làm lại:</b> người mới tự tái hiện được không cần hỏi thêm?</span></label>
+    <label><input type="checkbox"> <span><b>Nhất quán:</b> cùng cấu trúc/đánh số/phong cách các bài khác?</span></label>
+  </div>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap"><p><strong>Template bài giảng CTF — chuẩn 2 lớp.</strong> Nhân bản cho mỗi kỹ thuật. Combat Card để thi, 12 mục để học sâu. Chuẩn đầy đủ: <code>_CHUAN_VIET_BAIGIANG.html</code>.</p></div>
+</footer>
+
+<script>
+(function(){"use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("tpl2-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("tpl2-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

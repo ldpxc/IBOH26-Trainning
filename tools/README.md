@@ -9,6 +9,20 @@ Thư viện siêu nhẹ dành cho toàn đội (**Web / Crypto / Rev / Misc**) �
 - Xem hướng dẫn chi tiết từng trường hợp tại: **[`adflag.md`](adflag.md)**.
 - Dùng nhanh: `from adflag import submit; submit(r.text)`.
 
+## [`vulncheck.py`](vulncheck.py) / [`vulncheck.md`](vulncheck.md)
+
+Công cụ quét lỗ hổng từ mã nguồn (SAST) tương tự compiler check/linter, phát hiện toàn diện lỗi bộ nhớ (PWN T1–T10) và logic bảo mật (Web/Crypto/Rev), kết hợp phân tích nhị phân (`checksec`) để suy luận kịch bản tấn công thực chiến và hướng dẫn vá khẩn cấp.
+- Xem tài liệu chi tiết: **[`vulncheck.md`](vulncheck.md)**.
+- Dùng nhanh:
+  ```bash
+  vulncheck service.c --bin ./service          # Quét source + phân tích checksec nhị phân
+  vulncheck service.c --compiler               # Xuất định dạng compiler diagnostic chuẩn
+  vulncheck ./src/ --format md --out audit.md  # Xuất báo cáo Markdown kiểm thử toàn diện
+  vulncheck app.py --category web              # Quét lỗ hổng Web (SQLi, SSTI, Pickle, SSRF)
+  vulncheck cipher.py --category crypto        # Quét lỗi mật mã (AES-ECB, RSA, PRNG)
+  vulncheck crackme.c --category rev           # Quét bẫy Anti-Debug (ptrace, rdtsc)
+  ```
+
 ## [`pwnld.py`](pwnld.py)
 
 Lớp helper mỏng bọc pwntools (`from pwnld import *`). Tra cứu nhanh trong terminal:

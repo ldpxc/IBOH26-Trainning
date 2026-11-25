@@ -1,0 +1,504 @@
+<title>House of Apple 2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.chbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12px}
+.chbox .cond{display:grid;grid-template-columns:1fr auto;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface);margin:5px 0;align-items:center}
+.chbox .cond.ok{border-left:3px solid var(--ok)}
+.chbox .cond.no{border-left:3px solid var(--danger)}
+.chbox button{font-family:var(--font-mono);font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);cursor:pointer}
+.chbox .state{font-weight:700}.chbox .y{color:var(--ok)}.chbox .n{color:var(--danger)}
+.chbox .verdict{margin-top:10px;padding:8px 12px;border-radius:8px;font-weight:700}
+.chbox .pass{background:var(--ok-soft);color:var(--ok)}.chbox .fail{background:var(--danger-soft);color:var(--danger)}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 5 · FILE</div>
+    <h1>House of Apple 2</h1>
+    <p class="sub">glibc mới (≥2.35) <strong>xoá hết hook</strong> (<code>__free_hook</code>, <code>__malloc_hook</code>). Con đường còn lại: khai thác <strong>cấu trúc FILE</strong> (<code>_IO_FILE</code>). House of Apple 2 lợi dụng nhánh <mark>_wide_data</mark> và bảng <code>_IO_wfile_jumps</code>: khi một FILE bị flush/exit, một con trỏ hàm trong chuỗi wide-vtable được gọi. Bài này: hiểu struct, điều kiện, byte-table — mức khái niệm giáo dục.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Rất cao (Phase 5)</span>
+      <span class="chip"><b>glibc:</b> 2.35 / 2.36+ (hook đã xoá)</span>
+      <span class="chip"><b>Cần trước:</b> <a href="exit_handlers.html" style="color:inherit">exit handlers</a> · <a href="tcache_fastbin.html" style="color:inherit">tcache</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~75 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Struct FILE</a><a href="#s4">04 Chuỗi gọi</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Khung dựng</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Bối cảnh:</strong> glibc 2.34+ bỏ <code>__malloc_hook</code>/<code>__free_hook</code> → các "house" cũ ghi hook chết. Cần nhắm <strong>FILE structure</strong> (FSOP — File Stream Oriented Programming).</p>
+    <p><strong>House of Apple 2</strong> (roderick, 2021): giả mạo một <code>_IO_FILE</code> sao cho khi glibc duyệt và thao tác nó (lúc <code>exit</code>/<code>fflush</code>/stdout flush), nó đi vào nhánh <em>wide char</em> (<code>_wide_data</code>) và gọi một con trỏ hàm từ <code>_IO_wfile_jumps</code>-giả.</p>
+    <p><strong>Ưu điểm:</strong> không cần hook, không cần <code>_IO_list_all</code> ghi phức tạp như Apple 1; kích hoạt bằng <code>exit</code>/flush rất phổ biến. Bài học tập trung <em>hiểu cấu trúc</em>, không phải vũ khí hoá.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Hook chết rồi → giả FILE + nhánh _wide_data + _IO_wfile_jumps giả → hàm được gọi khi flush/exit.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — ý chính khi gặp đề</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Khi nào dùng</span>
+<pre><code># glibc ≥ 2.35 (hook đã xoá), có arbitrary write / tcache→FILE
+# có thể ghi được một _IO_FILE (vd chèn vào _IO_list_all hoặc stdout)
+# kích hoạt: exit() / fflush / khi chương trình kết thúc flush buffer</code></pre></div>
+      <div class="combat-row"><span class="lab">🧩 Ba mảnh giả</span>
+        <p>(1) <code>_IO_FILE</code> giả với cờ &amp; con trỏ hợp lệ; (2) <code>_wide_data</code> giả; (3) <code>vtable</code> = <code>_IO_wfile_jumps</code> thật (để đi nhánh wide), còn hàm bị gọi lấy từ <code>_wide_data-&gt;_wide_vtable</code> giả.</p></div>
+      <div class="combat-row"><span class="lab">🎯 Điểm được gọi</span>
+<pre><code># _IO_wfile_overflow → _IO_wdoallocbuf
+#   → *(fp->_wide_data->_wide_vtable->__doallocate)(fp)
+# ta kiểm soát __doallocate = hàm tuỳ ý, rdi = fp</code></pre></div>
+      <div class="combat-row"><span class="lab">📐 Offset chính (2.35)</span>
+        <p><code>_IO_2_1_stdout_</code>, <code>_IO_wfile_jumps</code>, <code>_IO_list_all</code> — tra bằng <code>p &amp;_IO_wfile_jumps</code> trong gdb. Nhiều giá trị số thật ở mục 03.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>Đây là kỹ thuật tinh vi, nhiều điều kiện struct phải đúng. Bài này giải thích CƠ CHẾ; dựng payload thực hành trên môi trường CTF của bạn với gdb kiểm từng field.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>FILE là một struct có vtable</h2>
+  <p>Mỗi stream C (<code>stdin</code>/<code>stdout</code>/<code>stderr</code> và mọi <code>FILE*</code> từ <code>fopen</code>) là một <span class="mem-term">_IO_FILE</span> trong glibc, kèm một <span class="mem-term">vtable</span> (<code>_IO_jump_t</code>) — mảng con trỏ hàm cho đọc/ghi/flush/seek. Khi bạn gọi <code>fwrite</code>/<code>fflush</code>, glibc gọi hàm tương ứng <em>qua vtable</em>. Các stream nối thành danh sách liên kết qua <span class="mem-term">_IO_list_all</span>; lúc <code>exit()</code>, glibc duyệt danh sách và flush từng cái → gọi vtable của mỗi FILE. Nếu attacker làm giả một FILE với vtable trỏ chỗ mình kiểm soát, lời gọi đó bị chiếm. Đó là nền của mọi kỹ thuật <span class="mem-term">FSOP</span>.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">_IO_FILE</div><p>Struct của một stream.</p></div>
+    <div class="card"><div class="term">vtable</div><p>Bảng hàm đọc/ghi/flush.</p></div>
+    <div class="card"><div class="term">_IO_list_all</div><p>Danh sách mọi FILE.</p></div>
+    <div class="card"><div class="term">_wide_data</div><p>Struct phụ cho wide-char.</p></div>
+    <div class="card"><div class="term">FSOP</div><p>Khai thác qua struct FILE.</p></div>
+    <div class="card"><div class="term">vtable check</div><p>glibc kiểm vtable nằm trong vùng hợp lệ.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Hook chết → FILE là lối thoát</h2>
+  <p>Từ glibc 2.34, <code>__malloc_hook</code>/<code>__free_hook</code>/<code>__realloc_hook</code> bị <strong>gỡ bỏ hoàn toàn</strong> — các "house" ghi hook (xem <a href="hook_overwrite.html">hook overwrite</a>) không còn tác dụng. Đồng thời glibc thêm <strong>IO vtable check</strong>: vtable của FILE phải nằm trong vùng <code>__libc_IO_vtables</code> hợp lệ, nếu không <code>_IO_vtable_check</code> abort — chặn kỹ thuật FSOP cổ điển "ghi thẳng vtable = system". House of Apple 2 lách cái check đó: nó <em>giữ vtable là một bảng glibc hợp lệ</em> (<code>_IO_wfile_jumps</code>), nhưng lợi dụng rằng bảng này dẫn sâu vào <code>_wide_data-&gt;_wide_vtable</code> — chỗ <strong>không</strong> bị <code>_IO_vtable_check</code> kiểm — để đặt con trỏ hàm giả. Vì vậy nó là một trong số ít kỹ thuật còn sống trên glibc mới.</p>
+ </div>
+</section>
+
+<!-- 03 Struct -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / STRUCT FILE · MỤC LÕI</div>
+  <h2>_IO_FILE &amp; _wide_data (byte-table, glibc 2.35)</h2>
+  <p>Các offset dưới đây theo <code>struct _IO_FILE_plus</code> trên x86-64 glibc 2.35. Tra chính xác trên libc của đề bằng <code>ptype struct _IO_FILE</code> / <code>p &amp;_IO_wfile_jumps</code> trong gdb.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Offset</th><th>Field</th><th>Vai trò trong House of Apple 2</th></tr></thead>
+    <tbody>
+      <tr><td><code>+0x00</code></td><td><code>_flags</code></td><td>cờ; đặt sao cho rẽ nhánh ghi/overflow (vd xoá <code>_IO_NO_WRITES</code>)</td></tr>
+      <tr><td><code>+0x20</code></td><td><code>_IO_write_base</code></td><td>điều kiện so sánh để vào <code>_IO_wdoallocbuf</code></td></tr>
+      <tr><td><code>+0x28</code></td><td><code>_IO_write_ptr</code></td><td>đặt > write_base để kích overflow</td></tr>
+      <tr><td><code>+0xa0</code></td><td><code>_wide_data</code></td><td><b>trỏ tới _wide_data GIẢ ta kiểm soát</b></td></tr>
+      <tr><td><code>+0xc0</code></td><td><code>vtable</code></td><td>= <code>&amp;_IO_wfile_jumps</code> THẬT (qua được vtable check)</td></tr>
+    </tbody>
+  </table></div>
+  <h4>_wide_data giả (struct _IO_wide_data)</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Offset trong _wide_data</th><th>Field</th><th>Đặt gì</th></tr></thead>
+    <tbody>
+      <tr><td><code>+0x00</code>..<code>+0x18</code></td><td>_IO_write_base/ptr...</td><td>thoả điều kiện "cần cấp buffer"</td></tr>
+      <tr><td><code>+0xe0</code></td><td><code>_wide_vtable</code></td><td><b>trỏ tới bảng wide-vtable GIẢ</b></td></tr>
+    </tbody>
+  </table></div>
+  <h4>wide-vtable giả (_IO_jump_t cho wide)</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Offset trong wide-vtable</th><th>Field</th><th>Đặt gì</th></tr></thead>
+    <tbody>
+      <tr><td><code>+0x68</code></td><td><code>__doallocate</code></td><td><b>= hàm sẽ được gọi (rdi = fp)</b></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Giá trị thật cần tra</span>Trên libc của đề (gdb): <code>p &amp;_IO_2_1_stdout_</code>, <code>p &amp;_IO_wfile_jumps</code>, <code>p &amp;_IO_list_all</code>. Ví dụ libc 2.35 Ubuntu 22.04: các symbol này cách libc-base một offset cố định — <code>readelf -s libc.so.6 | grep _IO_wfile_jumps</code> cho offset, cộng base sau khi leak.</div>
+ </div>
+</section>
+
+<!-- 04 Chuỗi gọi -->
+<section class="block" id="s4">
+ <div class="wrap wide">
+  <div class="secnum">04 / CHUỖI GỌI</div>
+  <h2>Từ exit/flush tới con trỏ hàm giả</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 600 180" role="img" aria-label="exit duyệt _IO_list_all gọi overflow, đi nhánh wfile_overflow, wdoallocbuf, gọi doallocate từ wide_vtable giả" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="9.5">
+    <rect x="12" y="20" width="120" height="26" rx="5" stroke-width="1.5"/><text x="72" y="37" text-anchor="middle" fill="currentColor" stroke="none">exit() / fflush</text>
+    <rect x="12" y="60" width="150" height="26" rx="5" stroke-width="1.4"/><text x="87" y="77" text-anchor="middle" fill="currentColor" stroke="none">duyệt _IO_list_all</text>
+    <rect x="12" y="100" width="170" height="26" rx="5" stroke-width="1.4" stroke="var(--mem)"/><text x="97" y="117" text-anchor="middle" fill="var(--mem)" stroke="none">_IO_wfile_overflow(fp)</text>
+    <rect x="215" y="100" width="150" height="26" rx="5" stroke-width="1.4" stroke="var(--mem)"/><text x="290" y="117" text-anchor="middle" fill="var(--mem)" stroke="none">_IO_wdoallocbuf</text>
+    <rect x="400" y="100" width="185" height="26" rx="5" stroke-width="1.7" stroke="#e8663e"/><text x="492" y="113" text-anchor="middle" fill="#e8663e" stroke="none">call wide_vtable</text><text x="492" y="123" text-anchor="middle" fill="#e8663e" stroke="none">->__doallocate(fp)</text>
+    <line x1="72" y1="46" x2="72" y2="59" stroke-width="1.2" marker-end="url(#ao)"/>
+    <line x1="87" y1="86" x2="90" y2="99" stroke-width="1.2" marker-end="url(#ao)"/>
+    <line x1="182" y1="113" x2="213" y2="113" stroke="var(--mem)" stroke-width="1.3" marker-end="url(#am)"/>
+    <line x1="365" y1="113" x2="398" y2="113" stroke="#e8663e" stroke-width="1.4" marker-end="url(#ar)"/>
+    <text x="300" y="160" text-anchor="middle" fill="currentColor" stroke="none" opacity=".72">vtable = _IO_wfile_jumps THẬT (qua check) → nhưng __doallocate lấy từ wide_vtable GIẢ → hàm tuỳ ý, rdi=fp.</text>
+    </g>
+    <defs>
+    <marker id="ao" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker>
+    <marker id="am" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--mem)" stroke="none"/></marker>
+    <marker id="ar" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker>
+    </defs>
+  </svg>
+  <figcaption>exit→duyệt FILE→wfile_overflow→wdoallocbuf→gọi __doallocate từ wide-vtable giả. rdi=fp.</figcaption>
+  </figure>
+  <h3>Vì sao qua được vtable check</h3>
+  <p><code>_IO_vtable_check</code> chỉ xác minh <strong>vtable chính</strong> của FILE (<code>fp+0xc0</code>) nằm trong vùng <code>__libc_IO_vtables</code>. House of Apple 2 đặt nó = <code>_IO_wfile_jumps</code> — một vtable glibc <em>hợp lệ</em>, nên check PASS. Nhưng <code>_IO_wfile_jumps</code> khi xử lý overflow lại đi vào <code>_wide_data-&gt;_wide_vtable</code> — một con trỏ <strong>không bị kiểm</strong>. Đó là nơi attacker đặt bảng giả và con trỏ hàm <code>__doallocate</code> tuỳ ý. Vì <code>rdi = fp</code>, nếu đặt đầu <code>fp</code> khéo thì có thể gọi được hàm nhận tham số là con trỏ FILE.</p>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Checker điều kiện House of Apple 2</h2>
+  <p>Bật/tắt từng điều kiện struct — công cụ báo chuỗi gọi có đi tới <code>__doallocate</code> giả không. Giúp hiểu field nào bắt buộc.</p>
+  <div class="lab">
+    <div class="chbox" id="ch">
+      <div class="cond ok" data-k="vt"><span>vtable (fp+0xc0) = &amp;_IO_wfile_jumps thật</span><button data-t="vt">BẬT</button></div>
+      <div class="cond ok" data-k="wd"><span>_wide_data (fp+0xa0) trỏ struct giả ta kiểm soát</span><button data-t="wd">BẬT</button></div>
+      <div class="cond ok" data-k="wv"><span>_wide_vtable (wd+0xe0) trỏ bảng giả</span><button data-t="wv">BẬT</button></div>
+      <div class="cond ok" data-k="da"><span>__doallocate (wvtable+0x68) = hàm đích</span><button data-t="da">BẬT</button></div>
+      <div class="cond ok" data-k="fl"><span>_flags &amp; write_ptr>write_base (kích overflow)</span><button data-t="fl">BẬT</button></div>
+      <div class="verdict" id="chVerdict"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>glibc version, symbol, điểm ghi</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>glibc ≥ 2.35?</h4>
+    <pre><code><span class="p">$</span> ./libc.so.6 | head -1   <span class="c"># version; hook đã xoá từ 2.34</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Offset symbol</h4>
+    <pre><code><span class="p">$</span> readelf -s libc.so.6 | grep -E "_IO_wfile_jumps|_IO_list_all|stdout"</code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Có ghi được FILE?</h4>
+    <pre><code><span class="c"># arbitrary write / tcache→stdout / ghi _IO_list_all = &fake_file</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Khung dựng -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / KHUNG DỰNG (GIÁO DỤC)</div>
+  <h2>Dựng fake FILE — giải thích từng field</h2>
+  <p>Đây là <strong>khung khái niệm</strong> để hiểu cấu trúc; chạy thực tế cần kiểm từng offset trên libc đề bằng gdb. Không phải chain bấm-là-chạy.</p>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · dựng struct</button>
+    <button class="tab" data-t="b">B · kích hoạt</button>
+    <button class="tab" data-t="c">C · kiểm bằng gdb</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># KHUNG — minh hoạ bố trí 3 struct giả trong một vùng heap ta kiểm soát.</span>
+<span class="c"># Mục đích: HIỂU field nào trỏ đâu. Offset phải khớp libc đề (gdb).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+libc.address = LEAK_BASE                     <span class="c"># sau khi leak libc base</span>
+wfile_jumps = libc.sym._IO_wfile_jumps        <span class="c"># vtable glibc hợp lệ</span>
+
+FAKE = HEAP_ADDR                              <span class="c"># địa chỉ vùng ta kiểm soát (biết trước)</span>
+target_fn = libc.address + <span class="d">0x000000</span>        <span class="c"># hàm muốn gọi (tra trên libc đề)</span>
+
+fp = flat({
+    <span class="d">0x00</span>: <span class="d">0</span>,                               <span class="c"># _flags (đặt theo điều kiện overflow)</span>
+    <span class="d">0x20</span>: <span class="d">0</span>,                               <span class="c"># _IO_write_base</span>
+    <span class="d">0x28</span>: <span class="d">1</span>,                               <span class="c"># _IO_write_ptr > base → kích overflow</span>
+    <span class="d">0xa0</span>: FAKE + <span class="d">0x100</span>,                    <span class="c"># _wide_data → struct giả bên dưới</span>
+    <span class="d">0xc0</span>: wfile_jumps,                      <span class="c"># vtable = _IO_wfile_jumps THẬT</span>
+}, filler=b<span class="s">"\x00"</span>, length=<span class="d">0x100</span>)
+
+wide = flat({
+    <span class="d">0xe0</span>: FAKE + <span class="d">0x200</span>,                    <span class="c"># _wide_vtable → bảng giả</span>
+}, filler=b<span class="s">"\x00"</span>, length=<span class="d">0x100</span>)
+
+wvtable = flat({
+    <span class="d">0x68</span>: target_fn,                       <span class="c"># __doallocate = hàm đích (rdi=fp)</span>
+}, filler=b<span class="s">"\x00"</span>, length=<span class="d">0x100</span>)
+
+blob = fp + wide + wvtable                    <span class="c"># ghi cả cụm vào FAKE</span></code></pre>
+<div class="note warn"><span class="tag">Thành thật — mức giáo dục</span>Các offset <code>0xa0/0xc0/0xe0/0x68</code> theo glibc 2.35 x86-64; <strong>phải xác nhận trên libc đề</strong>. <code>_flags</code>/<code>write_ptr</code> phải đặt để glibc rẽ vào nhánh overflow — chi tiết thay đổi theo version. Đây là bản đồ cấu trúc để bạn tự dựng &amp; debug, không phải exploit hoàn chỉnh.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># KÍCH HOẠT — làm sao glibc "chạm" FILE giả:</span>
+<span class="c"># Cách 1: ghi _IO_list_all = &amp;FAKE (cần arbitrary write) → exit() duyệt nó.</span>
+<span class="c"># Cách 2: giả ĐÈ lên _IO_2_1_stdout_ (nếu ghi được vùng đó) → fflush/exit.</span>
+<span class="c"># Cách 3: tcache poisoning trả chunk = &amp;stdout, ghi struct, chờ flush.</span>
+<span class="c">#</span>
+<span class="c"># Điểm chung: khi chương trình EXIT hoặc flush buffer stdout,</span>
+<span class="c"># glibc gọi _IO_wfile_overflow → ... → __doallocate(fp) = target_fn.</span>
+write_what_where(libc.sym._IO_list_all, FAKE)   <span class="c"># ví dụ (primitive của đề)</span>
+p.sendline(b<span class="s">"exit"</span>)                            <span class="c"># hoặc để chương trình kết thúc tự nhiên</span></code></pre>
+<div class="note tip"><span class="tag">Kích hoạt phổ biến</span>Ưu điểm lớn của Apple 2: <code>exit()</code> và flush stdout xảy ra ở GẦN NHƯ mọi chương trình → dễ kích. Không cần hàm hiếm. Chọn primitive ghi phù hợp đề (arbitrary write, tcache, largebin...).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c">
+<pre><code><span class="c"># KIỂM BẰNG GDB — xác nhận offset &amp; chuỗi gọi trên libc đề.</span>
+pwndbg&gt; p &amp;_IO_wfile_jumps        <span class="c"># địa chỉ vtable hợp lệ</span>
+pwndbg&gt; ptype struct _IO_FILE     <span class="c"># offset _wide_data, vtable</span>
+pwndbg&gt; p &amp;((struct _IO_wide_data*)0)-&gt;_wide_vtable   <span class="c"># offset 0xe0?</span>
+pwndbg&gt; b _IO_wfile_overflow       <span class="c"># dừng, xem fp, đi theo call</span>
+pwndbg&gt; b _IO_wdoallocbuf
+<span class="c"># đặt breakpoint, chạy exit, quan sát con trỏ hàm cuối được gọi là gì</span>
+<span class="c"># → chỉnh từng field cho khớp đến khi call nhảy tới target_fn.</span></code></pre>
+<div class="note"><span class="tag">Phương pháp</span>FSOP là kỹ thuật "debug từng field". Đặt breakpoint ở <code>_IO_wfile_overflow</code>/<code>_IO_wdoallocbuf</code>, chạy, xem glibc đọc field nào, so với struct giả, sửa dần. Hiểu luồng &gt; chép payload.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>vtable check abort</h4><p>vtable chính phải = bảng glibc hợp lệ (_IO_wfile_jumps), KHÔNG trỏ heap.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Offset lệch version</h4><p>_wide_data/0xe0/0x68 đổi theo glibc. Tra gdb libc đề.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Không vào nhánh overflow</h4><p>_flags/write_ptr sai → không gọi wdoallocbuf. Debug điều kiện.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwndbg</div><h4>ptype/break</h4><p>Offset struct, theo call.</p></div>
+    <div class="card"><div class="term">readelf -s</div><h4>Symbol offset</h4><p>_IO_wfile_jumps...</p></div>
+    <div class="card"><div class="term">libc-database</div><h4>Nhận version</h4><p>Khớp offset đúng libc.</p></div>
+    <div class="card"><div class="term">glibc source</div><h4>Đọc luồng</h4><p>libio/wfileops.c.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi không gọi được hàm</h2>
+  <div class="grid">
+    <div class="card"><h4>_IO_vtable_check abort</h4><p>vtable chính không hợp lệ. Dùng _IO_wfile_jumps.</p></div>
+    <div class="card"><h4>Crash trước __doallocate</h4><p>_wide_data/_wide_vtable sai offset. gdb ptype.</p></div>
+    <div class="card"><h4>Không tới overflow</h4><p>_flags/write_ptr chưa thoả. Debug điều kiện.</p></div>
+    <div class="card"><h4>Offset sai version</h4><p>2.35≠2.36≠2.38. Tra lại từng field.</p></div>
+    <div class="card"><h4>rdi=fp cản hàm đích</h4><p>Chọn hàm nhận con trỏ, hoặc gadget phù hợp.</p></div>
+    <div class="card"><h4>Không kích được</h4><p>exit/flush không chạy? Gọi fflush thủ công/để kết thúc.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & HỌ HÀNG</div>
+  <h2>Các "house" FILE</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kỹ thuật</th><th>Ý tưởng / glibc</th></tr></thead>
+    <tbody>
+      <tr><td>House of Apple 1</td><td>qua _IO_list_all + _IO_flush_all, phức tạp hơn</td></tr>
+      <tr><td><b>House of Apple 2</b></td><td>wide_data + _IO_wfile_jumps, kích bằng exit/flush (bài này)</td></tr>
+      <tr><td>House of Apple 3</td><td>biến thể wide, điều kiện khác</td></tr>
+      <tr><td>House of Cat / Emma</td><td>FSOP khác qua các nhánh FILE khác nhau</td></tr>
+      <tr><td>exit handler (tcache_shutdown)</td><td>xem <a href="exit_handlers.html">exit handlers</a>, PTR_MANGLE</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">glibc</span>2.23–2.33: còn hook → dùng <a href="hook_overwrite.html">hook overwrite</a> dễ hơn. 2.34+: hook xoá → FSOP (Apple 2...) hoặc exit handler. Offset struct FILE đổi theo từng minor; LUÔN tra trên libc của đề. 32-bit hiếm dùng FSOP CTF.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · đọc struct</div><p>gdb: tìm offset _wide_data, vtable, _wide_vtable trên libc 2.35.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · dựng fake FILE</div><p>Bố trí 3 struct, breakpoint _IO_wfile_overflow xác nhận luồng.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐⭐ · kích qua exit</div><p>Ghi _IO_list_all = fake, debug tới __doallocate.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">_IO_FILE</div><p>Struct stream.</p></div>
+    <div class="card"><div class="term">_wide_data</div><p>Struct wide-char phụ.</p></div>
+    <div class="card"><div class="term">_IO_wfile_jumps</div><p>Vtable wide hợp lệ.</p></div>
+    <div class="card"><div class="term">__doallocate</div><p>Con trỏ hàm bị gọi.</p></div>
+    <div class="card"><div class="term">vtable check</div><p>Kiểm vtable chính hợp lệ.</p></div>
+    <div class="card"><div class="term">FSOP</div><p>Khai thác struct FILE.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="exit_handlers.html">exit handlers</a> · <a href="hook_overwrite.html">hook (glibc cũ)</a> · <a href="tcache_fastbin.html">tcache</a> (primitive ghi FILE).</li>
+    <li>roderickchan "House of Apple" series · glibc <code>libio/wfileops.c</code> · CTF-wiki IO FILE.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · FILE.</strong> glibc ≥2.35 xoá hook → khai thác struct FILE. Apple 2: vtable chính = _IO_wfile_jumps (qua check), nhưng đi sâu vào _wide_data->_wide_vtable giả → __doallocate tuỳ ý khi exit/flush. Kỹ thuật "debug từng field" — hiểu cấu trúc quan trọng hơn chép payload.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("apple2-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("apple2-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var conds={vt:true,wd:true,wv:true,da:true,fl:true};
+  var verdict=document.getElementById("chVerdict");
+  function render(){
+    document.querySelectorAll("#ch .cond").forEach(function(c){
+      var k=c.getAttribute("data-k"),on=conds[k];
+      c.className="cond "+(on?"ok":"no");
+      c.querySelector("button").textContent=on?"BẬT":"TẮT";
+    });
+    var all=conds.vt&&conds.wd&&conds.wv&&conds.da&&conds.fl;
+    if(all){verdict.className="verdict pass";verdict.innerHTML="✓ Chuỗi gọi đi tới <b>__doallocate(fp)</b> = hàm đích. Thành công (nếu offset khớp libc đề).";}
+    else{
+      var why=[];
+      if(!conds.vt)why.push("vtable chính không hợp lệ → _IO_vtable_check ABORT");
+      if(!conds.wd)why.push("_wide_data không trỏ struct giả → đọc rác/crash");
+      if(!conds.wv)why.push("_wide_vtable không trỏ bảng giả → __doallocate không kiểm soát");
+      if(!conds.da)why.push("__doallocate chưa đặt → gọi hàm thật, không chiếm được");
+      if(!conds.fl)why.push("_flags/write_ptr sai → không vào nhánh overflow");
+      verdict.className="verdict fail";verdict.innerHTML="✗ Chưa gọi được. Lý do: "+why.join("; ")+".";
+    }
+  }
+  document.querySelectorAll("#ch button").forEach(function(b){
+    b.addEventListener("click",function(){var k=b.getAttribute("data-t");conds[k]=!conds[k];render();});
+  });
+  render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

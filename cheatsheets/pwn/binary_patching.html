@@ -1,0 +1,714 @@
+<title>Vá Binary</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+kbd{font-family:var(--font-mono);font-size:.82em;background:var(--surface-2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 6px;white-space:nowrap}
+.menupath{font-family:var(--font-mono);font-size:.85em;background:var(--mem-soft);color:var(--mem);padding:2px 7px;border-radius:5px;font-weight:600;white-space:nowrap}
+.tool{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:13px}
+.tool input{font-family:var(--font-mono);font-size:14px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);width:90px}
+.tool .out{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+.tool .big{font-size:16px;font-weight:700;color:var(--accent)}
+.tool .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0}
+.tool .inv{color:var(--ok);font-weight:700}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN / RE / ATTACK-DEFENSE · Cẩm nang sống còn</div>
+    <h1>Vá Binary (Patch)</h1>
+    <p class="sub">Sửa thẳng <strong>byte trong file</strong> để vá lỗ hổng (Attack-Defense) hoặc bẻ khóa kiểm tra (reverse). Bài này liệt kê <mark>từng cú click chuột trong IDA Pro</mark>, mọi cách patch, bảng opcode thuộc lòng, và công thức byte cụ thể (gets→fgets, NOP call, lật if...). Viết để bạn <strong>không cần Google/AI khi thi</strong> vẫn vá được.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Dùng cho:</b> AD vá service · RE bẻ check</span>
+      <span class="chip"><b>Công cụ:</b> IDA Pro · HxD/hexedit · radare2</span>
+      <span class="chip"><b>Kiến trúc:</b> x86-64 (có x86)</span>
+      <span class="chip"><b>Thời lượng:</b> ~90 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Bảng opcode</a><a href="#s4">04 IDA: mọi cách</a><a href="#s5">05 Công cụ thử</a><a href="#s6">06 Tìm chỗ vá</a>
+      <a href="#s7">07 Công thức vá</a><a href="#s8">08 Hex &amp; r2</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Code cave</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Patch = ghi đè byte</strong> trong file nhị phân để đổi hành vi, không cần mã nguồn. Hai mục đích: (1) <strong>Attack-Defense</strong> — vá lỗ hổng service của đội mình (gets→fgets, thu nhỏ buffer) mà vẫn giữ chức năng; (2) <strong>Reverse</strong> — vô hiệu kiểm tra (lật <code>if</code>, NOP call).</p>
+    <p><strong>4 loại vá, dễ→khó:</strong> (a) đổi 1 hằng số (thu nhỏ size đọc); (b) lật/ép nhảy có điều kiện (1 byte); (c) NOP một lệnh (ghi <code>90</code>); (d) code cave trampoline (vá lớn như gets→fgets).</p>
+    <p><strong>IDA:</strong> <span class="menupath">Edit → Patch Program → …</span> rồi <strong>BẮT BUỘC</strong> <span class="menupath">Apply patches to input file</span> để lưu ra file thật.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Patch xong trong IDA phải "Apply patches to input file" — không thì file trên đĩa KHÔNG đổi.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — thuộc lòng khi thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🧱 Byte thuộc lòng (nhớ bằng mọi giá)</span>
+<pre><code>NOP           = 90        (lệnh "không làm gì", 1 byte)
+jmp short     = EB xx     (nhảy luôn, xx = khoảng cách)
+je/jz         = 74        jne/jnz = 75   (lật: +1 / XOR 01)
+call rel32    = E8 .. .. .. ..   (5 byte)
+ret           = C3
+jmp near      = E9 .. .. .. ..   (5 byte)
+LẬT điều kiện = XOR byte opcode với 01 (74↔75, 7C↔7D...)</code></pre></div>
+      <div class="combat-row"><span class="lab">🖱️ IDA — vá 1 byte (click)</span>
+<pre><code>1. Bấm chuột vào lệnh/byte cần sửa (con trỏ ở đó)
+2. Menu trên: Edit → Patch Program → Change byte...
+3. Hộp thoại hiện: Address | Original | Values(sửa ô này)
+4. Gõ byte mới (vd 90 90 ...), bấm OK
+5. Edit → Patch Program → Apply patches to input file → OK  ← LƯU!</code></pre></div>
+      <div class="combat-row"><span class="lab">⌨️ IDA — bật hiện byte (phải làm trước)</span>
+        <p><span class="menupath">Options → General → tab Disassembly → "Number of opcode bytes" = 8</span> → mỗi lệnh hiện cả hex byte bên trái → biết byte nào mà sửa.</p></div>
+      <div class="combat-row"><span class="lab">🎯 Ba vá hay dùng nhất</span>
+<pre><code>• Thu nhỏ đọc: read(0,buf,0x100) → đổi hằng 00 01 → 40 (=0x40)
+• Lật if:  74 (je) → 75 (jne)   hoặc ép nhảy: 74 → EB
+• Tắt call nguy hiểm: E8 xx xx xx xx → 90 90 90 90 90 (5 NOP)</code></pre></div>
+      <div class="combat-row"><span class="lab">🔧 radare2 (nếu không có IDA)</span>
+<pre><code>r2 -w ./bin      # -w = ghi thẳng vào file
+[0x..]> s 0x401234      # seek tới địa chỉ
+[0x..]> wao nop         # NOP lệnh hiện tại
+[0x..]> wao recj        # LẬT nhảy điều kiện (je↔jne)
+[0x..]> wa jmp 0x401250 # ghi assembly
+[0x..]> wx 9090         # ghi hex byte
+[0x..]> q               # lưu tự động, thoát</code></pre></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Lệnh máy = byte. Sửa byte = sửa lệnh</h2>
+  <p>CPU không hiểu "if/for" — nó chỉ chạy một dãy <span class="mem-term">opcode</span> (mã lệnh dạng byte). Ví dụ byte <code>90</code> là lệnh <code>nop</code> ("không làm gì"), <code>C3</code> là <code>ret</code> ("trả về"). <strong>Patch</strong> (vá) là mở file nhị phân ra, tìm đúng byte của lệnh muốn đổi, rồi ghi đè byte khác — chương trình chạy theo lệnh mới. Không cần mã nguồn, không cần biên dịch lại.</p>
+  <p>Mỗi lệnh dài 1–15 byte. Khi vá, <strong>phải giữ nguyên tổng độ dài</strong> (không chèn thêm byte giữa chừng, vì sẽ xô lệch mọi lệnh phía sau). Nếu lệnh mới NGẮN hơn chỗ cũ → lấp phần thừa bằng <code>90</code> (nop). Nếu mới DÀI hơn → không ghi tại chỗ được, phải dùng <span class="mem-term">code cave</span> (mục 10).</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">opcode</div><p>Byte mã lệnh CPU (90=nop...).</p></div>
+    <div class="card"><div class="term">patch / vá</div><p>Ghi đè byte để đổi hành vi.</p></div>
+    <div class="card"><div class="term">VA</div><p>Virtual Address — địa chỉ IDA hiện.</p></div>
+    <div class="card"><div class="term">file offset</div><p>Vị trí byte trong file (cho hex editor).</p></div>
+    <div class="card"><div class="term">NOP</div><p>Lệnh không làm gì (90), dùng để xóa.</p></div>
+    <div class="card"><div class="term">code cave</div><p>Vùng byte trống chạy được để chèn lệnh.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Attack-Defense: vá nhưng đừng làm hỏng</h2>
+  <p>Trong <strong>Attack-Defense CTF</strong>, mỗi đội chạy cùng một service có lỗ hổng. Bạn phải: (1) khai thác service đội khác để lấy flag, và (2) <strong>vá service của mình</strong> để đội khác không khai thác được — nhưng service vẫn phải <em>chạy đúng chức năng</em> (checker của ban tổ chức sẽ kiểm, vá hỏng = mất điểm SLA). Bạn thường <strong>không có mã nguồn</strong>, chỉ có file binary → phải vá byte trực tiếp. Vá tối thiểu, chính xác, giữ hành vi hợp lệ là nghệ thuật sống còn. Trong reverse, patch dùng để bỏ qua check bản quyền/anti-debug để hiểu hoặc chạy chương trình.</p>
+ </div>
+</section>
+
+<!-- 03 Bảng opcode -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / BẢNG OPCODE SỐNG CÒN · THUỘC LÒNG</div>
+  <h2>Nhảy có điều kiện (jcc) — quan trọng nhất</h2>
+  <p>Nhảy có điều kiện dạng <strong>ngắn</strong> (short, nhảy gần) là 2 byte: <code>opcode</code> + <code>khoảng cách</code>. Opcode đi theo <strong>cặp lật nhau ở bit thấp nhất</strong> (LSB) — muốn đảo điều kiện, chỉ cần <mark>XOR byte opcode với 01</mark> (hoặc +1 nếu nó chẵn, −1 nếu lẻ).</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Byte</th><th>Lệnh</th><th>Nghĩa</th><th>Byte đảo</th><th>Lệnh đảo</th></tr></thead>
+    <tbody>
+      <tr><td><code>70</code></td><td>jo</td><td>nhảy nếu overflow</td><td><code>71</code></td><td>jno</td></tr>
+      <tr><td><code>72</code></td><td>jb / jc / jnae</td><td>nhảy nếu &lt; (không dấu)</td><td><code>73</code></td><td>jae / jnc</td></tr>
+      <tr><td><code>74</code></td><td><b>je / jz</b></td><td>nhảy nếu bằng / =0</td><td><code>75</code></td><td><b>jne / jnz</b></td></tr>
+      <tr><td><code>76</code></td><td>jbe / jna</td><td>nhảy nếu ≤ (không dấu)</td><td><code>77</code></td><td>ja / jnbe</td></tr>
+      <tr><td><code>78</code></td><td>js</td><td>nhảy nếu âm (sign)</td><td><code>79</code></td><td>jns</td></tr>
+      <tr><td><code>7A</code></td><td>jp / jpe</td><td>nhảy nếu parity chẵn</td><td><code>7B</code></td><td>jnp / jpo</td></tr>
+      <tr><td><code>7C</code></td><td>jl / jnge</td><td>nhảy nếu &lt; (có dấu)</td><td><code>7D</code></td><td>jge / jnl</td></tr>
+      <tr><td><code>7E</code></td><td>jle / jng</td><td>nhảy nếu ≤ (có dấu)</td><td><code>7F</code></td><td>jg / jnle</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note tip"><span class="tag">3 thao tác với jcc</span>
+    <b>1. Đảo điều kiện</b> (chạy nhánh ngược): byte <code>74</code> → <code>75</code> (XOR 01).<br>
+    <b>2. Ép LUÔN nhảy</b> (bỏ qua check): đổi <code>7x</code> → <code>EB</code> (jmp short), giữ nguyên byte khoảng cách.<br>
+    <b>3. Ép KHÔNG BAO GIỜ nhảy</b> (đi thẳng): NOP cả 2 byte → <code>90 90</code>.</div>
+  <h3>Nhảy điều kiện DÀI (near, 6 byte)</h3>
+  <p>Khi đích xa, jcc là 6 byte: <code>0F 8x</code> + 4 byte khoảng cách. Bảng <code>8x</code> y hệt trên nhưng cộng <code>80</code>: <code>0F 84</code>=je, <code>0F 85</code>=jne, <code>0F 8C</code>=jl... <strong>Đảo</strong>: XOR byte thứ hai với 01 (<code>0F 84</code>→<code>0F 85</code>). <strong>Ép luôn nhảy</strong>: đổi thành <code>E9</code>+4byte (jmp near, 5 byte) rồi thêm <code>90</code> cho đủ 6. <strong>Ép không nhảy</strong>: 6 × <code>90</code>.</p>
+  <h3>Các opcode cần nhớ khác</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Byte</th><th>Lệnh</th><th>Dùng khi vá</th></tr></thead>
+    <tbody>
+      <tr><td><code>90</code></td><td>nop</td><td>Xóa/vô hiệu bất kỳ byte nào</td></tr>
+      <tr><td><code>EB xx</code></td><td>jmp short</td><td>Ép nhảy gần (xx = offset có dấu)</td></tr>
+      <tr><td><code>E9 xx xx xx xx</code></td><td>jmp near</td><td>Ép nhảy xa (5 byte)</td></tr>
+      <tr><td><code>E8 xx xx xx xx</code></td><td>call</td><td>Gọi hàm (5 byte) — NOP để tắt</td></tr>
+      <tr><td><code>C3</code></td><td>ret</td><td>Trả về ngay (thoát hàm sớm)</td></tr>
+      <tr><td><code>C9 C3</code></td><td>leave; ret</td><td>Kết thúc hàm chuẩn</td></tr>
+      <tr><td><code>31 C0</code></td><td>xor eax,eax</td><td>Đặt eax=0 (hàm trả 0/false)</td></tr>
+      <tr><td><code>B8 xx xx xx xx</code></td><td>mov eax, imm</td><td>Đặt giá trị trả về (vd B8 01000000 = return 1)</td></tr>
+      <tr><td><code>EB FE</code></td><td>jmp $ (tự nhảy)</td><td>Treo vòng lặp vô tận (chặn luồng code)</td></tr>
+      <tr><td><code>CC</code></td><td>int3</td><td>Breakpoint (ít dùng để vá)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Tính offset nhảy ngắn</span><code>EB xx</code>: <code>xx = (địa_chỉ_đích) − (địa_chỉ_lệnh_jmp + 2)</code>, dạng byte có dấu (−128..+127). Ví dụ jmp từ 0x4011a0 tới 0x4011b0: xx = 0x4011b0 − 0x4011a2 = 0x0e → byte <code>EB 0E</code>. Lùi lại thì xx là số âm (bù 2): lùi 4 byte = <code>FC</code>.</div>
+ </div>
+</section>
+
+<!-- 04 IDA mọi cách -->
+<section class="block" id="s4">
+ <div class="wrap wide">
+  <div class="secnum">04 / IDA PRO — TẤT CẢ CÁCH PATCH</div>
+  <h2>Từng cú click, không bỏ sót</h2>
+
+  <h3>Chuẩn bị (làm 1 lần): bật hiện byte opcode</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Mở Options</h4><p>Menu trên cùng: bấm <span class="menupath">Options → General…</span></p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Đặt số byte hiện</h4><p>Tab <b>Disassembly</b>, ô <b>Number of opcode bytes (non-graph)</b> gõ <kbd>8</kbd> (hoặc 10). Bấm <b>OK</b>.</p>
+    <pre><code><span class="c">; giờ mỗi lệnh hiện kèm byte, ví dụ:</span>
+.text:00401182 <span class="d">74 0C</span>              jz   short loc_401190
+<span class="c">;            ↑ đây là byte thật, biết 74 0C mà sửa</span></code></pre></div></div>
+
+  <h3>Cách 1 — Change byte (vá từng byte, hay dùng nhất)</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Đặt con trỏ</h4><p>Trong cửa sổ <b>IDA View-A</b> (disassembly), <b>bấm chuột trái</b> vào dòng lệnh cần sửa (con trỏ nhấp nháy ở đầu địa chỉ đó).</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Mở hộp vá</h4><p>Menu: <span class="menupath">Edit → Patch Program → Change byte…</span></p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Sửa trong hộp thoại</h4>
+    <p>Hộp "Patch Bytes" hiện 3 phần: <b>Address</b> (địa chỉ, không sửa) · <b>File offset</b> · <b>Original value</b> (byte gốc) · <b>Values</b> (ô NHẬP — các byte hiện tại, cách nhau dấu cách). Sửa ô <b>Values</b> thành byte mới.</p>
+    <pre><code>Address      : 0x401182
+File offset  : 0x1182
+Original value: 74 0C 48 8D
+Values       : <span class="s">75</span> 0C 48 8D      ← đổi 74 thành 75 (lật jz→jnz)</code></pre>
+    <p>Bấm <b>OK</b>. Byte đã sửa hiện màu khác (thường nền tối/đỏ) trong disassembly.</p></div></div>
+
+  <h3>Cách 2 — Assemble (gõ thẳng lệnh assembly)</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Chọn lệnh</h4><p>Bấm vào lệnh muốn thay.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Mở Assemble</h4><p><span class="menupath">Edit → Patch Program → Assemble…</span></p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Gõ lệnh mới</h4>
+    <p>Hộp hiện địa chỉ + ô nhập. Gõ lệnh assembly (vd <code>nop</code>, hoặc <code>jmp 0x401190</code>, hoặc <code>mov eax, 1</code>). Bấm <b>OK</b> (hoặc Enter) — IDA tự dịch ra byte và ghi. Có thể gõ nhiều lệnh liên tiếp (mỗi lần OK nhảy xuống lệnh kế).</p>
+    <div class="note warn"><span class="tag">Hạn chế</span>Assembler tích hợp của IDA yếu, đôi khi báo lỗi với lệnh phức tạp (mov có rip-relative...). Khi đó dùng <b>Keypatch</b> (cách 4) hoặc Change byte tay.</div></div></div>
+
+  <h3>Cách 3 — Sửa trong Hex View</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Mở tab Hex</h4><p>Bấm tab <b>Hex View-1</b> (cạnh IDA View-A). Nếu muốn nó nhảy theo: chuột phải trong Hex View → <b>Synchronize with → IDA View-A</b>.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Vào chế độ sửa</h4><p>Bấm vào byte cần đổi, nhấn <kbd>F2</kbd> (các byte chuyển sang sửa được, con trỏ nhấp nháy). Gõ hex mới (vd <code>90</code>).</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Chốt</h4><p>Nhấn <kbd>F2</kbd> lần nữa để <b>commit</b> (áp dụng). Nhấn <kbd>Esc</kbd> để hủy nếu gõ nhầm.</p></div></div>
+
+  <h3>Cách 4 — Keypatch (plugin, mạnh nhất cho assembly)</h3>
+  <p>Keypatch dùng engine Keystone, dịch assembly tốt hơn IDA. Nếu đã cài (file <code>keypatch.py</code> trong thư mục plugins):</p>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Chọn lệnh</h4><p>Bấm vào lệnh, nhấn <kbd>Ctrl+Alt+K</kbd> (hoặc chuột phải → <b>Keypatch → Patcher</b>).</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Nhập trong hộp Keypatch</h4>
+    <p>Hộp hiện: <b>Address</b>, <b>Original</b> (asm gốc + byte), ô <b>Assembly</b> (gõ lệnh mới). Gõ xong, mục <b>Encode</b> hiện byte kết quả. Bấm <b>Patch</b>. Có nút <b>NOPs padding</b> tự lấp NOP nếu lệnh mới ngắn hơn — tiện.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Tiện ích Keypatch khác</h4>
+    <p>Chuột phải → <b>Keypatch → Fill Range with NOPs</b> (bôi đen nhiều lệnh rồi NOP hết), <b>Undo last patch</b>, <b>Check update</b>.</p></div></div>
+
+  <h3>⭐ BƯỚC SỐNG CÒN — Lưu ra file thật</h3>
+  <div class="note warn"><span class="tag">Nếu quên bước này = công cốc</span>Mọi cách trên chỉ sửa trong <b>database (.idb)</b> của IDA, KHÔNG đổi file gốc trên đĩa. Phải xuất ra:</div>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Apply patches</h4><p><span class="menupath">Edit → Patch Program → Apply patches to input file…</span></p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Chọn phạm vi</h4><p>Hộp hiện <b>Start address</b> / <b>End address</b> (mặc định bao cả vùng đã patch) và tên <b>Input file</b>. Để nguyên, bấm <b>OK</b> → file gốc trên đĩa được ghi đè byte mới. Tick "Create backup" nếu muốn giữ bản gốc.</p></div></div>
+  <div class="note tip"><span class="tag">Kiểm tra lại</span>Sau khi apply: mở terminal, <code>objdump -d ./bin | grep -A2 địa_chỉ</code> hoặc mở lại bằng hex editor để xác nhận byte đã đổi. AD: chạy thử service xem còn hoạt động + lỗ hổng đã bịt.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / CÔNG CỤ TRA NHANH (tương tác)</div>
+  <h2>Nhập byte → biết lệnh gì &amp; cách lật</h2>
+  <p>Gõ 1 byte opcode (vd <code>74</code>) → tra tên lệnh, byte đảo điều kiện, và cách ép-luôn-nhảy. Dưới là máy đổi VA ↔ file offset cho hex editor.</p>
+  <div class="lab">
+    <div class="tool" id="opt">
+      <div class="row"><span>opcode (hex):</span><input id="opIn" value="74"><button id="opBtn" style="font-family:var(--font-mono);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer">tra</button></div>
+      <div class="out" id="opOut"></div>
+    </div>
+    <div class="tool" id="offt">
+      <h4 style="margin:2px 0 8px">VA → file offset (hex editor cần offset này)</h4>
+      <div class="row">
+        <span>VA (IDA):</span><input id="vaIn" value="0x401182">
+        <span>base ảnh:</span><input id="baseIn" value="0x400000" style="width:110px">
+      </div>
+      <div class="row" style="opacity:.75;font-size:11px">non-PIE thường base=0x400000, .text VA 0x401xxx → offset = VA − base. PIE base=0 → offset = VA.</div>
+      <div class="out" id="offOut"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tìm chỗ vá -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TÌM ĐÚNG CHỖ ĐỂ VÁ</div>
+  <h2>Định vị lệnh/hàm trong IDA</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Tìm theo tên hàm</h4>
+    <p>Cửa sổ <b>Functions window</b> (trái) — gõ tên (vd <code>gets</code>). Hoặc <kbd>Ctrl+P</kbd> (Jump to function) gõ tên. Double-click để nhảy tới.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Tìm nơi GỌI hàm (xref)</h4>
+    <p>Bấm vào tên hàm <code>gets</code>, nhấn <kbd>X</kbd> (Jump to xref) → danh sách mọi chỗ gọi <code>gets</code>. Chọn chỗ muốn vá.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Tìm theo chuỗi</h4>
+    <p><kbd>Shift+F12</kbd> (Strings window) → tìm chuỗi (vd "Access granted", "password"). Double-click chuỗi → bấm vào tên biến chuỗi → <kbd>X</kbd> → tới code dùng nó.</p></div></div>
+  <div class="step"><div class="n">4</div><div class="body"><h4>Nhảy tới địa chỉ</h4>
+    <p><kbd>G</kbd> (Jump to address) → gõ địa chỉ/tên (vd <code>0x401182</code> hoặc <code>main</code>).</p></div></div>
+  <div class="step"><div class="n">5</div><div class="body"><h4>Đọc pseudocode (nếu có Hex-Rays)</h4>
+    <p>Bấm vào hàm, nhấn <kbd>F5</kbd> → C giả → hiểu logic, biết <code>if</code>/buffer nào cần vá, rồi bấm vào dòng đó để thấy địa chỉ asm tương ứng (IDA đồng bộ).</p></div></div>
+ </div>
+</section>
+
+<!-- 07 Công thức vá -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / CÔNG THỨC VÁ CỤ THỂ (byte thật)</div>
+  <h2>Case thường gặp — làm theo từng byte</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · thu nhỏ buffer</button>
+    <button class="tab" data-t="b">B · lật/ép if</button>
+    <button class="tab" data-t="c">C · NOP call</button>
+    <button class="tab" data-t="d">D · gets→fgets</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+    <h4>Thu nhỏ hằng số đọc (vá AN TOÀN nhất cho AD)</h4>
+    <p>Rất nhiều lỗ hổng là đọc quá nhiều byte vào buffer nhỏ. Nếu code dùng <code>read(0, buf, 0x100)</code> mà <code>buf</code> chỉ 0x40 byte → đổi hằng <code>0x100</code> thành <code>0x40</code> là bịt tràn, service vẫn chạy.</p>
+<pre><code><span class="c">; TRƯỚC — IDA hiện (đã bật số byte opcode):</span>
+.text:004011A0 BA <span class="d">00 01 00 00</span>    mov  edx, <span class="d">100h</span>    <span class="c">; size đọc = 0x100</span>
+.text:004011A5 48 89 C6          mov  rsi, rax     <span class="c">; buf</span>
+.text:004011A8 E8 ...            call read
+
+<span class="c">; VÁ: đổi hằng 0x100 → 0x40. Byte 00 01 00 00 (little-endian) → 40 00 00 00</span>
+<span class="c">; IDA: bấm dòng 4011A0 → Edit→Patch Program→Change byte</span>
+<span class="c">;   Values: BA 40 00 00 00   (chỉ đổi byte thứ 2: 00→40)</span>
+
+<span class="c">; SAU:</span>
+.text:004011A0 BA <span class="s">40 00 00 00</span>    mov  edx, <span class="s">40h</span>     <span class="c">; size = 0x40, an toàn</span></code></pre>
+    <div class="note tip"><span class="tag">Vì sao tốt</span>Chỉ đổi 1 byte, không xô lệch gì, service vẫn đọc input bình thường (chỉ ngắn hơn). Đây là vá AD "chuẩn mực" khi buffer overflow do size lớn. Áp dụng tương tự cho <code>fgets(buf, SIZE, stdin)</code>, <code>malloc(SIZE)</code>, vòng <code>for i&lt;N</code>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+    <h4>Lật hoặc ép lệnh if (reverse: bỏ qua check)</h4>
+    <p>Ví dụ check mật khẩu: <code>if (strcmp(input,pw)==0) win(); else fail();</code>. Sau <code>strcmp</code> thường có <code>test eax,eax ; jnz fail</code> (strcmp==0 nghĩa là khớp → eax=0 → không nhảy → vào win). Muốn <em>luôn</em> vào win dù sai mật khẩu:</p>
+<pre><code><span class="c">; TRƯỚC:</span>
+.text:00401200 E8 .. call strcmp
+.text:00401205 85 C0            test eax, eax
+.text:00401207 <span class="d">75 0A</span>           jnz  short fail   <span class="c">; nhảy đi fail nếu KHÁC 0</span>
+.text:00401209 ...              (win...)
+
+<span class="c">; CÁCH 1 — ép KHÔNG BAO GIỜ nhảy (luôn vào win): NOP 2 byte</span>
+<span class="c">;   bấm 401207 → Change byte → Values: 90 90</span>
+.text:00401207 <span class="s">90 90</span>           nop; nop
+
+<span class="c">; CÁCH 2 — đảo điều kiện (nếu logic ngược): 75 → 74 (jnz→jz)</span>
+<span class="c">;   Values: 74 0A</span>
+
+<span class="c">; CÁCH 3 — ép LUÔN nhảy tới đích khác: 75 → EB (jmp short), giữ 0A</span>
+<span class="c">;   Values: EB 0A</span></code></pre>
+    <div class="note warn"><span class="tag">Phân biệt</span><b>NOP jcc</b> = luôn đi thẳng (fall-through). <b>jcc→jmp (EB)</b> = luôn nhảy. <b>Đảo (XOR 01)</b> = đổi điều kiện. Đọc kỹ nhánh nào là "thành công" rồi chọn. Nếu dùng Keypatch: gõ thẳng <code>nop</code> hoặc <code>jmp &lt;addr&gt;</code>.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c">
+    <h4>Tắt một call (NOP cả 5 byte)</h4>
+    <p>Khi muốn vô hiệu một hàm (anti-debug <code>ptrace</code>, log, hoặc hàm nguy hiểm không cần thiết), NOP toàn bộ lệnh <code>call</code> (5 byte <code>E8 xx xx xx xx</code>) → thành 5 × <code>90</code>.</p>
+<pre><code><span class="c">; TRƯỚC:</span>
+.text:00401150 <span class="d">E8 CB FE FF FF</span>   call ptrace   <span class="c">; anti-debug</span>
+
+<span class="c">; VÁ: bấm 401150 → Change byte → Values: 90 90 90 90 90</span>
+<span class="c">; SAU:</span>
+.text:00401150 <span class="s">90 90 90 90 90</span>   nop (×5)</code></pre>
+    <div class="note"><span class="tag">Lưu ý giá trị trả về</span>Nếu code SAU đó dùng giá trị trả về của call (trong <code>eax</code>/<code>rax</code>), NOP không đặt eax → có thể sai. Khi cần "call trả về 0", thay bằng <code>31 C0</code> (xor eax,eax = 2 byte) + <code>90 90 90</code> (3 nop) cho đủ 5. Hoặc <code>return 1</code>: <code>B8 01 00 00 00</code> (mov eax,1 = đúng 5 byte, khỏi nop).</div>
+    <p><b>Mẹo trả về đúng 5 byte:</b></p>
+<pre><code>return 0 : 31 C0 90 90 90        (xor eax,eax + 3 nop)
+return 1 : B8 01 00 00 00        (mov eax, 1   — vừa 5 byte)
+return N : B8 NN 00 00 00        (mov eax, N)</code></pre>
+  </div>
+
+  <div class="tabpanel" id="panel-d">
+    <h4>gets → fgets (vá AD kinh điển, cần code cave)</h4>
+    <p><b>Vì sao KHÔNG đổi 1 byte được:</b> <code>gets(buf)</code> chỉ 1 tham số (rdi=buf). <code>fgets(buf, size, stdin)</code> cần 3 tham số: rdi=buf, rsi=size, rdx=stdin. Không thể "đổi tên gọi" vì thiếu rsi/rdx. Phải chuyển hướng <code>call gets</code> sang một đoạn code nhỏ (trampoline) nằm trong <strong>code cave</strong>, đặt đủ tham số rồi gọi <code>fgets</code>.</p>
+<pre><code><span class="c">; BƯỚC 1 — tìm call gets (X trên gets). Giả sử:</span>
+.text:00401233 48 8D 45 D0       lea  rax, [rbp-0x30]   <span class="c">; buf</span>
+.text:00401237 48 89 C7          mov  rdi, rax
+.text:0040123A <span class="d">E8 .. .. .. ..</span>    call gets           <span class="c">; ← đổi đích call này</span>
+
+<span class="c">; BƯỚC 2 — tìm code cave: vùng byte 00 chạy được (cuối .text).</span>
+<span class="c">;   readelf -S bin | grep .text  → biết biên .text</span>
+<span class="c">;   trong IDA kéo xuống cuối .text tìm dãy 'db 0' dài ≥ 30 byte.</span>
+<span class="c">;   Giả sử cave tại 0x401500 (trống).</span>
+
+<span class="c">; BƯỚC 3 — đổi 'call gets' thành 'call 0x401500' (vẫn 5 byte E8+rel32).</span>
+<span class="c">;   IDA: bấm 0x40123A → Edit→Patch Program→Assemble → gõ:  call 0x401500</span>
+<span class="c">;   (IDA tự tính E8 + rel32 mới)</span>
+
+<span class="c">; BƯỚC 4 — viết trampoline tại cave 0x401500 (Assemble từng dòng):</span>
+<span class="c">;   rdi đã = buf (giữ nguyên). Cần rsi=size, rdx=stdin, rồi call fgets, ret.</span>
+0x401500:  mov esi, 0x30                 <span class="c">; size = 0x30 (bằng buffer)</span>
+0x401505:  mov rdx, cs:stdin            <span class="c">; nạp con trỏ stdin (biến toàn cục)</span>
+           <span class="c">;  nếu IDA assemble lỗi, dùng byte: 48 8B 15 xx xx xx xx (mov rdx,[rip+off])</span>
+0x40150C:  call fgets                    <span class="c">; fgets(buf, 0x30, stdin)</span>
+0x401511:  ret                           <span class="c">; quay về sau 'call 0x401500'</span>
+
+<span class="c">; BƯỚC 5 — Apply patches to input file. Xong: input bị giới hạn 0x30 byte.</span></code></pre>
+    <div class="note warn"><span class="tag">Chi tiết sống còn</span>
+      • <b>stdin</b> là biến toàn cục trong IDA (double-click <code>gets</code> xref hoặc tìm symbol <code>stdin</code>). <code>mov rdx, cs:stdin</code> nạp giá trị con trỏ FILE.<br>
+      • <b>fgets</b> phải có trong PLT. Nếu binary chưa import fgets, không gọi được tên → khi đó dùng <code>read(0, buf, 0x30)</code> thay (read thường luôn có): đặt <code>xor edi,edi</code> (fd=0), rsi=buf, edx=0x30, <code>call read</code>, ret. read bỏ ký tự thừa khác fgets đôi chút nhưng chặn tràn.<br>
+      • <b>Giữ 5 byte</b> ở chỗ call gốc: <code>call cave</code> cũng là E8+rel32 = 5 byte, khớp hoàn hảo.<br>
+      • Cave phải nằm trong đoạn có quyền <b>X (execute)</b> — .text đạt; .data/.bss thì KHÔNG chạy được.</div>
+    <h4>Phương án đơn giản hơn (nếu chỉ cần CHẶN tràn, không cần fgets)</h4>
+<pre><code><span class="c">; Nếu buffer đủ lớn và chỉ cần không cho gets tràn vô hạn:</span>
+<span class="c">; thay 'call gets' bằng trampoline gọi read với size giới hạn (read luôn có sẵn).</span>
+cave:  xor edi, edi          <span class="c">; 31 FF    → fd = 0 (stdin)</span>
+       <span class="c">; rsi = buf (giữ từ rdi? không — read cần rsi=buf). Thêm:</span>
+       mov rsi, rdi          <span class="c">; 48 89 FE → rsi = buf</span>
+       mov edx, 0x30         <span class="c">; BA 30 00 00 00 → size</span>
+       call read             <span class="c">; E8 ..</span>
+       ret                   <span class="c">; C3</span></code></pre>
+    <div class="note tip"><span class="tag">AD checklist</span>Sau vá gets: chạy service, gửi input dài &gt; buffer → phải KHÔNG crash. Gửi input hợp lệ ngắn → chức năng vẫn đúng (checker pass). Nếu read làm input dính ký tự newline khác gets → kiểm logic parse phía sau.</div>
+  </div>
+
+  <h3>Checklist mọi lần vá</h3>
+  <div class="reqitem"><span class="ico">🔢</span><div><h4>Giữ nguyên tổng độ dài</h4><p>Lệnh mới ngắn hơn → lấp 90. Dài hơn → code cave.</p></div></div>
+  <div class="reqitem"><span class="ico">💾</span><div><h4>Apply patches to input file</h4><p>Không lưu = file đĩa không đổi.</p></div></div>
+  <div class="reqitem"><span class="ico">🧪</span><div><h4>Chạy thử</h4><p>AD: service còn chạy + lỗ hổng đã bịt. RE: check đã bị bỏ qua.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Hex & r2 -->
+<section class="block" id="s8">
+ <div class="wrap wide">
+  <div class="secnum">08 / HEX EDITOR &amp; RADARE2</div>
+  <h2>Vá không cần IDA</h2>
+  <h3>Hex editor (HxD trên Windows, hexedit/wxHexEditor/Okteta trên Linux)</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Lấy file offset</h4>
+    <p>Hex editor làm việc theo <b>file offset</b>, không phải VA. Lấy offset từ IDA (hộp Change byte có dòng <b>File offset</b>), hoặc tính: <code>offset = VA − base</code> (non-PIE base 0x400000; PIE base 0 → offset=VA). Hoặc <code>objdump -d</code> rồi dùng công cụ ở mục 05.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Nhảy &amp; sửa (HxD)</h4>
+    <p>HxD: <span class="menupath">Ctrl+G</span> (Goto) → gõ offset (hex) → con trỏ tới đó. Gõ đè byte hex mới (bên cột hex). Byte đổi hiện màu đỏ.</p>
+    <pre><code><span class="c"># hexedit (Linux): mở file</span>
+$ hexedit ./bin
+# Ctrl+G  → gõ offset  → Enter
+# gõ byte hex đè lên   (Tab chuyển hex/ascii)
+# Ctrl+X → lưu &amp; thoát (Y)</code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Hoặc sửa bằng dòng lệnh thuần</h4>
+    <pre><code><span class="c"># printf + dd: ghi 1 byte 0x90 vào offset 0x1207</span>
+$ printf '\x90' | dd of=bin bs=1 seek=$((0x1207)) count=1 conv=notrunc
+<span class="c"># nhiều byte: seek tới offset, count = số byte</span>
+$ printf '\x90\x90' | dd of=bin bs=1 seek=$((0x1207)) count=2 conv=notrunc
+<span class="c"># conv=notrunc BẮT BUỘC — nếu không file bị cắt!</span></code></pre></div></div>
+
+  <h3>radare2 / rizin (miễn phí, rất mạnh — nên thuộc)</h3>
+<pre><code>$ r2 -w ./bin            <span class="c"># -w = write mode (ghi thẳng file)</span>
+[0x00401040]> aaa        <span class="c"># phân tích (tìm hàm, nhãn)</span>
+[0x00401040]> s 0x401207 <span class="c"># seek tới địa chỉ (hoặc: s sym.main)</span>
+[0x00401207]> pd 3       <span class="c"># in 3 lệnh quanh đây để xem</span>
+
+<span class="c"># --- các lệnh ghi (write) ---</span>
+[0x..]> wao nop          <span class="c"># NOP lệnh tại con trỏ (tự đúng độ dài)</span>
+[0x..]> wao recj         <span class="c"># LẬT nhảy điều kiện (je↔jne, jl↔jge...)</span>
+[0x..]> wa jmp 0x401250  <span class="c"># ghi assembly (wa = write assembly)</span>
+[0x..]> wa nop           <span class="c"># ghi 1 nop</span>
+[0x..]> wx 9090          <span class="c"># ghi hex byte trực tiếp</span>
+[0x..]> wx 4000 @ 0x4011a1  <span class="c"># ghi byte tại địa chỉ khác (@ = tạm seek)</span>
+[0x..]> "wa mov esi, 0x30"  <span class="c"># lệnh có dấu cách → bọc nháy kép</span>
+
+<span class="c"># wao (write assembly op) các toán tử hữu dụng:</span>
+<span class="c">#   nop  | trap | ret0 | ret1 | jz | jnz | recj (reverse cond jump) | nocj</span>
+
+[0x..]> q                <span class="c"># thoát (đã ghi tự động vào file)</span></code></pre>
+  <div class="note tip"><span class="tag">r2 tìm chỗ vá</span><code>/ Access granted</code> (tìm chuỗi) · <code>axt @ sym.gets</code> (xref tới gets) · <code>afl</code> (liệt kê hàm) · <code>s sym.imp.gets</code> rồi <code>axt</code>. r2 có sẵn trên hầu hết máy CTF, không cần license như IDA.</div>
+  <h3>Các cách khác nhanh</h3>
+  <div class="grid">
+    <div class="card"><div class="term">objcopy</div><h4>Vá section</h4><p>Hiếm; thường dùng cho bản vá lớn/thêm section.</p></div>
+    <div class="card"><div class="term">pwntools</div><h4>Script vá</h4><p><code>e=ELF("bin"); e.asm(addr,"nop"); e.save("patched")</code>.</p></div>
+    <div class="card"><div class="term">Ghidra</div><h4>Free thay IDA</h4><p>Chuột phải lệnh → Patch Instruction; rồi Export Program (ELF).</p></div>
+    <div class="card"><div class="term">gdb</div><h4>Runtime</h4><p><code>set {char}0x401207=0x90</code> (chỉ bộ nhớ, không lưu file).</p></div>
+  </div>
+<pre><code><span class="c"># pwntools — vá bằng script (tái lập được, rất hợp AD):</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+e = ELF(<span class="s">"./bin"</span>)
+e.asm(<span class="d">0x401207</span>, <span class="s">"nop; nop"</span>)          <span class="c"># ghi assembly tại VA</span>
+e.write(<span class="d">0x4011a1</span>, <span class="k">bytes</span>([<span class="d">0x40</span>]))     <span class="c"># ghi 1 byte thô (đổi size)</span>
+e.save(<span class="s">"./bin_patched"</span>)                 <span class="c"># xuất file đã vá</span>
+<span class="c"># chmod +x bin_patched ; chạy thử</span></code></pre>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi vá hỏng</h2>
+  <div class="grid">
+    <div class="card"><h4>File không đổi</h4><p>Quên "Apply patches to input file" (IDA). Hoặc dd thiếu <code>conv=notrunc</code>.</p></div>
+    <div class="card"><h4>File bị cắt ngắn</h4><p>dd không có notrunc → file hỏng. Luôn thêm conv=notrunc.</p></div>
+    <div class="card"><h4>Crash sau vá</h4><p>Lệnh mới dài hơn chỗ cũ → xô lệch. Giữ đúng độ dài, lấp 90.</p></div>
+    <div class="card"><h4>Sai địa chỉ/offset</h4><p>Nhầm VA với file offset. PIE: offset=VA; non-PIE: VA−0x400000.</p></div>
+    <div class="card"><h4>eax sai sau NOP call</h4><p>Code dùng giá trị trả về. Dùng B8 01000000 (return 1) thay.</p></div>
+    <div class="card"><h4>Cave không chạy</h4><p>Cave nằm vùng không X (.data/.bss). Dùng padding trong .text.</p></div>
+    <div class="card"><h4>IDA Assemble báo lỗi</h4><p>Engine yếu. Dùng Keypatch hoặc Change byte tay / r2 wa.</p></div>
+    <div class="card"><h4>AD: checker fail</h4><p>Vá làm hỏng chức năng. Vá tối thiểu hơn, test input hợp lệ.</p></div>
+    <div class="card"><h4>Checksum/CRC chặn</h4><p>Hiếm ở AD. Binary tự kiểm tra toàn vẹn → phải vá cả hàm check.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Code cave -->
+<section class="block" id="s10">
+ <div class="wrap wide">
+  <div class="secnum">10 / CODE CAVE &amp; VÁ LỚN</div>
+  <h2>Khi lệnh mới dài hơn chỗ cũ</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 580 130" role="img" aria-label="call gốc chuyển hướng tới code cave chứa đoạn code mới rồi nhảy về" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10">
+    <rect x="15" y="30" width="150" height="30" rx="6" stroke-width="1.5" stroke="var(--mem)"/><text x="90" y="49" text-anchor="middle" fill="var(--mem)" stroke="none">call gets (5 byte)</text>
+    <text x="90" y="74" text-anchor="middle" fill="currentColor" stroke="none" opacity=".6">đổi đích →</text>
+    <rect x="360" y="20" width="205" height="90" rx="8" stroke-width="1.6" stroke="#e8663e"/><text x="462" y="38" text-anchor="middle" fill="#e8663e" stroke="none">CODE CAVE 0x401500</text>
+    <text x="462" y="56" text-anchor="middle" fill="currentColor" stroke="none" font-size="9">mov esi, 0x30</text>
+    <text x="462" y="70" text-anchor="middle" fill="currentColor" stroke="none" font-size="9">mov rdx, [stdin]</text>
+    <text x="462" y="84" text-anchor="middle" fill="currentColor" stroke="none" font-size="9">call fgets</text>
+    <text x="462" y="98" text-anchor="middle" fill="#2f7d4f" stroke="none" font-size="9">ret → về chỗ cũ</text>
+    <path d="M165,45 C250,45 280,60 358,60" stroke="#e8663e" stroke-width="1.5" marker-end="url(#ao)"/>
+    <path d="M360,100 C270,110 200,80 165,58" stroke="#2f7d4f" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#ag)"/>
+    </g>
+    <defs>
+    <marker id="ao" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker>
+    <marker id="ag" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#2f7d4f" stroke="none"/></marker>
+    </defs>
+  </svg>
+  <figcaption>call gốc trỏ tới cave; cave làm việc mới rồi ret về sau call. Giữ nguyên kích thước file.</figcaption>
+  </figure>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Tìm cave</h4>
+    <p>Vùng byte <code>00</code> liên tục trong đoạn <b>chạy được (X)</b>. Hay có ở cuối <code>.text</code> (padding trước <code>.fini</code>), hoặc giữa các hàm. IDA: kéo xuống cuối .text tìm <code>align</code>/<code>db 0</code>. r2: <code>/x 0000000000000000</code> trong .text.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Trỏ tới cave</h4>
+    <p>Tại chỗ cần vá, đặt <code>call cave</code> (5 byte) hoặc <code>jmp cave</code> (5 byte, E9). Nếu chỗ cũ &lt;5 byte, mượn thêm byte lệnh kế rồi tái tạo lệnh đó trong cave ("stolen bytes").</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Viết code trong cave</h4>
+    <p>Assemble từng dòng tại địa chỉ cave. Kết thúc bằng <code>ret</code> (nếu dùng call) hoặc <code>jmp</code> về (nếu dùng jmp). Nhớ bảo toàn thanh ghi nếu cần (<code>push/pop</code>).</p></div></div>
+  <div class="note warn"><span class="tag">Không có cave đủ lớn?</span>Cách nâng cao: thêm section mới có quyền X (dùng <code>objcopy --add-section</code> hoặc công cụ như <code>LIEF</code>), hoặc đổi quyền một section sang executable. Phức tạp hơn — chỉ dùng khi vá lớn và không còn chỗ trống. Với AD, đa số vá nhỏ (1 byte size / lật if / trampoline ngắn) nên cave sẵn trong .text là đủ.</div>
+  <h3>Bảo toàn thanh ghi trong cave</h3>
+<pre><code>cave:  push rdi          <span class="c">; lưu thanh ghi sẽ dùng</span>
+       push rsi
+       ...               <span class="c">; việc của bạn</span>
+       pop  rsi          <span class="c">; khôi phục (ngược thứ tự)</span>
+       pop  rdi
+       <span class="c">; tái tạo lệnh gốc bị "stolen" nếu có</span>
+       jmp  0x40123F     <span class="c">; nhảy về sau chỗ đã vá</span></code></pre>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐ · lật check</div><p>crackme: tìm <code>jnz</code> sau strcmp, NOP/đảo để luôn "Access granted". Apply + chạy.</p></div>
+  <div class="ex"><div class="level">⭐⭐ · thu nhỏ size (AD)</div><p>Service đọc 0x200 vào buf 0x40. Đổi hằng → 0x40. Checker vẫn pass, exploit chết.</p></div>
+  <div class="ex"><div class="level">⭐⭐ · NOP anti-debug</div><p>Tìm call ptrace, NOP 5 byte. Chạy dưới gdb không bị thoát.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · gets→fgets cave</div><p>Tìm cave, trampoline fgets/read, chuyển hướng call gets. Giữ chức năng.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · vá bằng 3 công cụ</div><p>Cùng 1 lỗi: vá bằng IDA, r2, và pwntools — so kết quả bằng objdump.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & GHI NHỚ</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">90</div><p>nop — xóa/vô hiệu byte.</p></div>
+    <div class="card"><div class="term">74 / 75</div><p>je/jz · jne/jnz (lật = XOR 01).</p></div>
+    <div class="card"><div class="term">EB</div><p>jmp short — ép nhảy gần.</p></div>
+    <div class="card"><div class="term">E8 / C3</div><p>call (5B) · ret.</p></div>
+    <div class="card"><div class="term">B8 01000000</div><p>mov eax,1 = return 1 (5B).</p></div>
+    <div class="card"><div class="term">Apply patches</div><p>Lưu patch IDA ra file thật.</p></div>
+    <div class="card"><div class="term">code cave</div><p>Vùng 00 chạy được để chèn code.</p></div>
+    <div class="card"><div class="term">wao recj</div><p>r2: lật nhảy điều kiện.</p></div>
+    <div class="card"><div class="term">conv=notrunc</div><p>dd: không cắt file khi vá.</p></div>
+  </div>
+  <h3>Menu IDA thuộc lòng</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Việc</th><th>Đường</th></tr></thead>
+    <tbody>
+      <tr><td>Bật hiện byte</td><td><span class="menupath">Options → General → Disassembly → Number of opcode bytes = 8</span></td></tr>
+      <tr><td>Vá byte</td><td><span class="menupath">Edit → Patch Program → Change byte…</span></td></tr>
+      <tr><td>Gõ assembly</td><td><span class="menupath">Edit → Patch Program → Assemble…</span></td></tr>
+      <tr><td>Keypatch</td><td><kbd>Ctrl+Alt+K</kbd></td></tr>
+      <tr><td>⭐ Lưu ra file</td><td><span class="menupath">Edit → Patch Program → Apply patches to input file…</span></td></tr>
+      <tr><td>Xref (ai gọi)</td><td><kbd>X</kbd> · Strings <kbd>Shift+F12</kbd> · Goto <kbd>G</kbd> · Pseudocode <kbd>F5</kbd></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="stack_overflow.html">stack overflow</a> (hiểu lỗi để vá) · <a href="rop_basics.html">ROP</a> (đọc asm) · <a href="seccomp_orw.html">seccomp</a> (vá thêm sandbox).</li>
+    <li>Tra opcode: <code>objdump -d -M intel bin</code> · Intel SDM Vol.2 (bảng opcode) · tài liệu radare2 <code>wao?</code>.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Cẩm nang vá binary.</strong> Nhớ: 90=nop, 74/75=je/jne (lật XOR 01), EB=jmp, E8=call, C3=ret, B8 01000000=return 1. IDA: Edit→Patch Program→Change byte→Apply patches to input file (BẮT BUỘC lưu). Giữ nguyên độ dài, lệnh lớn dùng code cave. AD: vá tối thiểu, giữ chức năng, test checker.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp (gồm Attack-Defense, vá service của chính mình).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("patch-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("patch-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  // opcode lookup
+  var OPC={
+    0x90:["nop","không làm gì — dùng để xóa byte",null],
+    0xC3:["ret","trả về khỏi hàm",null],
+    0xEB:["jmp short","nhảy gần luôn (byte sau = offset)",null],
+    0xE9:["jmp near","nhảy xa luôn (4 byte offset)",null],
+    0xE8:["call","gọi hàm (4 byte offset)",null],
+    0x70:["jo","nhảy nếu overflow",0x71],0x71:["jno","nhảy nếu không overflow",0x70],
+    0x72:["jb/jc","nhảy nếu < (không dấu)",0x73],0x73:["jae/jnc","nhảy nếu >= (không dấu)",0x72],
+    0x74:["je/jz","nhảy nếu bằng / =0",0x75],0x75:["jne/jnz","nhảy nếu khác / !=0",0x74],
+    0x76:["jbe","nhảy nếu <= (không dấu)",0x77],0x77:["ja","nhảy nếu > (không dấu)",0x76],
+    0x78:["js","nhảy nếu âm",0x79],0x79:["jns","nhảy nếu không âm",0x78],
+    0x7A:["jp","nhảy nếu parity chẵn",0x7B],0x7B:["jnp","nhảy nếu parity lẻ",0x7A],
+    0x7C:["jl","nhảy nếu < (có dấu)",0x7D],0x7D:["jge","nhảy nếu >= (có dấu)",0x7C],
+    0x7E:["jle","nhảy nếu <= (có dấu)",0x7F],0x7F:["jg","nhảy nếu > (có dấu)",0x7E],
+    0x31:["xor (31 C0=xor eax,eax)","đặt eax=0 / return 0",null],
+    0xB8:["mov eax,imm","B8 01000000 = return 1",null],
+    0xCC:["int3","breakpoint",null],0xC9:["leave","dọn stack frame",null]
+  };
+  var opIn=document.getElementById("opIn"),opOut=document.getElementById("opOut");
+  function hx(n){return "0x"+n.toString(16).toUpperCase().padStart(2,"0");}
+  function tra(){
+    var v=(opIn.value||"").trim().replace(/^0x/i,"");
+    var n=parseInt(v,16);
+    if(isNaN(n)||n<0||n>255){opOut.textContent="nhập byte hex 00–FF";return;}
+    var e=OPC[n];
+    if(!e){opOut.innerHTML='<span class="big">'+hx(n)+'</span> — không có trong bảng nhớ nhanh. Dùng <code>objdump -d</code> để tra lệnh đầy đủ.';return;}
+    var html='<div class="big">'+hx(n)+' = '+e[0]+'</div><div>'+e[1]+'</div>';
+    if(e[2]!==null){
+      html+='<div class="inv" style="margin-top:6px">↔ đảo điều kiện: '+hx(n)+' → <b>'+hx(e[2])+'</b> ('+OPC[e[2]][0]+')</div>';
+      html+='<div style="margin-top:4px;opacity:.85">ép LUÔN nhảy: đổi '+hx(n)+' → <b>EB</b> (jmp short, giữ byte offset)</div>';
+      html+='<div style="opacity:.85">ép KHÔNG nhảy: thay 2 byte bằng <b>90 90</b> (nop nop)</div>';
+    }
+    opOut.innerHTML=html;
+  }
+  document.getElementById("opBtn").addEventListener("click",tra);
+  opIn.addEventListener("input",tra);opIn.addEventListener("keydown",function(e){if(e.key==="Enter")tra();});tra();
+
+  // VA -> file offset
+  var vaIn=document.getElementById("vaIn"),baseIn=document.getElementById("baseIn"),offOut=document.getElementById("offOut");
+  function pv(s){s=(s||"").trim();if(/^0x/i.test(s))return parseInt(s,16);if(/^\d+$/.test(s))return parseInt(s,10);return NaN;}
+  function off(){
+    var va=pv(vaIn.value),base=pv(baseIn.value);
+    if(isNaN(va)||isNaN(base)){offOut.textContent="nhập VA & base hợp lệ";return;}
+    var o=va-base;
+    if(o<0){offOut.innerHTML='<span style="color:var(--danger)">VA &lt; base — kiểm lại. Với PIE đặt base=0.</span>';return;}
+    offOut.innerHTML='file offset ≈ VA − base = <span class="big">0x'+o.toString(16)+'</span>'+
+      '<div style="margin-top:5px;opacity:.8;font-size:12px">Dùng offset này trong hex editor (Ctrl+G / dd seek). LƯU Ý: đúng khi .text ánh xạ thẳng (đa số non-PIE/.text). Nếu nghi ngờ, lấy "File offset" trực tiếp từ hộp Change byte của IDA — luôn chính xác.</div>';
+  }
+  vaIn.addEventListener("input",off);baseIn.addEventListener("input",off);off();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c"),d:document.getElementById("panel-d")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

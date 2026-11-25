@@ -1,0 +1,280 @@
+<title>Chuẩn Viết Bài Giảng</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: cột đọc ~760px; tông gạch nung / đá phiến. Hai lớp: combat (cam) + giảng sâu (xanh) */
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 28px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,46px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;text-wrap:balance}
+.sub{color:var(--muted);font-size:17px;max-width:58ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(21px,4vw,27px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:17px;margin:22px 0 6px}
+section.block{padding-block:30px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:11px 0}strong{font-weight:600}
+a{color:var(--accent)}
+ul,ol{padding-left:22px;margin:10px 0}li{margin:6px 0}
+code{font-family:var(--font-mono);font-size:.87em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+.lead{font-size:18px}
+
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:18px 0}
+.layer{padding:16px 18px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:4px 0 0;font-size:14.5px}
+
+.rule{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 11px 11px 0;padding:13px 16px;margin:12px 0}
+.rule h3{margin:0 0 4px;font-size:16px}
+.rule p{margin:4px 0 0;font-size:14.5px;color:var(--muted)}
+.rule .bad,.rule .good{font-family:var(--font-mono);font-size:12.5px;padding:2px 7px;border-radius:5px;font-weight:700}
+.rule .bad{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.rule .good{background:var(--ok-soft);color:var(--ok)}
+
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:12px 15px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14.5px}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:11px 14px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14.5px}
+.srow .d{font-size:13px;color:var(--muted);margin-top:1px}
+
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:6px 14px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.cslot:last-child{border-bottom:none}
+.cslot b{color:var(--accent)}
+
+.checklist{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:14px 0}
+.checklist label{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;margin:8px 0;cursor:pointer}
+.checklist input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.checklist .k{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:700}
+
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:24px 42px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Chuẩn nội bộ · Bài giảng CTF</div>
+    <h1>Chuẩn Viết Bài Giảng</h1>
+    <p class="sub">Bản hướng dẫn để mọi bài giảng CTF sau này bám theo — chất lượng đồng đều, và đặc biệt: <strong>đọc được ngay trong lúc thi để bắt tay giải liền</strong>, đồng thời vẫn hiểu sâu 100% khi học.</p>
+    <div class="toc">
+      <a href="#s0">0 Mục tiêu kép</a><a href="#s1">1 Nguyên tắc nền</a><a href="#s2">2 Cấu trúc</a>
+      <a href="#s3">3 Combat Card</a><a href="#s4">4 Quy tắc trình bày</a><a href="#s5">5 Checklist</a><a href="#s6">6 Văn phong</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 0 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">0 / ĐIỀU QUAN TRỌNG NHẤT</div>
+  <h2>Mục tiêu kép: thi được & học sâu</h2>
+  <p class="lead">Mỗi bài giảng phục vụ <strong>hai tình huống</strong> rất khác nhau, nên phải thiết kế <strong>hai lớp</strong> trong cùng một file:</p>
+  <div class="twolayer">
+    <div class="layer combat">
+      <div class="lh">⚡ Lớp COMBAT — đọc khi đang thi</div>
+      <p>Người đọc đang chạy đua thời gian, cần: nhận ra kỹ thuật, biết điều kiện, có skeleton dán-chạy-ngay. <strong>Đọc 30 giây là bắt tay giải.</strong> Nằm ngay đầu bài.</p>
+    </div>
+    <div class="layer deep">
+      <div class="lh">📚 Lớp GIẢNG SÂU — đọc khi học</div>
+      <p>Người đọc đang học lần đầu, cần hiểu cơ chế tới mức 100%, không điểm mù. Từ tốn, có sơ đồ, ví dụ số thật. Nằm dưới Combat Card.</p>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Phép thử xương máu</span>Nếu người đọc <strong>đọc xong mà không hiểu / không giải được</strong> → giải đấu coi như thất bại, bài giảng coi như hỏng. Mọi quy tắc dưới đây phục vụ đúng một điều: <strong>đọc qua là nắm và làm được.</strong></div>
+ </div>
+</section>
+
+<!-- 1 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">1 / NĂM NGUYÊN TẮC NỀN</div>
+  <h2>Xương sống của mọi bài</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Không có bước ngầm</div><div class="d">Mọi thuật ngữ được định nghĩa NGAY lần đầu xuất hiện. Một từ lạ chưa giải thích = một lỗi, không phải phong cách.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Trình tự: Tại sao → Cái gì → Làm thế nào</div><div class="d">Động cơ trước, cơ chế sau, thao tác tay cuối. Người ta chỉ nhớ cái mình hiểu lý do.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Thấy được, không chỉ đọc được</div><div class="d">Mỗi khái niệm trừu tượng có ≥1 sơ đồ "trước → sau" (SVG). Quy ước màu: <strong>accent/cam = phần kẻ tấn công kiểm soát</strong>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Một ví dụ chạy được xuyên suốt</div><div class="d">Cả bài bám một ví dụ duy nhất, không mỗi mục một ví dụ rời.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Combat-ready (MỚI, quan trọng nhất)</div><div class="d">Có lớp tra cứu nhanh ở đầu bài để đọc-và-giải ngay giữa giải đấu. Xem mục 3.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 2 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">2 / CẤU TRÚC FILE</div>
+  <h2>Combat Card + 12 mục giảng sâu</h2>
+  <p>Thứ tự cố định để mọi bài đồng đều. Combat Card đứng trên cùng (ngay sau tiêu đề + TL;DR), rồi tới 12 mục:</p>
+  <div class="combatcard">
+    <div class="ch">⚡ COMBAT CARD (đầu bài — xem mục 3)</div>
+    <div class="cb"><div class="cslot">Nhận diện 30s · Điều kiện · Lệnh lấy số · Skeleton dán-chạy · Gotcha</div></div>
+  </div>
+  <div class="struct">
+    <div class="srow"><span class="n">00</span><div><div class="t">Tóm tắt 1 phút</div><div class="d">Lỗi / hậu quả / khai thác để làm gì — 3 câu, không thuật ngữ. + "nếu chỉ nhớ một điều".</div></div></div>
+    <div class="srow"><span class="n">01</span><div><div class="t">Nền tảng bắt buộc</div><div class="d">Lấp lỗ hổng kiến thức ngay trong bài, có ẩn dụ đời thường. Mục hay bị cắt → nguyên nhân #1 gây điểm mù.</div></div></div>
+    <div class="srow"><span class="n">02</span><div><div class="t">Vì sao kỹ thuật ra đời</div><div class="d">Nó giải bế tắc gì, vì sao cách cũ không đủ. Kể như câu chuyện.</div></div></div>
+    <div class="srow"><span class="n">03</span><div><div class="t">Cơ chế hoạt động ← mục lõi</div><div class="d">Sơ đồ trước→sau, chỉ rõ nằm đâu/chiều nào/vì sao. + ví dụ bằng SỐ THẬT (mục 4 quy tắc).</div></div></div>
+    <div class="srow"><span class="n">04</span><div><div class="t">Minh họa tương tác</div><div class="d">Widget kéo/bấm minh họa đúng cơ chế của mục 03.</div></div></div>
+    <div class="srow"><span class="n">05</span><div><div class="t">Điều kiện cần / dấu hiệu</div><div class="d">Bảng checklist: PIE/RELRO/canary/libc… cái nào bắt buộc, cái nào không. Giải thích vì sao.</div></div></div>
+    <div class="srow"><span class="n">06</span><div><div class="t">Tự tìm thông tin (GDB/readelf)</div><div class="d">Lệnh cụ thể + cách đọc output. Phần hay bị ăn gian nhất — làm tử tế.</div></div></div>
+    <div class="srow"><span class="n">07</span><div><div class="t">Ví dụ thực tế + 3 bản exploit</div><div class="d">Challenge thật (hoặc tái hiện): source, cách lấy từng số, và 3 bản: thủ công (hiểu cơ chế) · pwntools tiện ích · pwnld+pwnretry.</div></div></div>
+    <div class="srow"><span class="n">08</span><div><div class="t">Công cụ</div><div class="d">Chỉ cái bài này đụng tới, mỗi cái 1 dòng + lệnh.</div></div></div>
+    <div class="srow"><span class="n">09</span><div><div class="t">Lỗi thường gặp & gỡ</div><div class="d">Triệu chứng → nguyên nhân → sửa. Giữ người mới không nản.</div></div></div>
+    <div class="srow"><span class="n">10</span><div><div class="t">Nhận diện & giới hạn</div><div class="d">Khi nào ĐƯỢC / KHÔNG dùng (bảng ✅/❌ + vì sao).</div></div></div>
+    <div class="srow"><span class="n">11</span><div><div class="t">Bài tập 3 mức</div><div class="d">Làm lại / đổi 1 biến / tự nghĩ. Gợi ý ẩn (details), không phơi lời giải.</div></div></div>
+    <div class="srow"><span class="n">12</span><div><div class="t">Thuật ngữ + đọc thêm</div><div class="d">Mọi từ chuyên ngành trong bài, mỗi từ 1 câu. 3–5 link.</div></div></div>
+  </div>
+  <div class="note tip"><span class="tag">Linh hoạt</span>Số mục có thể co giãn theo kỹ thuật, nhưng <strong>thứ tự ý tưởng và Combat Card thì giữ nguyên</strong>.</div>
+ </div>
+</section>
+
+<!-- 3 -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">3 / COMBAT CARD</div>
+  <h2>Khối tra cứu nhanh — thiết kế để thi</h2>
+  <p>Đây là phần MỚI và quan trọng nhất. Một khối viền cam nổi bật ngay đầu bài, gồm đúng 5 ô, để người thi đọc lướt và giải ngay:</p>
+  <div class="combatcard">
+    <div class="ch">⚡ COMBAT CARD</div>
+    <div class="cb">
+      <div class="cslot"><b>🚩 Nhận ra trong 30s</b> — các dấu hiệu cô đọng nhất để biết "đúng là kỹ thuật này".</div>
+      <div class="cslot"><b>✅ Điều kiện bắt buộc</b> — một dòng gạch đầu dòng: PIE/RELRO/canary/libc… cần gì.</div>
+      <div class="cslot"><b>🔧 Lệnh lấy số</b> — đúng 2–3 lệnh để lấy mọi thứ cần (offset, địa chỉ…).</div>
+      <div class="cslot"><b>⚡ Skeleton dán-chạy-ngay</b> — exploit mẫu gọn nhất, chỉ cần điền OFFSET/host.</div>
+      <div class="cslot"><b>⚠️ Gotcha</b> — các lỗi hay vướng + cách sửa 1 dòng. Kết bằng "chưa hiểu? đọc tiếp dưới".</div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Nguyên tắc vàng</span>Combat Card phải <strong>tự đủ để giải một bài điển hình</strong> mà không cần đọc phần dưới. Phần giảng sâu chỉ để hiểu <em>vì sao</em> và xử lý ca khó.</div>
+ </div>
+</section>
+
+<!-- 4 -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">4 / QUY TẮC TRÌNH BÀY BẮT BUỘC</div>
+  <h2>Những luật rút ra từ thực tế dạy</h2>
+
+  <div class="rule"><h3>Không để code C / struct trần</h3>
+    <p>Luôn kèm ngay dưới: (1) hộp <strong>"dịch sang tiếng người"</strong>, (2) <strong>bảng-byte</strong> (byte | tên ô | chứa gì | giá trị ví dụ), (3) <strong>dòng pwntools</strong> tương ứng (<code>p64/p32/p8…</code>).</p>
+    <p><span class="bad">✗ Sai</span> dán <code>typedef struct {…}</code> rồi để đó. &nbsp; <span class="good">✓ Đúng</span> struct → bảng byte → <code>p64(..)+p64(..)</code>.</p></div>
+
+  <div class="rule"><h3>Mọi cơ chế có 1 ví dụ bằng SỐ THẬT đi hết chuỗi</h3>
+    <p>Chọn địa chỉ/con số cụ thể, tính tay từng bước tới kết quả. Số phải nhất quán (chia hết khi cần), địa chỉ "thật" vs "giả" phân biệt rõ (vd thật nằm thấp/chỉ-đọc, giả nằm cao/.bss).</p>
+    <p><span class="bad">✗ Sai</span> "linker nhân index với 24". &nbsp; <span class="good">✓ Đúng</span> "640×24 = 0x3C00 → 0x400500+0x3C00 = 0x404100".</p></div>
+
+  <div class="rule"><h3>Định nghĩa thuật ngữ ngay chỗ xuất hiện đầu</h3>
+    <p>Khái niệm lạ (vd <code>link_map</code>, <code>reloc_index</code>) phải có hộp định nghĩa ngay dòng nó xuất hiện lần đầu — kèm "giá trị là gì" và "ta có phải tự dựng nó không".</p></div>
+
+  <div class="rule"><h3>Sơ đồ cho mỗi khái niệm trừu tượng</h3>
+    <p>SVG vẽ đúng cơ chế (không trang trí), chạy đúng cả light/dark. Quy ước màu thống nhất: <strong>accent = phần kẻ tấn công kiểm soát/giả mạo</strong>, màu thường = cơ chế bình thường.</p></div>
+
+  <div class="rule"><h3>Ví dụ thực tế có 3 bản exploit</h3>
+    <p>(A) thủ công, hạn chế hàm tiện ích — để hiểu cơ chế; (B) pwntools tiện ích — bản chắc dùng thực chiến; (C) dùng helper nhà <code>pwnld</code> + <code>pwnretry</code>. Nói thẳng bản nào chạy chắc, bản nào chỉ để học.</p></div>
+
+  <div class="rule"><h3>Giải nghĩa MỌI output</h3>
+    <p>Không dán một đống hex/log rồi bỏ đó. Mỗi output: nói rõ đọc dòng nào, con số đó nghĩa gì.</p></div>
+
+  <div class="rule"><h3>Thành thật về giới hạn</h3>
+    <p>Nếu một bản/kỹ thuật chỉ chạy trên điều kiện nhất định (vd glibc cũ), ghi rõ cảnh báo — đừng hứa "chạy mọi nơi".</p></div>
+ </div>
+</section>
+
+<!-- 5 -->
+<section class="block" id="s5">
+ <div class="wrap">
+  <div class="secnum">5 / CHECKLIST CHẤT LƯỢNG</div>
+  <h2>Qua hết mới coi là XONG</h2>
+  <div class="checklist">
+    <label><input type="checkbox"><span><span class="k">COMBAT</span> — đọc riêng Combat Card 30s có đủ giải một bài điển hình không?</span></label>
+    <label><input type="checkbox"><span><span class="k">TỪ LẠ</span> — mọi thuật ngữ được định nghĩa trước lần dùng đầu?</span></label>
+    <label><input type="checkbox"><span><span class="k">STRUCT</span> — mọi code C/struct có bảng-byte + dòng pwntools, không để trần?</span></label>
+    <label><input type="checkbox"><span><span class="k">SỐ THẬT</span> — mỗi cơ chế có ví dụ bằng số thật đi hết chuỗi?</span></label>
+    <label><input type="checkbox"><span><span class="k">HÌNH</span> — mỗi khái niệm trừu tượng có ≥1 sơ đồ (đúng quy ước màu)?</span></label>
+    <label><input type="checkbox"><span><span class="k">OUTPUT</span> — mọi hex/log/lệnh đều được giải nghĩa?</span></label>
+    <label><input type="checkbox"><span><span class="k">3 BẢN</span> — ví dụ thực tế có đủ 3 bản exploit (thủ công / pwntools / pwnld)?</span></label>
+    <label><input type="checkbox"><span><span class="k">LÀM LẠI</span> — người mới tự tái hiện khai thác không cần hỏi thêm?</span></label>
+    <label><input type="checkbox"><span><span class="k">NHẤT QUÁN</span> — cùng cấu trúc, đánh số, phong cách với các bài khác?</span></label>
+  </div>
+  <p class="note" style="font-size:14px">Tick lưu tạm trong trình duyệt này để bạn tự chấm từng bài.</p>
+ </div>
+</section>
+
+<!-- 6 -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">6 / VĂN PHONG & NHẤT QUÁN</div>
+  <h2>Quy ước trình bày</h2>
+  <ul>
+    <li><strong>Tiếng Việt</strong>, giọng giảng bài — không phải gạch đầu dòng cộc lốc.</li>
+    <li>Mục đánh số <code>00…12</code>; tiểu mục rõ ràng; dùng bảng cho liệt kê/nhận diện.</li>
+    <li>Callout: 🚩 nhận diện · ✅ điều kiện · ⚠️ cạm bẫy · 💡 mẹo.</li>
+    <li>Màu: <strong>cam (accent)</strong> cho thứ kẻ tấn công kiểm soát; <strong>xanh (mem)</strong> cho địa chỉ/bộ nhớ; nền trung tính.</li>
+    <li>Mức bài tập: ⭐ → ⭐⭐⭐⭐.</li>
+    <li>Luôn chạy đúng cả giao diện sáng/tối; đọc tốt ở bề ngang điện thoại.</li>
+    <li>Cuối bài: ghi "chỉ dùng cho học tập & CTF hợp pháp".</li>
+  </ul>
+  <div class="note tip"><span class="tag">Bài mẫu tham chiếu</span>Khi phân vân, mở bài <strong>ret2dlresolve</strong> ra đối chiếu — nó đã áp đầy đủ chuẩn này (Combat Card + 12 mục + bảng-byte + ví dụ số thật + 3 bản exploit + sơ đồ).</div>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Chuẩn Viết Bài Giảng CTF.</strong> Hai lớp — Combat để thi, giảng sâu để học. Bám chuẩn này cho mọi bài pwn và reverse sau này để chất lượng không tụt.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("lstd-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("lstd-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+  // checklist persistence
+  var boxes=[].slice.call(document.querySelectorAll('.checklist input'));
+  try{var saved=JSON.parse(localStorage.getItem("lstd-check")||"[]");boxes.forEach(function(b,i){b.checked=!!saved[i];});}catch(e){}
+  boxes.forEach(function(b,i){b.addEventListener("change",function(){
+    try{localStorage.setItem("lstd-check",JSON.stringify(boxes.map(function(x){return x.checked?1:0;})));}catch(e){}
+  });});
+})();
+</script>

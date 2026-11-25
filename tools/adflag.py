@@ -48,11 +48,11 @@ __all__ = [
     "url",
 ]
 
-# Regex chuẩn cho các định dạng flag phổ biến trong CTF / Attack-Defense:
-# 1. IBOH26_xxx
-# 2. prefix{content} (như flag{...}, ctf{...}, sec{...})
+# Regex chuẩn cho các định dạng flag:
+# 0. IBOH 2026 CHÍNH THỨC: flag{<md5>}  = flag{ + 32 hex + }
+# 1. prefix{content} (fallback: ctf{...}, sec{...}) · 2. IBOH26_xxx
 DEFAULT_FLAG_REGEX = re.compile(
-    r"[a-zA-Z0-9_\-]+{[^}\s\r\n]+}|IBOH26_[a-zA-Z0-9_\-+/=]+"
+    r"flag\{[0-9a-fA-F]{32}\}|[a-zA-Z0-9_\-]+\{[^}\s\r\n]+\}|IBOH26_[a-zA-Z0-9_\-+/=]+"
 )
 
 _emitted_flags = set()

