@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web — Lane P2 · IBOH Web</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:120px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.brute{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.brute .bytes{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+.brute .b{border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--surface);min-width:32px;text-align:center}
+.brute .b.found{background:var(--ok-soft);border-color:var(--ok);font-weight:700}
+.brute .b.testing{background:var(--accent-soft);border-color:var(--accent)}
+.brute button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer;margin-top:8px}
+.brute .msg{color:var(--mem);margin-top:8px}
+
+blockquote.note{margin:14px 0}
+section.block h2{margin-top:3px}
+.tablewrap table{min-width:560px}
+footer a{margin-right:12px}
+</style>
+</head>
+<body>
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+<header class="hero"><div class="wrap hero-inner">
+<div class="kicker">IBOH · WEB · LANE P2</div>
+<h1>Web — Lane P2</h1>
+<p class="sub">Mở giao diện bài giảng: <a href="web.html">HTML</a> · <a href="web.md">Markdown</a></p>
+<div class="meta-row"><span class="chip"><b>Định dạng:</b> HTML</span><span class="chip"><b>Mã mẫu:</b> loopback/lab</span><span class="chip"><b>Markdown:</b> <a href="web.md">mở bản .md</a></span></div>
+<nav class="toc" aria-label="Mục lục"><a href="#combat-card-nhan-dien-nhanh">Combat Card — nhận diện nhanh</a><a href="#giang-sau">Giảng sâu</a><a href="#quy-uoc-thuc-hanh">Quy ước thực hành</a></nav>
+</div></header>
+<main><section class="block" id="mo-au"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Mở đầu</h2><blockquote class="note"><p>Tài liệu này có hai lớp: <strong>Combat</strong> để dò nhanh source → sink → PoC, và <strong>Giảng sâu</strong> để hiểu nguyên nhân, cách vá, cùng kiểm tra hồi quy. Các ví dụ dùng Python/Flask, dữ liệu giả, chỉ nhắm <code>127.0.0.1</code>; chưa chạy trong repo. Chỉ dùng trên lab cô lập mà bạn sở hữu hoặc được phép kiểm thử.</p></blockquote></div></section><section class="block" id="combat-card-nhan-dien-nhanh"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Combat Card — nhận diện nhanh</h2><div class="tablewrap"><table><thead><tr><th>#</th><th>Lỗi</th><th>Dấu hiệu trong code</th><th>Bản vá gốc</th></tr></thead><tbody><tr><td>01</td><td>SQL injection</td><td>request data nối vào SQL string</td><td>prepared statement / parameter binding</td></tr><tr><td>02</td><td>XSS</td><td>dữ liệu không tin cậy đi vào HTML/DOM sink</td><td>output encoding theo context; safe DOM API</td></tr><tr><td>03</td><td>IDOR/BOLA</td><td>object lấy theo ID request nhưng thiếu policy/owner check</td><td>authorization server-side trên từng object/action</td></tr><tr><td>04</td><td>Auth/session/JWT</td><td>token/claims dùng trước khi verify; session không đổi sau login</td><td>verifier cấu hình cố định; vòng đời session an toàn</td></tr><tr><td>05</td><td>CSRF</td><td>cookie-auth state change không đòi CSRF proof</td><td>framework CSRF middleware/token</td></tr><tr><td>06</td><td>SSRF</td><td>request URL tùy chỉnh tới HTTP client phía server</td><td>đích allowlist + egress policy</td></tr><tr><td>07</td><td>Path traversal/LFI</td><td>input tên file đi tới <code>open</code>/include</td><td>opaque ID → path server-owned; containment</td></tr><tr><td>08</td><td>Upload không an toàn</td><td>tin filename/MIME/extension; lưu vào webroot</td><td>validate nội dung server-side; tên ngẫu nhiên; vùng lưu riêng</td></tr><tr><td>09</td><td>OS command injection</td><td>request data đi vào shell command</td><td>bỏ shell; dùng API/argv cố định và validation</td></tr><tr><td>10</td><td>SSTI</td><td>input được biên dịch như template source</td><td>template cố định; input truyền như biến</td></tr><tr><td>11</td><td>XXE</td><td>XML parser cho phép DTD/entity ngoài</td><td>tắt/reject DTD và external entities</td></tr><tr><td>12</td><td>Deserialization</td><td>bytes người dùng vào <code>pickle</code>/<code>unserialize</code>/<code>readObject</code></td><td>định dạng data-only + schema/limits</td></tr></tbody></table></div></div></section><section class="block" id="giang-sau"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Giảng sâu</h2><ul><li><a href="web/injection.html">Injection: SQLi, XSS, OS command injection, SSTI</a> · <a href="web/injection.html">Markdown</a></li><li><a href="web/access.html">Authorization, authentication, CSRF, deserialization</a> · <a href="web/access.html">Markdown</a></li><li><a href="web/files_protocol.html">SSRF, path traversal, upload, XXE</a> · <a href="web/files_protocol.html">Markdown</a></li><li><a href="reports/Web%20security%20lab%2012%20flaws.md">Bản tổng hợp nghiên cứu và nguồn tham khảo</a></li></ul></div></section><section class="block" id="quy-uoc-thuc-hanh"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Quy ước thực hành</h2><p>Mỗi mục trong ba bài con có nhận diện 30 giây, code lỗi, PoC vô hại khóa vào loopback, code vá, lý do bản vá chặn PoC và checklist hồi quy. Mã trong tài liệu là ví dụ minh họa, không phải xác nhận đã chạy. Khi biến thành lab dùng thật, tạo user/file/token giả, bind service ở loopback, pin phiên bản thư viện, rồi kiểm tra kết quả trước/sau vá.</p>
+<p><strong>Luồng review chung:</strong> tìm source (request, cookie, upload, token) → lần qua biến đổi → xác định sink (query, quyền, shell, template, file, XML parser, HTTP client) → xem check nào chạy ngay trước sink → viết regression test thể hiện dữ liệu phải còn là dữ liệu.</p></div></section></main>
+<footer><div class="wrap"><p><strong>IBOH · Web security</strong> · Nội dung mẫu phục vụ lab được phép, không phải hướng dẫn nhắm hệ thống thật.</p><p><a href="README.md">Cheatsheets</a><a href="web.md">Bản Markdown</a></p></div></footer>
+<script>
+(function(){"use strict";var btn=document.getElementById("themeBtn");function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("web-theme",n);}catch(e){}});try{var s=localStorage.getItem("web-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}})();
+</script>
+</body>
+</html>

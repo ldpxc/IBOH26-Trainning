@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Authorization, phiên đăng nhập, CSRF và deserialization · IBOH Web</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:120px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.brute{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.brute .bytes{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+.brute .b{border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--surface);min-width:32px;text-align:center}
+.brute .b.found{background:var(--ok-soft);border-color:var(--ok);font-weight:700}
+.brute .b.testing{background:var(--accent-soft);border-color:var(--accent)}
+.brute button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer;margin-top:8px}
+.brute .msg{color:var(--mem);margin-top:8px}
+
+blockquote.note{margin:14px 0}
+section.block h2{margin-top:3px}
+.tablewrap table{min-width:560px}
+footer a{margin-right:12px}
+</style>
+</head>
+<body>
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+<header class="hero"><div class="wrap hero-inner">
+<div class="kicker">IBOH · WEB · ACCESS &amp; SESSION</div>
+<h1>Authorization, phiên đăng nhập, CSRF và deserialization</h1>
+<p class="sub"><strong>Tóm tắt 1 phút:</strong> Đăng nhập chỉ xác nhận danh tính; ứng dụng vẫn phải kiểm tra quyền trên từng object và từng hành động. Cookie/JWT là credential nên phải xác minh, quản lý vòng đời và chống request giả mạo phù hợp. Không giải tuần tự hóa object native từ dữ liệu người dùng. OWASP Top 10:2025 xếp Broken Access Control ở A01; API Security Top 10:2023 gọi lỗi quyền theo object là BOLA. (<a href="https://top10.owasp.org/2025/A01_2025-Broken_Access_Control/">OWASP A01:2025</a>, <a href="https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization/">OWASP API1:2023</a>)</p>
+<div class="meta-row"><span class="chip"><b>Định dạng:</b> HTML</span><span class="chip"><b>Mã mẫu:</b> loopback/lab</span><span class="chip"><b>Markdown:</b> <a href="access.md">mở bản .md</a></span></div>
+<nav class="toc" aria-label="Mục lục"><a href="#03-broken-access-control-idor-bola">03 — Broken access control: IDOR/BOLA</a><a href="#04-loi-xac-thuc-session-va-jwt">04 — Lỗi xác thực, session và JWT</a><a href="#05-cross-site-request-forgery-csrf">05 — Cross-site request forgery (CSRF)</a><a href="#12-insecure-deserialization">12 — Insecure deserialization</a><a href="#nguon-va-gioi-han">Nguồn và giới hạn</a></nav>
+</div></header>
+<main><section class="block" id="mo-au"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Mở đầu</h2><p>Tất cả ví dụ dùng hai principal giả lập (Alice/Bob), token lab và service loopback. Snippet cố ý lỗi để review/lab; chưa chạy trong repo.</p></div></section><section class="block" id="03-broken-access-control-idor-bola"><div class="wrap"><div class="secnum">03 / WEB</div><h2>03 — Broken access control: IDOR/BOLA</h2><p><strong>Combat ·</strong> Dấu hiệu: request ID tra object toàn cục; không thấy owner/tenant/ACL/policy trước khi đọc, sửa hay xóa. PoC: Alice gọi object của Bob bằng ID local. Vá: object query hoặc service policy ràng buộc principal với hành động. UUID khó đoán không phải bản vá.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<pre><code class="language-python">@app.get(&quot;/api/invoices/&lt;int:invoice_id&gt;&quot;)
+@login_required
+def get_invoice(invoice_id):
+    invoice = Invoice.query.get_or_404(invoice_id)  # BUG: lookup toàn bảng
+    return jsonify(invoice.to_public_dict())</code></pre>
+<p>Tìm <code>get(id)</code>, <code>findById</code>, query bằng request ID, nested resource và bulk IDs; lần xem authorization có kiểm tra đúng <strong>object + action</strong> không. Endpoint middleware cho phép role <code>user</code> không chứng minh user có quyền với mọi hóa đơn. (<a href="https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization/">OWASP API1:2023</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html">OWASP Authorization Cheat Sheet</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<p>Giả sử DB lab seed invoice 101 của Alice và invoice 202 của Bob; endpoint dùng bearer token Alice:</p>
+<pre><code class="language-python">import requests
+r = requests.get(
+    &quot;http://127.0.0.1:5000/api/invoices/202&quot;,
+    headers={&quot;Authorization&quot;: &quot;Bearer ALICE_LAB_TOKEN&quot;}, timeout=3,
+)
+print(r.status_code, r.text)  # bản lỗi trả hóa đơn giả của Bob</code></pre>
+<h3>Vá và vì sao</h3>
+<pre><code class="language-python">@app.get(&quot;/api/invoices/&lt;int:invoice_id&gt;&quot;)
+@login_required
+def get_invoice(invoice_id):
+    invoice = Invoice.query.filter_by(
+        id=invoice_id, owner_id=current_user.id
+    ).first_or_404()
+    return jsonify(invoice.to_public_dict())</code></pre>
+<p>Với chia sẻ/tenant, thay <code>owner_id</code> bằng authorization service đúng ACL. Principal phải đến từ session/token đã xác minh, không nhận <code>owner_id</code> từ body. Query ràng buộc object trong phạm vi user giúp mọi nhánh trả dữ liệu đi sau check. (<a href="https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization/">OWASP API1:2023</a>)</p>
+<p><strong>Hồi quy:</strong> test ma trận Alice/Bob × GET/PATCH/DELETE, gồm object của mình, người khác và tenant khác; Alice không được đọc hoặc làm đổi invoice 202. Kiểm tra cả bulk/nested routes. Dùng 403 hoặc 404 theo chính sách app nhưng không rò data.</p></div></section><section class="block" id="04-loi-xac-thuc-session-va-jwt"><div class="wrap"><div class="secnum">04 / WEB</div><h2>04 — Lỗi xác thực, session và JWT</h2><p><strong>Combat ·</strong> Dấu hiệu: <code>verify_signature=False</code>, algorithm lấy từ header token, bỏ qua <code>exp</code>/issuer/audience, claims dùng trước khi verify; session ID không xoay sau login. PoC: token <code>alg=none</code> chỉ hỏi route giả trên localhost. Vá: thuật toán allowlist cố định, verify claims bắt buộc, rồi mới tải principal; xoay/vô hiệu session.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<pre><code class="language-python">@app.get(&quot;/admin/whoami&quot;)
+def whoami():
+    token = request.headers[&quot;Authorization&quot;].removeprefix(&quot;Bearer &quot;)
+    claims = jwt.decode(token, options={&quot;verify_signature&quot;: False})  # BUG
+    return jsonify({&quot;subject&quot;: claims.get(&quot;sub&quot;), &quot;role&quot;: claims.get(&quot;role&quot;)})</code></pre>
+<p>Đây là ví dụ bỏ xác minh rõ ràng. Trong code thật, kiểm tra verifier thực sự nhận key/algorithm đã cấu hình server-side và xác thực claim cần cho nghiệp vụ. JWT payload chỉ Base64URL-encode; đừng xem token là bí mật. PyJWT cảnh báo không lấy algorithm từ <code>alg</code> trong input. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html">OWASP JWT Cheat Sheet</a>, <a href="https://pyjwt.readthedocs.io/en/stable/api.html">PyJWT API</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">import base64, json, requests
+
+def b64url(value):
+    return base64.urlsafe_b64encode(value).rstrip(b&quot;=&quot;).decode()
+header = b64url(json.dumps({&quot;alg&quot;: &quot;none&quot;, &quot;typ&quot;: &quot;JWT&quot;}).encode())
+payload = b64url(json.dumps({&quot;sub&quot;: &quot;alice-lab&quot;, &quot;role&quot;: &quot;admin&quot;}).encode())
+token = header + &quot;.&quot; + payload + &quot;.&quot;
+r = requests.get(&quot;http://127.0.0.1:5000/admin/whoami&quot;,
+                 headers={&quot;Authorization&quot;: &quot;Bearer &quot; + token}, timeout=3)
+print(r.status_code, r.text)  # bản lỗi trả claims giả do client tự dựng</code></pre>
+<h3>Vá và vì sao</h3>
+<pre><code class="language-python">claims = jwt.decode(
+    token,
+    key=JWT_PUBLIC_KEY,                 # key cấu hình phía server
+    algorithms=[&quot;RS256&quot;],              # allowlist cố định, không lấy từ token
+    issuer=&quot;https://issuer.lab&quot;,
+    audience=&quot;web-api&quot;,
+    options={&quot;require&quot;: [&quot;exp&quot;, &quot;sub&quot;]},
+)
+user = db.session.get(User, claims[&quot;sub&quot;])
+if user is None or not user.is_active:
+    abort(401)
+# Áp dụng authorization riêng; không dùng claims chưa verify.</code></pre>
+<p>Verifier từ chối token không có chữ ký hợp lệ, token hết hạn/sai issuer/audience; sau đó app tải account đang hoạt động. Cấu hình <code>Secure</code>, <code>HttpOnly</code>, <code>SameSite</code> cho cookie session; xoay session ID sau login/đổi quyền và hủy ID cũ. JWT cần cơ chế revoke nếu cần logout tức thời. (<a href="https://pyjwt.readthedocs.io/en/stable/api.html">PyJWT API</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html">OWASP Session Management</a>)</p>
+<pre><code class="language-python">app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE=&quot;Lax&quot;,
+)
+# Nếu dùng server-side session, gọi API regenerate/rotate của backend sau login
+# và hủy session ID cũ; API cụ thể phụ thuộc thư viện session đang dùng.</code></pre>
+<p><strong>Hồi quy:</strong> kiểm tra token hợp lệ, chữ ký sai, <code>alg=none</code>, thiếu/hết <code>exp</code>, sai <code>iss</code>/<code>aud</code> đều bị từ chối; session ID pre-login không dùng được sau login/logout. Đừng lưu credential nhạy cảm trong <code>localStorage</code>; XSS cùng origin có thể đọc.</p></div></section><section class="block" id="05-cross-site-request-forgery-csrf"><div class="wrap"><div class="secnum">05 / WEB</div><h2>05 — Cross-site request forgery (CSRF)</h2><p><strong>Combat ·</strong> Dấu hiệu: <code>POST/PUT/PATCH/DELETE</code> thay đổi trạng thái bằng cookie session nhưng không xác nhận token/nguồn request. PoC: HTML form trên origin loopback khác submit thay đổi email giả. Vá: CSRF middleware/token; SameSite và kiểm tra Origin là defense-in-depth, không thay token tổng quát.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<pre><code class="language-python">@app.post(&quot;/profile/email&quot;)
+@login_required
+def change_email():
+    current_user.email = request.form[&quot;email&quot;]
+    db.session.commit()  # BUG: browser tự gửi cookie, route không check CSRF
+    return &quot;updated&quot;</code></pre>
+<p>Tìm mọi state-changing route dùng cookie; GET không được làm đổi trạng thái. CSRF chủ yếu nhắm credential mà browser tự đính kèm (cookie). API chỉ dùng bearer header không tự gửi bởi browser có mô hình khác, nhưng kiểm tra lại refresh/session cookie và CORS. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP CSRF Prevention</a>)</p>
+<h3>PoC browser lab cục bộ</h3>
+<p>Đăng nhập Alice giả vào app <code>127.0.0.1:5000</code>, rồi phục vụ trang dưới ở <code>127.0.0.1:8081</code> và mở bằng cùng browser profile. Hai port khác origin nhưng cùng site loopback; chỉ đổi dữ liệu lab.</p>
+<pre><code class="language-html">&lt;!-- csrf-lab.html: chỉ post tới service loopback của bài lab --&gt;
+&lt;form id=&quot;f&quot; action=&quot;http://127.0.0.1:5000/profile/email&quot; method=&quot;post&quot;&gt;
+  &lt;input name=&quot;email&quot; value=&quot;csrf-lab@example.test&quot;&gt;
+&lt;/form&gt;
+&lt;script&gt;document.getElementById(&quot;f&quot;).submit()&lt;/script&gt;</code></pre>
+<p>Chạy trang tĩnh trong thư mục fixture riêng: <code>python3 -m http.server 8081 --bind 127.0.0.1 --directory ./csrf-fixture</code>. Trước vá, quan sát email Alice đổi thành địa chỉ <code>.test</code>; không dùng tài khoản thật.</p>
+<h3>Vá và vì sao</h3>
+<pre><code class="language-python">from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect(app)  # kiểm tra unsafe methods toàn cục</code></pre>
+<pre><code class="language-html">&lt;form method=&quot;post&quot; action=&quot;/profile/email&quot;&gt;
+  &lt;input type=&quot;hidden&quot; name=&quot;csrf_token&quot; value=&quot;{{ csrf_token() }}&quot;&gt;
+  &lt;input name=&quot;email&quot;&gt;
+  &lt;button&gt;Save&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+<p>Token ngẫu nhiên do server cấp và gắn session; request xuyên site không biết token nên bị middleware từ chối. Dùng framework middleware, tránh tự so cookie với field. Cookie nên cấu hình <code>Secure</code>, <code>HttpOnly</code>, <code>SameSite=Lax</code> hoặc theo nhu cầu. Không exempt route nếu chưa có biện pháp tương đương. (<a href="https://flask-wtf.readthedocs.io/en/latest/api/">Flask-WTF CSRF</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP CSRF Prevention</a>)</p>
+<p><strong>Hồi quy:</strong> form thiếu/sai token phải bị từ chối và email không đổi; form có token hợp lệ mới thành công. Test bằng browser để đánh giá cookie/origin thật; <code>curl</code> chỉ chứng minh middleware token, không tái tạo hành vi browser. GET không bao giờ đổi email.</p></div></section><section class="block" id="12-insecure-deserialization"><div class="wrap"><div class="secnum">12 / WEB</div><h2>12 — Insecure deserialization</h2><p><strong>Combat ·</strong> Dấu hiệu: bytes từ request/cookie/upload tới <code>pickle.loads</code>, <code>yaml.load</code> unsafe, PHP <code>unserialize</code>, Java <code>ObjectInputStream.readObject</code>. PoC harmless gọi <code>print</code> khi giải pickle cục bộ. Vá: JSON/data-only DTO, schema allowlist, giới hạn body; pickle không dành cho dữ liệu không tin cậy.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<pre><code class="language-python">@app.post(&quot;/import&quot;)
+def import_state():
+    raw = base64.b64decode(request.form[&quot;state&quot;])
+    state = pickle.loads(raw)  # BUG: pickle có thể gọi callable lúc dựng object
+    return jsonify({&quot;ok&quot;: True, &quot;state&quot;: str(state)})</code></pre>
+<p>Tìm luồng đầu vào có thể bị user sửa đến native object reconstruction. Base64 không tạo tính toàn vẹn hay an toàn. Python cảnh báo pickle có thể thực thi code lúc unpickle; OWASP liệt kê các sink tương tự ở nhiều ngôn ngữ. (<a href="https://docs.python.org/3/library/pickle.html">Python pickle</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html">OWASP Deserialization Cheat Sheet</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">import base64, pickle, requests
+class HarmlessProof:
+    def __reduce__(self):
+        return (print, (&quot;LAB ONLY: pickle object reconstructed&quot;,))
+blob = base64.b64encode(pickle.dumps(HarmlessProof())).decode(&quot;ascii&quot;)
+r = requests.post(&quot;http://127.0.0.1:5000/import&quot;,
+                  data={&quot;state&quot;: blob}, timeout=3)
+print(&quot;local lab status:&quot;, r.status_code)
+# Bản lỗi in marker ở stdout process lab; không shell/file/network.</code></pre>
+<h3>Vá và vì sao</h3>
+<pre><code class="language-python">raw = request.get_data(cache=False)
+if len(raw) &gt; 16_384:
+    abort(413)
+state = request.get_json()
+if not isinstance(state, dict) or set(state) - {&quot;theme&quot;, &quot;page&quot;}:
+    abort(400)
+if state.get(&quot;theme&quot;) not in {&quot;light&quot;, &quot;dark&quot;}:
+    abort(400)</code></pre>
+<p>JSON parse thành kiểu dữ liệu cơ bản, không dựng Python object từ payload. Schema/type/size check giới hạn input hợp lệ; không đưa dữ liệu parse thành class tùy ý, path hoặc query mà không validate tiếp. Nếu legacy dùng serialization, chỉ chấp nhận blob do server kiểm soát và có integrity protection an toàn; MAC không biến pickle thành format an toàn khi key bị lộ. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html">OWASP Deserialization Cheat Sheet</a>, <a href="https://docs.python.org/3/library/pickle.html">Python pickle</a>)</p>
+<p><strong>Hồi quy:</strong> blob pickle lab không còn được giải; invalid JSON, sai kiểu, field lạ và body quá lớn bị từ chối trước side effect. Kiểm tra stdout/state để chắc marker không xuất hiện.</p></div></section><section class="block" id="nguon-va-gioi-han"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Nguồn và giới hạn</h2><p>Ví dụ dùng Flask, SQLAlchemy, PyJWT và Flask-WTF làm một stack minh họa; tên API cần điều chỉnh theo phiên bản đang học. Source pattern là tín hiệu để review, không luôn chứng minh exploit được nếu một policy/service check chạy trước sink. Sources: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html">OWASP Authorization</a>, <a href="https://api-security.owasp.org/editions/2023/en/">OWASP API Security Top 10:2023</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html">OWASP JWT</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP CSRF</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Deserialization_Cheat_Sheet.html">OWASP Deserialization</a>.</p></div></section></main>
+<footer><div class="wrap"><p><strong>IBOH · Web security</strong> · Nội dung mẫu phục vụ lab được phép, không phải hướng dẫn nhắm hệ thống thật.</p><p><a href="../web.html">Mục lục Web</a><a href="access.md">Bản Markdown</a></p></div></footer>
+<script>
+(function(){"use strict";var btn=document.getElementById("themeBtn");function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("web-theme",n);}catch(e){}});try{var s=localStorage.getItem("web-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}})();
+</script>
+</body>
+</html>

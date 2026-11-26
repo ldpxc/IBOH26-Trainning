@@ -8,7 +8,7 @@ Mỗi mảng một file. **Chỉ ghi thứ đã tự chạy thật** (quy ước
 | [infra.md](infra.md) | Deploy / backup / monitor / traffic | HT3–HT6, giữ SLA |
 | [patching.md](patching.md) | Vá binary & web không chết dịch vụ | HT7, mục 3 README, Drill Vá-Sống |
 | [pwn.md](pwn.md) | Khai thác nhị phân | lane P1 |
-| [web.md](web.md) | Khai thác web | lane P2 |
+| [web.md](web.md) · [web.html](web.html) | Khai thác web | lane P2 |
 | [crypto.md](crypto.md) | Mật mã | lane P3 |
 | [rev.md](rev.md) | Dịch ngược | REV (P1/P2 chia) |
 | [ad.md](ad.md) | Đặc thù Attack-Defense | farm / replay / submit / flag-id |
