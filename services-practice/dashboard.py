@@ -212,6 +212,9 @@ def main():
     ap.add_argument("--service", default="notevault")
     ap.add_argument("--runtime-dir", default=".runtime", help="Thư mục .runtime của services-practice (chạy script từ đúng thư mục services-practice/)")
     ap.add_argument("--port", type=int, default=None, help="Mặc định 8800 + lệch theo team (a=8800, b=8810...)")
+    ap.add_argument("--bind", default="0.0.0.0",
+                     help="Địa chỉ lắng nghe -- mặc định 0.0.0.0 để đồng đội mở được từ laptop khác qua IP LAN "
+                          "của máy host. Đặt 127.0.0.1 nếu chỉ muốn xem trên chính máy đang chạy.")
     args = ap.parse_args()
 
     port = args.port if args.port is not None else 8800 + team_offset(args.team) * 10
@@ -222,12 +225,15 @@ def main():
     Handler.jsonl_path = jsonl_path
 
     print(f"[*] Dashboard team {args.team}/{args.service} -- đọc: {jsonl_path}")
-    print(f"[*] Mở trình duyệt: http://127.0.0.1:{port}/  (Ctrl+C để dừng)")
+    print(f"[*] Trên máy này mở: http://127.0.0.1:{port}/")
+    if args.bind != "127.0.0.1":
+        print(f"[*] Đồng đội mở từ laptop khác (cùng LAN/Wi-Fi): http://<IP-LAN-cua-may-nay>:{port}/")
+    print("[*] Ctrl+C để dừng.")
     if not os.path.isfile(jsonl_path):
         print(f"[!] Chưa thấy {jsonl_path} -- chạy `./spin.sh up {args.team} {args.service}` và "
               f"healthcheck_notevault.py trước, dashboard sẽ tự cập nhật khi có dữ liệu.")
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = ThreadingHTTPServer((args.bind, port), Handler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

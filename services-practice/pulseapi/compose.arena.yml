@@ -43,8 +43,8 @@ services:
       app: { condition: service_started }
       postgres: { condition: service_healthy }
     ports:
-      - "127.0.0.1:${BW_PORT:-8010}:8080"
-      - "127.0.0.1:${BW_UI_PORT:-8015}:7000"
+      - "0.0.0.0:${BW_PORT:-8010}:8080"
+      - "0.0.0.0:${BW_UI_PORT:-8015}:7000"
     volumes:
       - waf_logs:/var/log/bunkerweb
     environment:
