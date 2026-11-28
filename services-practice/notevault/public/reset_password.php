@@ -6,7 +6,7 @@
 require __DIR__ . '/inc/config.php';
 require __DIR__ . '/inc/db.php';
 require __DIR__ . '/inc/auth.php';
-require __DIR__ . '/inc/flag.php';
+require_once __DIR__ . '/inc/flag.php';
 
 $result = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
