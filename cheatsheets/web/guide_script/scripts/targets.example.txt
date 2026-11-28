@@ -1,0 +1,10 @@
+# Danh sách đội đối thủ - mỗi dòng 1 mục tiêu.
+# Dòng @OUR_TEAM: đội nhà, tuyệt đối không quét/nộp cờ.
+# Dòng bắt đầu bằng # sẽ bị bỏ qua.
+# Chấp nhận: http://10.0.2.1:8000 hoặc 10.0.2.1:8000
+
+@OUR_TEAM http://10.0.1.1:8000
+
+http://10.0.2.1:8000
+http://10.0.3.1:8000
+# 10.0.4.1:8000

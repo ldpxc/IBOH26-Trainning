@@ -1,0 +1,16 @@
+# Core HTTP
+requests>=2.31.0,<3
+
+# Response parsing
+beautifulsoup4>=4.12.0,<5
+lxml>=5.0.0,<6
+
+# Config / utilities
+PyYAML>=6.0.1,<7
+tenacity>=8.3.0,<10
+
+# Optional: async concurrency
+# aiohttp>=3.9.0,<4
+
+# Optional: browser automation (XSS/CSRF victim simulation)
+# playwright>=1.44.0,<2

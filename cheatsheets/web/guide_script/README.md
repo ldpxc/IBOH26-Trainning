@@ -1,0 +1,65 @@
+# Sheatchee - Burp -> Python Copy-Paste Cookbook
+
+Kho code mẫu để chuyển thao tác đã làm được trên **Burp Suite** sang **Python** thật nhanh khi thi offline (không AI, không Internet).
+
+## Quy trình dùng trong phòng thi
+
+1. **Giải tay trên Burp** cho 1 đội/mục tiêu.
+2. **Copy file mẫu**: `cp scripts/template.py bai1.py` (hoặc Copy-Item trên Windows).
+3. **Mở cheatsheet**: [`CHEATSHEET_NHANH.md`](CHEATSHEET_NHANH.md) -> chọn đúng snippet.
+4. **Dán logic vào `solve_one()`** trong `bai1.py`, sửa `TARGETS_FILE/USE_PROXY/FLAG_RE/OWN_FLAGS` nếu cần.
+5. **Chạy**: `python bai1.py`.
+
+## Bắt đầu nhanh
+
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+pip install requests beautifulsoup4
+```
+
+Chuẩn bị targets:
+
+```bash
+# Windows
+Copy-Item scripts\targets.example.txt scripts\targets.txt
+# Linux/macOS
+# cp scripts/targets.example.txt scripts/targets.txt
+```
+
+Sửa `scripts/targets.txt`, rồi chạy template:
+
+```bash
+python scripts/template.py
+```
+
+## Cấu trúc gọn
+
+| Đường dẫn | Dùng để làm gì |
+|---|---|
+| [`CHEATSHEET_NHANH.md`](CHEATSHEET_NHANH.md) | Mục lục tra cứu 5 giây: cần gì -> mở file nào |
+| [`scripts/template.py`](scripts/template.py) | File độc lập 1-file, copy ra thành `baiX.py` rồi sửa `solve_one()` |
+| [`scripts/targets.txt`](scripts/targets.txt) | Danh sách mục tiêu runtime (local, không commit) |
+| [`scripts/targets.example.txt`](scripts/targets.example.txt) | Mẫu targets, có `@OUR_TEAM` và comment `#` |
+| `01_Request_Co_Ban/` | GET/POST/Header-Cookie/Upload/Encoding |
+| `02_Chuoi_Request/` | Login, CSRF, truyền ID, đọc response |
+| `03_Thao_Tac_Nang_Cao/` | Vòng lặp Intruder, song song, polling |
+| `04_Theo_Lo_Hong/` | SQLi, IDOR, LFI, CMDi, SSTI, SSRF, Upload, XSS/CSRF |
+| `05_Nhieu_Doi_Va_Flag/` | Lặp targets, trích flag, lưu flag |
+| `06_Debug/` | Python qua Burp, khác biệt Burp/Python, 403/WAF, lỗi thường gặp |
+| `07_Chall_Kiem_Chung/` | Ý tưởng lab tự kiểm chứng |
+| `08_Khai_Thac_Lo_Hong_Web/` | Tài liệu nền tảng lỗ hổng web |
+
+## Quy ước snippet
+
+- Mỗi file `01_`-`06_` có đoạn Python ngắn, **độc lập**, có đủ `import`, copy vào `solve_one()` là chạy.
+- Host mẫu: `http://target`. Thay bằng mục tiêu thật.
+- Luôn có `timeout`; khi mass dùng `workers=4`, `delay=0.5`.
+- Chỉ dùng trên hệ thống/lab/CTF được phép.
+
+## Tài liệu chi tiết
+
+- Cấu trúc dự án: [`CAU_TRUC_DU_AN.md`](CAU_TRUC_DU_AN.md)
+- Hướng dẫn cũ chi tiết (nếu cần): [`HUONG_DAN_SU_DUNG.md`](HUONG_DAN_SU_DUNG.md)
+- Đánh giá mô hình trước khi đơn giản hóa: [`DANH_GIA_MO_HINH_HIEN_TAI.md`](DANH_GIA_MO_HINH_HIEN_TAI.md)

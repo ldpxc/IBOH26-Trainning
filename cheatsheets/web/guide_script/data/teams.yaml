@@ -1,0 +1,25 @@
+# Danh sách đội cho lab/CTF.
+# Chỉ sử dụng trên hệ thống bạn được phép kiểm thử.
+#
+# Cách dùng với script có sẵn:
+#   python scripts/run_teams.py --teams-file data/teams.yaml --dry-run
+#   python scripts/run_teams.py --teams-file data/teams.yaml --workers 5
+#
+# Ghi chú:
+# - `name`: tên/ID đội.
+# - `ip`: địa chỉ IP của đội.
+# - `web`: link web/service chính của đội.
+# - Có thể thêm các trường khác khi cần: base_url, auth, token, note...
+
+teams:
+  - name: "team01"
+    ip: "10.10.1.1"
+    web: "http://10.10.1.1:8080"
+
+  - name: "team02"
+    ip: "10.10.1.2"
+    web: "http://10.10.1.2:8080"
+
+  - name: "team03"
+    ip: "10.10.1.3"
+    web: "http://10.10.1.3:8080"
