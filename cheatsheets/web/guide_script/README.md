@@ -65,5 +65,6 @@ python scripts/template.py
 
 ## Tài liệu chi tiết
 
+- Danh sách đầy đủ cần cài trước ngày thi (gửi đồng đội): [`CHUAN_BI_MAY_TRUOC_GIAI.md`](CHUAN_BI_MAY_TRUOC_GIAI.md)
 - Cấu trúc dự án: [`CAU_TRUC_DU_AN.md`](CAU_TRUC_DU_AN.md)
 - Đánh giá mô hình trước khi đơn giản hóa (lưu sử, các script nhắc tới trong đó đã bị gỡ): [`DANH_GIA_MO_HINH_HIEN_TAI.md`](DANH_GIA_MO_HINH_HIEN_TAI.md)
