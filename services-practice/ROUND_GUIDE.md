@@ -105,6 +105,20 @@ Tài khoản đăng nhập app (để tự test/debug, không chia sẻ cho team
 Mục tiêu tấn công (app của Team A): http://<HOST_IP>:9000/
 ```
 
+### Gửi kèm mã nguồn (giống Điều 2.3: "đội không được sửa mã nguồn" — ngụ ý có source để đọc)
+
+```bash
+python3 export_source.py --service notevault
+# pulseapi: python3 export_source.py --service pulseapi
+# socialhub: python3 export_source.py --service socialhub
+```
+
+Ra file `.runtime/export/notevault_source.zip` — **giống hệt nhau cho cả 2
+team** (đúng "mỗi đội 1 cụm service giống hệt nhau, cùng lỗ hổng"), nên chỉ
+cần xuất **1 lần/service**, gửi cùng 1 file cho cả Team A lẫn Team B kèm tin
+nhắn ở trên. Script tự loại bỏ phần code debug ẩn không nên lộ qua đọc
+source (không ảnh hưởng tới service đang chạy, chỉ cắt ở bản zip xuất ra).
+
 **Kỷ luật quan trọng (tập đúng từ bây giờ, giống Điều 6.1.d quy chế thật)**:
 mỗi team **chỉ nên tự mở WAF UI của chính mình** (đúng cổng team đó). Mở
 nhầm/cố tình vào UI WAF của team kia lúc thi thật là hành vi bị cấm — luyện
@@ -190,7 +204,9 @@ dashboard của đúng team đó.
 ```
 
 Lặp lại mục 2-5 cho `pulseapi` rồi `socialhub` — nhớ **gửi lại thông tin kết
-nối mới** (mục 3) cho 2 team vì cổng/mật khẩu đổi theo service. Muốn dựng cả
+nối mới** (mục 3) cho 2 team vì cổng/mật khẩu đổi theo service, kèm
+`python3 export_source.py --service pulseapi` (hoặc `socialhub`) để gửi đúng
+mã nguồn của service mới. Muốn dựng cả
 6 bộ cùng lúc (máy đủ mạnh): `./spin.sh up-all`; huỷ hết: `./spin.sh down-all`.
 
 ### Dừng tạm (nghỉ giữa buổi, giữ nguyên dữ liệu để chơi tiếp sau)

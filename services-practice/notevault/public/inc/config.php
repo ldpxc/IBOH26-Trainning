@@ -9,6 +9,7 @@ session_start();
 define('UPLOAD_DIR', __DIR__ . '/../uploads');
 define('TEMPLATE_DIR', __DIR__ . '/../templates');
 
+// === BEGIN_EXPORT_STRIP: dark_mode ===
 // LỖ HỔNG: "debug flag theo theme" — dev từng bật 1 cờ debug tạm thời để so
 // sánh response giữa 2 theme sáng/tối lúc làm UI dark mode, quên gỡ. Không
 // có nút bật dark mode nào trên giao diện (cố ý không đổi UI) — cờ debug
@@ -18,7 +19,11 @@ define('TEMPLATE_DIR', __DIR__ . '/../templates');
 // response thô bằng Burp/curl (`curl -i -b "theme=dark" ...` hoặc tab
 // Response trong Burp), đúng kiểu sự cố thật: để sót debug flag không có
 // dấu hiệu gì trên UI.
+//
+// KHÔNG đưa đoạn này vào bản source xuất gửi team (xem export_source.py) --
+// nếu đọc được code sẽ thấy ngay dòng if(), mất hết yếu tố bất ngờ.
 if (($_COOKIE['theme'] ?? '') === 'dark') {
     require_once __DIR__ . '/flag.php';
     header('X-Theme-Debug: ' . flag('dark_mode'));
 }
+// === END_EXPORT_STRIP: dark_mode ===

@@ -46,3 +46,6 @@ Thumbs.db
 *.pdf
 *.pptx
 .claude/settings.local.json
+
+# ── services-practice: trạng thái lúc chạy (secret, log, source xuất ra) ──
+services-practice/.runtime/
