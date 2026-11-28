@@ -27,6 +27,8 @@ Mặc định --base-url là cổng team "a" (9000) theo đúng spin.sh. Team "b
 import argparse
 import hashlib
 import hmac
+import json
+import os
 import re
 import sys
 import time
@@ -181,7 +183,11 @@ def main():
     ap.add_argument("--interval", type=float, default=30.0, help="Giây giữa mỗi lần check, mặc định 30s giống quy chế thật")
     ap.add_argument("--timeout", type=float, default=6.0, help="Timeout mỗi request (giây)")
     ap.add_argument("--once", action="store_true", help="Chạy đúng 1 vòng rồi thoát (test nhanh)")
-    ap.add_argument("--log-file", default=None, help="Nếu đặt, ghi thêm (append) mỗi dòng kết quả vào file này")
+    ap.add_argument("--log-file", default=None, help="Nếu đặt, ghi thêm (append) mỗi dòng kết quả dạng chữ vào file này")
+    ap.add_argument("--json-log", default=None,
+                     help="File JSONL ghi lịch sử mỗi vòng check (1 dòng JSON/vòng) cho dashboard.py đọc. "
+                          "Mặc định: cùng thư mục với --env-file, tên healthcheck.jsonl. Đặt rỗng ('') để tắt.")
+    ap.add_argument("--team", default=None, help="Nhãn team hiển thị trên dashboard (mặc định tự đoán từ tên thư mục --env-file)")
     args = ap.parse_args()
 
     if args.admin_password and args.alice_password:
@@ -201,27 +207,43 @@ def main():
         {"username": "admin", "password": admin_pw, "expect_flag": True},
     ]
 
+    # Đường dẫn JSONL mặc định: cùng thư mục với --env-file (chỗ spin.sh đã
+    # quản lý sẵn, vd .runtime/a_notevault/healthcheck.jsonl) -- dashboard.py
+    # tự tìm đúng file này theo --team/--service, không cần truyền tay.
+    json_log_path = args.json_log
+    if json_log_path is None and args.env_file:
+        json_log_path = os.path.join(os.path.dirname(args.env_file), "healthcheck.jsonl")
+    team_label = args.team
+    if team_label is None and args.env_file:
+        base = os.path.basename(os.path.dirname(args.env_file).rstrip("/"))
+        team_label = base.split("_", 1)[0] if "_" in base else base
+
     base_url = args.base_url.rstrip("/")
     total, failed = 0, 0
     logf = open(args.log_file, "a", encoding="utf-8") if args.log_file else None
+    jsonf = open(json_log_path, "a", encoding="utf-8") if json_log_path else None
 
     print(f"[*] Healthcheck notevault -- target: {base_url}  (Ctrl+C để dừng)")
+    if jsonf:
+        print(f"[*] Ghi lịch sử cho dashboard vào: {json_log_path}")
     try:
         while True:
-            ts = datetime.now().strftime("%H:%M:%S")
+            now = datetime.now()
+            ts = now.strftime("%H:%M:%S")
             checks = run_cycle(base_url, users, args.timeout)
             ok_count = sum(1 for c in checks if c.ok)
             total += len(checks)
             failed += len(checks) - ok_count
+            pct_cycle = 100.0 * ok_count / len(checks) if checks else 100.0
+            pct_cum = 100.0 * (total - failed) / total if total else 100.0
 
             lines = [f"[{ts}] vòng check: {ok_count}/{len(checks)} OK"]
             for c in checks:
                 status = "OK  " if c.ok else "FAIL"
                 line = f"    [{status}] {c.name}" + (f" -- {c.reason}" if c.reason else "")
                 lines.append(line)
-            pct = 100.0 * (total - failed) / total if total else 100.0
-            lines.append(f"    => SVC ước lượng từ lúc chạy script: {pct:.1f}% ({total - failed}/{total} check qua)")
-            if pct <= 50.0:
+            lines.append(f"    => SVC ước lượng từ lúc chạy script: {pct_cum:.1f}% ({total - failed}/{total} check qua)")
+            if pct_cum <= 50.0:
                 lines.append("    !!! Đã lỗi >= 50% check -- theo quy chế Điều 5, mức này coi như SVC = 0.")
 
             out = "\n".join(lines)
@@ -229,6 +251,20 @@ def main():
             if logf:
                 logf.write(out + "\n")
                 logf.flush()
+            if jsonf:
+                record = {
+                    "event": "check",
+                    "ts": now.timestamp(),
+                    "time": now.strftime("%Y-%m-%d %H:%M:%S"),
+                    "team": team_label,
+                    "ok_count": ok_count,
+                    "total": len(checks),
+                    "svc_cycle_pct": round(pct_cycle, 1),
+                    "svc_cum_pct": round(pct_cum, 1),
+                    "checks": [{"name": c.name, "ok": c.ok, "reason": c.reason} for c in checks],
+                }
+                jsonf.write(json.dumps(record, ensure_ascii=False) + "\n")
+                jsonf.flush()
 
             if args.once:
                 break
@@ -238,6 +274,8 @@ def main():
     finally:
         if logf:
             logf.close()
+        if jsonf:
+            jsonf.close()
 
 
 if __name__ == "__main__":

@@ -155,6 +155,7 @@ cmd_up() {
     echo "     admin / $(seed_password "$seed_secret" admin)"
     echo "     alice / $(seed_password "$seed_secret" alice)"
   fi
+  mark_round_event "$team" "$svc" "up"
 }
 
 cmd_down() {
@@ -183,6 +184,19 @@ cmd_rotate() {
   echo "==> Rotate flag ${team}/${svc}, restart app..."
   (cd "$svc" && docker compose --env-file "../$dir/.env" -f compose.arena.yml up -d --force-recreate --no-deps app)
   echo "✅ Flag mới đã áp dụng (restart app xong)."
+  mark_round_event "$team" "$svc" "rotate"
+}
+
+# Ghi 1 dòng JSON đánh dấu sự kiện (rotate = round mới, up = bắt đầu phiên)
+# vào cùng file healthcheck_notevault.py --json-log mặc định dùng -- để
+# dashboard.py vẽ được đường phân round trên biểu đồ. Không lỗi nếu thư mục
+# chưa có (vd chưa từng chạy healthcheck) -- chỉ là bỏ qua, không bắt buộc.
+mark_round_event() {
+  local team="$1" svc="$2" event="$3" dir
+  dir=$(env_dir_for "$team" "$svc")
+  local ts; ts=$(date +%s.%N)
+  local time_str; time_str=$(date '+%Y-%m-%d %H:%M:%S')
+  printf '{"event":"%s","ts":%s,"time":"%s","team":"%s"}\n' "$event" "$ts" "$time_str" "$team" >> "$dir/healthcheck.jsonl"
 }
 
 cmd_ps() {

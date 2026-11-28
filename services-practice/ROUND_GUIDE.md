@@ -68,6 +68,18 @@ tạo bảng), vào UI WAF → **Cài đặt chung → ModSecurity** → đổi
    Chạy song song 1 cửa sổ riêng, để liên tục trong lúc viết/bật rule — thấy
    ngay dòng `WAF CHAN NHAM` là biết rule vừa viết chặn nhầm người dùng hợp lệ.
 
+   **Muốn xem trực quan thay vì đọc chữ chạy liên tục**: mở thêm 1 cửa sổ
+   thứ 3 chạy `dashboard.py` (chỉ xem dịch vụ của CHÍNH team mình, không
+   thấy được team kia — đọc chung file log của `healthcheck_notevault.py`
+   ở trên, cần chạy cả 2 cùng lúc):
+   ```bash
+   python3 dashboard.py --team a            # team b: --team b
+   ```
+   Mở `http://127.0.0.1:8800/` (team a) hoặc `:8810` (team b) — trang tự
+   load lại mỗi 5 giây, hiện SVC% vòng gần nhất, lý do lỗi nếu có, và 1
+   timeline cột xanh/vàng/đỏ theo từng vòng check, có vạch đứt đánh dấu mỗi
+   lần `rotate` (= 1 round mới, số round tính tự động).
+
    **Mật khẩu `admin`/`alice` của notevault giờ random riêng theo từng
    team** (sinh lúc `spin.sh up`, in ra ngay dưới dòng `✅ .../notevault:` —
    đọc lại bằng `./spin.sh up <team> notevault` nếu lỡ không chép kịp). 1
