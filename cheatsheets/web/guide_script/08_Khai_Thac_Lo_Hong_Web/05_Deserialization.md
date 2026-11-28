@@ -23,7 +23,7 @@ Nếu server nhận 1 gói dữ liệu từ bạn (cookie, token, field ẩn tro
 
 ## Script copy-paste có sẵn
 
-Thư mục `04_Theo_Lo_Hong/` chưa có file riêng cho dạng lỗ hổng này (deserialization thường gắn chặt với ngôn ngữ/thư viện cụ thể của từng bài, khó viết 1 script dùng chung). Khi gặp bài cụ thể, viết script theo đúng 3 bước: (1) lấy gói dữ liệu hợp lệ từ server, (2) decode/sửa nó bằng thư viện đúng ngôn ngữ (`pickle`, `phpserialize`...), (3) gửi gói đã sửa lại — xem mẫu cách chèn 1 bước xử lý cục bộ giữa 2 request ở [`00_Bat_Dau_Tu_Zero.md`](../00_Bat_Dau_Tu_Zero.md) mục 5, ví dụ 2 (sửa JWT), cách làm tương tự.
+Xem [`Deserialization.md`](../04_Theo_Lo_Hong/Deserialization.md) trong `04_Theo_Lo_Hong/` — có code Python đầy đủ cho Python `pickle` (tự viết `__reduce__()`, không cần công cụ ngoài), và hướng dẫn dùng công cụ sinh sẵn (`phpggc` cho PHP, `ysoserial` cho Java) khi bài không phải Python.
 
 ## Cách sửa (nếu bạn là người phòng thủ/DEF)
 

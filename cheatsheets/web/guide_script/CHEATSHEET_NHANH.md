@@ -22,10 +22,11 @@ Mở file này khi đang thi: **Burp đã chạy được → copy snippet → d
 | Chạy đồng thời nhiều đội/request | [`03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md`](03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md) | `ThreadPoolExecutor(max_workers=4)` + `timeout=4` |
 | Polling job bất đồng bộ | [`03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md`](03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md) | `for _ in range(N): ...; time.sleep(1)` |
 | App dùng WebSocket, không phải HTTP request thường | [`03_Thao_Tac_Nang_Cao/04_WebSocket.md`](03_Thao_Tac_Nang_Cao/04_WebSocket.md) | `websocket.create_connection(url)`; `ws.send(...)`/`ws.recv()` |
-| SQLi/IDOR/LFI/CMDi/SSTI/SSRF/Upload/XSS-CSRF | [`04_Theo_Lo_Hong/`](04_Theo_Lo_Hong/) | Mở đúng file lỗ hổng, copy payload + request mẫu |
+28 bài theo lỗ hổng: SQLi/NoSQLi/CMDi/Code-Injection/IDOR/Mass-Assignment/LFI/Upload/SSRF/SSTI/XSS-CSRF/CORS/Open-Redirect/XXE/GraphQL/Smuggling/Deserialization/JWT/Session-Forge/OAuth/Crypto/Race/Type-Juggling/Prototype-Pollution/WAF-Bypass/Recon | [`04_Theo_Lo_Hong/`](04_Theo_Lo_Hong/) | Mở đúng file lỗ hổng, copy payload + request mẫu |
 | Lặp `targets.txt`, bỏ đội nhà/localhost | [`05_Nhieu_Doi_Va_Flag/01_Lap_Danh_Sach_Doi.md`](05_Nhieu_Doi_Va_Flag/01_Lap_Danh_Sach_Doi.md) | bỏ `@OUR_TEAM`, `127.0.0.1`, dòng `#` |
 | Trích flag bằng regex | [`05_Nhieu_Doi_Va_Flag/02_Trich_Flag.md`](05_Nhieu_Doi_Va_Flag/02_Trich_Flag.md) | `re.findall(r"FHACKER2026\{[0-9a-fA-F]{64}\}", text)` |
 | Lưu flag không trùng, lọc cờ nhà | [`05_Nhieu_Doi_Va_Flag/03_Luu_Flag_Theo_Doi.md`](05_Nhieu_Doi_Va_Flag/03_Luu_Flag_Theo_Doi.md) | `seen=set(); if flag in OWN_FLAGS: continue` |
 | Đẩy Python qua Burp để soi khác biệt | [`06_Debug/Python_Qua_Burp.md`](06_Debug/Python_Qua_Burp.md) | `s.proxies={"http":"http://127.0.0.1:8080","https":"..."}` |
 | Burp được, Python không | [`06_Debug/Burp_Duoc_Python_Khong.md`](06_Debug/Burp_Duoc_Python_Khong.md) | so URL/method/header/cookie/body/redirect/encode |
-| Gặp 403/WAF hoặc lỗi thường gặp | [`06_Debug/04_Khi_Gap_WAF_403.md`](06_Debug/04_Khi_Gap_WAF_403.md), [`06_Debug/Loi_Thuong_Gap.md`](06_Debug/Loi_Thuong_Gap.md) | đổi 1 biến/lần, không retry spam 403/429 |
+| Gặp 403/WAF hoặc lỗi thường gặp (debug sau khi bị chặn) | [`06_Debug/04_Khi_Gap_WAF_403.md`](06_Debug/04_Khi_Gap_WAF_403.md), [`06_Debug/Loi_Thuong_Gap.md`](06_Debug/Loi_Thuong_Gap.md) | đổi 1 biến/lần, không retry spam 403/429 |
+| Né WAF ngay từ đầu bằng nhiều biến thể payload | [`04_Theo_Lo_Hong/WAF_Bypass.md`](04_Theo_Lo_Hong/WAF_Bypass.md) | thử hoa/thường, comment `/**/`, encode khác nhau qua vòng `for` |

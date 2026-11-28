@@ -57,3 +57,4 @@ print("raw url:", r.request.url, r.status_code)
 - Đổi **1 biến mỗi lần thử** (chỉ header, hoặc chỉ định dạng body, hoặc chỉ cách encode) — đổi nhiều thứ cùng lúc sẽ không biết chính xác cái nào gây ra khác biệt.
 - Không gửi request lặp lại dồn dập để "dò" WAF — vừa tốn thời gian vừa dễ bị tính là hành vi tấn công DoS (ban tổ chức có thể phạt), chỉ thử vài lần có suy nghĩ.
 - Giữ `timeout` ngắn (4-5 giây) và `WORKERS` nhỏ (4 trở xuống) khi chạy mass nhiều đội, để không tự biến mình thành nguồn gây quá tải bị WAF/service chặn ngược.
+- File này giúp bạn debug khi ĐÃ bị chặn (đổi 1 biến/lần). Nếu muốn né WAF ngay từ đầu bằng nhiều biến thể payload khác nhau (viết hoa/thường, encode, thêm comment...), xem [`04_Theo_Lo_Hong/WAF_Bypass.md`](../04_Theo_Lo_Hong/WAF_Bypass.md).

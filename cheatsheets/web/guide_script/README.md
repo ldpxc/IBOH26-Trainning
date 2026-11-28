@@ -50,7 +50,7 @@ python scripts/template.py
 | `01_Request_Co_Ban/` | GET/POST/Header-Cookie/Upload/Encoding |
 | `02_Chuoi_Request/` | Login, CSRF, truyền ID, đọc response, tính toán cục bộ (JWT/hash/brute-force) |
 | `03_Thao_Tac_Nang_Cao/` | Vòng lặp Intruder, song song, polling, WebSocket |
-| `04_Theo_Lo_Hong/` | SQLi, IDOR, LFI, CMDi, SSTI, SSRF, Upload, XSS/CSRF |
+| `04_Theo_Lo_Hong/` | 28 bài theo từng lỗ hổng: SQLi/NoSQLi, Command/Code Injection, IDOR, Mass Assignment, LFI, Upload, SSRF, SSTI, XSS/CSRF, CORS, Open Redirect, XXE, GraphQL, HTTP Smuggling, Deserialization, JWT/Session Forge/OAuth-SAML, Crypto (hash length ext/padding oracle), Race Condition, PHP Type Juggling, Prototype Pollution, WAF Bypass, Recon/Source Leak, mẹo theo ngôn ngữ |
 | `05_Nhieu_Doi_Va_Flag/` | Lặp targets, trích flag, lưu flag |
 | `06_Debug/` | Python qua Burp, khác biệt Burp/Python, 403/WAF, lỗi thường gặp |
 | `07_Chall_Kiem_Chung/` | Tự dựng lab nhỏ để kiểm chứng script chạy đúng |
