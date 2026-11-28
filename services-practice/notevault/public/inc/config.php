@@ -8,3 +8,17 @@ session_start();
 
 define('UPLOAD_DIR', __DIR__ . '/../uploads');
 define('TEMPLATE_DIR', __DIR__ . '/../templates');
+
+// LỖ HỔNG: "debug flag theo theme" — dev từng bật 1 cờ debug tạm thời để so
+// sánh response giữa 2 theme sáng/tối lúc làm UI dark mode, quên gỡ. Không
+// có nút bật dark mode nào trên giao diện (cố ý không đổi UI) — cờ debug
+// này chỉ đọc qua cookie `theme`, không liên quan gì tới việc trang có đổi
+// màu hay không. Vì chỉ thêm 1 header response (không in ra HTML), người
+// dùng bấm/xem trang bình thường KHÔNG thấy gì khác — chỉ lộ ra khi soi
+// response thô bằng Burp/curl (`curl -i -b "theme=dark" ...` hoặc tab
+// Response trong Burp), đúng kiểu sự cố thật: để sót debug flag không có
+// dấu hiệu gì trên UI.
+if (($_COOKIE['theme'] ?? '') === 'dark') {
+    require_once __DIR__ . '/flag.php';
+    header('X-Theme-Debug: ' . flag('dark_mode'));
+}
