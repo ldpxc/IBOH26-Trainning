@@ -16,8 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Username đã tồn tại';
         } else {
             $hash = password_hash($password, PASSWORD_BCRYPT);
-            $stmt = db()->prepare('INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, 0)');
-            $stmt->execute([$username, $hash]);
+            // reset_token là NOT NULL (xem seed.php) -- phải cấp 1 giá trị ngẫu nhiên khi tạo
+            // user mới, nếu không PDO sẽ throw PDOException: "reset_token doesn't have a
+            // default value" và cả trang register.php chết trắng (lỗi thật đã gặp khi test).
+            $resetToken = bin2hex(random_bytes(8));
+            $stmt = db()->prepare('INSERT INTO users (username, password_hash, is_admin, reset_token) VALUES (?, ?, 0, ?)');
+            $stmt->execute([$username, $hash, $resetToken]);
             header('Location: /login.php');
             exit;
         }
