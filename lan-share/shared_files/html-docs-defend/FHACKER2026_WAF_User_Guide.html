@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HƯỚNG DẪN SỬ DỤNG &amp; CHỨC NĂNG WAF THI ĐẤU (`2026-waf-practice` / `custom_waf26`)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="index.html">⌂ Trang chủ</a>
+    <span class="doc-path">FHACKER2026_WAF_User_Guide.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#mục-lục">Mục lục</a></li>
+<li><a href="#1-tổng-quan-hệ-thống-waf-của-btc">1. Tổng quan hệ thống WAF của BTC</a><ul>
+<li><a href="#11-waf-này-gồm-những-thành-phần-gì">1.1. WAF này gồm những thành phần gì?</a></li>
+<li><a href="#12-luồng-đi-của-một-request-qua-waf">1.2. Luồng đi của một request qua WAF</a></li>
+<li><a href="#13-điểm-giống-và-khác-giữa-bản-tập-2026-waf-practice-và-lúc-thi-thật">1.3. Điểm giống và khác giữa bản tập (2026-waf-practice) và lúc thi thật</a></li>
+</ul>
+</li>
+<li><a href="#2-bản-đồ-giao-diện-và-chức-năng-từng-mục-trên-waf-ui">2. Bản đồ giao diện và chức năng từng mục trên WAF UI</a><ul>
+<li><a href="#21-home-trang-chủ">2.1. Home (Trang chủ)</a></li>
+<li><a href="#22-traffic-log-lịch-sử-http-kiểu-burp-suite">2.2. Traffic log (Lịch sử HTTP kiểu Burp Suite)</a><ul>
+<li><a href="#bảng-cú-pháp-tìm-kiếm-nhanh-trên-traffic-log">Bảng cú pháp tìm kiếm nhanh trên Traffic log</a></li>
+</ul>
+</li>
+<li><a href="#23-configs-cấu-hình---nơi-viết-và-quản-lý-rule">2.3. Configs (Cấu hình - Nơi viết và quản lý Rule)</a><ul>
+<li><a href="#các-nút-điều-khiển-khi-tạosửa-config">Các nút điều khiển khi tạo/sửa Config</a></li>
+<li><a href="#thứ-tự-nạp-các-loại-config-type-phải-nắm-chắc">Thứ tự nạp các loại Config Type (Phải nắm chắc!)</a></li>
+<li><a href="#quy-ước-dải-số-rule-id-tránh-trùng-id-gây-lỗi-reload">Quy ước dải số Rule ID (tránh trùng ID gây lỗi reload)</a></li>
+</ul>
+</li>
+<li><a href="#24-global-settings-cài-đặt-chung">2.4. Global Settings (Cài đặt chung)</a></li>
+<li><a href="#25-các-mục-khác-logs-reports-f-hacker-changes-plugins-nâng-cao">2.5. Các mục khác: Logs, Reports, F-Hacker Changes, Plugins, NÂNG CAO</a></li>
+</ul>
+</li>
+<li><a href="#3-các-tính-năng-bị-btc-khóa-tắt-và-tính-năng-không-nên-bật">3. Các tính năng bị BTC khóa tắt và tính năng không nên bật</a></li>
+<li><a href="#4-hướng-dẫn-thao-tác-từng-bước-cho-6-tình-huống-hay-gặp-nhất-lúc-thi">4. Hướng dẫn thao tác từng bước cho 6 tình huống hay gặp nhất lúc thi</a><ul>
+<li><a href="#tình-huống-1-quan-sát-traffic-realtime-để-phân-biệt-bot-chấm-vs-đối-thủ">Tình huống 1: Quan sát Traffic realtime để phân biệt Bot chấm vs Đối thủ</a></li>
+<li><a href="#tình-huống-2-thêm-một-bộ-rule-mới-an-toàn-không-làm-rớt-svc">Tình huống 2: Thêm một bộ rule mới an toàn (không làm rớt SVC)</a></li>
+<li><a href="#tình-huống-3-bật--tắt-chế-độ-chặn-detectiononly--on">Tình huống 3: Bật / Tắt chế độ chặn (DetectionOnly ↔ On)</a></li>
+<li><a href="#tình-huống-4-gỡ-false-positive-khi-owasp-crs-9xxxxx-chặn-nhầm-bot-chấm">Tình huống 4: Gỡ False Positive khi OWASP CRS (9xxxxx) chặn nhầm bot chấm</a></li>
+<li><a href="#tình-huống-5-lưu-config-bị-báo-lỗi-ở-notifications">Tình huống 5: Lưu config bị báo lỗi ở NOTIFICATIONS</a></li>
+<li><a href="#tình-huống-6-cấp-cứu-khi-bảng-điểm-svc-đột-ngột-báo-đỏ">Tình huống 6: Cấp cứu khi bảng điểm SVC đột ngột báo đỏ</a></li>
+</ul>
+</li>
+<li><a href="#5-cài-đặt-và-sử-dụng-bản-tập-2026-waf-practice-trên-máy-cá-nhân">5. Cài đặt và sử dụng bản tập 2026-waf-practice trên máy cá nhân</a><ul>
+<li><a href="#51-yêu-cầu--khởi-chạy">5.1. Yêu cầu &amp; Khởi chạy</a></li>
+<li><a href="#52-bảng-lệnh-make-vận-hành-bản-tập">5.2. Bảng lệnh make vận hành bản tập</a></li>
+<li><a href="#53-đổi-cổng-hoặc-mật-khẩu-bản-tập">5.3. Đổi cổng hoặc mật khẩu bản tập</a></li>
+<li><a href="#54-sử-dụng-3-script-kiểm-thử-tự-động-đi-kèm-trong-repo">5.4. Sử dụng 3 script kiểm thử tự động đi kèm trong repo</a></li>
+</ul>
+</li>
+<li><a href="#6-bài-tập-thực-hành-10-phút-làm-quen-waf-trước-ngày-thi">6. Bài tập thực hành 10 phút làm quen WAF trước ngày thi</a></li>
+<li><a href="#7-xử-lý-sự-cố-thường-gặp-troubleshooting">7. Xử lý sự cố thường gặp (Troubleshooting)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="hướng-dẫn-sử-dụng--chức-năng-waf-thi-đấu-2026-waf-practice--custom_waf26">HƯỚNG DẪN SỬ DỤNG &amp; CHỨC NĂNG WAF THI ĐẤU (<code>2026-waf-practice</code> / <code>custom_waf26</code>)</h1>
+<blockquote>
+<p><strong>Tài liệu hướng dẫn thực hành offline</strong> cho hệ thống WAF dùng trong vòng chung kết <strong>F-Hacker 2026 (Bảng C)</strong>.
+Nếu bạn cần tra cứu cú pháp rule &amp; bộ rule vá từng lỗ hổng, xem kèm file <strong><a href="FHACKER2026_WAF_Defense_Cheatsheet.html">FHACKER2026_WAF_Defense_Cheatsheet.md</a></strong>.</p>
+</blockquote>
+<hr />
+<h2 id="mục-lục">Mục lục</h2>
+<ol>
+<li><a href="#1-tổng-quan-hệ-thống-waf-của-btc">Tổng quan hệ thống WAF của BTC</a></li>
+<li><a href="#2-bản-đồ-giao-diện-và-chức-năng-từng-mục-trên-waf-ui">Bản đồ giao diện và chức năng từng mục trên WAF UI</a>
+   - <a href="#21-home-trang-chủ">2.1. Home (Trang chủ)</a>
+   - <a href="#22-traffic-log-lịch-sử-http-kiểu-burp-suite">2.2. Traffic log (Lịch sử HTTP kiểu Burp Suite)</a>
+   - <a href="#23-configs-cấu-hình---nơi-viết-và-quản-lý-rule">2.3. Configs (Cấu hình - Nơi viết và quản lý Rule)</a>
+   - <a href="#24-global-settings-cài-đặt-chung">2.4. Global Settings (Cài đặt chung)</a>
+   - <a href="#25-các-mục-khác-logs-reports-f-hacker-changes-plugins-nâng-cao">2.5. Các mục khác: Logs, Reports, F-Hacker Changes, Plugins, NÂNG CAO</a></li>
+<li><a href="#3-các-tính-năng-bị-btc-khóa-tắt-và-tính-năng-không-nên-bật">Các tính năng bị BTC khóa tắt và tính năng không nên bật</a></li>
+<li><a href="#4-hướng-dẫn-thao-tác-từng-bước-cho-6-tình-huống-hay-gặp-nhất-lúc-thi">Hướng dẫn thao tác từng bước cho 6 tình huống hay gặp nhất lúc thi</a></li>
+<li><a href="#5-cài-đặt-và-sử-dụng-bản-tập-2026-waf-practice-trên-máy-cá-nhân">Cài đặt và sử dụng bản tập <code>2026-waf-practice</code> trên máy cá nhân</a></li>
+<li><a href="#6-bài-tập-thực-hành-10-phút-làm-quen-waf-trước-ngày-thi">Bài tập thực hành 10 phút làm quen WAF trước ngày thi</a></li>
+<li><a href="#7-xử-lý-sự-cố-thường-gặp-troubleshooting">Xử lý sự cố thường gặp (Troubleshooting)</a></li>
+</ol>
+<hr />
+<h2 id="1-tổng-quan-hệ-thống-waf-của-btc">1. Tổng quan hệ thống WAF của BTC</h2>
+<h3 id="11-waf-này-gồm-những-thành-phần-gì">1.1. WAF này gồm những thành phần gì?</h3>
+<p>Image WAF BTC dùng lúc thi (<code>ghcr.io/f-hacker-macos/custom_waf26:latest</code>) được dựng trực tiếp từ <strong>BunkerWeb 1.6.16 nguyên bản</strong> (<code>bunkerity/bunkerweb-all-in-one:1.6.16</code>). BTC <strong>không sửa phần lõi (core)</strong> mà chỉ thêm:
+- Giao diện F-Hacker (mặc định <strong>Tiếng Việt</strong>, có thể đổi sang Tiếng Anh ở góc trên phải).
+- Plugin <strong>Traffic log</strong> (xem lịch sử Request/Response + rule khớp kiểu Burp Suite).
+- Bộ cấu hình mặc định (seed sẵn <code>ModSecurity + OWASP CRS v4</code> ở chế độ <code>DetectionOnly</code> và 1 file rule mẫu <code>mau-rule-phong-thu</code>).
+- Trình soạn thảo <strong>Configs</strong> có tô màu cú pháp cho ModSecurity (<code>MODSEC</code> / <code>MODSEC_CRS</code>).</p>
+<p>Bên trong WAF chạy 3 lớp chính:
+1. <strong>NGINX (Reverse Proxy):</strong> Đứng trước nhận toàn bộ request rồi chuyển vào ứng dụng web phía sau.
+2. <strong>ModSecurity v3 (<code>libmodsecurity3</code>):</strong> Bộ máy đọc và thực thi các rule phòng thủ (cả rule của OWASP CRS lẫn rule đội bạn tự viết).
+3. <strong>OWASP CRS v4 (Core Rule Set):</strong> Bộ luật phòng thủ chuẩn quốc tế được bật sẵn (dải rule ID <code>900000–999999</code>), hoạt động theo cơ chế <strong>tính điểm bất thường (Anomaly Score)</strong> — khi tổng điểm đạt ngưỡng (<code>&gt;= 5</code>), rule <strong><code>949110</code></strong> sẽ kích hoạt chặn request.</p>
+<h3 id="12-luồng-đi-của-một-request-qua-waf">1.2. Luồng đi của một request qua WAF</h3>
+<pre><code class="language-text">Người dùng / Đội khác / Bot chấm SVC
+        │
+        ▼  (lúc thi: đi qua 1 IP reverse proxy chung của BTC)
+┌──────────────────────────────────────────────────────────┐
+│  BunkerWeb (NGINX + ModSecurity v3 + OWASP CRS v4)       │
+│                                                          │
+│  [Phase 1] Kiểm tra URL, Method, Headers                 │
+│  [Phase 2] Kiểm tra Query, Form, JSON body, File upload  │
+│      └─ Nếu bị chặn (chế độ On) -&gt; Trả 403/400 ngay      │
+│      └─ Nếu hợp lệ -&gt; Chuyển tiếp vào App phía sau       │
+└───────────────────────────┬──────────────────────────────┘
+                            ▼
+             App phía sau (http://fuap_edge:80)
+     (Bản tập: app Echo trả lại request | Lúc thi: App của đội)
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────┐
+│  BunkerWeb (ModSecurity)                                 │
+│  [Phase 3] Kiểm tra Response Headers                     │
+│  [Phase 4] Kiểm tra Response Body (tối đa 512 KiB)       │
+│  [Ghi log] traffic.log + modsec_audit.log + access.log   │
+└───────────────────────────┬──────────────────────────────┘
+                            ▼
+                    Trả kết quả về Client
+</code></pre>
+<h3 id="13-điểm-giống-và-khác-giữa-bản-tập-2026-waf-practice-và-lúc-thi-thật">1.3. Điểm giống và khác giữa bản tập (<code>2026-waf-practice</code>) và lúc thi thật</h3>
+<table>
+<thead>
+<tr>
+<th>Hạng mục</th>
+<th>Bản tập (<code>2026-waf-practice</code>)</th>
+<th>Lúc thi thật (Bảng C)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Image WAF, giao diện, plugin, setting</strong></td>
+<td><code>custom_waf26:latest</code></td>
+<td><strong>Giống hệt 100%</strong></td>
+</tr>
+<tr>
+<td><strong>App web phía sau WAF</strong></td>
+<td>App giả (<code>mendhak/http-https-echo</code>) trả lại chính request bạn gửi dưới dạng JSON</td>
+<td>Cụm ứng dụng web thi đấu thật (có lỗ hổng &amp; chứa Flag)</td>
+</tr>
+<tr>
+<td><strong>Địa chỉ truy cập</strong></td>
+<td>App: <code>http://localhost:8000/</code><br>WAF UI: <code>http://localhost:8005/</code></td>
+<td>Do BTC công bố trước giờ thi (qua Wi-Fi nội bộ)</td>
+</tr>
+<tr>
+<td><strong>Tài khoản WAF UI</strong></td>
+<td><code>admin</code> / <code>ChangeMe_Bw_2026!</code> (tự đổi trong <code>.env</code>)</td>
+<td>BTC cấp 1 tài khoản riêng cho đội (mật khẩu cấp 1 lần, đổi tốn ATK)</td>
+</tr>
+<tr>
+<td><strong>Tài nguyên giới hạn</strong></td>
+<td><code>mem_limit: 3g</code> trong <code>docker-compose.yml</code></td>
+<td><strong>2 CPU, 3 GB RAM</strong></td>
+</tr>
+<tr>
+<td><strong>Chế độ mặc định ban đầu</strong></td>
+<td><code>DetectionOnly</code> (chỉ ghi log, chưa chặn)</td>
+<td><code>DetectionOnly</code> (đội tự bật <code>On</code> khi đã kiểm tra)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-bản-đồ-giao-diện-và-chức-năng-từng-mục-trên-waf-ui">2. Bản đồ giao diện và chức năng từng mục trên WAF UI</h2>
+<p>Thanh menu bên trái của WAF UI được BTC rút gọn thành các mục chính:</p>
+<table>
+<thead>
+<tr>
+<th>Menu (Tiếng Anh)</th>
+<th>Menu (Tiếng Việt)</th>
+<th style="text-align: center;">Mức độ quan trọng lúc thi</th>
+<th>Công dụng chính</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Home</strong></td>
+<td><strong>Trang chủ</strong></td>
+<td style="text-align: center;">Cao</td>
+<td>Xem tổng quan lưu lượng, kiểm tra WAF đang <code>DetectionOnly</code> hay <code>Đang chặn</code>, bấm bật chặn nhanh.</td>
+</tr>
+<tr>
+<td><strong>Traffic log</strong></td>
+<td><strong>Traffic log</strong></td>
+<td style="text-align: center;"><strong>Cực cao</strong></td>
+<td>Xem từng Request/Response chi tiết kiểu Burp Suite, lọc tìm payload tấn công, xem rule nào khớp.</td>
+</tr>
+<tr>
+<td><strong>Configs</strong></td>
+<td><strong>Cấu hình</strong></td>
+<td style="text-align: center;"><strong>Cực cao</strong></td>
+<td>Tạo, sửa, bật/tắt file rule ModSecurity (<code>MODSEC</code>, <code>MODSEC_CRS</code>).</td>
+</tr>
+<tr>
+<td><strong>Global Settings</strong></td>
+<td><strong>Cài đặt chung</strong></td>
+<td style="text-align: center;">Cao</td>
+<td>Bật/tắt <code>ModSecurity</code>, chuyển <code>DetectionOnly</code> ↔ <code>On</code>, chỉnh giới hạn body/audit log.</td>
+</tr>
+<tr>
+<td><strong>Logs</strong></td>
+<td><strong>Log</strong></td>
+<td style="text-align: center;">Trung bình</td>
+<td>Đọc file log thô (<code>error.log</code>, <code>modsec_audit.log</code>, <code>access-web.log</code>) để debug lỗi cú pháp rule.</td>
+</tr>
+<tr>
+<td><strong>F-Hacker Changes</strong></td>
+<td><strong>F-Hacker Changes</strong></td>
+<td style="text-align: center;">Tham khảo</td>
+<td>Bảng tổng hợp mọi tùy chỉnh của BTC và lý do khóa các tính năng theo IP.</td>
+</tr>
+<tr>
+<td><strong>Reports</strong></td>
+<td><strong>Báo cáo</strong></td>
+<td style="text-align: center;">Thấp</td>
+<td>Thống kê báo cáo của BunkerWeb.</td>
+</tr>
+<tr>
+<td><strong>Plugins</strong></td>
+<td><strong>Plugin</strong></td>
+<td style="text-align: center;">Thấp</td>
+<td>Upload plugin tự viết dạng <code>.zip</code> (<code>plugin.json</code> + Lua/Jinja).</td>
+</tr>
+<tr>
+<td><strong>NÂNG CAO &gt;</strong></td>
+<td><strong>NÂNG CAO &gt;</strong></td>
+<td style="text-align: center;">Ít dùng</td>
+<td>Nhóm thu gọn chứa Services, Templates, Instances, Jobs, Cache, Bans, Support.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Thanh công cụ trên cùng (luôn hiện ở mọi trang):</strong>
+- <strong>Đổi ngôn ngữ</strong> (<code>Tiếng Việt</code> / <code>English</code>): chọn ngôn ngữ bạn quen đọc.
+- <strong>Nút sáng/tối (Dark mode)</strong> và nút thu gọn thanh menu trái.
+- <strong>Nút cam <code>NOTIFICATIONS</code> (có số màu đỏ góc trên phải):</strong> <strong>Cực kỳ quan trọng!</strong> Mỗi khi bạn bấm <code>Save</code> một file rule bị lỗi cú pháp, thông báo lỗi chi tiết từ <code>nginx -t</code> sẽ hiện tại đây.</p>
+</blockquote>
+<hr />
+<h3 id="21-home-trang-chủ">2.1. Home (Trang chủ)</h3>
+<p><img alt="Trang chủ WAF UI" src="2026-waf-practice/docs/images/home.png" /></p>
+<p>Các thành phần trên <strong>Trang chủ</strong>:
+1. <strong>Bộ chọn khung thời gian (<code>15 phút</code>, <code>1 giờ</code>, <code>6 giờ</code>, <code>24 giờ</code>, <code>Tất cả</code>) + nút làm mới:</strong> Thu hẹp biểu đồ vào đúng round đang thi (nên để <code>15 phút</code> khi thi để nhìn biến động ngay lập tức).
+2. <strong>Biểu đồ Tổng request:</strong> Hiển thị 3 đường theo thời gian thực:
+   - Đường xanh dương: <strong>Tổng request</strong> đi qua WAF.
+   - Đường cam: <strong>Khớp rule ModSecurity</strong> (request bị đánh dấu bất thường).
+   - Đường tím: <strong>Bị chặn</strong> (số request đã bị WAF từ chối).
+3. <strong>Khối Chế độ WAF (góc phải trên):</strong>
+   - Báo rõ WAF đang ở chế độ <strong><code>Chỉ ghi log</code> (<code>DetectionOnly</code>)</strong> hay <strong><code>Đang chặn</code> (<code>On</code>)</strong>. Khi đang ở <code>DetectionOnly</code>, có nút chuyển nhanh <strong><code>Bật chặn</code></strong> ngay tại đây.
+   - <strong>4 ô đèn trạng thái (<code>WAF</code> → <code>ModSec</code> → <code>CRS</code> → <code>app</code>):</strong> Tất cả chấm xanh lá nghĩa là chuỗi xử lý đang hoạt động bình thường.
+4. <strong>Khối Mã trạng thái HTTP (góc phải dưới):</strong> Đếm số lượng <code>2xx</code> (xanh), <code>3xx</code>, <code>4xx</code> (cam — thường tăng khi WAF chặn 403), <code>5xx</code> (đỏ — <strong>cảnh báo app lỗi hoặc Phase 4 cắt response</strong>, cần mở Traffic log kiểm tra ngay!).</p>
+<hr />
+<h3 id="22-traffic-log-lịch-sử-http-kiểu-burp-suite">2.2. Traffic log (Lịch sử HTTP kiểu Burp Suite)</h3>
+<p><img alt="Traffic log - Danh sách" src="2026-waf-practice/docs/images/trafficlog-list.png" />
+<img alt="Traffic log - Chi tiết Request và Rule khớp" src="2026-waf-practice/docs/images/trafficlog-detail.png" /></p>
+<p>Đây là <strong>màn hình bạn sẽ mở 80% thời gian thi</strong>. Chức năng của từng khu vực:</p>
+<ol>
+<li><strong>Tab <code>Lịch sử</code> / <code>Hướng dẫn</code> (góc phải trên):</strong>
+   - <code>Lịch sử</code>: xem danh sách request.
+   - <code>Hướng dẫn</code>: tài liệu tra cứu nhanh cú pháp tìm kiếm của BTC viết sẵn ngay trên giao diện (không cần nhớ thuộc lòng).</li>
+<li><strong>Thanh công cụ lọc phía trên bảng:</strong>
+   - <strong>Ô chọn nguồn log (bên trái):</strong> Mặc định là <code>traffic.log (toàn bộ traffic, đang ghi)</code>. Có thể bấm xổ xuống để chọn các file log cũ (rotate) hoặc chuyển sang <strong><code>modsec_audit.log</code></strong> khi cần xem body lớn hơn giới hạn của <code>traffic.log</code>.
+   - <strong>Ô tìm kiếm + nút <code>Tìm</code> + nút <code>Bộ lọc</code>:</strong> Lọc nhanh request theo nhiều điều kiện.
+   - <strong>Công tắc <code>Live 5s</code>:</strong> Bật lên để bảng tự động tải request mới mỗi 5 giây (rất tiện để canh xem bot chấm SVC và đối thủ đang gửi gì).</li>
+<li><strong>Các cột trong bảng lịch sử:</strong>
+   - <code>#</code>, <code>GIỜ</code>, <code>METHOD</code> (<code>GET</code>/<code>POST</code>...), <code>HOST</code>, <code>URL</code>, <code>STATUS</code> (<code>200</code> xanh, <code>403</code> đỏ/nâu, <code>500</code> đỏ).
+   - <strong>Cột <code>WAF</code>:</strong> Hiện ID rule ModSecurity đầu tiên khớp + số lượng rule khớp thêm (ví dụ <strong><code>942100 +2</code></strong> nghĩa là khớp <code>942100</code> và 2 rule nữa; dấu <strong><code>—</code></strong> nghĩa là sạch, không khớp rule nào).
+   - <code>CONTENT-TYPE</code>, <code>LENGTH</code> (kích thước response; hiện <code>8,192+</code> nếu vượt giới hạn capture 8 KiB của <code>traffic.log</code>), <code>MS</code> (thời gian xử lý tính bằng mili-giây — nếu thấy tăng vọt bất thường có thể do rule regex quá nặng).</li>
+<li><strong>Khung chi tiết khi bấm vào một dòng:</strong>
+   - <strong>Các dải màu đỏ ở giữa:</strong> Liệt kê <strong>từng rule ModSecurity khớp với request đó</strong>, gồm: <code>Rule ID</code>, <code>severity</code>, mô tả (<code>msg</code>), <code>Matched Data</code> (chính xác chuỗi ký tự/tham số nào bị bắt!), và <code>tags</code>.
+   - <strong>2 khung song song <code>Request</code> và <code>Response</code>:</strong> Có nút <strong><code>Pretty</code></strong> (tự format JSON đẹp dễ đọc) / <strong><code>Raw</code></strong> (nguyên bản) và nút <strong><code>Copy</code></strong> để copy nhanh sang terminal/Burp test lại.</li>
+</ol>
+<h4 id="bảng-cú-pháp-tìm-kiếm-nhanh-trên-traffic-log">Bảng cú pháp tìm kiếm nhanh trên <code>Traffic log</code></h4>
+<blockquote>
+<p>Các từ khóa cách nhau bằng dấu cách mặc định là phép <strong>AND</strong>. Không hỗ trợ <code>OR</code>, <code>NOT</code>, regex. Cụm có dấu cách đặt trong ngoặc kép <code>"..."</code>.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Cú pháp nhập vào ô tìm kiếm</th>
+<th>Tác dụng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modsec.id:</code></td>
+<td>Hiện <strong>tất cả</strong> request có khớp ít nhất 1 rule ModSecurity</td>
+</tr>
+<tr>
+<td><code>modsec.id:20100</code></td>
+<td>Chỉ hiện request khớp đúng rule ID <code>20100</code></td>
+</tr>
+<tr>
+<td><code>modsec.tag:sqli</code> hoặc <code>modsec.tag:attack-sqli</code></td>
+<td>Lọc theo tag (rule đội dùng tag ngắn như <code>sqli</code>, rule CRS dùng <code>attack-sqli</code>, <code>attack-xss</code>, <code>attack-lfi</code>...)</td>
+</tr>
+<tr>
+<td><code>modsec.msg:xss</code></td>
+<td>Tìm chuỗi trong thông báo <code>msg</code> của rule</td>
+</tr>
+<tr>
+<td><code>status:403</code> / <code>status:4xx</code> / <code>status:5xx</code></td>
+<td>Lọc theo mã trạng thái cụ thể hoặc theo dải mã</td>
+</tr>
+<tr>
+<td><code>method:POST uri:"/api/login"</code></td>
+<td>Kết hợp Method và URL</td>
+</tr>
+<tr>
+<td><code>request.body.username:admin</code></td>
+<td>Tìm trường <code>username</code> bên trong JSON hoặc Form request body</td>
+</tr>
+<tr>
+<td><code>response.body.data.0.name:x</code></td>
+<td>Tìm trường lồng nhau trong JSON response body</td>
+</tr>
+<tr>
+<td><code>"FHACKER2026{"</code></td>
+<td><strong>Truy vết rò rỉ cờ:</strong> tìm mọi request/response có chứa chuỗi Flag</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Lưu ý về dung lượng log:</strong>
+- <code>traffic.log</code> chỉ lưu tối đa <strong>16 KiB request body</strong> và <strong>8 KiB response body</strong>.
+- <code>modsec_audit.log</code> lưu được body lớn hơn rất nhiều (đã kiểm chứng &gt;100 KiB; chịu giới hạn xử lý của ModSecurity là 128 KiB cho body không file và 512 KiB cho response). Nếu thấy nghi vấn mà <code>traffic.log</code> bị cắt cụt, hãy chuyển ô nguồn log sang <code>modsec_audit.log</code>.</p>
+</blockquote>
+<hr />
+<h3 id="23-configs-cấu-hình---nơi-viết-và-quản-lý-rule">2.3. Configs (Cấu hình - Nơi viết và quản lý Rule)</h3>
+<p><img alt="Configs - Tạo mới custom config MODSEC" src="2026-waf-practice/docs/images/configs-new-modsec.png" /></p>
+<p>Đây là nơi bạn <strong>tạo, chỉnh sửa, bật hoặc tắt</strong> các file rule ModSecurity của đội (và cũng có sẵn file rule mẫu <code>mau-rule-phong-thu</code> của BTC để tham khảo).</p>
+<h4 id="các-nút-điều-khiển-khi-tạosửa-config">Các nút điều khiển khi tạo/sửa Config</h4>
+<ol>
+<li><strong><code>Service</code></strong>: Luôn chọn <strong><code>Global</code></strong> (áp dụng cho service của đội).</li>
+<li><strong><code>Config Type</code></strong>: Quyết định <strong>vị trí và thứ tự nạp</strong> file của bạn vào NGINX/ModSecurity (xem bảng dưới).</li>
+<li><strong><code>Configuration Name</code></strong>: Đặt tên gợi nhớ (không dấu, không khoảng trắng, ví dụ <code>team-rules</code>, <code>fix-fp-crs</code>). Đuôi <code>.conf</code> được tự động gắn thêm.</li>
+<li><strong>Nút <code>Online</code></strong>: Trạng thái bật/tắt của file config.</li>
+<li><strong>Nút xanh <code>Save</code></strong>: Lưu vào database PostgreSQL → scheduler của BunkerWeb tự sinh lại cấu hình NGINX, chạy kiểm tra cú pháp <code>nginx -t</code>, rồi reload không làm gián đoạn kết nối (mất khoảng 2–5 giây).</li>
+</ol>
+<h4 id="thứ-tự-nạp-các-loại-config-type-phải-nắm-chắc">Thứ tự nạp các loại <code>Config Type</code> (Phải nắm chắc!)</h4>
+<table>
+<thead>
+<tr>
+<th>Config Type</th>
+<th>Thứ tự nạp</th>
+<th>Dùng để làm gì?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>MODSEC_CRS</code></strong></td>
+<td>Nạp <strong>TRƯỚC</strong> OWASP CRS</td>
+<td>Đặt các rule <code>ctl:ruleRemoveTargetById=...</code> hoặc <code>ctl:ruleRemoveByTag=OWASP_CRS</code> theo từng route cụ thể (gỡ False Positive của CRS <em>trước khi</em> CRS chạy).</td>
+</tr>
+<tr>
+<td><strong><code>MODSEC</code></strong></td>
+<td>Nạp <strong>SAU</strong> OWASP CRS</td>
+<td><strong>Dùng chính:</strong> Viết toàn bộ rule phòng thủ của đội (ID <code>20000–29999</code>), và dùng <code>SecRuleRemoveById</code> / <code>SecRuleUpdateTargetById</code> để gỡ rule CRS đã nạp.</td>
+</tr>
+<tr>
+<td><strong><code>HTTP</code> / <code>SERVER_HTTP</code></strong></td>
+<td>Cấu hình NGINX</td>
+<td>Dùng khi cần chỉnh directive thuần của NGINX (ví dụ header, limit, rewrite...) — đa phần lúc thi không cần đụng tới.</td>
+</tr>
+<tr>
+<td><strong><code>CRS_PLUGINS_BEFORE</code> / <code>CRS_PLUGINS_AFTER</code></strong></td>
+<td><strong>KHÔNG ĐƯỢC NẠP!</strong></td>
+<td>BTC đã khóa <code>USE_MODSECURITY_CRS_PLUGINS=no</code>. <strong>Tuyệt đối không đặt rule vào 2 loại này</strong> vì rule sẽ không bao giờ chạy!</td>
+</tr>
+</tbody>
+</table>
+<h4 id="quy-ước-dải-số-rule-id-tránh-trùng-id-gây-lỗi-reload">Quy ước dải số Rule ID (tránh trùng ID gây lỗi reload)</h4>
+<ul>
+<li><code>10000–10099</code>: File mẫu <code>mau-rule-phong-thu</code> của BTC.</li>
+<li><code>20000–29999</code>: <strong>Dành cho đội thi tự do sử dụng.</strong></li>
+<li><code>200000+</code>: Rule nội bộ của BunkerWeb.</li>
+<li><code>900000–999999</code>: Bộ rule OWASP CRS v4.</li>
+</ul>
+<blockquote>
+<p><strong>Cơ chế an toàn khi viết sai cú pháp:</strong> Nếu file bạn bấm <code>Save</code> bị lỗi cú pháp (trùng <code>id</code>, thiếu dấu ngoặc kép, viết <code>id:</code> vào dòng con của <code>chain</code>...), <code>nginx -t</code> sẽ thất bại. <strong>BunkerWeb KHÔNG làm sập WAF</strong> mà tự động <strong>giữ nguyên cấu hình cũ đang chạy</strong> và bắn cảnh báo vào nút cam <strong><code>NOTIFICATIONS</code></strong> góc trên phải (cũng ghi vào <code>Logs → error.log</code>).</p>
+</blockquote>
+<hr />
+<h3 id="24-global-settings-cài-đặt-chung">2.4. Global Settings (Cài đặt chung)</h3>
+<p><img alt="Global Settings - Mục ModSecurity" src="2026-waf-practice/docs/images/global-settings-modsecurity.png" /></p>
+<p>Trang này chứa toàn bộ cấu hình module của BunkerWeb. Trong cuộc thi, bạn chủ yếu chỉ cần quan tâm mục <strong><code>ModSecurity</code></strong> ở cột bên trái:</p>
+<table>
+<thead>
+<tr>
+<th>Tham số trên UI</th>
+<th>Tên biến cấu hình</th>
+<th>Mặc định</th>
+<th>Ý nghĩa &amp; Lưu ý khi thi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Use ModSecurity</strong></td>
+<td><code>USE_MODSECURITY</code></td>
+<td>Bật (<code>yes</code>)</td>
+<td>Công tắc tổng bật/tắt toàn bộ WAF ModSecurity. Luôn giữ bật.</td>
+</tr>
+<tr>
+<td><strong>Use Core Rule Set</strong></td>
+<td><code>USE_MODSECURITY_CRS</code></td>
+<td>Bật (<code>yes</code>)</td>
+<td>Bật/tắt bộ luật OWASP CRS v4. Nên giữ bật và chỉ gỡ từng rule gây False Positive.</td>
+</tr>
+<tr>
+<td><strong>Core Rule Set Version</strong></td>
+<td><code>MODSECURITY_CRS_VERSION</code></td>
+<td><code>4</code></td>
+<td>Phiên bản OWASP CRS đang dùng (v4). Giữ nguyên.</td>
+</tr>
+<tr>
+<td><strong>SecRuleEngine</strong></td>
+<td><code>MODSECURITY_SEC_RULE_ENGINE</code></td>
+<td><code>DetectionOnly</code></td>
+<td><strong>Quan trọng nhất!</strong> Chuyển giữa <strong><code>DetectionOnly</code></strong> (chỉ ghi log, không chặn ai) và <strong><code>On</code></strong> (chặn thật khi khớp rule <code>deny</code> hoặc CRS điểm &gt;= 5).</td>
+</tr>
+<tr>
+<td><strong>SecAuditEngine</strong></td>
+<td><code>MODSECURITY_SEC_AUDIT_ENGINE</code></td>
+<td><code>RelevantOnly</code></td>
+<td>Chỉ ghi <code>modsec_audit.log</code> khi request khớp rule hoặc có mã lỗi liên quan (giữ <code>RelevantOnly</code> để không đầy đĩa/chậm WAF).</td>
+</tr>
+<tr>
+<td><strong>SecAuditLogParts</strong></td>
+<td><code>MODSECURITY_SEC_AUDIT_LOG_PARTS</code></td>
+<td><code>BCEFH</code></td>
+<td>Các phần ghi vào audit log (Request headers/body, Response headers/body, Audit trailer). Giữ nguyên để <code>Traffic log</code> và <code>waf-audit.py</code> đọc đầy đủ.</td>
+</tr>
+<tr>
+<td><strong>SecRequestBodyNoFilesLimit</strong></td>
+<td><code>MODSECURITY_REQ_BODY_NO_FILES_LIMIT</code></td>
+<td><code>131072</code> (128 KiB)</td>
+<td>Giới hạn kích thước body (không tính file upload) mà ModSecurity kiểm tra.</td>
+</tr>
+<tr>
+<td><strong>SecRequestBodyLimitAction</strong></td>
+<td><code>MODSECURITY_REQ_BODY_LIMIT_ACTION</code></td>
+<td><code>Reject</code></td>
+<td>Hành động khi body vượt giới hạn.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Nhớ bấm nút xanh <code>Save</code> ở góc trên phải</strong> sau khi thay đổi bất kỳ thông số nào trong <code>Global Settings</code>, và chờ 2–5 giây cho WAF reload!</p>
+</blockquote>
+<hr />
+<h3 id="25-các-mục-khác-logs-reports-f-hacker-changes-plugins-nâng-cao">2.5. Các mục khác: Logs, Reports, F-Hacker Changes, Plugins, NÂNG CAO</h3>
+<ul>
+<li><strong><code>Logs</code> (<code>Log</code>):</strong> Xem trực tiếp file log thô trên trình duyệt mà không cần SSH/Docker:</li>
+<li><code>error.log</code>: <strong>Nơi đầu tiên cần mở khi <code>NOTIFICATIONS</code> báo lỗi cú pháp config.</strong> Tìm dòng có chữ <code>emerg</code> hoặc <code>ModSecurity</code> ở cuối file sẽ thấy chính xác số dòng bị lỗi.</li>
+<li><code>modsec_audit.log</code>: Log JSON chi tiết của ModSecurity (body lớn &gt;100 KiB).</li>
+<li><code>access-web.log</code>: Nhật ký truy cập NGINX rút gọn (có thời gian xử lý và <code>Content-Type</code>).</li>
+<li><strong><code>F-Hacker Changes</code>:</strong> Trang tóm tắt chính thức của BTC liệt kê các thay đổi so với BunkerWeb gốc và danh sách các chức năng bị tắt kèm lý do — mở xem lại bất cứ lúc nào nếu quên.</li>
+<li><strong><code>Reports</code>:</strong> Biểu đồ thống kê tổng hợp.</li>
+<li><strong><code>Plugins</code>:</strong> Hỗ trợ upload plugin tùy chỉnh định dạng <code>.zip</code> (chứa <code>plugin.json</code> + mã Lua/Jinja theo chuẩn BunkerWeb 1.6.16) — chỉ dành cho đội đã chuẩn bị sẵn plugin trước giờ thi.</li>
+<li><strong><code>NÂNG CAO &gt;</code>:</strong> Chứa các trang quản trị hệ thống (<code>Services</code>, <code>Templates</code>, <code>Instances</code>, <code>Jobs</code>, <code>Cache</code>, <code>Bans</code>, <code>Support</code>). <strong>Không nên bấm sửa lung tung trong mục này</strong> (đặc biệt <code>Services</code> / <code>Reverse proxy</code>) để tránh làm đứt kết nối vào app của đội và rớt SVC.</li>
+</ul>
+<hr />
+<h2 id="3-các-tính-năng-bị-btc-khóa-tắt-và-tính-năng-không-nên-bật">3. Các tính năng bị BTC khóa tắt và tính năng không nên bật</h2>
+<p>Tại sao nhiều tính năng chống tấn công quen thuộc của BunkerWeb lại bị khóa mờ trong <code>Global Settings</code>? Vì <strong>2 đặc thù của phòng thi</strong>:
+1. <strong>Mọi request (đối thủ + bot chấm SVC) đều đi qua cùng 1 IP reverse proxy của BTC.</strong> Nếu bạn chặn hoặc giới hạn tốc độ theo IP → chặn luôn bot chấm điểm → <code>SVC = 0</code> → <code>DEF = 0</code>!
+2. <strong>Phòng thi cách ly hoàn toàn với Internet.</strong> Các tính năng tải danh sách từ mạng sẽ bị treo.</p>
+<table>
+<thead>
+<tr>
+<th>Nhóm</th>
+<th>Tính năng / Biến cấu hình</th>
+<th>Trạng thái</th>
+<th>Ghi chú thực chiến</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Đã bị BTC KHÓA TẮT</strong> <em>(hiện mờ, không sửa được)</em></td>
+<td><code>USE_BAD_BEHAVIOR</code>, <code>USE_LIMIT_REQ</code>, <code>USE_LIMIT_CONN</code>, <code>USE_DNSBL</code></td>
+<td><code>no</code> (Khóa)</td>
+<td>Chặn/giới hạn theo IP sẽ khóa luôn bot chấm SVC.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>USE_BUNKERNET</code>, <code>BLACKLIST_COMMUNITY_LISTS</code>, <code>USE_MODSECURITY_CRS_PLUGINS</code></td>
+<td>Tắt (Khóa)</td>
+<td>Cần Internet; vì khóa CRS plugins nên <code>CRS_PLUGINS_BEFORE</code>/<code>AFTER</code> không chạy.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>AUTO_REDIRECT_HTTP_TO_HTTPS</code></td>
+<td><code>no</code> (Khóa)</td>
+<td>Phòng thi dùng HTTP; trả 301 sang HTTPS khiến bot chấm báo lỗi SVC.</td>
+</tr>
+<tr>
+<td><strong>Mở sẵn nhưng KHÔNG NÊN BẬT</strong></td>
+<td><code>Blacklist</code> (<code>USE_BLACKLIST</code>), <code>Greylist</code>, <code>Country</code>, <code>Antibot</code>, <code>Bans</code></td>
+<td>Đang tắt</td>
+<td>Đều dựa vào IP/trình duyệt/CAPTCHA — bật lên sẽ chặn bot healthcheck của BTC và làm tụt sạch SVC!</td>
+</tr>
+<tr>
+<td><strong>ĐƯỢC PHÉP &amp; NÊN DÙNG</strong></td>
+<td><code>USE_MODSECURITY</code>, <code>USE_MODSECURITY_CRS</code>, <code>MODSECURITY_SEC_RULE_ENGINE</code>, custom <code>Configs</code> (<code>MODSEC</code> / <code>MODSEC_CRS</code>), <code>Traffic log</code></td>
+<td>Đang bật / Chỉnh được</td>
+<td>Công cụ phòng thủ chính thức để viết Virtual Patching theo payload.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-hướng-dẫn-thao-tác-từng-bước-cho-6-tình-huống-hay-gặp-nhất-lúc-thi">4. Hướng dẫn thao tác từng bước cho 6 tình huống hay gặp nhất lúc thi</h2>
+<h3 id="tình-huống-1-quan-sát-traffic-realtime-để-phân-biệt-bot-chấm-vs-đối-thủ">Tình huống 1: Quan sát Traffic realtime để phân biệt Bot chấm vs Đối thủ</h3>
+<ol>
+<li>Vào menu <strong><code>Traffic log</code></strong>.</li>
+<li>Bật công tắc <strong><code>Live 5s</code></strong> góc phải bảng.</li>
+<li>Quan sát 1–2 phút đầu:
+   - <strong>Bot chấm SVC:</strong> Gọi đều đặn theo chu kỳ ~30 giây, gửi dữ liệu sạch và hợp lệ vào các chức năng chính của app. Ghi lại danh sách endpoint + tham số của bot để <strong>tuyệt đối không chặn nhầm</strong>.
+   - <strong>Đối thủ tấn công:</strong> Nhập <code>modsec.id:</code> vào ô tìm kiếm → bấm <strong><code>Tìm</code></strong> để thấy ngay các request chứa payload bị CRS đánh dấu; hoặc nhập <code>"FHACKER2026{"</code> để phát hiện ngay nếu có chỗ nào đang bị rò Flag!</li>
+</ol>
+<h3 id="tình-huống-2-thêm-một-bộ-rule-mới-an-toàn-không-làm-rớt-svc">Tình huống 2: Thêm một bộ rule mới an toàn (không làm rớt SVC)</h3>
+<ol>
+<li>Vào <strong><code>Configs</code></strong> → bấm nút tạo mới (<strong><code>New</code></strong> / <strong><code>Tạo mới</code></strong>).</li>
+<li>Chọn <strong><code>Service: Global</code></strong>, <strong><code>Config Type: MODSEC</code></strong>, đặt <strong><code>Name</code></strong> (vd <code>team-rules</code>).</li>
+<li>Dán rule vào editor, <strong>ban đầu để action là <code>pass,log</code></strong> (hoặc giữ WAF ở <code>DetectionOnly</code>).</li>
+<li>Bấm <strong><code>Save</code></strong> → chờ 3–5 giây → kiểm tra nút cam <strong><code>NOTIFICATIONS</code></strong> không có thông báo lỗi đỏ.</li>
+<li>Quay lại <strong><code>Traffic log</code></strong>, tự gửi 1 request tấn công và chờ 30 giây cho bot chấm chạy qua:
+   - Cột <strong><code>WAF</code></strong> hiện ID rule của bạn ở dòng tấn công = rule hoạt động đúng.
+   - Không có dòng nào của bot chấm hiện ID rule của bạn = an toàn.</li>
+<li>Quay lại <strong><code>Configs</code></strong> mở file đó → đổi <code>pass,log</code> thành <strong><code>deny,status:403,log</code></strong> → bấm <strong><code>Save</code></strong>.</li>
+</ol>
+<h3 id="tình-huống-3-bật--tắt-chế-độ-chặn-detectiononly--on">Tình huống 3: Bật / Tắt chế độ chặn (<code>DetectionOnly</code> ↔ <code>On</code>)</h3>
+<ul>
+<li><strong>Cách nhanh (1 bấm):</strong> Vào <strong><code>Home</code> (Trang chủ)</strong> → ở khối <strong>Chế độ WAF</strong> góc phải, bấm nút <strong><code>Bật chặn</code></strong>.</li>
+<li><strong>Cách chuẩn (đổi qua lại 2 chiều):</strong> Vào <strong><code>Global Settings</code></strong> → chọn mục <strong><code>ModSecurity</code></strong> ở cột trái → tìm ô <strong><code>SecRuleEngine</code> (<code>MODSECURITY_SEC_RULE_ENGINE</code>)</strong> → chọn <strong><code>On</code></strong> (để chặn) hoặc <strong><code>DetectionOnly</code></strong> (để tạm ngừng chặn) → bấm nút xanh <strong><code>Save</code></strong> ở góc trên phải.</li>
+</ul>
+<h3 id="tình-huống-4-gỡ-false-positive-khi-owasp-crs-9xxxxx-chặn-nhầm-bot-chấm">Tình huống 4: Gỡ False Positive khi OWASP CRS (<code>9xxxxx</code>) chặn nhầm bot chấm</h3>
+<ol>
+<li>Mở <strong><code>Traffic log</code></strong>, gõ <code>status:403</code> vào ô tìm kiếm → bấm <strong><code>Tìm</code></strong>.</li>
+<li>Bấm vào dòng request hợp lệ của app/bot bị <code>403</code>.</li>
+<li>Nhìn danh sách thẻ đỏ ở khung chi tiết: <strong>bỏ qua rule <code>949110</code></strong> (chỉ là rule tổng điểm), hãy ghi lại <strong>ID rule ngay phía trên nó</strong> (vd <code>942100</code>, <code>941100</code>, <code>920350</code>) và <strong>tên biến bị khớp</strong> (vd <code>ARGS:content</code> hoặc <code>ARGS:json.content</code>).</li>
+<li>Vào <strong><code>Configs</code> → Tạo mới</strong>:
+   - <strong>Nếu chỉ muốn gỡ ở 1 route cụ thể (khuyên dùng):</strong> Chọn <strong><code>Config Type: MODSEC_CRS</code></strong> (nạp <em>trước</em> CRS), đặt tên <code>fix-crs-fp</code>, dán:
+     <code>apache
+     SecRule REQUEST_FILENAME "@rx (?i)^/api/notes/?$" \
+         "id:22000,phase:1,pass,nolog,t:none,t:normalizePath,\
+         ctl:ruleRemoveTargetById=942100;ARGS:content,\
+         ctl:ruleRemoveTargetById=942100;ARGS:json.content"</code>
+   - <strong>Nếu muốn gỡ 1 tham số/cookie trên toàn site hoặc tắt hẳn 1 rule CRS:</strong> Chọn <strong><code>Config Type: MODSEC</code></strong> (nạp <em>sau</em> CRS), dán:
+     <code>apache
+     SecRuleUpdateTargetById 942440 "!REQUEST_COOKIES:session"
+     # Hoặc tắt hẳn 1 rule hay báo nhầm (vd Host là IP):
+     SecRuleRemoveById 920350</code></li>
+<li>Bấm <strong><code>Save</code></strong> → gửi lại request hợp lệ thấy trả <code>200</code> là thành công.</li>
+</ol>
+<h3 id="tình-huống-5-lưu-config-bị-báo-lỗi-ở-notifications">Tình huống 5: Lưu config bị báo lỗi ở <code>NOTIFICATIONS</code></h3>
+<ol>
+<li>Bấm vào nút cam <strong><code>NOTIFICATIONS</code></strong> góc trên phải để xem tóm tắt lỗi.</li>
+<li>Nếu cần xem chi tiết số dòng lỗi: vào menu <strong><code>Logs</code></strong> → chọn <strong><code>error.log</code></strong> → cuộn xuống cuối tìm dòng <code>ModSecurity</code> / <code>emerg</code>.</li>
+<li>4 lỗi cú pháp phổ biến nhất cần kiểm tra:
+   - <strong>Trùng <code>id:</code></strong> giữa 2 rule (kể cả trùng với file <code>mau-rule-phong-thu</code> đang bật!).
+   - Ghi nhầm <code>id:...</code>, <code>phase:...</code>, <code>deny</code>, <code>msg:...</code> vào <strong>rule thứ 2</strong> của một <code>chain</code>.
+   - Có dấu <code># chú thích</code> nằm ngay sau ký tự nối dòng <code>\</code>.
+   - Viết dấu <code>|</code> trong regex tên biến (<code>ARGS:/a|b/</code>) — phải viết tách tường minh <code>ARGS:a|ARGS:b</code>.</li>
+<li>Sửa lại lỗi trong <strong><code>Configs</code></strong> → bấm <strong><code>Save</code></strong> lại. <em>(Trong thời gian bị lỗi, WAF vẫn chạy bản config cũ trước đó nên app không bị sập.)</em></li>
+</ol>
+<h3 id="tình-huống-6-cấp-cứu-khi-bảng-điểm-svc-đột-ngột-báo-đỏ">Tình huống 6: Cấp cứu khi bảng điểm SVC đột ngột báo đỏ</h3>
+<ol>
+<li><strong>Cầm máu ngay trong 10 giây:</strong>
+   - Nếu vừa mới lưu 1 rule mới: vào <strong><code>Configs</code></strong>, tạm xóa/comment rule vừa thêm (hoặc chuyển action về <code>pass,log</code>) → bấm <strong><code>Save</code></strong>.
+   - Nếu nghi OWASP CRS chặn nhầm hàng loạt mà chưa kịp tìm rule nào: vào <strong><code>Global Settings → ModSecurity</code></strong>, chuyển tạm <code>SecRuleEngine</code> về <strong><code>DetectionOnly</code></strong> → <strong><code>Save</code></strong> để giữ điểm SVC không tụt về <code>0</code>.</li>
+<li><strong>Điều tra nguyên nhân:</strong> Mở <strong><code>Traffic log</code></strong> lọc <code>status:403</code> và <code>status:500</code> trong 2 phút gần nhất để tìm đúng endpoint của bot bị chặn/cắt response.</li>
+<li>Gỡ False Positive theo Tình huống 4 rồi mới bật lại <strong><code>On</code></strong>.</li>
+</ol>
+<hr />
+<h2 id="5-cài-đặt-và-sử-dụng-bản-tập-2026-waf-practice-trên-máy-cá-nhân">5. Cài đặt và sử dụng bản tập <code>2026-waf-practice</code> trên máy cá nhân</h2>
+<p>Bản tập <code>2026-waf-practice</code> gồm 3 container chạy qua Docker Compose:
+- <code>fuap_bunkerweb</code>: Image WAF <code>custom_waf26:latest</code> (App ở cổng <code>8000</code>, WAF UI ở cổng <code>8005</code>).
+- <code>postgres</code>: Cơ sở dữ liệu PostgreSQL 16 lưu cấu hình rule và tài khoản UI.
+- <code>app</code> (alias mạng nội bộ <code>fuap_edge:80</code>): App Echo (<code>mendhak/http-https-echo</code>) phản hồi lại nguyên vẹn method, URL, header và body bạn gửi lên dưới dạng JSON — rất tiện để test cả Phase 1–2 lẫn Phase 4 (<code>RESPONSE_BODY</code>).</p>
+<h3 id="51-yêu-cầu--khởi-chạy">5.1. Yêu cầu &amp; Khởi chạy</h3>
+<ul>
+<li>Cần <strong>Docker + Docker Compose v2</strong>, tối thiểu <strong>3 GB RAM trống</strong>, và <code>make</code>.</li>
+<li>Chạy tại thư mục <code>2026-waf-practice</code>:</li>
+</ul>
+<pre><code class="language-bash">cd /home/kali/Documents/2026-waf-practice
+make up
+</code></pre>
+<p><em>(Nếu user Linux chưa active group <code>docker</code> trong terminal hiện tại, chạy <code>sg docker -c 'make up'</code>.)</em></p>
+<p>Lần chạy đầu mất ~1–2 phút để khởi tạo database và chạy seed cấu hình BTC. Khi thấy dòng thông báo hoàn tất:
+- <strong>App đi qua WAF:</strong> <code>http://localhost:8000/</code>
+- <strong>Giao diện quản trị WAF UI:</strong> <code>http://localhost:8005/</code>
+- <strong>Tài khoản mặc định (trong <code>.env</code>):</strong> <code>admin</code> / <code>ChangeMe_Bw_2026!</code></p>
+<h3 id="52-bảng-lệnh-make-vận-hành-bản-tập">5.2. Bảng lệnh <code>make</code> vận hành bản tập</h3>
+<table>
+<thead>
+<tr>
+<th>Lệnh</th>
+<th>Tác dụng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>make up</code></td>
+<td>Khởi chạy toàn bộ container + tự tạo <code>.env</code> từ <code>.env.example</code> + chạy <code>make seed</code>.</td>
+</tr>
+<tr>
+<td><code>make seed</code></td>
+<td>Nạp lại cấu hình mặc định BTC và rule mẫu <code>mau-rule-phong-thu</code> (không ghi đè file bạn đã tạo).</td>
+</tr>
+<tr>
+<td><code>make down</code></td>
+<td>Dừng và gỡ container, <strong>giữ nguyên</strong> toàn bộ rule đã viết trong DB và log.</td>
+</tr>
+<tr>
+<td><code>make reset</code></td>
+<td>Xóa sạch container + volume (<code>pgdata</code>, <code>waf_logs</code>) để đưa bản tập về trạng thái mới tinh ban đầu.</td>
+</tr>
+<tr>
+<td><code>make logs</code></td>
+<td>Xem log realtime của container <code>fuap_bunkerweb</code>.</td>
+</tr>
+<tr>
+<td><code>make ps</code></td>
+<td>Xem trạng thái sống/chết của các container.</td>
+</tr>
+<tr>
+<td><code>make pull</code></td>
+<td>Kéo bản cập nhật mới nhất của image <code>custom_waf26</code> (chỉ chạy trước ngày thi khi có mạng).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-đổi-cổng-hoặc-mật-khẩu-bản-tập">5.3. Đổi cổng hoặc mật khẩu bản tập</h3>
+<p>Mở file <code>.env</code> trong <code>2026-waf-practice</code>, sửa:
+- <code>BW_PORT=8000</code> (cổng app qua WAF)
+- <code>BW_UI_PORT=8005</code> (cổng WAF UI)
+- <code>ADMIN_USERNAME</code> / <code>ADMIN_PASSWORD</code> (mật khẩu phải có đủ chữ thường, chữ hoa, số, ký tự đặc biệt)</p>
+<p>Sau đó chạy lại <code>make up</code>.</p>
+<h3 id="54-sử-dụng-3-script-kiểm-thử-tự-động-đi-kèm-trong-repo">5.4. Sử dụng 3 script kiểm thử tự động đi kèm trong repo</h3>
+<p>Trong thư mục <code>2026-waf-practice</code> đã chuẩn bị sẵn bộ rule <code>team-rules.conf</code> và 3 script chạy <strong>100% offline</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Chức năng</th>
+<th>Lệnh chạy tiêu biểu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>test-waf.sh</code></strong></td>
+<td>Gửi bộ <strong>regression test 2 chiều</strong> (cả request bình thường phải <code>2xx</code> lẫn request tấn công đủ mọi nhóm phải bị chặn). Tự nhận diện WAF đang <code>On</code> hay <code>DetectionOnly</code>.</td>
+<td><code>./test-waf.sh</code><br><code>MODE=on ./test-waf.sh --require-block</code><br><code>./test-waf.sh benign sqli xss</code></td>
+</tr>
+<tr>
+<td><strong><code>waf-audit.py</code></strong></td>
+<td>Đọc trực tiếp <code>/var/log/bunkerweb/modsec_audit.log</code> trong container để thống kê rule đội (<code>20xxx</code>) vs CRS (<code>9xxxxx</code>), kiểm tra rule đội có khớp hay không ngay cả khi đang <code>DetectionOnly</code>, và cảnh báo Flag lọt chưa bị rule chặn.</td>
+<td><code>sg docker -c 'python3 waf-audit.py --tests-only --since-min 10'</code><br><code>python3 waf-audit.py --top 15</code></td>
+</tr>
+<tr>
+<td><strong><code>waf-bypass.py</code></strong></td>
+<td>Bắn <strong>118 biến thể mã hóa/lách lọc</strong> (URL encode, double URL encode, HTML entity, JS <code>\uXXXX</code>, SQL comment, chữ hoa/thường...) vào WAF để kiểm tra độ bền của rule.</td>
+<td><code>python3 waf-bypass.py --mode on</code><br><code>python3 waf-bypass.py --category sqli xss --verbose</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-bài-tập-thực-hành-10-phút-làm-quen-waf-trước-ngày-thi">6. Bài tập thực hành 10 phút làm quen WAF trước ngày thi</h2>
+<p>Hãy làm đúng 6 bước này 1 lần trên máy cá nhân trước ngày thi — vào phòng thi bạn sẽ thao tác WAF như phản xạ tự nhiên:</p>
+<ol>
+<li><strong>Khởi chạy lab (2 phút):</strong> Chạy <code>make up</code>, mở <code>http://localhost:8005/</code> đăng nhập bằng <code>admin</code> / <code>ChangeMe_Bw_2026!</code>.</li>
+<li><strong>Gửi thử request ở chế độ <code>DetectionOnly</code> (2 phút):</strong>
+   <code>bash
+   curl -i 'http://localhost:8000/.env'
+   curl -i 'http://localhost:8000/api/product?id=1%27%20or%201=1'
+   curl -i -X POST http://localhost:8000/ -d 'note=FHACKER2026{aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}'</code>
+   Cả 3 lệnh lúc này đều trả <strong><code>200</code></strong> vì WAF đang ở <code>DetectionOnly</code>.</li>
+<li><strong>Đọc <code>Traffic log</code> (2 phút):</strong> Mở <strong>Traffic log</strong> trên UI, lọc <code>modsec.id:</code>, bấm vào từng dòng xem các thẻ đỏ rule khớp, bấm qua lại giữa <strong><code>Pretty</code></strong> / <strong><code>Raw</code></strong> và thử bật <strong><code>Live 5s</code></strong>.</li>
+<li><strong>Nạp file rule <code>team-rules.conf</code> qua <code>Configs</code> (2 phút):</strong>
+   - Vào <strong>Configs → New → <code>Service: Global</code>, <code>Config Type: MODSEC</code>, <code>Name: team-rules</code></strong>.
+   - Dán nội dung file <code>team-rules.conf</code> → bấm <strong><code>Save</code></strong> → kiểm tra nút <strong><code>NOTIFICATIONS</code></strong> không có lỗi.
+   - Chạy <code>MODE=detect ./test-waf.sh</code> rồi chạy <code>sg docker -c 'python3 waf-audit.py --tests-only --since-min 5'</code> để xem rule <code>20xxx</code> của đội đã khớp.</li>
+<li><strong>Bật chặn <code>On</code> &amp; chạy kiểm thử toàn diện (2 phút):</strong>
+   - Vào <strong>Home → bấm <code>Bật chặn</code></strong> (hoặc <strong>Global Settings → ModSecurity → <code>SecRuleEngine = On</code> → <code>Save</code></strong>).
+   - Chạy lại <code>curl -i 'http://localhost:8000/.env'</code> → phải trả <strong><code>403</code></strong>.
+   - Chạy <code>MODE=on ./test-waf.sh --require-block</code> và <code>python3 waf-bypass.py --mode on</code> → kiểm tra tất cả đều <strong>PASS / BLOCK</strong> và không có False Positive ở nhóm <code>benign</code>.</li>
+<li><strong>Tập thử xử lý lỗi cú pháp (30 giây):</strong> Cố tình sửa sai 1 dòng trong <code>Configs</code> (vd xóa 1 dấu <code>"</code>) → bấm <strong><code>Save</code></strong> → quan sát thông báo lỗi ở <strong><code>NOTIFICATIONS</code></strong> và <strong><code>Logs → error.log</code></strong>, thấy WAF vẫn chạy bình thường với bản cũ → sửa lại cho đúng và bấm <strong><code>Save</code></strong>.</li>
+</ol>
+<hr />
+<h2 id="7-xử-lý-sự-cố-thường-gặp-troubleshooting">7. Xử lý sự cố thường gặp (Troubleshooting)</h2>
+<table>
+<thead>
+<tr>
+<th>Triệu chứng</th>
+<th>Nguyên nhân phổ biến</th>
+<th>Cách khắc phục</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>permission denied while trying to connect to the Docker daemon socket</code></td>
+<td>User hiện tại chưa có quyền chạy Docker trực tiếp</td>
+<td>Dùng <code>sg docker -c 'make up'</code> hoặc thêm user vào group docker (<code>sudo usermod -aG docker $USER</code>) rồi đăng nhập lại.</td>
+</tr>
+<tr>
+<td><code>make up</code> chờ lâu rồi báo <code>BunkerWeb chưa sẵn sàng sau 120s</code></td>
+<td>Máy thiếu RAM (&lt; 3 GB) hoặc lần đầu tải image chậm</td>
+<td>Chạy <code>make logs</code> để xem tiến trình; đảm bảo đủ 3 GB RAM trống rồi chạy lại <code>make up</code>.</td>
+</tr>
+<tr>
+<td>Lưu rule trong <code>Configs</code> xong nhưng rule không có tác dụng</td>
+<td>1) Chọn nhầm <code>Config Type</code> là <code>CRS_PLUGINS_BEFORE</code>/<code>AFTER</code>; 2) File bị lỗi cú pháp nên NGINX giữ cấu hình cũ; 3) WAF vẫn đang ở <code>DetectionOnly</code></td>
+<td>1) Đổi sang <code>MODSEC</code> (hoặc <code>MODSEC_CRS</code>); 2) Kiểm tra <code>NOTIFICATIONS</code> và <code>Logs → error.log</code>; 3) Kiểm tra <code>SecRuleEngine = On</code>.</td>
+</tr>
+<tr>
+<td>Test <code>GET /?id=1' or 1=1</code> vẫn ra <code>200</code> dù đã lưu rule <code>deny</code></td>
+<td><code>MODSECURITY_SEC_RULE_ENGINE</code> vẫn đang là <code>DetectionOnly</code></td>
+<td>Ra <strong>Home</strong> bấm <strong><code>Bật chặn</code></strong> hoặc vào <strong>Global Settings → ModSecurity → <code>SecRuleEngine = On</code> → <code>Save</code></strong>.</td>
+</tr>
+<tr>
+<td><code>Traffic log</code> hiện body bị cụt hoặc cột <code>WAF</code> trống</td>
+<td>Body vượt giới hạn <code>16 KiB</code> (req) / <code>8 KiB</code> (resp) của <code>traffic.log</code>, hoặc request không khớp rule nào</td>
+<td>Chuyển ô <strong>Nguồn log</strong> trên đầu trang <code>Traffic log</code> sang <code>modsec_audit.log</code>, hoặc chạy <code>waf-audit.py</code>.</td>
+</tr>
+<tr>
+<td>App trả <code>400 Failed to parse request body</code> (rule <code>200002</code>) khi upload file</td>
+<td>Bật nhầm <code>SecTmpSaveUploadedFiles On</code> trên image BTC</td>
+<td>Xóa dòng <code>SecTmpSaveUploadedFiles On</code>; dùng rule soi <code>REQUEST_BODY</code> của multipart (<code>20414</code>/<code>20415</code>) đã kiểm chứng ổn định.</td>
+</tr>
+<tr>
+<td>Rule viết cho <code>ARGS:id</code> không bắt được request JSON <code>{"id": "..."}</code></td>
+<td>ModSecurity v3 parse JSON thành tiền tố <code>json.</code> (<code>ARGS:json.id</code>)</td>
+<td>Luôn viết cả hai dạng tường minh: <code>ARGS:id|ARGS:json.id</code> (không dùng dấu <code>|</code> bên trong regex tên biến).</td>
+</tr>
+<tr>
+<td>Muốn làm lại bản tập từ đầu do lỡ bấm hỏng setting</td>
+<td>DB <code>pgdata</code> vẫn lưu cấu hình cũ sau <code>make down</code></td>
+<td>Chạy <code>make reset &amp;&amp; make up</code> để xóa sạch cấu hình và log về nguyên bản.</td>
+</tr>
+</tbody>
+</table>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

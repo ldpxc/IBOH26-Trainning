@@ -7,6 +7,9 @@ Dịch vụ web chia sẻ file trong mạng LAN (chạy trên Linux, client Wind
 ```bash
 cd /home/ld/hoc/CTF/training/AD/iboh26/lan-share
 
+# Cài các thư viện cần thiết lần đầu
+python3 -m pip install -r requirements.txt
+
 # Khởi động chạy nền (tự sinh mật khẩu nếu không truyền --password)
 ./lanshare.sh start --password "MatKhauCuaBan"
 
@@ -22,6 +25,8 @@ cd /home/ld/hoc/CTF/training/AD/iboh26/lan-share
 ```
 
 Nếu không truyền `--password`, chương trình sẽ tự tạo một mật khẩu ngẫu nhiên và in ra màn hình khi khởi động.
+
+File Markdown (`.md`, `.markdown`) được render khi bấm **Xem**; có thể mở phần mã nguồn bên dưới bản xem trước.
 
 ### Các tùy chọn
 

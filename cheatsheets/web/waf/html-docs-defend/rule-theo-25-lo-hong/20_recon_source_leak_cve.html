@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: Recon, Source Leak &amp; Known CVE Probes</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/20_recon_source_leak_cve.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-app-có-chức-năng-xuất-báo-cáo-hợp-lệ-tải-file-exportsreportzip">Ví dụ 1: App có chức năng xuất báo cáo hợp lệ tải file /exports/report.zip</a></li>
+<li><a href="#ví-dụ-2-phát-hiện-đối-thủ-dùng-tool-lạ-có-user-agent-mới-vd-python-httpx-kèm-scan-đường-dẫn-404">Ví dụ 2: Phát hiện đối thủ dùng tool lạ có User-Agent mới (vd python-httpx kèm scan đường dẫn 404)</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-recon-source-leak--known-cve-probes">Mẫu Luật Phòng Thủ: Recon, Source Leak &amp; Known CVE Probes</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/recon_source_leak.html</code>, <code>attack/cve_quickref.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-disclosure</code> / <code>attack-reputation-scanner</code> (<code>913xxx</code> / <code>930xxx</code>)</li>
+<li><strong>Dải Rule ID:</strong> <code>26000–26099</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Rất cao (chặn truy cập tệp nhạy cảm <code>.git</code>, <code>.env</code>, backup, debug endpoint và chữ ký dò CVE phổ biến).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li><strong>Source Leak &amp; Backup:</strong> <code>/.git/</code>, <code>/.svn/</code>, <code>/.env</code>, <code>/.htaccess</code>, <code>/.DS_Store</code>, <code>/backup.zip</code>, <code>.bak</code>, <code>.old</code>, <code>.swp</code>, <code>.sql</code>, <code>composer.json</code>, <code>package.json</code>, <code>docker-compose.yml</code>, <code>Dockerfile</code>.</li>
+<li><strong>Debug / Docs / Actuator lộ ra ngoài:</strong> <code>/actuator/env</code>, <code>/actuator/heapdump</code>, <code>/phpinfo.php</code>, <code>/server-status</code>, <code>/_profiler</code>, <code>/console</code> (Werkzeug debugger).</li>
+<li><strong>Scanner &amp; CVE Probes phổ biến:</strong> User-Agent tool tự động (<code>sqlmap</code>, <code>nikto</code>, <code>commix</code>, <code>ffuf</code>, <code>gobuster</code>, <code>dirsearch</code>, <code>nuclei</code>, <code>xsstrike</code>) và chuỗi Log4Shell (<code>${jndi:</code>), Spring4Shell (<code>class.module.classLoader</code>), Apache Path Traversal (<code>.%2e/</code>).</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [26001] Chặn truy cập tệp ẩn / repo / cấu hình (.git, .env, .svn, .htaccess, .DS_Store)
+SecRule REQUEST_FILENAME &quot;@rx (?i)(?:^|/)\.(?:git|svn|hg|env|htaccess|htpasswd|DS_Store|dockerignore|ssh)(?:/|\.|\z)&quot; \
+    &quot;id:26001,phase:1,pass,log,t:none,t:urlDecodeUni,t:normalizePath,msg:'Recon: Hidden config or VCS exposure',tag:'recon',logdata:'%{REQUEST_FILENAME}'&quot;
+
+# [26002] Chặn tải file backup / source dump / database dump
+SecRule REQUEST_FILENAME &quot;@rx (?i)\.(?:bak|backup|old|orig|save|swp|swo|sql|sqlite|sqlite3|db|tar\.gz|tgz|zip|7z|rar|dist|inc|log)\z&quot; \
+    &quot;id:26002,phase:1,pass,log,t:none,t:urlDecodeUni,t:normalizePath,msg:'Recon: Backup or database file probe',tag:'recon',logdata:'%{REQUEST_FILENAME}'&quot;
+
+# [26003] Chặn endpoint debug/actuator/phpinfo nguy hiểm
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/(?:actuator(?:/.*)?|phpinfo\.php|info\.php|server-status|server-info|__debug__|console/?|_profiler(?:/.*)?|Dockerfile|docker-compose\.ya?ml)\z&quot; \
+    &quot;id:26003,phase:1,pass,log,t:none,t:normalizePath,msg:'Recon: Debug or management endpoint probe',tag:'recon',logdata:'%{REQUEST_FILENAME}'&quot;
+
+# [26004] Chặn chữ ký CVE kinh điển (Log4Shell JNDI, Spring4Shell classLoader)
+SecRule REQUEST_URI|ARGS|REQUEST_HEADERS|REQUEST_BODY &quot;@rx (?i)(?:\$\{jndi:(?:ldap|ldaps|rmi|dns|iiop|http)s?://|class\.module\.classLoader\.)&quot; \
+    &quot;id:26004,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:'CVE: Log4Shell or Spring4Shell probe',tag:'cve',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [26005] Chặn User-Agent của công cụ scan tự động phổ biến
+SecRule REQUEST_HEADERS:User-Agent &quot;@rx (?i)\b(?:sqlmap|nikto|commix|tplmap|xsstrike|ffuf|gobuster|feroxbuster|dirsearch|wfuzz|nuclei|wpscan|acunetix|nessus)\b&quot; \
+    &quot;id:26005,phase:1,pass,log,t:none,msg:'Recon: Known attack scanner User-Agent',tag:'recon',logdata:'UA=%{MATCHED_VAR}'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>26001</code></td>
+<td><code>REQUEST_FILENAME</code> (<code>t:urlDecodeUni</code>, <code>t:normalizePath</code>)</td>
+<td>Chặn mọi truy cập vào thư mục/tệp bắt đầu bằng dấu chấm nhạy cảm (<code>.git</code>, <code>.svn</code>, <code>.env</code>, <code>.htaccess</code>, <code>.DS_Store</code>, <code>.ssh</code>), kể cả ở thư mục con (<code>/app/.env</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>26002</code></td>
+<td><code>REQUEST_FILENAME</code> (<code>t:urlDecodeUni</code>, <code>t:normalizePath</code>)</td>
+<td>Chặn dò/tải các tệp sao lưu, dump cơ sở dữ liệu và tệp tạm editor (<code>.bak</code>, <code>.old</code>, <code>.swp</code>, <code>.sql</code>, <code>.sqlite</code>, <code>.zip</code>, <code>.tar.gz</code>, <code>.log</code>).</td>
+<td>Cao (kiểm tra app có tải <code>.zip</code> hợp lệ không)</td>
+</tr>
+<tr>
+<td><code>26003</code></td>
+<td><code>REQUEST_FILENAME</code> (<code>t:normalizePath</code>)</td>
+<td>Chặn truy cập trực tiếp endpoint debug/quản trị (<code>/actuator/*</code>, <code>/phpinfo.php</code>, <code>/console</code> Werkzeug, <code>/_profiler</code>, <code>/Dockerfile</code>, <code>/docker-compose.yml</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>26004</code></td>
+<td><code>REQUEST_URI\|ARGS\|REQUEST_HEADERS\|REQUEST_BODY</code></td>
+<td>Chặn chữ ký khai thác CVE kinh điển: Log4Shell (<code>${jndi:...}</code>) và Spring4Shell (<code>class.module.classLoader.</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>26005</code></td>
+<td><code>REQUEST_HEADERS:User-Agent</code></td>
+<td>Chặn trực tiếp các request để nguyên User-Agent mặc định của tool dò/tấn công (<code>sqlmap</code>, <code>commix</code>, <code>ffuf</code>, <code>gobuster</code>, <code>nuclei</code>...).</td>
+<td>Rất cao</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-app-có-chức-năng-xuất-báo-cáo-hợp-lệ-tải-file-exportsreportzip">Ví dụ 1: App có chức năng xuất báo cáo hợp lệ tải file <code>/exports/report.zip</code></h3>
+<p>Nếu bot SVC tải file <code>.zip</code> nên bị <code>26002</code> chặn nhầm:
+- <strong>Cách sửa <code>26002</code>:</strong> Xóa <code>zip|</code> khỏi regex của <code>26002</code>, hoặc chặn riêng route backup bằng <code>chain</code> loại trừ <code>/exports/</code>:</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [26002] cho phép tải .zip ở /exports/ nhưng vẫn chặn mọi file backup khác
+SecRule REQUEST_FILENAME &quot;!@beginsWith /exports/&quot; \
+    &quot;id:26002,phase:1,deny,status:403,log,t:none,t:urlDecodeUni,t:normalizePath,chain,msg:'Recon: Backup or DB file probe',tag:'recon',logdata:'%{REQUEST_FILENAME}'&quot;
+    SecRule REQUEST_FILENAME &quot;@rx (?i)\.(?:bak|backup|old|orig|save|swp|swo|sql|sqlite|sqlite3|db|tar\.gz|tgz|zip|7z|rar|dist|inc|log)\z&quot; &quot;t:none&quot;
+</code></pre>
+<h3 id="ví-dụ-2-phát-hiện-đối-thủ-dùng-tool-lạ-có-user-agent-mới-vd-python-httpx-kèm-scan-đường-dẫn-404">Ví dụ 2: Phát hiện đối thủ dùng tool lạ có User-Agent mới (vd <code>python-httpx</code> kèm scan đường dẫn 404)</h3>
+<ul>
+<li><strong>Lưu ý:</strong> Không chặn <code>python-requests</code> hay <code>curl</code> đại trà vì <strong>bot chấm SVC thường chạy bằng Python (<code>requests</code>/<code>urllib</code>/<code>httpx</code>)</strong>! Chỉ chặn tên tool tấn công rõ ràng như danh sách trong <code>26005</code>.</li>
+</ul>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li><code>26001</code>, <code>26003</code>, <code>26004</code>, <code>26005</code> rất an toàn để bật <code>deny,status:403,log</code> ngay từ Round 1.</li>
+<li>Với <code>26002</code>, kiểm tra xem app có chức năng cho tải file <code>.zip</code> hoặc <code>.log</code> hợp lệ không; nếu có thì áp dụng Ví dụ 1.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

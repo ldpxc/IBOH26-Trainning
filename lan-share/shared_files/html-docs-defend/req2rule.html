@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP Request → ModSecurity Rule Generator (Offline) — F-Hacker 2026</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --ok: #15803d; --ok-bg: #dcfce7;
+  --bad: #b91c1c; --bad-bg: #fee2e2; --code-bg: #16181d; --code-fg: #e6edf3;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --ok: #4ade80; --ok-bg: #132a1c;
+  --bad: #f87171; --bad-bg: #321619; --code-bg: #0b0d11; --code-fg: #e6edf3;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-sans); font-size: 15px; line-height: 1.55; }
+.topbar {
+  position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface2); color: var(--fg);
+  text-decoration: none; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-accent:hover { opacity: 0.9; color: #fff; }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 18px 20px 50px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; }
+h1 { margin: 0 0 6px; font-size: 1.45em; }
+.sub { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+select, input[type="number"], label.chk {
+  padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 13px; font-weight: 600;
+}
+input[type="number"] { width: 95px; font-family: var(--font-mono); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 960px) { .grid2 { grid-template-columns: 1fr; } }
+textarea {
+  width: 100%; min-height: 290px; padding: 12px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--surface2); color: var(--fg);
+  font-family: var(--font-mono); font-size: 12.8px; line-height: 1.5; resize: vertical;
+}
+pre {
+  background: var(--code-bg); color: var(--code-fg); padding: 14px 16px; border-radius: 9px;
+  border: 1px solid var(--line); overflow-x: auto; font-family: var(--font-mono);
+  font-size: 12.8px; line-height: 1.55; margin: 0; min-height: 290px; white-space: pre-wrap; word-break: break-word;
+}
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.tag {
+  padding: 3px 9px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  background: var(--surface2); border: 1px solid var(--line); color: var(--accent);
+}
+.tag-ok { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+.tag-bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+.out-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="btn" href="index.html">⌂ Trang chủ</a>
+    <a class="btn" href="regex_tester.html">🧪 Regex Tester</a>
+    <strong>Request → WAF Rule Generator (Offline)</strong>
+  </div>
+  <button id="themeToggle" class="btn" type="button">☀ Sáng</button>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <h1>Chuyển HTTP Request / Response (từ Traffic log) → Rule WAF ModSecurity v3</h1>
+    <p class="sub">Dán nguyên văn Request (hoặc Response lộ cờ) từ <strong>Traffic log</strong> vào ô bên trái → công cụ tự tách route, query, form, JSON (<code>json.*</code>) và sinh rule chuẩn Copy-Safe.</p>
+
+    <div class="row">
+      <span style="color:var(--muted);font-size:13px;">Ví dụ mẫu:</span>
+      <button class="btn" type="button" data-sample="bot_note">Bot sạch: GET /note.php?id=1</button>
+      <button class="btn" type="button" data-sample="atk_sqli">Tấn công SQLi: /search.php</button>
+      <button class="btn" type="button" data-sample="atk_nosql">Tấn công NoSQLi JSON</button>
+      <button class="btn" type="button" data-sample="atk_mass">Mass Assignment JSON</button>
+      <button class="btn" type="button" data-sample="atk_lfi">LFI + Traversal</button>
+      <button class="btn" type="button" data-sample="access_log">Access log: /fetch?url=file://</button>
+      <button class="btn" type="button" data-sample="resp_hdr">Response lộ X-Theme-Debug</button>
+    </div>
+
+    <div class="row">
+      <select id="genMode">
+        <option value="auto">Tự động nhận diện (Tấn công / Bot sạch / Response)</option>
+        <option value="allowlist">Ép chế độ Allowlist (dán request SẠCH của Bot SVC)</option>
+        <option value="attack">Ép chế độ Chặn Tấn Công (dán request BẨN của đối thủ)</option>
+      </select>
+      <select id="actionMode">
+        <option value="pass,log">Action: pass,log (An toàn test 30s trước)</option>
+        <option value="deny,status:403,log">Action: deny,status:403,log (Chặn ngay)</option>
+      </select>
+      <label class="chk">Start ID: <input id="startId" type="number" value="27201" min="20000" max="29999"></label>
+      <label class="chk"><input id="scopeRoute" type="checkbox" checked> Khóa đúng Route (<code>chain</code>)</label>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="out-head">
+        <strong>1. Dán Raw HTTP Request / Response vào đây</strong>
+        <button id="clearBtn" class="btn" type="button">Xóa</button>
+      </div>
+      <textarea id="rawInput" spellcheck="false" placeholder="Dán Raw HTTP Request hoặc Response từ Traffic log..."></textarea>
+      <div id="parsedTags" class="tags" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="panel">
+      <div class="out-head">
+        <strong id="outTitle">2. Rule ModSecurity v3 sinh tự động (Config Type: MODSEC)</strong>
+        <button id="copyOut" class="btn btn-accent" type="button">Copy Rule</button>
+      </div>
+      <pre id="ruleOutput"></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+  const themeBtn = document.getElementById('themeToggle');
+  function syncTheme() { themeBtn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối'; }
+  syncTheme();
+  themeBtn.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('fhacker_theme', next);
+    syncTheme();
+  });
+
+  const SAMPLES = {
+    bot_note: `GET /note.php?id=1 HTTP/1.1\nHost: 127.0.0.1\nUser-Agent: python-requests/2.31.0\nCookie: PHPSESSID=abc123`,
+    atk_sqli: `GET /search.php?q=1%27%20UNION%20SELECT%201,flag%20FROM%20flags-- HTTP/1.1\nHost: 10.13.128.235\nUser-Agent: Mozilla/5.0`,
+    atk_nosql: `POST /api/login HTTP/1.1\nHost: 10.13.128.235\nContent-Type: application/json\n\n{"username":"admin","password":{"$ne":""}}`,
+    atk_mass: `POST /api/profile HTTP/1.1\nHost: 10.13.128.235\nContent-Type: application/json\n\n{"name":"alice","is_admin":true,"role":"admin"}`,
+    atk_lfi: `GET /download.php?file=../../../../etc/passwd HTTP/1.1\nHost: 10.13.128.235\nUser-Agent: curl/8.5.0`,
+    access_log: `[2026-11-28T21:18:39] "GET /fetch?url=file:///etc/passwd HTTP/1.1" 200 673 0.008 200 0.005 "curl/8.22.0" 134 "-" "application/json; charset=utf-8" "-"`,
+    resp_hdr: `HTTP/1.1 302\nX-Theme-Debug: FHACKER2026{01f9be4aca65ac661f826c049abc64dafa8896c71c433e37fa22efaf468b1f3e}\nLocation: http://10.13.128.235:9010/login.php\nSet-Cookie: theme=light; path=/`
+  };
+
+  const rawEl = document.getElementById('rawInput');
+  const outEl = document.getElementById('ruleOutput');
+  const tagsEl = document.getElementById('parsedTags');
+  const outTitle = document.getElementById('outTitle');
+  const genModeEl = document.getElementById('genMode');
+  const actionEl = document.getElementById('actionMode');
+  const startIdEl = document.getElementById('startId');
+  const scopeRouteEl = document.getElementById('scopeRoute');
+
+  function escRxPath(p) {
+    return p.replace(/[.+*?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function safeDecode(s) {
+    try { return decodeURIComponent(s.replace(/\+/g, ' ')); } catch (e) { return s; }
+  }
+
+  function flattenJson(obj, prefix = 'json', out = []) {
+    if (obj === null || typeof obj !== 'object') {
+      out.push({ name: prefix, rawName: prefix.replace(/^json\./, ''), val: String(obj), isJson: true, type: typeof obj });
+      return out;
+    }
+    if (Array.isArray(obj)) {
+      obj.forEach((v, i) => flattenJson(v, `${prefix}.array_${i}`, out));
+      return out;
+    }
+    for (const [k, v] of Object.entries(obj)) {
+      flattenJson(v, `${prefix}.${k}`, out);
+    }
+    return out;
+  }
+
+  function inferAllowlist(val) {
+    if (/^[0-9]{1,10}$/.test(val)) return { rx: '^[0-9]{1,10}$', desc: 'Số nguyên 1-10 chữ số' };
+    if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val)) return { rx: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', desc: 'UUID 36 ký tự' };
+    if (/^[0-9a-fA-F]{24}$/.test(val)) return { rx: '^[0-9a-fA-F]{24}$', desc: 'Mongo ObjectId (24 hex)' };
+    if (/^(?:true|false)$/i.test(val)) return { rx: '^(?:true|false|0|1)$', desc: 'Boolean' };
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return { rx: '^\\d{4}-\\d{2}-\\d{2}$', desc: 'Ngày YYYY-MM-DD' };
+    if (/^[a-z]{2}(?:-[A-Z]{2})?$/.test(val)) return { rx: '^[a-z]{2}(?:-[A-Z]{2})?$', desc: 'Mã ngôn ngữ' };
+    if (/^[A-Za-z0-9._-]{1,64}\.(?:pdf|png|jpe?g|gif|txt|csv|webp)$/i.test(val)) return { rx: '^[A-Za-z0-9._-]{1,64}\\.(?:pdf|png|jpe?g|gif|txt|csv|webp)$', desc: 'Tên file an toàn' };
+    if (/^(?:light|dark|asc|desc)$/i.test(val)) return { rx: '^(?:light|dark|asc|desc)$', desc: 'Giá trị cố định (sửa thêm nếu cần)' };
+    return { rx: '^[A-Za-z0-9._-]{1,64}$', desc: 'Chuỗi chữ/số an toàn (kiểm tra lại độ dài/ký tự)' };
+  }
+
+  function detectAttacks(path, params, headers, rawBody) {
+    const hits = [];
+    const checkStr = (src, val, paramName) => {
+      const d1 = safeDecode(val);
+      const d2 = safeDecode(d1);
+      const s = d2;
+      if (/(?:union\s+(?:all\s+)?select|\x27\s*(?:or|and)\s*|\bsleep\s*\(|\bbenchmark\s*\(|--\s*$|information_schema)/i.test(s))
+        hits.push({ cat: 'sqli', param: paramName, why: 'SQL Injection', op: '@detectSQLi', t: 't:none,t:urlDecodeUni,t:urlDecodeUni' });
+      if (/(?:\.\.[/\\]|(?:php|phar|file|expect|data):\/\/|\/etc\/(?:passwd|shadow))/i.test(s))
+        hits.push({ cat: 'lfi', param: paramName, why: 'LFI / Path Traversal', op: '@rx (?i)(?:\\.\\.(?:[/\\x5c]|%2f|%5c)|(?:php|phar|file|data|expect)://|/etc/(?:passwd|shadow))', t: 't:none,t:urlDecodeUni,t:urlDecodeUni' });
+      if (/(?:<\s*script\b|\bon(?:error|load|click|focus|mouseover|toggle)\s*=|javascript\s*:|<svg\b|<iframe\b)/i.test(s))
+        hits.push({ cat: 'xss', param: paramName, why: 'XSS', op: '@rx (?i)(?:<\\s*script\\b|javascript\\s*:|\\bon(?:error|load|click|focus|mouseover|toggle)\\s*=|<svg\\b|<iframe\\b)', t: 't:none,t:urlDecodeUni,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode' });
+      if (/(?:\{\{[^}]{1,200}\}\}|\$\{[^}]{1,200}\}|__(?:class|mro|subclasses|globals)__)/i.test(s))
+        hits.push({ cat: 'ssti', param: paramName, why: 'SSTI', op: '@rx (?:\\{\\{[^}]{1,250}\\}\\}|\\$\\{[^}]{1,200}\\}|__(?:class|mro|subclasses|globals)__)', t: 't:none,t:urlDecodeUni,t:urlDecodeUni' });
+      if (/(?:[;|`]|\$\(|\$\{IFS\}|&&|\|\|)/i.test(s) && !/^https?:\/\//i.test(s))
+        hits.push({ cat: 'cmdi', param: paramName, why: 'OS Command Injection', op: '@rx (?:[;|`]|\\$\\(|\\$\\{IFS\\}|&&|\\|\\|)', t: 't:none,t:urlDecodeUni,t:urlDecodeUni' });
+      if (/(?:(?:gopher|dict|file|ldap):\/\/|https?:\/\/(?:localhost|127\.|169\.254\.169\.254|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.))/i.test(s))
+        hits.push({ cat: 'ssrf', param: paramName, why: 'SSRF Internal/Scheme', op: '@rx (?i)(?:\\b(?:gopher|dict|file|ldap)://|https?://(?:localhost|127\\.|169\\.254\\.169\\.254|10\\.|192\\.168\\.|172\\.(?:1[6-9]|2\\d|3[01])\\.))', t: 't:none,t:urlDecodeUni,t:urlDecodeUni' });
+      if (/(?:<!ENTITY|<!DOCTYPE[^>]*\[|xmlns:xi)/i.test(s))
+        hits.push({ cat: 'xxe', param: paramName, why: 'XXE', op: '@rx (?i)<!\\s*(?:DOCTYPE|ENTITY)\\b', t: 't:none,t:urlDecodeUni' });
+      if (/(?:rO0AB|\b[OC]:\+?\d+:"|!!python\/object)/i.test(s))
+        hits.push({ cat: 'deserialization', param: paramName, why: 'Insecure Deserialization', op: '@rx (?i)(?:rO0AB|\\b[OC]:\\+?\\d+:\\x22|!!python/object)', t: 't:none,t:urlDecodeUni' });
+    };
+
+    if (/(?:^|\/)\.(?:env|git|svn|htaccess|DS_Store)|\.(?:bak|sql|old|swp)$/i.test(path)) {
+      hits.push({ cat: 'recon', param: null, why: 'Recon / Sensitive File', varName: 'REQUEST_FILENAME', op: '@rx (?i)(?:^|/)\\.(?:git|svn|env|htaccess|DS_Store)(?:/|\\.|$)|\\.(?:bak|sql|old|swp)$', t: 't:none,t:urlDecodeUni,t:normalizePath' });
+    }
+    for (const p of params) {
+      if (/(?:^|\.|\[)\$(?:ne|eq|gt|gte|lt|lte|regex|where|in|nin|exists|or|and)/i.test(p.name)) {
+        hits.push({ cat: 'nosqli', param: p.name, why: 'NoSQL Operator Injection', varName: 'ARGS_NAMES', op: '@rx (?i)(?:^|\\.|\\[)\\$(?:ne|eq|gt|gte|lt|lte|regex|where|in|nin|exists|or|and)(?:\\]|$|\\.)', t: 't:none,t:urlDecodeUni' });
+      }
+      if (/__proto__|constructor\.prototype/i.test(p.name)) {
+        hits.push({ cat: 'prototype-pollution', param: p.name, why: 'Prototype Pollution', varName: 'ARGS_NAMES|REQUEST_BODY', op: '@rx (?i)(?:__proto__|constructor.{0,8}prototype)', t: 't:none,t:urlDecodeUni,t:jsDecode' });
+      }
+      if (/(?:^|\.)(?:role|is_?admin|admin|balance|credit|verified|permissions?)$/i.test(p.rawName)) {
+        hits.push({ cat: 'mass-assignment', param: p.rawName, why: 'Mass Assignment (' + p.rawName + ')', varName: 'ARGS_NAMES', op: `@rx (?i)(?:^|[.\\[])(?:${escRxPath(p.rawName)})(?:\\]|\\.array_\\d+|$)`, t: 't:none' });
+      }
+      checkStr('param', p.val, p.name);
+    }
+    if (rawBody && /<!(?:ENTITY|DOCTYPE)/i.test(rawBody)) {
+      hits.push({ cat: 'xxe', param: null, why: 'XXE in REQUEST_BODY', varName: 'REQUEST_BODY', op: '@rx (?i)<!\\s*(?:DOCTYPE|ENTITY)\\b', t: 't:none' });
+    }
+    // Deduplicate by cat+param
+    const uniq = [];
+    const seen = new Set();
+    for (const h of hits) {
+      const k = `${h.cat}|${h.param || h.varName}`;
+      if (!seen.has(k)) { seen.add(k); uniq.push(h); }
+    }
+    return uniq;
+  }
+
+  function generate() {
+    const raw = rawEl.value.trim();
+    if (!raw) { outEl.textContent = '# Dán HTTP Request hoặc Response vào ô bên trái...'; tagsEl.innerHTML = ''; return; }
+
+    let nextId = parseInt(startIdEl.value, 10) || 27201;
+    const action = actionEl.value;
+    const scopeRoute = scopeRouteEl.checked;
+    const mode = genModeEl.value;
+
+    const norm = raw.replace(/\r\n/g, '\n');
+    const splitIdx = norm.indexOf('\n\n');
+    const headPart = splitIdx >= 0 ? norm.slice(0, splitIdx) : norm;
+    const bodyPart = splitIdx >= 0 ? norm.slice(splitIdx + 2) : '';
+    let headLines = headPart.split('\n').map(l => l.trim()).filter(Boolean);
+    // Bỏ qua dòng tiêu đề copy từ BunkerWeb UI ("Request · 9 headers", "Response · 16 headers")
+    while (headLines.length > 1 && /^(?:Request|Response)\s*[·•-]\s*\d+\s*headers?/i.test(headLines[0])) {
+      headLines.shift();
+    }
+    const firstLine = headLines[0] || '';
+
+    // Case A: HTTP Response pasted (e.g. X-Theme-Debug flag leak)
+    if (/^HTTP\/\d(?:\.\d)?\s+\d{3}/i.test(firstLine)) {
+      outTitle.textContent = '2. Rule sinh cho HTTP Response (NGINX SERVER_HTTP + ModSecurity Phase 3/4)';
+      const flagHdrs = [];
+      for (const l of headLines.slice(1)) {
+        const idx = l.indexOf(':');
+        if (idx > 0) {
+          const hk = l.slice(0, idx).trim();
+          const hv = l.slice(idx + 1).trim();
+          if (/FHACKER(?:2026)?\{/i.test(hv)) flagHdrs.push({ hk, hv });
+        }
+      }
+      const hasBodyFlag = /FHACKER(?:2026)?\{/i.test(bodyPart);
+      let tags = ['<span class="tag">HTTP Response</span>'];
+      let rules = [];
+      if (flagHdrs.length) {
+        for (const fh of flagHdrs) {
+          tags.push(`<span class="tag tag-bad">Lộ Flag ở Header: ${fh.hk}</span>`);
+          rules.push(
+`# ── CÁCH 1 (TỐT NHẤT): Xóa riêng header lộ Flag mà vẫn giữ chức năng bình thường ──
+# Config Type trên WAF UI: SERVER_HTTP (Service: Global)
+proxy_hide_header ${fh.hk};
+
+# ── CÁCH 2 (Lưới dự phòng Phase 3): Chặn mọi Response Header chứa Flag ──
+# Config Type trên WAF UI: MODSEC (Service: Global)
+SecRule RESPONSE_HEADERS "@rx FHACKER(?:2026)?\\{[0-9a-fA-F]{16,64}\\}" \\
+    "id:${nextId++},phase:3,${action},t:none,msg:'DLP: Flag leaked in response header ${fh.hk}',tag:'flag-leak',logdata:'%{MATCHED_VAR_NAME}'"`
+          );
+        }
+      }
+      if (hasBodyFlag || !flagHdrs.length) {
+        if (hasBodyFlag) tags.push('<span class="tag tag-bad">Lộ Flag ở Response Body</span>');
+        rules.push(
+`# ── Phase 4: Chặn lộ Flag trong Response Body (nhớ sửa đúng route cờ hợp lệ của bot!) ──
+# Config Type trên WAF UI: MODSEC (Service: Global)
+SecRule REQUEST_FILENAME "!@rx (?i)^(?:/api/flag|/note\\.php)/?$" \\
+    "id:${nextId++},phase:4,${action},t:none,t:normalizePath,chain,msg:'DLP: Flag leaked in response body',tag:'flag-leak',logdata:'%{REQUEST_METHOD} %{REQUEST_URI}'"
+    SecRule RESPONSE_BODY "@rx FHACKER(?:2026)?\\{[0-9a-fA-F]{16,64}\\}" "t:none"`
+        );
+      }
+      tagsEl.innerHTML = tags.join('');
+      outEl.textContent = rules.join('\n\n');
+      return;
+    }
+
+    // Case B: HTTP Request (hỗ trợ Raw HTTP, NGINX/BunkerWeb access.log, bảng Traffic log, curl, URL đầy đủ)
+    outTitle.textContent = '2. Rule ModSecurity v3 sinh tự động (Config Type: MODSEC)';
+    let method = null, fullUri = null, sourceKind = 'Raw HTTP';
+
+    // 1) Raw HTTP: GET /path?a=1 HTTP/1.1
+    let m = firstLine.match(/^(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+(\S+)/);
+    if (m) {
+      method = m[1]; fullUri = m[2];
+    }
+    // 2) NGINX / BunkerWeb access.log: [2026-...] "GET /fetch?url=file:///etc/passwd HTTP/1.1" 200 ...
+    if (!method) {
+      m = firstLine.match(/"(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+(\S+?)(?:\s+HTTP\/[\d.]+)?"/);
+      if (m) { method = m[1]; fullUri = m[2]; sourceKind = 'Access Log'; }
+    }
+    // 3) Dòng bảng Traffic log: 296  16:07:36  GET  127.0.0.1  /search.php?q=note  200 ...
+    if (!method) {
+      m = firstLine.match(/\b(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+\S+\s+(\/\S*)/);
+      if (m) { method = m[1]; fullUri = m[2]; sourceKind = 'Traffic Log Row'; }
+    }
+    // 4) Lệnh curl hoặc URL đầy đủ: http://10.x.x.x/fetch?url=...
+    if (!method) {
+      const xm = raw.match(/(?:-X|--request)\s+([A-Z]+)/);
+      const um = raw.match(/https?:\/\/[^\/\s'"]+(\/[^\s'"]*)/);
+      if (um) {
+        method = xm ? xm[1] : (/\s(?:-d|--data)\s/.test(raw) ? 'POST' : 'GET');
+        fullUri = um[1];
+        sourceKind = raw.trim().startsWith('curl') ? 'curl' : 'URL';
+      }
+    }
+
+    if (!method || !fullUri) {
+      tagsEl.innerHTML = '<span class="tag tag-bad">Không nhận diện được Request/Log (hỗ trợ Raw HTTP, access.log, Traffic log, curl, URL)</span>';
+      outEl.textContent = '# Hãy dán 1 trong các dạng sau:\n# - Raw HTTP: GET /note.php?id=1 HTTP/1.1\n# - Access log: [2026-...] "GET /fetch?url=file:///etc/passwd HTTP/1.1" 200 ...\n# - URL: http://10.13.128.235/fetch?url=file:///etc/passwd\n# - Response: HTTP/1.1 302 + header lộ cờ';
+      return;
+    }
+    const qIdx = fullUri.indexOf('?');
+    const path = qIdx >= 0 ? fullUri.slice(0, qIdx) : fullUri;
+    const queryStr = qIdx >= 0 ? fullUri.slice(qIdx + 1) : '';
+
+    const headers = {};
+    for (const l of headLines.slice(1)) {
+      const i = l.indexOf(':');
+      if (i > 0) headers[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim();
+    }
+
+    const params = [];
+    if (queryStr) {
+      for (const pair of queryStr.split('&')) {
+        if (!pair) continue;
+        const eq = pair.indexOf('=');
+        const k = eq >= 0 ? safeDecode(pair.slice(0, eq)) : safeDecode(pair);
+        const v = eq >= 0 ? pair.slice(eq + 1) : '';
+        params.push({ name: k, rawName: k, val: v, isJson: false });
+      }
+    }
+    const ct = (headers['content-type'] || '').toLowerCase();
+    if (bodyPart.trim()) {
+      if (ct.includes('application/json') || bodyPart.trim().startsWith('{') || bodyPart.trim().startsWith('[')) {
+        try {
+          const parsed = JSON.parse(bodyPart);
+          flattenJson(parsed, 'json', params);
+        } catch (e) {}
+      } else if (ct.includes('x-www-form-urlencoded') || (bodyPart.includes('=') && !bodyPart.trim().startsWith('<'))) {
+        for (const pair of bodyPart.trim().split('&')) {
+          if (!pair) continue;
+          const eq = pair.indexOf('=');
+          const k = eq >= 0 ? safeDecode(pair.slice(0, eq)) : safeDecode(pair);
+          const v = eq >= 0 ? pair.slice(eq + 1) : '';
+          params.push({ name: k, rawName: k, val: v, isJson: false });
+        }
+      }
+    }
+
+    const attacks = detectAttacks(path, params, headers, bodyPart);
+    const effectiveMode = mode === 'auto' ? (attacks.length > 0 ? 'attack' : 'allowlist') : mode;
+
+    const tags = [
+      `<span class="tag">${method} ${path}</span>`,
+      `<span class="tag">Params: ${params.length}</span>`,
+      effectiveMode === 'attack'
+        ? `<span class="tag tag-bad">Phát hiện ${attacks.length} dấu hiệu tấn công</span>`
+        : `<span class="tag tag-ok">Chế độ Allowlist (Request sạch)</span>`
+    ];
+    if (headers['host'] && /^\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?$/.test(headers['host'])) {
+      tags.push('<span class="tag">Host IP → nhớ tắt CRS 920350</span>');
+    }
+    tagsEl.innerHTML = tags.join('');
+
+    const rxPath = escRxPath(path);
+    const rules = [];
+
+    if (effectiveMode === 'attack' && attacks.length > 0) {
+      for (const atk of attacks) {
+        const varTarget = atk.varName
+          ? atk.varName
+          : (atk.param
+              ? (atk.param.startsWith('json.') ? `ARGS:${atk.param.replace(/^json\./, '')}|ARGS:${atk.param}` : `ARGS:${atk.param}|ARGS:json.${atk.param}`)
+              : 'ARGS');
+        if (scopeRoute && atk.varName !== 'REQUEST_FILENAME') {
+          rules.push(
+`# [${nextId}] Chặn ${atk.why} trên ${path}
+SecRule REQUEST_FILENAME "@rx (?i)^${rxPath}/?$" \\
+    "id:${nextId++},phase:2,${action},t:none,t:normalizePath,chain,msg:'${atk.why} on ${path}',tag:'${atk.cat}',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"
+    SecRule ${varTarget} "${atk.op}" "${atk.t}"`
+          );
+        } else {
+          const phase = atk.varName === 'REQUEST_FILENAME' ? 1 : 2;
+          rules.push(
+`# [${nextId}] Chặn ${atk.why} (toàn site)
+SecRule ${varTarget} "${atk.op}" \\
+    "id:${nextId++},phase:${phase},${action},${atk.t},msg:'${atk.why}',tag:'${atk.cat}',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"`
+          );
+        }
+      }
+    } else {
+      // Allowlist generation from clean bot params
+      if (params.length === 0) {
+        rules.push(
+`# Request này không có tham số Query/Form/JSON — sinh mẫu giới hạn đúng HTTP Method cho ${path}
+SecRule REQUEST_FILENAME "@rx (?i)^${rxPath}/?$" \\
+    "id:${nextId++},phase:1,${action},t:none,t:normalizePath,chain,msg:'Disallowed method on ${path}',tag:'allowlist',logdata:'%{REQUEST_METHOD} %{REQUEST_FILENAME}'"
+    SecRule REQUEST_METHOD "!@rx ^${method}$" "t:none"`
+        );
+      } else {
+        for (const p of params) {
+          const inf = inferAllowlist(safeDecode(p.val));
+          const varExpr = p.isJson
+            ? `ARGS:${p.rawName}|ARGS:${p.name}`
+            : `ARGS:${p.name}|ARGS:json.${p.name}`;
+          if (scopeRoute) {
+            rules.push(
+`# [${nextId}] Allowlist tham số '${p.rawName}' trên ${path} (${inf.desc})
+SecRule REQUEST_FILENAME "@rx (?i)^${rxPath}/?$" \\
+    "id:${nextId++},phase:2,${action},t:none,t:normalizePath,chain,msg:'Allowlist: Invalid ${p.rawName} on ${path}',tag:'allowlist',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"
+    SecRule ${varExpr} "!@rx ${inf.rx}" "t:none,t:urlDecodeUni,t:urlDecodeUni"`
+            );
+          } else {
+            rules.push(
+`# [${nextId}] Allowlist tham số '${p.rawName}' (${inf.desc})
+SecRule ${varExpr} "!@rx ${inf.rx}" \\
+    "id:${nextId++},phase:2,${action},t:none,t:urlDecodeUni,t:urlDecodeUni,msg:'Allowlist: Invalid ${p.rawName}',tag:'allowlist',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"`
+            );
+          }
+        }
+      }
+    }
+
+    outEl.textContent = rules.join('\n\n');
+  }
+
+  document.querySelectorAll('[data-sample]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      rawEl.value = SAMPLES[btn.getAttribute('data-sample')];
+      generate();
+    });
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', () => { rawEl.value = ''; generate(); });
+  [rawEl, genModeEl, actionEl, startIdEl, scopeRouteEl].forEach(el => {
+    el.addEventListener('input', generate);
+    el.addEventListener('change', generate);
+  });
+
+  document.getElementById('copyOut').addEventListener('click', (e) => {
+    const text = outEl.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(ta);
+    }
+    e.target.textContent = '✓ Đã copy';
+    setTimeout(() => { e.target.textContent = 'Copy Rule'; }, 1200);
+  });
+
+  // Load default sample
+  document.querySelector('[data-sample="bot_note"]').click();
+})();
+</script>
+</body>
+</html>

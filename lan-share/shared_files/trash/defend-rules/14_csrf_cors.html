@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: CSRF &amp; CORS Misconfiguration</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/14_csrf_cors.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-dịch-vụ-của-đội-lúc-thi-chạy-ở-ip-http10102058080">Ví dụ 1: Dịch vụ của đội lúc thi chạy ở IP http://10.10.20.5:8080</a></li>
+<li><a href="#ví-dụ-2-app-bị-csrf-qua-phương-thức-get-vd-get-apichange-emailemailattackerxcom">Ví dụ 2: App bị CSRF qua phương thức GET (vd GET /api/change-email?email=attacker@x.com)</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-csrf--cors-misconfiguration">Mẫu Luật Phòng Thủ: CSRF &amp; CORS Misconfiguration</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/csrf.html</code>, <code>attack/cors.html</code>, <code>attack/access.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> Không có rule chuẩn (cần cấu hình theo domain dịch vụ).</li>
+<li><strong>Dải Rule ID:</strong> <code>25400–25499</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Cao (kiểm tra <code>Origin</code> / <code>Sec-Fetch-Site</code> cho request đổi trạng thái và chặn <code>Origin: null</code> / origin lạ cho CORS).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li><strong>CSRF:</strong> Request <code>POST</code>/<code>PUT</code>/<code>DELETE</code>/<code>PATCH</code> gửi từ trang web khác (<code>Sec-Fetch-Site: cross-site</code>) hoặc mang <code>Origin</code> khác với <code>Host</code> của dịch vụ.</li>
+<li><strong>CORS Misconfiguration:</strong> Kẻ tấn công gửi <code>Origin: null</code> (qua sandboxed iframe), hoặc <code>Origin: https://evil.com</code>, hoặc <code>Origin: http://target.local.evil.com</code> để lợi dụng backend phản chiếu <code>Access-Control-Allow-Origin</code> kèm <code>Access-Control-Allow-Credentials: true</code>.</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [25401] Chặn Origin: null (kỹ thuật khai thác CORS qua sandboxed iframe)
+SecRule REQUEST_HEADERS:Origin &quot;@rx (?i)^null\z&quot; \
+    &quot;id:25401,phase:1,pass,log,t:none,msg:'CORS: Null Origin header rejected',tag:'cors',logdata:'Origin=%{MATCHED_VAR}'&quot;
+
+# [25402] Chặn request thay đổi trạng thái (POST/PUT/DELETE/PATCH) có Sec-Fetch-Site: cross-site
+SecRule REQUEST_METHOD &quot;@rx ^(?:POST|PUT|DELETE|PATCH)\z&quot; \
+    &quot;id:25402,phase:1,pass,log,t:none,chain,msg:'CSRF: Cross-site state-changing request',tag:'csrf',logdata:'Sec-Fetch-Site=%{REQUEST_HEADERS.Sec-Fetch-Site}'&quot;
+    SecRule REQUEST_HEADERS:Sec-Fetch-Site &quot;@streq cross-site&quot; &quot;t:none&quot;
+
+# [25403] Chặn Origin lạ khác domain/IP dịch vụ (thay teamXX\.fhacker\.local hoặc IP thật của đội)
+SecRule REQUEST_HEADERS:Origin &quot;@rx ^.+&quot; \
+    &quot;id:25403,phase:1,pass,log,t:none,chain,msg:'CSRF/CORS: Untrusted Origin header',tag:'cors',logdata:'Origin=%{REQUEST_HEADERS.Origin}'&quot;
+    SecRule REQUEST_HEADERS:Origin &quot;!@rx (?i)^https?://(?:localhost|127\.0\.0\.1|team\d+\.fhacker\.local)(?::\d{1,5})?\z&quot; &quot;t:none&quot;
+
+# [25404] Phase 3: Phát hiện backend phản chiếu Access-Control-Allow-Origin: * kèm Credentials: true
+SecRule RESPONSE_HEADERS:Access-Control-Allow-Credentials &quot;@rx (?i)^true\z&quot; \
+    &quot;id:25404,phase:3,pass,log,t:none,chain,msg:'CORS: Response allows credentials with suspicious ACAO',tag:'cors',logdata:'ACAO=%{RESPONSE_HEADERS.Access-Control-Allow-Origin}'&quot;
+    SecRule RESPONSE_HEADERS:Access-Control-Allow-Origin &quot;@rx (?i)^(?:\*|null)\z&quot; &quot;t:none&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>25401</code></td>
+<td><code>REQUEST_HEADERS:Origin</code></td>
+<td>Chặn <code>Origin: null</code> — kỹ thuật kinh điển dùng <code>&lt;iframe sandbox&gt;</code> để khai thác CORS khi backend cho phép <code>null</code>.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25402</code></td>
+<td><code>REQUEST_METHOD</code> + <code>REQUEST_HEADERS:Sec-Fetch-Site</code></td>
+<td>Chặn mọi request đổi trạng thái (<code>POST</code>/<code>PUT</code>/<code>DELETE</code>/<code>PATCH</code>) bị trình duyệt đánh dấu là <code>cross-site</code> (chặn thẳng CSRF từ trang độc hại).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25403</code></td>
+<td><code>REQUEST_HEADERS:Origin</code></td>
+<td>Nếu request có mang header <code>Origin</code>, bắt buộc <code>Origin</code> phải trùng đúng domain/IP dịch vụ của đội; mọi origin lạ (<code>evil.com</code>, <code>team01.fhacker.local.evil.com</code>) bị chặn.</td>
+<td>Cao (cần điền đúng domain/IP thật)</td>
+</tr>
+<tr>
+<td><code>25404</code></td>
+<td><code>RESPONSE_HEADERS:Access-Control-Allow-Credentials</code> + <code>Access-Control-Allow-Origin</code> (Phase 3)</td>
+<td>Phát hiện cấu hình CORS nguy hiểm ở backend khi vừa bật <code>Credentials: true</code> vừa trả <code>ACAO: *</code> hoặc <code>null</code>.</td>
+<td>Nên để <code>pass,log</code> để cảnh báo</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-dịch-vụ-của-đội-lúc-thi-chạy-ở-ip-http10102058080">Ví dụ 1: Dịch vụ của đội lúc thi chạy ở IP <code>http://10.10.20.5:8080</code></h3>
+<p>Khi mở <code>Traffic log</code>, thấy trình duyệt/frontend gửi <code>Origin: http://10.10.20.5:8080</code>.
+- <strong>Cách sửa <code>25403</code>:</strong> Thay <code>team\d+\.fhacker\.local</code> bằng đúng IP <code>10\.10\.20\.5</code> (nhớ escape dấu chấm <code>\.</code> và cho phép cổng <code>:8080</code>):</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [25403] cho IP dịch vụ 10.10.20.5:8080
+SecRule REQUEST_HEADERS:Origin &quot;@rx ^.+&quot; \
+    &quot;id:25403,phase:1,deny,status:403,log,t:none,chain,msg:'CSRF/CORS: Untrusted Origin',tag:'cors',logdata:'Origin=%{REQUEST_HEADERS.Origin}'&quot;
+    SecRule REQUEST_HEADERS:Origin &quot;!@rx (?i)^https?://(?:10\.10\.20\.5|localhost|127\.0\.0\.1)(?::\d{1,5})?\z&quot; &quot;t:none&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-bị-csrf-qua-phương-thức-get-vd-get-apichange-emailemailattackerxcom">Ví dụ 2: App bị CSRF qua phương thức <code>GET</code> (vd <code>GET /api/change-email?email=attacker@x.com</code>)</h3>
+<p>Rule <code>25402</code> mặc định chỉ kiểm tra <code>POST|PUT|DELETE|PATCH</code>. Nếu gặp chức năng nhạy cảm dùng <code>GET</code>, thêm 1 rule riêng cho route đó chặn <code>Sec-Fetch-Site: cross-site</code> hoặc yêu cầu <code>Referer</code> thuộc đúng domain của đội.</p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li>Bot chấm SVC chạy bằng Python/curl thường <strong>không gửi</strong> <code>Origin</code> hay <code>Sec-Fetch-Site</code>, nên <code>25401</code>–<code>25403</code> hoàn toàn không làm ảnh hưởng đến bot.</li>
+<li>Trước khi chuyển <code>25403</code> sang <code>deny</code>, bắt buộc kiểm tra đúng <code>Host</code> / domain trong <code>Traffic log</code> và cập nhật regex allowlist trong <code>25403</code> cho khớp 100%.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

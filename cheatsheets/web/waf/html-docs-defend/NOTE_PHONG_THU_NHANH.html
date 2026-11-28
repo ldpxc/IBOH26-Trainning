@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOTE PHÒNG THỦ NHANH — F-HACKER 2026 (BẢNG C)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="index.html">⌂ Trang chủ</a>
+    <span class="doc-path">NOTE_PHONG_THU_NHANH.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-quy-trình-3-phút-đầu-trận-làm-đúng-thứ-tự">1. Quy trình 3 phút đầu trận (Làm đúng thứ tự)</a></li>
+<li><a href="#2-chọn-đúng-config-type-trên-waf-ui">2. Chọn đúng Config Type trên WAF UI</a></li>
+<li><a href="#3-cứu-hỏa--gỡ-false-positive-crs-9xxxxx-trong-30-giây">3. Cứu hỏa &amp; Gỡ False Positive CRS (9xxxxx) trong 30 giây</a></li>
+<li><a href="#4-lọc-nhanh-trên-traffic-log">4. Lọc nhanh trên Traffic log</a></li>
+<li><a href="#5-bản-đồ-dải-rule-id-0-trùng-lặp">5. Bản đồ dải Rule ID (0 trùng lặp)</a></li>
+<li><a href="#6-6-bẫy-modsecurity-v3-tuyệt-đối-tránh">6. 6 bẫy ModSecurity v3 tuyệt đối tránh</a></li>
+<li><a href="#7-liên-kết-nhanh-các-file-hay-mở-lúc-thi">7. Liên kết nhanh các file hay mở lúc thi</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="note-phòng-thủ-nhanh--f-hacker-2026-bảng-c">NOTE PHÒNG THỦ NHANH — F-HACKER 2026 (BẢNG C)</h1>
+<blockquote>
+<p><strong>Tờ ghi chú 1 trang mở sẵn trong phòng thi</strong> — tổng hợp quy trình đầu trận, thứ tự nạp rule, gỡ FP CRS, xóa header lộ cờ, dải Rule ID và cấp cứu SVC.</p>
+</blockquote>
+<hr />
+<h2 id="1-quy-trình-3-phút-đầu-trận-làm-đúng-thứ-tự">1. Quy trình 3 phút đầu trận (Làm đúng thứ tự)</h2>
+<ol>
+<li><strong>Giữ <code>DetectionOnly</code></strong>, mở <strong>Traffic log → bật <code>Live 5s</code></strong>.</li>
+<li><strong>Nạp ngay 6 file an toàn (Nhóm 1)</strong> từ <a href="2026-waf-practice/rules/README.html">rules/</a> (<code>Service: Global</code>, <code>Config Type: MODSEC</code>):
+   - <code>00_disable_fp_crs.conf</code> <em>(nạp đầu tiên — tắt <code>920350</code> Host IP &amp; gỡ FP cookie/JWT)</em>
+   - <code>01_200xx_recon.conf</code>, <code>06_205xx_ssrf.conf</code>, <code>07_206xx_xxe.conf</code>, <code>08_207xx_deserialization.conf</code>, <code>09_208xx_crlf_jwt_jndi_proto.conf</code>
+   - Thêm <code>21200</code> + <code>21202</code> (<code>pass,log</code>) trong <code>12_212xx_flag_data_leak.conf</code> <em>(tạm comment <code>21201</code>)</em>.</li>
+<li><strong>Nhận diện Bot SVC (quan sát 2 chu kỳ = 60 giây):</strong>
+   - Nhịp đều <strong>~30 giây/lần</strong>, cùng thứ tự endpoint, cùng <code>User-Agent</code>, cột <code>WAF</code> sạch (<code>—</code>), trả <code>200</code>/<code>302</code>.
+   - Gõ <code>"FHACKER2026{"</code> vào ô tìm kiếm <strong>Traffic log</strong> → ghi lại <strong>route trả cờ hợp lệ</strong> của bot.
+   - Ghi lại danh sách <strong>route + tên param + định dạng sạch</strong> (số/UUID/chuỗi) của bot.</li>
+<li><strong>Sửa route &amp; nạp Nhóm 2</strong> (<code>02_201xx</code>, <code>03_202xx</code>, <code>04_203xx</code>, <code>05_204xx</code>, mở lại <code>21201</code> sau khi điền đúng route cờ hợp lệ).</li>
+<li><strong>Bật chặn:</strong> Vào <strong>Home → <code>Bật chặn</code></strong> (hoặc <strong>Global Settings → ModSecurity → <code>SecRuleEngine = On</code> → Save</strong>).</li>
+<li><strong>Mốc Round 4 (Mở Level 2 — thêm cờ mới):</strong> Tạm đổi <code>21201</code> về <code>pass,log</code> trong 2 phút, xem route mới của bot rồi cập nhật lại <code>!@rx</code> trước khi bật <code>deny</code>.</li>
+</ol>
+<hr />
+<h2 id="2-chọn-đúng-config-type-trên-waf-ui">2. Chọn đúng <code>Config Type</code> trên WAF UI</h2>
+<table>
+<thead>
+<tr>
+<th>Config Type</th>
+<th>Thứ tự nạp</th>
+<th>Dùng để làm gì?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>MODSEC_CRS</code></strong></td>
+<td><strong>TRƯỚC</strong> OWASP CRS</td>
+<td>Gỡ FP CRS theo đúng route bằng <code>ctl:ruleRemoveTargetById=...</code> (<code>22000–22099</code>)</td>
+</tr>
+<tr>
+<td><strong><code>MODSEC</code></strong></td>
+<td><strong>SAU</strong> OWASP CRS</td>
+<td><strong>Dùng chính:</strong> toàn bộ rule đội + <code>SecRuleRemoveById</code> + <code>SecRuleUpdateTargetById</code></td>
+</tr>
+<tr>
+<td><strong><code>SERVER_HTTP</code></strong></td>
+<td>Cấu hình NGINX</td>
+<td>Xóa Response Header lộ cờ mà vẫn giữ app chạy bình thường (<code>proxy_hide_header X-Theme-Debug;</code>)</td>
+</tr>
+<tr>
+<td><code>CRS_PLUGINS_*</code></td>
+<td><strong>KHÔNG DÙNG</strong></td>
+<td>Đã bị BTC khóa tắt — dán vào đây rule không chạy</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-cứu-hỏa--gỡ-false-positive-crs-9xxxxx-trong-30-giây">3. Cứu hỏa &amp; Gỡ False Positive CRS (<code>9xxxxx</code>) trong 30 giây</h2>
+<ul>
+<li><strong>Cấp cứu 10 giây khi SVC báo đỏ hàng loạt:</strong></li>
+<li>Nếu vừa sửa 1 rule → tắt/chuyển rule đó về <code>pass,log</code> → <strong>Save</strong>.</li>
+<li>Nếu CRS chặn nhầm chưa rõ rule nào → chuyển tạm <code>SecRuleEngine</code> về <strong><code>DetectionOnly</code></strong> → <strong>Save</strong> → điều tra <code>status:403</code> trên <code>Traffic log</code> rồi bật lại <strong><code>On</code></strong>.</li>
+<li><strong>Gỡ FP CRS (bỏ qua <code>949110</code>, lấy ID rule ngay phía trên nó):</strong>
+  ```apache
+  # Cách 1 — Hẹp nhất: gỡ đúng 1 field trên 1 route (đặt ở Config Type: MODSEC_CRS)
+  SecRule REQUEST_FILENAME "@rx (?i)^/api/notes/?$" \
+      "id:22000,phase:1,pass,nolog,t:none,t:normalizePath,\
+      ctl:ruleRemoveTargetById=942100;ARGS:content,\
+      ctl:ruleRemoveTargetById=942100;ARGS:json.content"</li>
+</ul>
+<p># Cách 2 — Gỡ 1 cookie/header trên toàn site (đặt ở Config Type: MODSEC)
+  SecRuleUpdateTargetById 942440 "!REQUEST_COOKIES:session"</p>
+<p># Cách 3 — Tắt hẳn 1 rule CRS hay báo nhầm (đặt ở Config Type: MODSEC)
+  SecRuleRemoveById 920350
+  <code>``
+- **Xóa Header Debug lộ Flag nhưng giữ nguyên chức năng (</code>302<code>/cookie):**
+  - Tạo config **</code>Config Type: SERVER_HTTP<code>** → dán:</code>proxy_hide_header X-Theme-Debug;<code>→ **Save** → test</code>curl -i`.</p>
+<hr />
+<h2 id="4-lọc-nhanh-trên-traffic-log">4. Lọc nhanh trên <code>Traffic log</code></h2>
+<table>
+<thead>
+<tr>
+<th>Gõ vào ô tìm kiếm</th>
+<th>Tác dụng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modsec.id:</code></td>
+<td>Hiện mọi request khớp rule ModSecurity</td>
+</tr>
+<tr>
+<td><code>status:403</code> / <code>status:5xx</code></td>
+<td>Tìm request bị chặn hoặc bị cắt response/crash</td>
+</tr>
+<tr>
+<td><code>"FHACKER2026{"</code></td>
+<td>Truy vết ngay mọi chỗ đang rò Flag</td>
+</tr>
+<tr>
+<td><code>modsec.tag:sqli</code></td>
+<td>Lọc theo tag (<code>sqli</code>, <code>xss</code>, <code>lfi</code>, <code>ssrf</code>, <code>flag-leak</code>...)</td>
+</tr>
+<tr>
+<td><code>method:POST uri:"/login.php"</code></td>
+<td>Lọc đúng method và endpoint</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-bản-đồ-dải-rule-id-0-trùng-lặp">5. Bản đồ dải Rule ID (0 trùng lặp)</h2>
+<table>
+<thead>
+<tr>
+<th>Dải ID</th>
+<th>File / Mục đích</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>10000–10099</code></td>
+<td>File mẫu BTC (<code>mau-rule-phong-thu</code>) — không đụng</td>
+</tr>
+<tr>
+<td><code>20001–22000</code></td>
+<td><a href="2026-waf-practice/team-rules.conf.html">team-rules.conf</a> &amp; 14 file trong <a href="2026-waf-practice/rules/README.html">rules/</a></td>
+</tr>
+<tr>
+<td><code>22000–22099</code></td>
+<td>Gỡ FP CRS (<code>MODSEC_CRS</code>)</td>
+</tr>
+<tr>
+<td><code>24100–26299</code></td>
+<td>22 file mẫu luật riêng theo từng lỗ hổng trong <a href="defense_rules/README.html">defense_rules/</a></td>
+</tr>
+<tr>
+<td><code>27001–27008</code></td>
+<td>8 rule gọn trong <a href="waf_tester_rules.conf.html">waf_tester_rules.conf</a></td>
+</tr>
+<tr>
+<td><code>27101–27107</code></td>
+<td>5 Khuôn vá nhanh + 2 Guard trong <a href="FHACKER2026_5_Khuon_Va_Nhanh_CopySafe.html">FHACKER2026_5_Khuon_Va_Nhanh_CopySafe.md</a></td>
+</tr>
+<tr>
+<td><strong><code>27200–29999</code></strong></td>
+<td><strong>Dải TRỐNG dự phòng</strong> để viết vá nóng theo từng round</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-6-bẫy-modsecurity-v3-tuyệt-đối-tránh">6. 6 bẫy ModSecurity v3 tuyệt đối tránh</h2>
+<ol>
+<li><strong>JSON có tiền tố <code>json.</code>:</strong> Luôn viết <code>ARGS:id|ARGS:json.id</code> (mảng là <code>json.id.array_0</code>).</li>
+<li><strong>Không dùng <code>|</code> trong regex tên biến:</strong> Viết <code>ARGS:a|ARGS:b</code>, cấm viết <code>ARGS:/a|b/</code>.</li>
+<li><strong>Không có <code>#</code> hoặc khoảng trắng sau dấu <code>\</code> nối dòng.</strong></li>
+<li><strong>Dòng con của <code>chain</code> KHÔNG được có <code>id:</code>, <code>phase:</code>, <code>deny</code>, <code>msg:</code>.</strong></li>
+<li><strong>Thứ tự transform chuẩn:</strong> <code>t:none,t:urlDecodeUni,t:normalizePath</code> (decode trước, normalize sau; <strong>không</strong> dùng <code>t:normalizePath</code> cho rule tìm <code>../</code> trên <code>ARGS</code>).</li>
+<li><strong>Không bật tính năng chặn/rate-limit theo IP</strong> (vì bot SVC và đối thủ đi chung 1 IP proxy của BTC) và <strong>không bật <code>SecTmpSaveUploadedFiles On</code></strong>.</li>
+</ol>
+<hr />
+<h2 id="7-liên-kết-nhanh-các-file-hay-mở-lúc-thi">7. Liên kết nhanh các file hay mở lúc thi</h2>
+<ul>
+<li>Bộ rule tách nhỏ theo mảng: <a href="2026-waf-practice/rules/README.html">rules/README.md</a></li>
+<li>5 khuôn vá nóng trong 30 giây: <a href="FHACKER2026_5_Khuon_Va_Nhanh_CopySafe.html">FHACKER2026_5_Khuon_Va_Nhanh_CopySafe.md</a></li>
+<li>Kho 63 Regex Copy-Safe: <a href="FHACKER2026_Regex_CopySafe.html">FHACKER2026_Regex_CopySafe.md</a></li>
+<li>22 file mẫu luật chi tiết + ví dụ sửa thực tế: <a href="defense_rules/README.html">defense_rules/README.md</a></li>
+<li>Kiểm tra trùng ID nhanh: <code>grep -oE 'id:[0-9]+' &lt;file.conf&gt; | sort | uniq -d</code></li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

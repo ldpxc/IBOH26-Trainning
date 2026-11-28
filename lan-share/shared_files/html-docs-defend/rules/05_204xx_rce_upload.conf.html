@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05_204xx_rce_upload.conf</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">2026-waf-practice/rules/05_204xx_rce_upload.conf</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Điều hướng</div><div class="toc"><ul><li><a href="../../index.html">← Về trang chủ</a></li></ul></div></aside>
+  <main class="content">
+    <h1>05_204xx_rce_upload.conf</h1><p>File rule ModSecurity (bấm nút <strong>Copy</strong> ở góc phải để dán thẳng lên WAF UI):</p><pre><code class="language-apache"># Config Type trên WAF UI: MODSEC (Service: Global)
+# ═════════════ 204xx — RCE / COMMAND INJECTION / UPLOAD ════════════════
+# Allowlist host/IP cho endpoint ping. Sửa route cho đúng app.
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/ping/?$&quot; \
+    &quot;id:20400,phase:2,deny,status:403,log,t:none,t:normalizePath,chain,msg:&#x27;Invalid ping host&#x27;,tag:&#x27;rce&#x27;,logdata:&#x27;host=%{MATCHED_VAR}&#x27;&quot;
+    SecRule ARGS:host|ARGS:ip|ARGS:target|ARGS:domain|ARGS:json.host|ARGS:json.ip|ARGS:json.target|ARGS:json.domain &quot;!@rx ^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$|^(?:\d{1,3}\.){3}\d{1,3}$&quot; &quot;t:none&quot;
+
+# Shell metacharacter trong tham số nghi chạy lệnh (form + JSON).
+SecRule ARGS:cmd|ARGS:command|ARGS:exec|ARGS:ping|ARGS:host|ARGS:ip|ARGS:domain|ARGS:target|ARGS:filename|ARGS:json.cmd|ARGS:json.command|ARGS:json.exec|ARGS:json.ping|ARGS:json.host|ARGS:json.ip|ARGS:json.domain|ARGS:json.target|ARGS:json.filename \
+    &quot;@rx [;&amp;|`\r\n&lt;&gt;]|\$\(|\$\{|\|\||&amp;&amp;|\x00&quot; \
+    &quot;id:20401,phase:2,deny,status:403,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:&#x27;Shell metacharacter injection&#x27;,tag:&#x27;rce&#x27;,logdata:&#x27;%{MATCHED_VAR_NAME}=%{MATCHED_VAR}&#x27;&quot;
+
+# Hàm thực thi mã phổ biến. Có thể false positive trên ô &quot;code&quot;; giới hạn route nếu cần.
+SecRule ARGS:cmd|ARGS:code|ARGS:exec|ARGS:eval|ARGS:template|ARGS:expr|ARGS:formula|ARGS:content|ARGS:json.cmd|ARGS:json.code|ARGS:json.exec|ARGS:json.eval|ARGS:json.template|ARGS:json.expr|ARGS:json.formula|ARGS:json.content \
+    &quot;@rx (?i)(?:\b(?:system|exec|shell_exec|passthru|popen|proc_open|pcntl_exec)\s*\(|\b(?:eval|assert|create_function)\s*\(|\b(?:include|require)(?:_once)?\s*\(|\b(?:base64_decode|gzinflate|str_rot13|convert_uudecode)\s*\(|java\.lang\.(?:Runtime|ProcessBuilder)|getRuntime\s*\(\s*\)\s*\.\s*exec|ProcessBuilder\s*\(|jndi\s*:\s*(?:ldap|rmi|dns|iiop)|InitialContext|lookup\s*\(\s*[\x22\x27](?:ldap|rmi)://)&quot; \
+    &quot;id:20402,phase:2,deny,status:403,log,t:none,t:urlDecodeUni,t:urlDecodeUni,t:lowercase,msg:&#x27;Code execution pattern&#x27;,tag:&#x27;rce&#x27;,logdata:&#x27;%{MATCHED_VAR_NAME}=%{MATCHED_VAR}&#x27;&quot;
+
+# Backtick command substitution ở BẤT KỲ tham số nào (kể cả ?x=`id`).
+# Nếu app có ô markdown dùng `code`, hãy đổi ARGS thành danh sách tham số hẹp.
+SecRule ARGS &quot;@rx `[^`]{1,200}`&quot; \
+    &quot;id:20403,phase:2,deny,status:403,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:&#x27;Backtick command substitution&#x27;,tag:&#x27;rce&#x27;,logdata:&#x27;%{MATCHED_VAR_NAME}=%{MATCHED_VAR}&#x27;&quot;
+
+# Command substitution $(...) ở bất kỳ tham số nào.
+SecRule ARGS &quot;@rx \$\([^)]{1,200}\)&quot; \
+    &quot;id:20404,phase:2,deny,status:403,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:&#x27;Command substitution $()&#x27;,tag:&#x27;rce&#x27;,logdata:&#x27;%{MATCHED_VAR_NAME}=%{MATCHED_VAR}&#x27;&quot;
+
+# Upload: allowlist đuôi file. FILES = tên file gốc (KHÔNG phải FILES_NAMES).
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/(?:api/)?upload(?:/|$)&quot; \
+    &quot;id:20410,phase:2,deny,status:403,log,t:none,t:normalizePath,chain,msg:&#x27;Disallowed upload extension&#x27;,tag:&#x27;upload&#x27;,logdata:&#x27;%{FILES}&#x27;&quot;
+    SecRule FILES &quot;!@rx ^[A-Za-z0-9._-]{1,100}\.(?:jpg|jpeg|png|gif|webp|pdf|txt|csv)$&quot; &quot;t:none,t:lowercase&quot;
+
+# Upload: double extension (shell.php.jpg).
+SecRule FILES &quot;@rx (?i)\.(?:php\d?|phtml|phar|jsp|jspx|asp|aspx|ashx|asmx|cgi|pl|py|sh|exe|dll|so)\.(?:[A-Za-z0-9]{1,8})$&quot; \
+    &quot;id:20411,phase:2,deny,status:403,log,t:none,t:lowercase,msg:&#x27;Double extension upload&#x27;,tag:&#x27;upload&#x27;,logdata:&#x27;%{FILES}&#x27;&quot;
+
+# Upload: path traversal / null byte / .htaccess / web.config trong tên file.
+SecRule FILES &quot;@rx (?i)(?:[/\x5c]|\.\.|%00|\x00|(?:^|/)\.htaccess$|(?:^|/)web\.config$|\.\s*$)&quot; \
+    &quot;id:20412,phase:2,deny,status:403,log,t:none,t:urlDecodeUni,msg:&#x27;Malicious upload filename&#x27;,tag:&#x27;upload&#x27;,logdata:&#x27;%{FILES}&#x27;&quot;
+
+# Webshell content — cách BỀN nhất trên BunkerWeb: soi REQUEST_BODY của multipart.
+# REQUEST_BODY chứa cả phần nội dung file (đã kiểm chứng trên image BTC), không cần
+# bật SecUploadKeepFiles/SecTmpSaveUploadedFiles. Chỉ áp dụng cho route upload.
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/(?:api/)?upload(?:/|$)&quot; \
+    &quot;id:20414,phase:2,deny,status:403,log,t:none,t:normalizePath,chain,msg:&#x27;Webshell content in upload body&#x27;,tag:&#x27;upload&#x27;,logdata:&#x27;%{REQUEST_URI}&#x27;&quot;
+    SecRule REQUEST_BODY &quot;@rx (?i)(&lt;\?php|&lt;\?=|&lt;%|&lt;jsp|Runtime\.getRuntime|ProcessBuilder|cmd\.exe|powershell|/bin/(?:ba)?sh|GIF89a&lt;\?php)&quot; &quot;t:none&quot;
+
+# Webshell content trong BẤT KỲ multipart upload (không phụ thuộc route cụ thể).
+# Chỉ soi khi Content-Type là multipart/form-data nên không ảnh hưởng JSON/form thường.
+SecRule REQUEST_HEADERS:Content-Type &quot;@rx (?i)^multipart/form-data&quot; \
+    &quot;id:20415,phase:2,deny,status:403,log,t:none,chain,msg:&#x27;Webshell content in multipart body&#x27;,tag:&#x27;upload&#x27;,logdata:&#x27;%{REQUEST_URI}&#x27;&quot;
+    SecRule REQUEST_BODY &quot;@rx (?i)(&lt;\?php|&lt;\?=|&lt;%|&lt;jsp|Runtime\.getRuntime|ProcessBuilder|cmd\.exe|powershell|/bin/(?:ba)?sh|GIF89a&lt;\?php)&quot; &quot;t:none&quot;
+
+# (Tùy chọn) FILES_TMP_CONTENT chỉ có dữ liệu khi bật SecUploadKeepFiles On +
+# SecUploadDir (hoặc SecTmpSaveUploadedFiles On). Trên BunkerWeb, bật
+# SecTmpSaveUploadedFiles On có thể làm multipart trả 400 nếu SecTmpDir không
+# ghi được — vì vậy rule 20414 ở trên an toàn hơn cho môi trường thi.
+SecRule FILES_TMP_CONTENT \
+    &quot;@rx (?i)(&lt;\?php|&lt;\?=|&lt;%|&lt;jsp|Runtime\.getRuntime|ProcessBuilder|cmd\.exe|powershell|/bin/(?:ba)?sh|GIF89a&lt;\?php)&quot; \
+    &quot;id:20413,phase:2,deny,status:403,log,t:none,msg:&#x27;Webshell content (FILES_TMP_CONTENT)&#x27;,tag:&#x27;upload&#x27;,logdata:&#x27;%{FILES}&#x27;&quot;
+</code></pre>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

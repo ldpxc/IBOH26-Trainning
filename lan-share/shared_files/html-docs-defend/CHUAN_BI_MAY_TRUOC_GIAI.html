@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chuẩn bị máy trước ngày thi</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="index.html">⌂ Trang chủ</a>
+    <span class="doc-path">CHUAN_BI_MAY_TRUOC_GIAI.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-phần-mềm-hệ-thống">1. Phần mềm hệ thống</a></li>
+<li><a href="#2-tạo-venv-python-tên-venv_fhacker26--alias-kích-hoạt-nhanh">2. Tạo venv Python tên venv_fhacker26 + alias kích hoạt nhanh</a></li>
+<li><a href="#3-cài-thư-viện-python-đang-trong-venv-đã-spwn">3. Cài thư viện Python (đang trong venv, đã spwn)</a></li>
+<li><a href="#4-clone-toàn-bộ-tool-vào-hocctftoolsweb">4. Clone toàn bộ tool vào ~/hoc/CTF/Tools/web/</a></li>
+<li><a href="#5-build--cài-thêm-cho-từng-tool-sau-khi-clone-xong">5. Build / cài thêm cho từng tool (sau khi clone xong)</a></li>
+<li><a href="#6-cyberchef-không-phải-git-repo--tải-file-html-đơn-dùng-offline-không-cần-server">6. CyberChef (không phải git repo — tải file HTML đơn, dùng offline không cần server)</a></li>
+<li><a href="#7-kiểm-tra-lại-mọi-thứ-đã-sẵn-sàng-chạy-hết-không-lỗi-là-xong">7. Kiểm tra lại mọi thứ đã sẵn sàng (chạy hết không lỗi là xong)</a></li>
+<li><a href="#8-clone-chính-repo-cheatsheet-này">8. Clone chính repo cheatsheet này</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="chuẩn-bị-máy-trước-ngày-thi">Chuẩn bị máy trước ngày thi</h1>
+<p>--</p>
+<h2 id="1-phần-mềm-hệ-thống">1. Phần mềm hệ thống</h2>
+<table>
+<thead>
+<tr>
+<th>Gói</th>
+<th>Dùng cho</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python3</code>, <code>python3-venv</code>, <code>python3-pip</code></td>
+<td>Chạy toàn bộ script trong cheatsheet</td>
+</tr>
+<tr>
+<td><code>git</code></td>
+<td>Clone tool + clone chính repo cheatsheet này</td>
+</tr>
+<tr>
+<td><code>perl</code></td>
+<td>Chạy <code>PadBuster</code></td>
+</tr>
+<tr>
+<td><code>php-cli</code></td>
+<td>Chạy <code>phpggc</code>, test chuỗi filter của <code>php_filter_chain_generator</code></td>
+</tr>
+<tr>
+<td><code>gcc</code>, <code>make</code></td>
+<td>Build <code>hash_extender</code></td>
+</tr>
+<tr>
+<td><code>maven</code></td>
+<td>Build <code>ysoserial</code> từ source</td>
+</tr>
+<tr>
+<td><code>openjdk-11-jdk</code></td>
+<td><strong>Bắt buộc</strong> để chạy <code>ysoserial</code> đúng — JDK 21 mặc định sẽ báo lỗi <code>InaccessibleObjectException</code></td>
+</tr>
+<tr>
+<td><code>openjdk-21-jdk</code></td>
+<td>Dùng cho mọi việc Java khác bình thường (giữ cả 2 bản JDK, không gỡ bản nào)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Burp Suite</strong>: cài riêng (Community hoặc Pro) từ https://portswigger.net/burp — không có trong <code>apt</code>.</p>
+<hr />
+<h2 id="2-tạo-venv-python-tên-venv_fhacker26--alias-kích-hoạt-nhanh">2. Tạo venv Python tên <code>venv_fhacker26</code> + alias kích hoạt nhanh</h2>
+<p>Venv đặt <strong>ngay trong thư mục chứa tool</strong> (<code>~/hoc/CTF/Tools/web/</code>, cùng cấp với <code>commix/</code>, <code>tplmap/</code>...) — gọn, chỉ cần nhớ 1 thư mục duy nhất cho mọi thứ của giải này.</p>
+<p>Đường dẫn <code>~/hoc/CTF/Tools/web/</code> chỉ là ví dụ mẫu, <strong>đặt ở đâu bạn muốn cũng được</strong> — chỉ cần:
+- Venv và các tool clone ở Bước 4 nằm <strong>chung 1 thư mục gốc</strong>.
+- Nếu đổi sang thư mục khác, nhớ đổi lại đúng đường dẫn đó ở <strong>mọi lệnh còn lại</strong> trong file này (Bước 4 trở xuống đều viết sẵn theo <code>~/hoc/CTF/Tools/web/</code>).</p>
+<pre><code class="language-bash">mkdir -p ~/hoc/CTF/Tools/web
+python3 -m venv ~/hoc/CTF/Tools/web/venv_fhacker26
+echo 'alias spwn=&quot;source ~/hoc/CTF/Tools/web/venv_fhacker26/bin/activate&quot;' &gt;&gt; ~/.bashrc   # dùng ~/.zshrc nếu máy chạy zsh
+source ~/.bashrc
+spwn
+</code></pre>
+<p>Từ giờ, mỗi khi mở terminal mới cần chạy script/tool Python trong cheatsheet, gõ <code>spwn</code> trước (tên alias giữ nguyên <code>spwn</code> cho ngắn, dù venv tên <code>venv_fhacker26</code> — alias chỉ là phím tắt, không cần trùng tên venv).</p>
+<hr />
+<h2 id="3-cài-thư-viện-python-đang-trong-venv-đã-spwn">3. Cài thư viện Python (đang trong venv, đã <code>spwn</code>)</h2>
+<p>Sau khi đã <code>git clone</code> repo cheatsheet này (bước 8), chạy đúng 1 lệnh ở gốc <code>guide_script/</code>:</p>
+<pre><code class="language-bash">pip install -r requirements.txt
+</code></pre>
+<p>Nếu chưa clone repo kịp, cài tay tương đương:</p>
+<pre><code class="language-bash">pip install requests beautifulsoup4 lxml PyYAML tenacity pyjwt flask flask-unsign websocket-client pycryptodome
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Thư viện</th>
+<th>Dùng cho</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>requests</code></td>
+<td>Toàn bộ script gửi HTTP — thư viện quan trọng nhất</td>
+</tr>
+<tr>
+<td><code>beautifulsoup4</code>, <code>lxml</code></td>
+<td>Đọc/trích dữ liệu từ HTML (lấy CSRF token...)</td>
+</tr>
+<tr>
+<td><code>PyYAML</code></td>
+<td>Đọc file cấu hình dạng YAML nếu cần</td>
+</tr>
+<tr>
+<td><code>pyjwt</code></td>
+<td>Bài <code>JWT_Attacks.md</code>, <code>02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md</code></td>
+</tr>
+<tr>
+<td><code>flask</code>, <code>flask-unsign</code></td>
+<td>Bài <code>Session_Cookie_Forge.md</code></td>
+</tr>
+<tr>
+<td><code>websocket-client</code></td>
+<td>Bài <code>03_Thao_Tac_Nang_Cao/04_WebSocket.md</code></td>
+</tr>
+<tr>
+<td><code>pycryptodome</code></td>
+<td>Các bài crypto cần tự mã hoá/giải mã (padding oracle, hash length extension)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-clone-toàn-bộ-tool-vào-hocctftoolsweb">4. Clone toàn bộ tool vào <code>~/hoc/CTF/Tools/web/</code></h2>
+<pre><code class="language-bash">cd ~/hoc/CTF/Tools/web
+
+git clone --depth 1 https://github.com/commixproject/commix.git commix
+git clone --depth 1 https://github.com/epinna/tplmap.git tplmap
+git clone --depth 1 https://github.com/defparam/smuggler.git smuggler
+git clone --depth 1 https://github.com/dolevf/graphql-cop.git graphql-cop
+git clone --depth 1 https://github.com/nikitastupin/clairvoyance.git clairvoyance
+git clone --depth 1 https://github.com/s0md3v/XSStrike.git XSStrike
+git clone --depth 1 https://github.com/synacktiv/php_filter_chain_generator.git php_filter_chain_generator
+git clone --depth 1 https://github.com/arthaud/git-dumper.git git-dumper
+git clone --depth 1 https://github.com/internetwache/GitTools.git GitTools
+git clone --depth 1 https://github.com/iagox86/hash_extender.git hash_extender
+git clone --depth 1 https://github.com/AonCyberLabs/PadBuster.git padbuster
+git clone --depth 1 https://github.com/ticarpi/jwt_tool.git jwt_tool
+git clone --depth 1 https://github.com/ambionics/phpggc.git phpggc
+git clone https://github.com/frohoff/ysoserial.git ysoserial
+git clone --depth 1 https://github.com/tarunkant/Gopherus.git Gopherus
+git clone --depth 1 https://github.com/swisskyrepo/PayloadsAllTheThings.git PayloadsAllTheThings
+git clone --depth 1 https://github.com/danielmiessler/SecLists.git SecLists
+git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git exploitdb
+</code></pre>
+<blockquote>
+<p><code>SecLists</code> và <code>PayloadsAllTheThings</code> khá nặng (vài trăm MB) — clone sớm, kiểm tra còn đủ dung lượng đĩa.
+<code>ysoserial</code> clone KHÔNG dùng <code>--depth 1</code> vì bước build cần đầy đủ (dùng maven).</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Dùng ở bài</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>commix</code></td>
+<td><code>Command_Injection.md</code></td>
+</tr>
+<tr>
+<td><code>tplmap</code></td>
+<td><code>SSTI.md</code></td>
+</tr>
+<tr>
+<td><code>smuggler</code></td>
+<td><code>HTTP_Request_Smuggling.md</code></td>
+</tr>
+<tr>
+<td><code>graphql-cop</code>, <code>clairvoyance</code></td>
+<td><code>GraphQL.md</code></td>
+</tr>
+<tr>
+<td><code>XSStrike</code></td>
+<td><code>XSS_CSRF.md</code>, <code>XSS_Filter_CSP_Bypass.md</code></td>
+</tr>
+<tr>
+<td><code>php_filter_chain_generator</code></td>
+<td><code>Path_Traversal_LFI.md</code></td>
+</tr>
+<tr>
+<td><code>git-dumper</code>, <code>GitTools</code></td>
+<td><code>Recon_Source_Leak.md</code></td>
+</tr>
+<tr>
+<td><code>hash_extender</code></td>
+<td><code>Crypto_Hash_Length_Extension.md</code></td>
+</tr>
+<tr>
+<td><code>padbuster</code></td>
+<td><code>Crypto_Padding_Oracle.md</code></td>
+</tr>
+<tr>
+<td><code>jwt_tool</code></td>
+<td><code>JWT_Attacks.md</code></td>
+</tr>
+<tr>
+<td><code>phpggc</code>, <code>ysoserial</code></td>
+<td><code>Deserialization.md</code></td>
+</tr>
+<tr>
+<td><code>Gopherus</code></td>
+<td>SSRF qua gopher:// (payload khai thác Redis/Memcached nội bộ)</td>
+</tr>
+<tr>
+<td><code>PayloadsAllTheThings</code>, <code>SecLists</code></td>
+<td>Kho payload/wordlist tra cứu offline khi payload mẫu không ăn</td>
+</tr>
+<tr>
+<td><code>exploitdb</code></td>
+<td>Tra CVE/exploit có sẵn khi challenge dùng phần mềm/CMS cụ thể</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-build--cài-thêm-cho-từng-tool-sau-khi-clone-xong">5. Build / cài thêm cho từng tool (sau khi clone xong)</h2>
+<pre><code class="language-bash"># hash_extender -- build bằng C
+cd ~/hoc/CTF/Tools/web/hash_extender &amp;&amp; make &amp;&amp; cd ..
+
+# ysoserial -- build bằng maven (mất vài phút)
+cd ~/hoc/CTF/Tools/web/ysoserial &amp;&amp; mvn -q clean package -DskipTests &amp;&amp; cd ..
+
+# jwt_tool, graphql-cop, XSStrike -- mỗi tool có requirements.txt riêng, cài vào ĐÚNG venv venv_fhacker26
+spwn
+pip install -r ~/hoc/CTF/Tools/web/jwt_tool/requirements.txt
+pip install -r ~/hoc/CTF/Tools/web/graphql-cop/requirements.txt
+pip install -r ~/hoc/CTF/Tools/web/XSStrike/requirements.txt
+</code></pre>
+<p><strong>Nhớ</strong>: chạy <code>ysoserial</code> luôn bằng JDK 11, không phải JDK mặc định của máy:</p>
+<pre><code class="language-bash">/usr/lib/jvm/java-11-openjdk-amd64/bin/java -jar ~/hoc/CTF/Tools/web/ysoserial/target/ysoserial-*-all.jar &lt;gadget&gt; '&lt;command&gt;'
+</code></pre>
+<hr />
+<h2 id="6-cyberchef-không-phải-git-repo--tải-file-html-đơn-dùng-offline-không-cần-server">6. CyberChef (không phải git repo — tải file HTML đơn, dùng offline không cần server)</h2>
+<pre><code class="language-bash">mkdir -p ~/hoc/CTF/Tools/web/CyberChef &amp;&amp; cd ~/hoc/CTF/Tools/web/CyberChef
+# Lấy đúng link bản mới nhất ở https://github.com/gchq/CyberChef/releases, ví dụ bản 11.6.0:
+wget https://github.com/gchq/CyberChef/releases/download/v11.6.0/CyberChef_v11.6.0.zip
+unzip CyberChef_v11.6.0.zip &amp;&amp; rm CyberChef_v11.6.0.zip
+</code></pre>
+<p>Dùng: mở file <code>CyberChef_v11.6.0.html</code> bằng trình duyệt — không cần chạy server, không cần Internet sau khi đã mở trang 1 lần.</p>
+<hr />
+<h2 id="7-kiểm-tra-lại-mọi-thứ-đã-sẵn-sàng-chạy-hết-không-lỗi-là-xong">7. Kiểm tra lại mọi thứ đã sẵn sàng (chạy hết không lỗi là xong)</h2>
+<pre><code class="language-bash">spwn
+python3 -c &quot;import requests, bs4, jwt, flask, websocket, Crypto; print('OK: thu vien python')&quot;
+
+python3 ~/hoc/CTF/Tools/web/commix/commix.py --help &gt; /dev/null &amp;&amp; echo &quot;OK: commix&quot;
+python3 ~/hoc/CTF/Tools/web/tplmap/tplmap.py --help &gt; /dev/null &amp;&amp; echo &quot;OK: tplmap&quot;
+python3 ~/hoc/CTF/Tools/web/XSStrike/xsstrike.py --help &gt; /dev/null &amp;&amp; echo &quot;OK: XSStrike&quot;
+python3 ~/hoc/CTF/Tools/web/graphql-cop/graphql-cop.py --help &gt; /dev/null &amp;&amp; echo &quot;OK: graphql-cop&quot;
+python3 -m venv --help &gt; /dev/null &amp;&amp; python3 ~/hoc/CTF/Tools/web/git-dumper/git_dumper.py --help &gt; /dev/null &amp;&amp; echo &quot;OK: git-dumper&quot;
+python3 ~/hoc/CTF/Tools/web/jwt_tool/jwt_tool.py -h &gt; /dev/null &amp;&amp; echo &quot;OK: jwt_tool&quot;
+perl ~/hoc/CTF/Tools/web/padbuster/padBuster.pl 2&gt;&amp;1 | grep -q &quot;Use:&quot; &amp;&amp; echo &quot;OK: PadBuster&quot;
+test -x ~/hoc/CTF/Tools/web/hash_extender/hash_extender &amp;&amp; echo &quot;OK: hash_extender&quot;
+test -f ~/hoc/CTF/Tools/web/ysoserial/target/ysoserial-*-all.jar &amp;&amp; echo &quot;OK: ysoserial build xong&quot;
+test -f ~/hoc/CTF/Tools/web/phpggc/phpggc &amp;&amp; echo &quot;OK: phpggc&quot;
+</code></pre>
+<hr />
+<h2 id="8-clone-chính-repo-cheatsheet-này">8. Clone chính repo cheatsheet này</h2>
+<pre><code class="language-bash">git clone &lt;URL repo IBOH26-Trainning do đội trưởng cung cấp&gt;
+cd IBOH26-Trainning/cheatsheets/web/guide_script
+cat README.md
+</code></pre>
+<p>Nếu repo để <strong>private trên GitHub</strong>, đội trưởng cần thêm từng người làm collaborator trước, hoặc gửi file zip/tarball nếu không muốn cấp quyền GitHub.</p>
+<p>Sau khi clone xong, đọc theo đúng thứ tự: <a href="00_Bat_Dau_Tu_Zero.html"><code>00_Bat_Dau_Tu_Zero.md</code></a> trước, rồi <a href="CHEATSHEET_NHANH.html"><code>CHEATSHEET_NHANH.md</code></a> để tra cứu nhanh lúc thi.</p>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

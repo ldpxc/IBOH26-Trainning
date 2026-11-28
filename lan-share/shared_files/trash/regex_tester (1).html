@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regex Tester Offline — ModSecurity v3 / F-Hacker 2026</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --ok: #15803d; --ok-bg: #dcfce7;
+  --bad: #b91c1c; --bad-bg: #fee2e2; --warn: #a16207; --warn-bg: #fef9c3;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --ok: #4ade80; --ok-bg: #132a1c;
+  --bad: #f87171; --bad-bg: #321619; --warn: #facc15; --warn-bg: #2e2611;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--font-sans); font-size: 15px; line-height: 1.55; }
+.topbar {
+  position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface2); color: var(--fg);
+  text-decoration: none; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-accent:hover { opacity: 0.9; color: #fff; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 20px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+h1 { margin: 0 0 6px; font-size: 1.5em; }
+.sub { color: var(--muted); font-size: 13.5px; margin: 0 0 14px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.rx-input {
+  flex: 1; min-width: 280px; padding: 11px 14px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface2); color: var(--fg);
+  font-family: var(--font-mono); font-size: 14px;
+}
+.rx-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+select, label.chk {
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.status-bar {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  padding: 10px 14px; border-radius: 8px; background: var(--surface2); font-size: 13.5px;
+}
+.badge { padding: 3px 9px; border-radius: 6px; font-weight: 700; font-family: var(--font-mono); font-size: 12.5px; }
+.b-ok { background: var(--ok-bg); color: var(--ok); }
+.b-bad { background: var(--bad-bg); color: var(--bad); }
+.b-warn { background: var(--warn-bg); color: var(--warn); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+textarea {
+  width: 100%; min-height: 170px; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface2); color: var(--fg);
+  font-family: var(--font-mono); font-size: 13px; line-height: 1.5; resize: vertical;
+}
+.results { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.res-item {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  padding: 7px 10px; border-radius: 7px; border: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 12.5px; word-break: break-all;
+}
+.res-ok { background: var(--ok-bg); border-color: transparent; }
+.res-bad { background: var(--bad-bg); border-color: transparent; }
+mark { background: var(--accent); color: #fff; border-radius: 3px; padding: 0 2px; }
+.note { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.err-box { padding: 10px 14px; border-radius: 8px; background: var(--bad-bg); color: var(--bad); font-family: var(--font-mono); font-size: 13px; margin-top: 8px; display: none; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="btn" href="index.html">⌂ Trang chủ</a>
+    <strong>Regex Tester Offline (ModSecurity v3)</strong>
+  </div>
+  <button id="themeToggle" class="btn" type="button">☀ Sáng</button>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <h1>Kiểm thử Regex WAF Offline (2 chiều: Chặn Độc vs Giữ SVC)</h1>
+    <p class="sub">Hỗ trợ dán thẳng regex ModSecurity (tự hiểu tiền tố <code>(?i)</code> và <code>\z</code>). Chạy 100% offline trên trình duyệt.</p>
+
+    <div class="presets">
+      <span style="color:var(--muted);font-size:13px;align-self:center;">Mẫu nhanh:</span>
+      <button class="btn" type="button" data-preset="allow_id">Allowlist ID số (!@rx)</button>
+      <button class="btn" type="button" data-preset="sqli">SQLi (@rx)</button>
+      <button class="btn" type="button" data-preset="lfi">LFI / Traversal (@rx)</button>
+      <button class="btn" type="button" data-preset="xss">XSS (@rx)</button>
+      <button class="btn" type="button" data-preset="ssti">SSTI (@rx)</button>
+      <button class="btn" type="button" data-preset="ssrf">SSRF (@rx)</button>
+      <button class="btn" type="button" data-preset="flag">Flag Phase 4 (@rx)</button>
+    </div>
+
+    <div class="row">
+      <select id="mode">
+        <option value="rx">@rx (Chặn khi KHỚP)</option>
+        <option value="!rx">!@rx (Allowlist — Chặn khi KHÔNG khớp)</option>
+      </select>
+      <input id="rxInput" class="rx-input" type="text" spellcheck="false" placeholder="Nhập regex vào đây (vd: ^[0-9]{1,10}$ hoặc (?i)\bunion\s+select\b)">
+      <label class="chk"><input id="flagI" type="checkbox"> <code>i</code> (không phân biệt hoa/thường)</label>
+      <button id="copyRx" class="btn btn-accent" type="button">Copy Regex</button>
+    </div>
+
+    <div id="errBox" class="err-box"></div>
+
+    <div class="status-bar" style="margin-top:10px;">
+      <span id="statMal" class="badge b-ok">Bẩn bị chặn: 0/0</span>
+      <span id="statBen" class="badge b-ok">Bot sạch bị nhầm (FP): 0/0</span>
+      <span id="statPerf" class="badge b-ok">ReDoS check: 0.00 ms</span>
+      <span id="statWarn" class="note" style="margin:0;"></span>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h3 style="margin-top:0;color:var(--bad);">1. Payload BẨN — PHẢI BỊ CHẶN (mỗi dòng 1 mẫu)</h3>
+      <textarea id="malInput" spellcheck="false"></textarea>
+      <div id="malResults" class="results"></div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0;color:var(--ok);">2. Traffic SẠCH của Bot SVC — PHẢI CHO QUA (mỗi dòng 1 mẫu)</h3>
+      <textarea id="benInput" spellcheck="false"></textarea>
+      <div id="benResults" class="results"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+  const themeBtn = document.getElementById('themeToggle');
+  function syncTheme() {
+    themeBtn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncTheme();
+  themeBtn.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('fhacker_theme', next);
+    syncTheme();
+  });
+
+  const PRESETS = {
+    allow_id: {
+      mode: '!rx', i: false,
+      rx: '^[0-9]{1,10}$',
+      mal: "1' OR 1=1--\n1 UNION SELECT 1,2\nabc\n-1\n1234567890123",
+      ben: "1\n2\n42\n9999\n1234567890"
+    },
+    sqli: {
+      mode: 'rx', i: true,
+      rx: "(?i)(?:\\x27\\s*(?:or|and)\\s*\\x27?\\d+\\x27?\\s*=\\s*\\x27?\\d+|\\bunion\\s+(?:all\\s+)?select\\b|\\bsleep\\s*\\()",
+      mal: "' OR 1=1--\n' OR '1'='1\n1 UNION SELECT 1,2,3--\n' AND SLEEP(5)--",
+      ben: "hello world\nSELECT * FROM\nunion all\ninsert coin\nnote"
+    },
+    lfi: {
+      mode: 'rx', i: true,
+      rx: "(?i)(?:(?:\\.\\.|%2e%2e)(?:[/\\x5c]|%2f|%5c)|(?:php|phar|file)://|/etc/(?:passwd|shadow))",
+      mal: "../../../../etc/passwd\n%2e%2e%2fetc%2fpasswd\nphp://filter/convert.base64-encode/resource=index.php",
+      ben: "report_2026.pdf\navatar.png\n/api/users/123\nhello..world"
+    },
+    xss: {
+      mode: 'rx', i: true,
+      rx: "(?i)(?:<\\s*script\\b|javascript\\s*:|\\bon(?:error|load|click|mouseover|focus|toggle)\\s*=|<svg\\b|<iframe\\b)",
+      mal: "<script>alert(1)<\/script>\n<img src=x onerror=alert(1)>\njavascript:alert(1)\n<svg onload=alert(1)>",
+      ben: "hello world\nmy name is Alice\n<p>Bold text</p>\ncomment=Great+article!"
+    },
+    ssti: {
+      mode: 'rx', i: true,
+      rx: "(?:\\{\\{[^}]{1,250}\\}\\}|\\$\\{[^}]{1,200}\\}|__(?:class|mro|subclasses|globals)__)",
+      mal: "{{7*7}}\n{{config}}\n${7*7}\n{{''.__class__.__mro__}}",
+      ben: "hello world\n{\"name\": \"Alice\", \"age\": 25}\nprice = $50"
+    },
+    ssrf: {
+      mode: 'rx', i: true,
+      rx: "(?i)(?:\\b(?:gopher|file|dict)://|https?://(?:localhost|127\\.\\d+\\.\\d+\\.\\d+|169\\.254\\.169\\.254|10\\.\\d+\\.\\d+\\.\\d+))",
+      mal: "http://127.0.0.1/admin\nhttp://localhost:6379\nhttp://169.254.169.254/latest/meta-data/\ngopher://127.0.0.1:6379/",
+      ben: "https://example.com/img.png\n/api/notes\nhello world"
+    },
+    flag: {
+      mode: 'rx', i: false,
+      rx: "FHACKER(?:2026)?\\{[0-9a-fA-F]{64}\\}",
+      mal: "FHACKER2026{01f9be4aca65ac661f826c049abc64dafa8896c71c433e37fa22efaf468b1f3e}",
+      ben: "FHACKER2026\nHello from index.php\n{\"status\":\"ok\"}"
+    }
+  };
+
+  const modeEl = document.getElementById('mode');
+  const rxEl = document.getElementById('rxInput');
+  const flagIEl = document.getElementById('flagI');
+  const malEl = document.getElementById('malInput');
+  const benEl = document.getElementById('benInput');
+  const malResEl = document.getElementById('malResults');
+  const benResEl = document.getElementById('benResults');
+  const errEl = document.getElementById('errBox');
+  const statMal = document.getElementById('statMal');
+  const statBen = document.getElementById('statBen');
+  const statPerf = document.getElementById('statPerf');
+  const statWarn = document.getElementById('statWarn');
+
+  const REDOS_PROBES = [
+    'a'.repeat(500),
+    'UNION '.repeat(25) + 'SELECT',
+    '<'.repeat(100) + 'script',
+    '../'.repeat(50),
+    '{{'.repeat(25) + 'config' + '}}'.repeat(25),
+    'aaaaaaaaaaaaaaaaaaaab'.repeat(10)
+  ];
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function compilePcreLike(raw, forceI) {
+    let pat = raw;
+    let flags = forceI ? 'i' : '';
+    if (pat.startsWith('(?i)')) {
+      pat = pat.slice(4);
+      if (!flags.includes('i')) flags += 'i';
+    }
+    pat = pat.replace(/\\z/g, '$');
+    return new RegExp(pat, flags);
+  }
+
+  function highlightLine(line, re) {
+    const m = re.exec(line);
+    if (!m || m[0].length === 0) return esc(line);
+    const start = m.index;
+    const end = start + m[0].length;
+    return esc(line.slice(0, start)) + '<mark>' + esc(m[0]) + '</mark>' + esc(line.slice(end));
+  }
+
+  function run() {
+    const raw = rxEl.value;
+    errEl.style.display = 'none';
+    statWarn.textContent = '';
+
+    if (raw.includes('"')) {
+      statWarn.textContent = '⚠ Lưu ý: Regex có dấu " trần — khi dán vào "@rx ..." của ModSecurity nên đổi thành \\x22!';
+    }
+    if (!raw.trim()) {
+      malResEl.innerHTML = '';
+      benResEl.innerHTML = '';
+      return;
+    }
+
+    let re;
+    try {
+      re = compilePcreLike(raw, flagIEl.checked);
+    } catch (e) {
+      errEl.textContent = 'Lỗi cú pháp Regex: ' + e.message;
+      errEl.style.display = 'block';
+      malResEl.innerHTML = '';
+      benResEl.innerHTML = '';
+      return;
+    }
+
+    const isAllow = modeEl.value === '!rx';
+    const malLines = malEl.value.split('\n').filter(l => l.length > 0);
+    const benLines = benEl.value.split('\n').filter(l => l.length > 0);
+
+    let malBlocked = 0;
+    malResEl.innerHTML = malLines.map(line => {
+      const matched = re.test(line);
+      const blocked = isAllow ? !matched : matched;
+      if (blocked) malBlocked++;
+      const label = blocked ? '✓ BLOCK' : '✗ LỌT';
+      const cls = blocked ? 'res-ok' : 'res-bad';
+      const body = matched ? highlightLine(line, re) : esc(line);
+      return `<div class="res-item ${cls}"><span>${body}</span><strong>${label}</strong></div>`;
+    }).join('');
+
+    let benFP = 0;
+    benResEl.innerHTML = benLines.map(line => {
+      const matched = re.test(line);
+      const blocked = isAllow ? !matched : matched;
+      if (blocked) benFP++;
+      const label = blocked ? '✗ CHẶN NHẦM (FP)' : '✓ PASS';
+      const cls = blocked ? 'res-bad' : 'res-ok';
+      const body = matched ? highlightLine(line, re) : esc(line);
+      return `<div class="res-item ${cls}"><span>${body}</span><strong>${label}</strong></div>`;
+    }).join('');
+
+    statMal.textContent = `Bẩn bị chặn: ${malBlocked}/${malLines.length}`;
+    statMal.className = 'badge ' + (malBlocked === malLines.length ? 'b-ok' : 'b-warn');
+
+    statBen.textContent = `Bot sạch bị nhầm (FP): ${benFP}/${benLines.length}`;
+    statBen.className = 'badge ' + (benFP === 0 ? 'b-ok' : 'b-bad');
+
+    // Quick ReDoS probe
+    let maxMs = 0;
+    for (const p of REDOS_PROBES) {
+      const t0 = performance.now();
+      re.test(p);
+      const dt = performance.now() - t0;
+      if (dt > maxMs) maxMs = dt;
+    }
+    statPerf.textContent = `ReDoS check: ${maxMs.toFixed(2)} ms`;
+    statPerf.className = 'badge ' + (maxMs < 20 ? 'b-ok' : (maxMs < 100 ? 'b-warn' : 'b-bad'));
+  }
+
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = PRESETS[btn.getAttribute('data-preset')];
+      modeEl.value = p.mode;
+      flagIEl.checked = p.i;
+      rxEl.value = p.rx;
+      malEl.value = p.mal;
+      benEl.value = p.ben;
+      run();
+    });
+  });
+
+  [modeEl, rxEl, flagIEl, malEl, benEl].forEach(el => el.addEventListener('input', run));
+  modeEl.addEventListener('change', run);
+  flagIEl.addEventListener('change', run);
+
+  document.getElementById('copyRx').addEventListener('click', (e) => {
+    const text = rxEl.value.replace(/"/g, '\\x22');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (err) {}
+      document.body.removeChild(ta);
+    }
+    e.target.textContent = '✓ Đã copy';
+    setTimeout(() => { e.target.textContent = 'Copy Regex'; }, 1200);
+  });
+
+  // Load default preset
+  document.querySelector('[data-preset="allow_id"]').click();
+})();
+</script>
+</body>
+</html>

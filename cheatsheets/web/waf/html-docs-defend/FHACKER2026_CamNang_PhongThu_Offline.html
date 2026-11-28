@@ -1,0 +1,3001 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CẨM NANG KIẾN THỨC PHÒNG THỦ OFFLINE — CTF ATTACK-DEFENSE (F-HACKER 2026 BẢNG C)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="index.html">⌂ Trang chủ</a>
+    <span class="doc-path">FHACKER2026_CamNang_PhongThu_Offline.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#mục-lục">Mục lục</a></li>
+<li><a href="#1-chiến-thuật--phân-công-đội-phòng-thủ-trong-3-giờ-thi">1. Chiến thuật &amp; Phân công đội phòng thủ trong 3 giờ thi</a><ul>
+<li><a href="#11-nguyên-tắc-vàng-của-phòng-thủ-attack-defense">1.1. Nguyên tắc vàng của phòng thủ Attack-Defense</a></li>
+<li><a href="#12-cách-chia-vai-trò-trong-đội-gợi-ý-cho-đội-34-người">1.2. Cách chia vai trò trong đội (gợi ý cho đội 3–4 người)</a></li>
+<li><a href="#13-nhịp-độ-phòng-thủ-theo-4-chặng-của-trận-đấu">1.3. Nhịp độ phòng thủ theo 4 chặng của trận đấu</a></li>
+</ul>
+</li>
+<li><a href="#2-kiến-thức-nền-tảng-http--web-cho-người-phòng-thủ">2. Kiến thức nền tảng HTTP &amp; Web cho người phòng thủ</a><ul>
+<li><a href="#21-cấu-trúc-một-http-request-và-biến-modsecurity-tương-ứng">2.1. Cấu trúc một HTTP Request và biến ModSecurity tương ứng</a></li>
+<li><a href="#22-các-loại-content-type-phổ-biến--cách-modsecurity-xử-lý">2.2. Các loại Content-Type phổ biến &amp; cách ModSecurity xử lý</a></li>
+<li><a href="#23-bảng-mã-trạng-thái-http-status-code-khi-đọc-log">2.3. Bảng mã trạng thái HTTP (Status Code) khi đọc Log</a></li>
+<li><a href="#24-các-http-header-cần-để-ý-khi-phòng-thủ">2.4. Các HTTP Header cần để ý khi phòng thủ</a></li>
+</ul>
+</li>
+<li><a href="#3-bảng-tra-cứu-encoding-đọc-log-bằng-mắt-thường-không-cần-mạng">3. Bảng tra cứu Encoding (đọc log bằng mắt thường không cần mạng)</a><ul>
+<li><a href="#31-url-encoding-phổ-biến-percent-encoding">3.1. URL Encoding phổ biến (Percent-encoding)</a></li>
+<li><a href="#32-nhận-diện-nhanh-base64--jwt-trong-log">3.2. Nhận diện nhanh Base64 &amp; JWT trong log</a></li>
+</ul>
+</li>
+<li><a href="#4-cẩm-nang-regex-pcre-cho-người-viết-rule-waf">4. Cẩm nang Regex (PCRE) cho người viết Rule WAF</a><ul>
+<li><a href="#41-bảng-ký-hiệu-regex-cốt-lõi">4.1. Bảng ký hiệu Regex cốt lõi</a></li>
+<li><a href="#42-bộ-mẫu-regex-allowlist-chuẩn-copy-dùng-ngay-với-rx">4.2. Bộ mẫu Regex Allowlist chuẩn (Copy dùng ngay với !@rx)</a></li>
+<li><a href="#43-tránh-lỗi-redos-regex-làm-treo-waf-mất-svc">4.3. Tránh lỗi ReDoS (Regex làm treo WAF, mất SVC!)</a></li>
+</ul>
+</li>
+<li><a href="#5-hướng-dẫn-viết-rule-modsecurity-v3-từ-az-tư-duy-cú-pháp--bẫy-thực-chiến">5. Hướng dẫn viết Rule ModSecurity v3 từ A–Z (Tư duy, Cú pháp &amp; Bẫy thực chiến)</a><ul>
+<li><a href="#50-viết-rule-từ-con-số-0-dành-cho-người-chưa-biết-gì">5.0. Viết rule từ con số 0 (dành cho người chưa biết gì)</a><ul>
+<li><a href="#501-một-rule-waf-là-gì">5.0.1. Một rule WAF là gì?</a></li>
+<li><a href="#502-cấu-trúc-3-phần-của-một-secrule">5.0.2. Cấu trúc 3 phần của một SecRule</a></li>
+<li><a href="#503-đọc-một-rule-thành-tiếng-việt">5.0.3. Đọc một rule thành tiếng Việt</a></li>
+<li><a href="#504-biến--dữ-liệu-nằm-ở-đâu">5.0.4. Biến — dữ liệu nằm ở đâu?</a></li>
+<li><a href="#505-toán-tử--so-sánh-như-thế-nào">5.0.5. Toán tử — so sánh như thế nào?</a></li>
+<li><a href="#506-hành-động--chặn-log-hay-chỉ-quan-sát">5.0.6. Hành động — chặn, log hay chỉ quan sát?</a></li>
+<li><a href="#507-transformations--vì-sao-payload-encode-vẫn-lọt">5.0.7. Transformations — vì sao payload encode vẫn lọt?</a></li>
+<li><a href="#508-phase--đặt-rule-ở-đâu">5.0.8. Phase — đặt rule ở đâu?</a></li>
+<li><a href="#509-chain--and-nhiều-điều-kiện">5.0.9. Chain — AND nhiều điều kiện</a></li>
+<li><a href="#5010-quy-trình-7-bước-viết-một-rule-mới">5.0.10. Quy trình 7 bước viết một rule mới</a></li>
+<li><a href="#5011-ví-dụ-1--chặn-dò-env">5.0.11. Ví dụ 1 — Chặn dò /.env</a></li>
+<li><a href="#5012-ví-dụ-2--allowlist-id-số-trên-apiproduct">5.0.12. Ví dụ 2 — Allowlist id số trên /api/product</a></li>
+<li><a href="#5013-ví-dụ-3--sqli-trên-ô-tìm-kiếm">5.0.13. Ví dụ 3 — SQLi trên ô tìm kiếm</a></li>
+<li><a href="#5014-ví-dụ-4--mass-assignment-role-isadmin">5.0.14. Ví dụ 4 — Mass assignment (role, isAdmin)</a></li>
+<li><a href="#5015-ví-dụ-5--phase-4-chặn-lọt-flag">5.0.15. Ví dụ 5 — Phase 4 chặn lọt Flag</a></li>
+<li><a href="#5016-ví-dụ-6--upload-file--chặn-webshell-files--request_body">5.0.16. Ví dụ 6 — Upload File &amp; Chặn Webshell (FILES + REQUEST_BODY)</a></li>
+<li><a href="#5017-ví-dụ-7--path-parameter-apiusers42--rcessrf-khi-nào-allowlist-vs-blacklist">5.0.17. Ví dụ 7 — Path Parameter (/api/users/42) &amp; RCE/SSRF (Khi nào Allowlist vs Blacklist?)</a></li>
+<li><a href="#5018-ví-dụ-8--case-study-trọn-vẹn-từ-2-dòng-traffic-log-bot-vs-hacker--tự-viết-rule">5.0.18. Ví dụ 8 — Case study trọn vẹn: Từ 2 dòng Traffic log (Bot vs Hacker) → Tự viết Rule</a></li>
+<li><a href="#5019-ví-dụ-9--đọc-log-949110-và-tự-viết-rule-gỡ-false-positive-owasp-crs">5.0.19. Ví dụ 9 — Đọc log 949110 và tự viết Rule gỡ False Positive OWASP CRS</a></li>
+<li><a href="#5020-bảng-sửa-ở-đâu-khi-app-khác">5.0.20. Bảng “sửa ở đâu” khi app khác</a></li>
+<li><a href="#5021-debug-rule-không-chạy--chạy-quá-nhiều">5.0.21. Debug: rule không chạy / chạy quá nhiều</a></li>
+<li><a href="#5022-bài-tập-tự-luyện-6-bài-có-đáp-án">5.0.22. Bài tập tự luyện (6 bài có đáp án)</a></li>
+<li><a href="#5023-checklist-trước-khi-save">5.0.23. Checklist trước khi Save</a></li>
+<li><a href="#5024-tóm-tắt-10-dòng-để-nhớ-nhanh">5.0.24. Tóm tắt 10 dòng để nhớ nhanh</a></li>
+</ul>
+</li>
+<li><a href="#51-giải-phẫu-1-secrule--thứ-tự-thực-thi-nội-bộ">5.1. Giải phẫu 1 SecRule &amp; Thứ tự thực thi nội bộ</a></li>
+<li><a href="#52-chọn-đúng-phase-1--4--sai-phase-là-rule-vô-tác-dụng">5.2. Chọn đúng Phase (1 → 4) — Sai Phase là Rule vô tác dụng!</a></li>
+<li><a href="#53-cách-chọn--kết-hợp-biến-variables-linh-hoạt">5.3. Cách chọn &amp; kết hợp Biến (Variables) linh hoạt</a></li>
+<li><a href="#54-chọn-toán-tử-operators-nhanh-và-chuẩn">5.4. Chọn Toán tử (Operators) nhanh và chuẩn</a></li>
+<li><a href="#55-thứ-tự-ghép-transformations-t-chống-bypass">5.5. Thứ tự ghép Transformations (t:...) chống bypass</a></li>
+<li><a href="#56-viết-rule-chain-and-nhiều-điều-kiện--cách-xử-lý-điều-kiện-or">5.6. Viết Rule chain (AND nhiều điều kiện) &amp; Cách xử lý điều kiện OR</a></li>
+<li><a href="#57-tư-duy-viết-rule-theo-4-cấp-độ-ưu-tiên-từ-trên-xuống-dưới">5.7. Tư duy viết Rule theo 4 cấp độ (Ưu tiên từ trên xuống dưới)</a></li>
+<li><a href="#58-6-bẫy-ngầm-thực-chiến-khi-viết-rule-trên-bunkerweb--modsecurity-v3">5.8. 6 "Bẫy ngầm" thực chiến khi viết Rule trên BunkerWeb / ModSecurity v3</a></li>
+<li><a href="#59-hiểu-cơ-chế-owasp-crs-v4-anomaly-scoring--cách-gỡ-false-positive-chuẩn">5.9. Hiểu cơ chế OWASP CRS v4 (Anomaly Scoring) &amp; Cách gỡ False Positive chuẩn</a></li>
+<li><a href="#510-tách-rule-khi-nhiều-service-chạy-chung-1-waf-tránh-chặn-chéo-mất-svc">5.10. Tách Rule khi nhiều Service chạy chung 1 WAF (tránh chặn chéo mất SVC)</a></li>
+</ul>
+</li>
+<li><a href="#6-nhận-diện-nhanh-lỗ-hổng-từ-traffic-log--tra-cứu-đầu-số-owasp-crs-v4">6. Nhận diện nhanh lỗ hổng từ Traffic Log &amp; Tra cứu đầu số OWASP CRS v4</a><ul>
+<li><a href="#61-bảng-nhận-diện-nhanh-12-nhóm-lỗ-hổng-từ-dấu-hiệu-trong-traffic-log">6.1. Bảng nhận diện nhanh 12 nhóm lỗ hổng từ dấu hiệu trong Traffic Log</a></li>
+<li><a href="#62-bảng-tra-cứu-nhanh-đầu-số-rule-owasp-crs-v4-trên-cột-waf">6.2. Bảng tra cứu nhanh đầu số Rule OWASP CRS v4 trên cột WAF</a></li>
+</ul>
+</li>
+<li><a href="#7-đọc--phân-tích-log-phòng-thủ-traffic-log-audit-log-error-log">7. Đọc &amp; Phân tích Log phòng thủ (Traffic log, Audit log, Error log)</a><ul>
+<li><a href="#71-cách-phân-biệt-bot-chấm-svc-vs-traffic-bất-thường-trên-traffic-log">7.1. Cách phân biệt Bot chấm SVC vs Traffic bất thường trên Traffic log</a></li>
+<li><a href="#72-ý-nghĩa-các-phần-trong-modsec_auditlog-bcefh">7.2. Ý nghĩa các phần trong modsec_audit.log (BCEFH)</a></li>
+<li><a href="#73-tra-nhanh-lỗi-cú-pháp-trên-errorlog-khi-lưu-config-bị-báo-đỏ">7.3. Tra nhanh lỗi cú pháp trên error.log khi lưu Config bị báo đỏ</a></li>
+</ul>
+</li>
+<li><a href="#8-playbook-5-tình-huống-khẩn-cấp--cách-cứu-điểm-trong-60-giây">8. Playbook 5 tình huống khẩn cấp &amp; Cách cứu điểm trong 60 giây</a><ul>
+<li><a href="#tình-huống-1-bảng-điểm-báo-svc-tụt-đỏ-đột-ngột">Tình huống 1: Bảng điểm báo SVC tụt đỏ đột ngột!</a></li>
+<li><a href="#tình-huống-2-waf-đang-on-nhưng-cột-def-vẫn-tụt-đang-bị-cướp-cờ">Tình huống 2: WAF đang On nhưng cột DEF vẫn tụt (đang bị cướp cờ)!</a></li>
+<li><a href="#tình-huống-3-sửa-rule-rồi-bấm-save-nhưng-test-lại-không-thấy-đổi-gì">Tình huống 3: Sửa rule rồi bấm Save nhưng test lại không thấy đổi gì</a></li>
+<li><a href="#tình-huống-4-owasp-crs-chặn-nhầm-tính-năng-hợp-lệ-của-app">Tình huống 4: OWASP CRS chặn nhầm tính năng hợp lệ của app</a></li>
+<li><a href="#tình-huống-5-bắt-đầu-round-4-mở-level-2--thêm-bài-mới-thêm-cờ-thứ-3">Tình huống 5: Bắt đầu Round 4 (Mở Level 2 — thêm bài mới, thêm cờ thứ 3)</a></li>
+</ul>
+</li>
+<li><a href="#9-bộ-lệnh-offline-curl--python-kiểm-tra-dịch-vụ--kiểm-thử-rule">9. Bộ lệnh Offline (curl &amp; Python) kiểm tra dịch vụ &amp; kiểm thử Rule</a><ul>
+<li><a href="#91-lệnh-curl-kiểm-tra-dịch-vụ--tốc-độ-phản-hồi-waf">9.1. Lệnh curl kiểm tra dịch vụ &amp; tốc độ phản hồi WAF</a></li>
+<li><a href="#92-lệnh-python-1-dòng-offline-thay-thế-công-cụ-online-khi-mất-mạng">9.2. Lệnh Python 1 dòng offline (thay thế công cụ online khi mất mạng)</a></li>
+</ul>
+</li>
+<li><a href="#10-tóm-gọn-1-trang-quy-tắc-an-toàn-phòng-thi--checklist-quản-lý-rule">10. Tóm gọn 1 trang: Quy tắc an toàn phòng thi &amp; Checklist quản lý Rule</a><ul>
+<li><a href="#101-checklist-5-bước-trước-khi-bấm-save-rule-mới">10.1. Checklist 5 bước trước khi bấm Save Rule mới</a></li>
+<li><a href="#102-quy-tắc-an-toàn-phòng-thi-tránh-mất-điểm-oan">10.2. Quy tắc an toàn phòng thi (tránh mất điểm oan)</a></li>
+</ul>
+</li>
+<li><a href="#11-attack-mini-playbook-atk-cho-người-phòng-thủ">11. Attack mini-playbook (ATK) cho người phòng thủ</a><ul>
+<li><a href="#111-quy-tắc-an-toàn-khi-đi-tấn-công">11.1. Quy tắc an toàn khi đi tấn công</a></li>
+<li><a href="#112-quy-trình-6-bước-1520-phútđội">11.2. Quy trình 6 bước (15–20 phút/đội)</a></li>
+<li><a href="#113-bảng-payload-nhớ-nhanh">11.3. Bảng payload nhớ nhanh</a></li>
+<li><a href="#114-cách-lấy-flag-nhanh">11.4. Cách lấy flag nhanh</a></li>
+<li><a href="#115-khi-nào-dừng-tấn-công">11.5. Khi nào dừng tấn công</a></li>
+</ul>
+</li>
+<li><a href="#12-audit-app-15-phút--bảng-inventory-endpointparam">12. Audit app 15 phút &amp; bảng inventory endpoint/param</a><ul>
+<li><a href="#121-mục-tiêu">12.1. Mục tiêu</a></li>
+<li><a href="#122-nguồn-thông-tin-ưu-tiên-từ-trên-xuống">12.2. Nguồn thông tin (ưu tiên từ trên xuống)</a></li>
+<li><a href="#123-mẫu-bảng-inventory-copy-ra-giấyexcel">12.3. Mẫu bảng inventory (copy ra giấy/Excel)</a></li>
+<li><a href="#124-quy-trình-5-bước">12.4. Quy trình 5 bước</a></li>
+<li><a href="#125-checklist-endpoint-đặc-biệt">12.5. Checklist endpoint đặc biệt</a></li>
+</ul>
+</li>
+<li><a href="#13-nộp-cờ--dashboard-script-an-toàn">13. Nộp cờ &amp; Dashboard (script an toàn)</a><ul>
+<li><a href="#131-cơ-chế-cần-nhớ">13.1. Cơ chế cần nhớ</a></li>
+<li><a href="#132-quy-trình-nộp">13.2. Quy trình nộp</a></li>
+<li><a href="#133-script-mẫu-offline-không-cần-thư-viện-ngoài">13.3. Script mẫu (offline, không cần thư viện ngoài)</a></li>
+<li><a href="#134-nếu-không-kịp-viết-script">13.4. Nếu không kịp viết script</a></li>
+</ul>
+</li>
+<li><a href="#14-rollback-versioning--checklist-theo-round">14. Rollback, versioning &amp; checklist theo round</a><ul>
+<li><a href="#141-versioning-rule-bắt-buộc">14.1. Versioning rule (bắt buộc)</a></li>
+<li><a href="#142-rollback-10-giây">14.2. Rollback 10 giây</a></li>
+<li><a href="#143-tắt-nhanh-1-rule">14.3. Tắt nhanh 1 rule</a></li>
+<li><a href="#144-checklist-theo-round">14.4. Checklist theo round</a></li>
+<li><a href="#145-quy-tắc-đóng-băng-r8r10">14.5. Quy tắc "đóng băng" R8–R10</a></li>
+<li><a href="#146-phân-công-khi-sự-cố">14.6. Phân công khi sự cố</a></li>
+</ul>
+</li>
+<li><a href="#15-những-lỗ-hổng-waf-không-vá-được">15. Những lỗ hổng WAF không vá được</a></li>
+<li><a href="#phụ-lục-3-câu-chốt">Phụ lục: 3 câu chốt</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="cẩm-nang-kiến-thức-phòng-thủ-offline--ctf-attack-defense-f-hacker-2026-bảng-c">CẨM NANG KIẾN THỨC PHÒNG THỦ OFFLINE — CTF ATTACK-DEFENSE (F-HACKER 2026 BẢNG C)</h1>
+<blockquote>
+<p><strong>Mục đích tài liệu:</strong> Đây là tài liệu tra cứu <strong>trọng tâm phòng thủ (Defense-first)</strong> dùng offline trong phòng thi (khi không có Internet và không có AI). Tài liệu này đi kèm với <a href="FHACKER2026_WAF_Defense_Cheatsheet.html">FHACKER2026_WAF_Defense_Cheatsheet.md</a> và <a href="FHACKER2026_Regex_CopySafe.html">FHACKER2026_Regex_CopySafe.md</a> — trong khi file Cheatsheet chứa sẵn bộ rule ModSecurity để copy–dán, file Regex chứa regex sạch copy trực tiếp (không dính bẫy <code>\|</code> của bảng Markdown), file này cung cấp <strong>kiến thức nền tảng, cách vận hành đội, bảng tra HTTP/Encoding/Regex, cách đọc log điều tra, kịch bản xử lý sự cố khẩn cấp, playbook tấn công tối thiểu, audit app, nộp cờ và rollback</strong> để người mới hoàn toàn vẫn làm chủ được trận đấu.</p>
+</blockquote>
+<hr />
+<h2 id="mục-lục">Mục lục</h2>
+<ol>
+<li><a href="#1-chiến-thuật--phân-công-đội-phòng-thủ-trong-3-giờ-thi">Chiến thuật &amp; Phân công đội phòng thủ trong 3 giờ thi</a></li>
+<li><a href="#2-kiến-thức-nền-tảng-http--web-cho-người-phòng-thủ">Kiến thức nền tảng HTTP &amp; Web cho người phòng thủ</a></li>
+<li><a href="#3-bảng-tra-cứu-encoding-đọc-log-bằng-mắt-thường-không-cần-mạng">Bảng tra cứu Encoding (đọc log bằng mắt thường không cần mạng)</a></li>
+<li><a href="#4-cẩm-nang-regex-pcre-cho-người-viết-rule-waf">Cẩm nang Regex (PCRE) cho người viết Rule WAF</a></li>
+<li><a href="#5-hướng-dẫn-viết-rule-modsecurity-v3-từ-az-tư-duy-cú-pháp--bẫy-thực-chiến">Hướng dẫn viết Rule ModSecurity v3 từ A–Z (Tư duy, Cú pháp &amp; Bẫy thực chiến)</a>
+   - <a href="#50-viết-rule-từ-con-số-0-dành-cho-người-chưa-biết-gì">5.0 — Viết rule từ con số 0 (dành cho người chưa biết gì)</a></li>
+<li><a href="#6-nhận-diện-nhanh-lỗ-hổng-từ-traffic-log--tra-cứu-đầu-số-owasp-crs-v4">Nhận diện nhanh lỗ hổng từ Traffic Log &amp; Tra cứu đầu số OWASP CRS v4</a></li>
+<li><a href="#7-đọc--phân-tích-log-phòng-thủ-traffic-log-audit-log-error-log">Đọc &amp; Phân tích Log phòng thủ (Traffic log, Audit log, Error log)</a></li>
+<li><a href="#8-playbook-5-tình-huống-khẩn-cấp--cách-cứu-điểm-trong-60-giây">Playbook 5 tình huống khẩn cấp &amp; Cách cứu điểm trong 60 giây</a></li>
+<li><a href="#9-bộ-lệnh-offline-curl--python-kiểm-tra-dịch-vụ--kiểm-thử-rule">Bộ lệnh Offline (<code>curl</code> &amp; Python) kiểm tra dịch vụ &amp; kiểm thử Rule</a></li>
+<li><a href="#10-tóm-gọn-1-trang-quy-tắc-an-toàn-phòng-thi--checklist-quản-lý-rule">Tóm gọn 1 trang: Quy tắc an toàn phòng thi &amp; Checklist quản lý Rule</a></li>
+<li><a href="#11-attack-mini-playbook-atk-cho-người-phòng-thủ">Attack mini-playbook (ATK) cho người phòng thủ</a></li>
+<li><a href="#12-audit-app-15-phút--bảng-inventory-endpointparam">Audit app 15 phút &amp; bảng inventory endpoint/param</a></li>
+<li><a href="#13-nộp-cờ--dashboard-script-an-toàn">Nộp cờ &amp; Dashboard (script an toàn)</a></li>
+<li><a href="#14-rollback-versioning--checklist-theo-round">Rollback, versioning &amp; checklist theo round</a></li>
+<li><a href="#15-những-lỗ-hổng-waf-không-vá-được">Những lỗ hổng WAF không vá được</a></li>
+</ol>
+<hr />
+<h2 id="1-chiến-thuật--phân-công-đội-phòng-thủ-trong-3-giờ-thi">1. Chiến thuật &amp; Phân công đội phòng thủ trong 3 giờ thi</h2>
+<h3 id="11-nguyên-tắc-vàng-của-phòng-thủ-attack-defense">1.1. Nguyên tắc vàng của phòng thủ Attack-Defense</h3>
+<p>Trong CTF Attack-Defense (Bảng C), bạn <strong>không thắng chỉ bằng việc chặn thật gắt</strong> — bạn thắng bằng việc <strong>giữ cân bằng giữa 2 cột điểm sống còn</strong>:
+- <strong><code>SVC</code> (Service / Dịch vụ):</strong> Bot của BTC kiểm tra mỗi <strong>30 giây</strong> xem web của bạn có hoạt động bình thường như người dùng thật hay không.
+- <strong><code>DEF</code> (Defense / Phòng thủ):</strong> Cờ của nhà bạn có bị đối thủ lấy mất hay không.
+- <strong>Ràng buộc 2 chiều:</strong>
+  - Nếu <code>SVC = 0</code> → <code>DEF</code> của round đó cũng lập tức về <code>0</code>.
+  - Nếu <code>DEF = 0</code> → mất <code>90%</code> điểm <code>SVC</code> còn lại của round đó.
+  - Cố ý chặn cả một API có lỗi → bị trừ <code>SVC</code> <strong>gấp đôi</strong> API thường.</p>
+<blockquote>
+<p><strong>Tư duy đúng cho người mới:</strong> Luôn coi <strong>giữ SVC xanh là ưu tiên số 1</strong>, sau đó mới siết dần rule WAF theo đúng từng endpoint và từng tham số (chặn chính xác, không chặn tràn lan).</p>
+</blockquote>
+<h3 id="12-cách-chia-vai-trò-trong-đội-gợi-ý-cho-đội-34-người">1.2. Cách chia vai trò trong đội (gợi ý cho đội 3–4 người)</h3>
+<table>
+<thead>
+<tr>
+<th>Vai trò</th>
+<th>Nhiệm vụ chính trong suốt 10 round</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Người trực WAF &amp; Traffic Log</strong></td>
+<td>Mở sẵn UI WAF (<code>Traffic log</code> + <code>Configs</code>). Ghi lại danh sách endpoint mà <strong>bot chấm SVC</strong> gọi mỗi 30 giây. Khi thấy request bất thường hoặc cờ lọt ra ngoài, báo ngay endpoint + tên tham số để viết rule.</td>
+</tr>
+<tr>
+<td><strong>Người viết &amp; kiểm thử Rule</strong></td>
+<td>Viết rule ModSecurity theo nguyên tắc <code>pass,log</code> → test 2 chiều (<code>200</code> cho request sạch, <code>403</code> cho request bẩn) → đổi sang <code>deny,status:403,log</code>. Gỡ False Positive của OWASP CRS nếu CRS chặn nhầm bot.</td>
+</tr>
+<tr>
+<td><strong>Người đọc hiểu Service</strong></td>
+<td>Khảo sát các chức năng của web app (các form, API JSON, chức năng upload/tải file, trang đăng nhập, endpoint trả cờ) để biết định dạng dữ liệu hợp lệ (ví dụ <code>id</code> luôn là số, <code>sort</code> chỉ có <code>asc</code>/<code>desc</code>) → cung cấp thông tin cho người viết Allowlist.</td>
+</tr>
+<tr>
+<td><strong>Đội trưởng (Theo dõi điểm &amp; Kỷ luật)</strong></td>
+<td>Theo dõi Dashboard điểm <code>SVC</code>/<code>DEF</code> từng round, quản lý thời gian chuyển round, nhắc đội không vi phạm quy chế (không vượt 30 lần nộp/phút, không dùng AI/Internet), và là <strong>người duy nhất được gửi khiếu nại</strong> lên BTC nếu có sự cố hệ thống.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-nhịp-độ-phòng-thủ-theo-4-chặng-của-trận-đấu">1.3. Nhịp độ phòng thủ theo 4 chặng của trận đấu</h3>
+<ol>
+<li><strong>Chặng 1 — Round 1 (30 phút, BP = 10, Level 1 — 2 cờ):</strong>
+   - 2–3 phút đầu để WAF ở <code>DetectionOnly</code>. Mở <code>Traffic log</code>, chụp/ghi chú toàn bộ các route mà bot chấm đi qua.
+   - Kiểm tra xem OWASP CRS (<code>9xxxxx</code>) có gắn cờ nhầm request nào của bot không → gỡ False Positive trước khi bật <code>On</code>.
+   - Dựng các rule nền an toàn (<code>200xx</code> chặn dò <code>.env</code>/<code>.git</code>, <code>21200</code> theo dõi flag dạng <code>pass,log</code>) rồi bật <code>On</code>.</li>
+<li><strong>Chặng 2 — Round 2 &amp; 3 (25 phút/round, BP = 10 → 15):</strong>
+   - Bổ sung rule <strong>Allowlist chặt</strong> cho từng endpoint đã phát hiện có điểm yếu.
+   - Đảm bảo <code>SVC</code> xanh liên tục; lưu lại bản sao file rule ổn định ra file text trên máy phòng trường hợp cần rollback nhanh.</li>
+<li><strong>Chặng 3 — Round 4 &amp; 5 (20 phút/round, BP = 15, MỞ LEVEL 2 — 3 cờ):</strong>
+   - <strong>Mốc cực kỳ quan trọng:</strong> Có thêm bài mới và cờ thứ 3!
+   - Lập tức kiểm tra <code>Traffic log</code> cho các route mới của Level 2. Kiểm tra xem rule cũ (hoặc OWASP CRS) có vô tình chặn nhầm tính năng mới của bot không.
+   - Cập nhật danh sách loại trừ endpoint cờ hợp lệ ở rule Phase 4 (<code>21201</code>) nếu bài mới có route trả cờ riêng.</li>
+<li><strong>Chặng 4 — Round 6 đến 10 (15 phút → 10 phút/round, BP = 20 → 25):</strong>
+   - Quỹ điểm <code>DEF</code> và <code>SVC</code> mỗi round lúc này lên tới <strong>510 – 637,5 điểm/cột</strong> (gấp gần 4 lần Round 1).
+   - <strong>Nguyên tắc "Không phá thứ đang chạy xanh":</strong> Không sửa rule diện rộng khi không chắc chắn. Mọi rule mới ở giai đoạn này bắt buộc phải test bằng <code>pass,log</code> ít nhất 1 chu kỳ 30 giây của bot rồi mới chuyển sang <code>deny</code>.</li>
+</ol>
+<hr />
+<h2 id="2-kiến-thức-nền-tảng-http--web-cho-người-phòng-thủ">2. Kiến thức nền tảng HTTP &amp; Web cho người phòng thủ</h2>
+<p>Hiểu rõ HTTP giúp bạn đọc <code>Traffic log</code> trong 3 giây và viết đúng tên biến ModSecurity.</p>
+<h3 id="21-cấu-trúc-một-http-request-và-biến-modsecurity-tương-ứng">2.1. Cấu trúc một HTTP Request và biến ModSecurity tương ứng</h3>
+<pre><code class="language-http">POST /api/orders/detail?lang=vi HTTP/1.1
+Host: team01.fhacker.local
+Content-Type: application/json
+Cookie: session=xyz789
+User-Agent: Mozilla/5.0
+
+{&quot;order_id&quot;: 42, &quot;note&quot;: &quot;giao gio hanh chinh&quot;}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Thành phần trong Request</th>
+<th>Giá trị ở ví dụ trên</th>
+<th>Biến ModSecurity để kiểm tra</th>
+<th>Phase chạy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Method</strong></td>
+<td><code>POST</code></td>
+<td><code>REQUEST_METHOD</code></td>
+<td>Phase 1 &amp; 2</td>
+</tr>
+<tr>
+<td><strong>Đường dẫn (không gồm <code>?</code>)</strong></td>
+<td><code>/api/orders/detail</code></td>
+<td><code>REQUEST_FILENAME</code></td>
+<td>Phase 1 &amp; 2</td>
+</tr>
+<tr>
+<td><strong>Đường dẫn đầy đủ (thô)</strong></td>
+<td><code>/api/orders/detail?lang=vi</code></td>
+<td><code>REQUEST_URI</code></td>
+<td>Phase 1 &amp; 2</td>
+</tr>
+<tr>
+<td><strong>Header cụ thể</strong></td>
+<td><code>application/json</code></td>
+<td><code>REQUEST_HEADERS:Content-Type</code></td>
+<td>Phase 1 &amp; 2</td>
+</tr>
+<tr>
+<td><strong>Cookie cụ thể</strong></td>
+<td><code>xyz789</code></td>
+<td><code>REQUEST_COOKIES:session</code></td>
+<td>Phase 1 &amp; 2</td>
+</tr>
+<tr>
+<td><strong>Tham số trên URL (Query)</strong></td>
+<td><code>lang</code> = <code>vi</code></td>
+<td><code>ARGS:lang</code> hoặc <code>ARGS_GET:lang</code></td>
+<td>Phase 2</td>
+</tr>
+<tr>
+<td><strong>Tham số trong JSON Body</strong></td>
+<td><code>order_id</code> = <code>42</code></td>
+<td><strong><code>ARGS:json.order_id</code></strong> <em>(có tiền tố <code>json.</code>!)</em></td>
+<td>Phase 2</td>
+</tr>
+<tr>
+<td><strong>Toàn bộ Body thô</strong></td>
+<td><code>{"order_id": 42, ...}</code></td>
+<td><code>REQUEST_BODY</code></td>
+<td>Phase 2</td>
+</tr>
+<tr>
+<td><strong>Tên các tham số</strong></td>
+<td><code>lang</code>, <code>json.order_id</code>, <code>json.note</code></td>
+<td><code>ARGS_NAMES</code></td>
+<td>Phase 2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-các-loại-content-type-phổ-biến--cách-modsecurity-xử-lý">2.2. Các loại <code>Content-Type</code> phổ biến &amp; cách ModSecurity xử lý</h3>
+<table>
+<thead>
+<tr>
+<th><code>Content-Type</code></th>
+<th>Dữ liệu gửi lên trông như thế nào?</th>
+<th>Cách viết biến WAF cho đúng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>application/x-www-form-urlencoded</code></td>
+<td><code>user=an&amp;id=10</code></td>
+<td><code>ARGS:user</code>, <code>ARGS:id</code></td>
+</tr>
+<tr>
+<td><code>application/json</code></td>
+<td><code>{"user":"an","profile":{"role":"user"}}</code></td>
+<td><code>ARGS:json.user</code>, <code>ARGS:json.profile.role</code>. Nếu là mảng <code>{"id":[1,2]}</code> → <code>ARGS:json.id.array_0</code>, <code>ARGS:json.id.array_1</code>.</td>
+</tr>
+<tr>
+<td><code>multipart/form-data</code></td>
+<td>Dùng khi upload file (có ranh giới <code>boundary=----</code>)</td>
+<td>Tên file gốc nằm ở <code>FILES</code>; tên trường input nằm ở <code>FILES_NAMES</code>; nội dung file nằm trong <code>REQUEST_BODY</code> (trên BunkerWeb).</td>
+</tr>
+<tr>
+<td><code>application/xml</code> hoặc <code>text/xml</code></td>
+<td><code>&lt;user&gt;&lt;name&gt;an&lt;/name&gt;&lt;/user&gt;</code></td>
+<td>ModSecurity mặc định dùng XML parser (<code>id:200000</code>). Muốn soi text thô trong <code>REQUEST_BODY</code>, cần rule Phase 1 <code>ctl:requestBodyProcessor=URLENCODED</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-bảng-mã-trạng-thái-http-status-code-khi-đọc-log">2.3. Bảng mã trạng thái HTTP (Status Code) khi đọc Log</h3>
+<table>
+<thead>
+<tr>
+<th>Mã</th>
+<th>Tên</th>
+<th>Ý nghĩa thực chiến khi phòng thủ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>200</code> / <code>201</code> / <code>204</code></strong></td>
+<td>OK / Created</td>
+<td>Request đi qua WAF và app xử lý bình thường. Nếu là request độc hại mà ra <code>200</code> → WAF chưa chặn (hoặc đang <code>DetectionOnly</code>).</td>
+</tr>
+<tr>
+<td><strong><code>301</code> / <code>302</code> / <code>304</code></strong></td>
+<td>Redirect / Not Modified</td>
+<td>Chuyển hướng bình thường (vd sau khi login). <em>Lưu ý: Không bật tự động redirect HTTP→HTTPS vì bot chấm có thể báo lỗi.</em></td>
+</tr>
+<tr>
+<td><strong><code>400</code></strong></td>
+<td>Bad Request</td>
+<td>Request lỗi cú pháp, hoặc bị rule WAF chặn với <code>status:400</code> (vd Null byte, CRLF, HPP).</td>
+</tr>
+<tr>
+<td><strong><code>401</code> / <code>403</code></strong></td>
+<td>Unauthorized / <strong>Forbidden</strong></td>
+<td><code>401</code>: chưa đăng nhập. <strong><code>403</code></strong>: thường là <strong>WAF đã chặn thành công</strong>! (Kiểm tra cột <code>WAF</code> trên Traffic log để phân biệt 403 của WAF với 403 của app).</td>
+</tr>
+<tr>
+<td><strong><code>404</code></strong></td>
+<td>Not Found</td>
+<td>Đường dẫn không tồn tại (thường thấy khi đối thủ chạy tool dò đường dẫn).</td>
+</tr>
+<tr>
+<td><strong><code>414</code></strong></td>
+<td>URI Too Long</td>
+<td>Bị rule <code>20005</code> chặn vì URL quá dài (&gt; 8192 ký tự).</td>
+</tr>
+<tr>
+<td><strong><code>429</code></strong></td>
+<td>Too Many Requests</td>
+<td>Gửi quá giới hạn tần suất (vd nộp cờ quá 30 lần/phút trên Dashboard).</td>
+</tr>
+<tr>
+<td><strong><code>500</code></strong></td>
+<td>Internal Server Error</td>
+<td>App bị crash/lỗi code, <strong>HOẶC</strong> rule Phase 4 của WAF vừa cắt response chặn lọt Flag (xem cột <code>WAF</code> để phân biệt!).</td>
+</tr>
+<tr>
+<td><strong><code>502</code> / <code>504</code></strong></td>
+<td>Bad Gateway / Timeout</td>
+<td>App phía sau bị treo/chết, hoặc rule WAF viết regex quá nặng làm quá tải CPU/RAM → <strong>nguy cơ rớt SVC rất cao!</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="24-các-http-header-cần-để-ý-khi-phòng-thủ">2.4. Các HTTP Header cần để ý khi phòng thủ</h3>
+<ul>
+<li><strong><code>Host</code>:</strong> Tên miền hoặc IP của dịch vụ. Nếu bot gọi bằng IP, OWASP CRS rule <code>920350</code> có thể chặn nhầm → gỡ bằng <code>SecRuleRemoveById 920350</code>.</li>
+<li><strong><code>Cookie</code> &amp; <code>Authorization</code>:</strong> Chứa phiên đăng nhập / JWT token. Rất hay bị OWASP CRS bắt nhầm (False Positive) vì chuỗi ngẫu nhiên đôi khi chứa ký tự giống SQL/XSS.</li>
+<li><strong><code>X-Forwarded-For</code> / <code>X-Forwarded-Host</code>:</strong> Do proxy của BTC gắn thêm. <strong>Không bao giờ chặn theo IP</strong>, và cẩn thận không chặn nhầm <code>X-Forwarded-Host</code> nếu proxy BTC tự chèn.</li>
+<li><strong><code>X-Original-URL</code> / <code>X-Rewrite-URL</code>:</strong> Header ít khi dùng bởi người dùng thật, đôi khi bị lạm dụng để đi vòng kiểm tra đường dẫn ở tầng proxy/framework.</li>
+</ul>
+<hr />
+<h2 id="3-bảng-tra-cứu-encoding-đọc-log-bằng-mắt-thường-không-cần-mạng">3. Bảng tra cứu Encoding (đọc log bằng mắt thường không cần mạng)</h2>
+<p>Khi xem <code>Traffic log</code>, dữ liệu trong URL hoặc body thường bị mã hóa (encode). Biết bảng này giúp bạn dịch ngay bằng mắt thường mà không cần Internet.</p>
+<h3 id="31-url-encoding-phổ-biến-percent-encoding">3.1. URL Encoding phổ biến (Percent-encoding)</h3>
+<table>
+<thead>
+<tr>
+<th>Mã URL</th>
+<th>Ký tự thật</th>
+<th>Double-encoded</th>
+<th>Ghi chú nhận diện nhanh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>%20</code> hoặc <code>+</code></td>
+<td><em>(dấu cách)</em></td>
+<td><code>%2520</code></td>
+<td>Khoảng trắng trong query string</td>
+</tr>
+<tr>
+<td><code>%27</code></td>
+<td><code>'</code></td>
+<td><code>%2527</code></td>
+<td>Dấu nháy đơn (hay xuất hiện trong chuỗi bất thường liên quan SQL)</td>
+</tr>
+<tr>
+<td><code>%22</code></td>
+<td><code>"</code></td>
+<td><code>%2522</code></td>
+<td>Dấu nháy kép</td>
+</tr>
+<tr>
+<td><code>%2F</code> / <code>%2f</code></td>
+<td><code>/</code></td>
+<td><code>%252f</code></td>
+<td>Dấu gạch chéo đường dẫn</td>
+</tr>
+<tr>
+<td><code>%5C</code> / <code>%5c</code></td>
+<td><code>\</code></td>
+<td><code>%255c</code></td>
+<td>Dấu gạch chéo ngược</td>
+</tr>
+<tr>
+<td><code>%2E</code> / <code>%2e</code></td>
+<td><code>.</code></td>
+<td><code>%252e</code></td>
+<td>Dấu chấm (<code>%2e%2e%2f</code> = <code>../</code>)</td>
+</tr>
+<tr>
+<td><code>%3C</code> / <code>%3E</code></td>
+<td><code>&lt;</code> / <code>&gt;</code></td>
+<td><code>%253c</code> / <code>%253e</code></td>
+<td>Dấu ngoặc thẻ HTML</td>
+</tr>
+<tr>
+<td><code>%3B</code></td>
+<td><code>;</code></td>
+<td><code>%253b</code></td>
+<td>Dấu chấm phẩy</td>
+</tr>
+<tr>
+<td><code>%7C</code></td>
+<td><code>|</code></td>
+<td><code>%257c</code></td>
+<td>Dấu gạch đứng (pipe)</td>
+</tr>
+<tr>
+<td><code>%26</code></td>
+<td><code>&amp;</code></td>
+<td><code>%2526</code></td>
+<td>Dấu và</td>
+</tr>
+<tr>
+<td><code>%24</code></td>
+<td><code>$</code></td>
+<td><code>%2524</code></td>
+<td>Dấu đô la (<code>%24%28</code> = <code>$(</code>)</td>
+</tr>
+<tr>
+<td><code>%00</code></td>
+<td><em>(Null byte)</em></td>
+<td><code>%2500</code></td>
+<td>Ký tự kết thúc chuỗi</td>
+</tr>
+<tr>
+<td><code>%0D</code> / <code>%0A</code></td>
+<td><code>\r</code> / <code>\n</code></td>
+<td><code>%250d</code> / <code>%250a</code></td>
+<td>Ký tự xuống dòng (CRLF)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Bài học cho người viết Rule WAF:</strong> Nếu thấy log có <code>%252e</code> hoặc <code>%2527</code> (mã hóa 2 lớp), rule của bạn bắt buộc phải có <strong>2 lần</strong> <code>t:urlDecodeUni,t:urlDecodeUni</code> mới giải mã về ký tự gốc trước khi so khớp!</p>
+</blockquote>
+<h3 id="32-nhận-diện-nhanh-base64--jwt-trong-log">3.2. Nhận diện nhanh Base64 &amp; JWT trong log</h3>
+<ul>
+<li><strong>Base64 chuẩn:</strong> Chỉ gồm <code>A-Z</code>, <code>a-z</code>, <code>0-9</code>, <code>+</code>, <code>/</code>, cuối chuỗi hay có <code>=</code> hoặc <code>==</code>.</li>
+<li><strong>JWT (JSON Web Token):</strong> Dạng JWS thường có <strong>3 phần cách nhau bằng 2 dấu chấm</strong> <code>xxxxx.yyyyy.zzzzz</code>; JWE có 5 phần. Phần đầu thường bắt đầu bằng <code>eyJ</code> (vì <code>eyJ</code> là Base64URL của <code>{"</code>). Base64URL dùng <code>-</code> và <code>_</code> thay cho <code>+</code> và <code>/</code>.</li>
+<li><code>eyJhbGciOiJub25l</code> → <code>{"alg":"none</code> (cần cảnh giác!).</li>
+<li><code>eyJhbGciOiJIUzI1Ni</code> → <code>{"alg":"HS256</code> (JWT ký bằng HMAC-SHA256 bình thường).</li>
+<li><strong>HTML Entities:</strong> <code>&amp;lt;</code> = <code>&lt;</code>, <code>&amp;gt;</code> = <code>&gt;</code>, <code>&amp;quot;</code> = <code>"</code>, <code>&amp;#60;</code> hoặc <code>&amp;#x3c;</code> = <code>&lt;</code> → dùng <code>t:htmlEntityDecode</code> trong rule WAF.</li>
+<li><strong>JavaScript Escape:</strong> <code>\u003c</code> hoặc <code>\x3c</code> = <code>&lt;</code> → dùng <code>t:jsDecode</code> trong rule WAF.</li>
+</ul>
+<hr />
+<h2 id="4-cẩm-nang-regex-pcre-cho-người-viết-rule-waf">4. Cẩm nang Regex (PCRE) cho người viết Rule WAF</h2>
+<p>ModSecurity v3 sử dụng <strong>PCRE (Perl Compatible Regular Expressions)</strong>. Dưới đây là mọi ký hiệu bạn cần để tự viết hoặc sửa rule Allowlist an toàn.</p>
+<h3 id="41-bảng-ký-hiệu-regex-cốt-lõi">4.1. Bảng ký hiệu Regex cốt lõi</h3>
+<table>
+<thead>
+<tr>
+<th>Ký hiệu</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>^</code> và <code>$</code></td>
+<td>Bắt đầu và kết thúc chuỗi (<strong>luôn dùng cho Allowlist!</strong>)</td>
+<td><code>^[0-9]+$</code> chỉ khớp toàn bộ là số</td>
+</tr>
+<tr>
+<td><code>.</code></td>
+<td>Bất kỳ 1 ký tự nào (trừ xuống dòng). Muốn khớp dấu chấm thật phải viết <code>\.</code></td>
+<td><code>\.pdf$</code> khớp đuôi <code>.pdf</code></td>
+</tr>
+<tr>
+<td><code>[abc]</code> / <code>[^abc]</code></td>
+<td>1 ký tự nằm trong / <strong>không</strong> nằm trong tập</td>
+<td><code>[A-Za-z0-9_-]</code></td>
+</tr>
+<tr>
+<td><code>\d</code> / <code>\w</code> / <code>\s</code></td>
+<td>Chữ số (<code>0-9</code>) / chữ-số-gạch dưới / khoảng trắng</td>
+<td><code>^\d{1,10}$</code></td>
+</tr>
+<tr>
+<td><code>?</code> / <code>*</code> / <code>+</code></td>
+<td>Lặp <code>0 hoặc 1</code> / <code>0 trở lên</code> / <code>1 trở lên</code></td>
+<td><code>https?</code> khớp <code>http</code> hoặc <code>https</code></td>
+</tr>
+<tr>
+<td><code>{m,n}</code></td>
+<td>Lặp từ <code>m</code> đến <code>n</code> lần (<strong>nên dùng để tránh ReDoS</strong>)</td>
+<td><code>^[0-9]{1,10}$</code></td>
+</tr>
+<tr>
+<td><code>(?:a\|b)</code></td>
+<td>Nhóm chọn <code>a</code> hoặc <code>b</code> (không tạo capture group → chạy nhanh hơn <code>(a\|b)</code>)</td>
+<td><code>^(?:asc\|desc)$</code></td>
+</tr>
+<tr>
+<td><code>(?i)</code></td>
+<td>Không phân biệt chữ HOA / thường</td>
+<td><code>(?i)^admin$</code> khớp <code>Admin</code>, <code>ADMIN</code></td>
+</tr>
+<tr>
+<td><code>(?!...)</code></td>
+<td>Negative lookahead (phía sau <strong>không được</strong> là...)</td>
+<td><code>^/(?!/)</code> bắt đầu bằng <code>/</code> nhưng không phải <code>//</code></td>
+</tr>
+<tr>
+<td><code>\x22</code> / <code>\x27</code> / <code>\x5c</code></td>
+<td>Dấu <code>"</code> / <code>'</code> / <code>\</code> viết theo mã hex (tránh lỗi thoát ký tự trong chuỗi ModSecurity)</td>
+<td><code>[\x22\x27]</code> khớp <code>"</code> hoặc <code>'</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-bộ-mẫu-regex-allowlist-chuẩn-copy-dùng-ngay-với-rx">4.2. Bộ mẫu Regex Allowlist chuẩn (Copy dùng ngay với <code>!@rx</code>)</h3>
+<blockquote>
+<p>Khi dùng với toán tử phủ định <strong><code>!@rx</code></strong>, nghĩa là: <em>"Nếu giá trị </em><em>KHÔNG</em><em> khớp mẫu chuẩn này → chặn!"</em></p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Kiểu dữ liệu hợp lệ</th>
+<th>Regex Allowlist chuẩn</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Số nguyên dương (ID, page, limit)</td>
+<td><code>^[0-9]{1,10}$</code></td>
+</tr>
+<tr>
+<td>Số nguyên có thể rỗng (tham số tùy chọn)</td>
+<td><code>^[0-9]{0,10}$</code></td>
+</tr>
+<tr>
+<td>UUID (36 ký tự; regex dưới <strong>không</strong> kiểm tra version)</td>
+<td><code>^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$</code></td>
+</tr>
+<tr>
+<td>Username / Slug đơn giản</td>
+<td><code>^[A-Za-z0-9_.-]{1,64}$</code></td>
+</tr>
+<tr>
+<td>Ngày tháng <code>YYYY-MM-DD</code></td>
+<td><code>^\d{4}-\d{2}-\d{2}$</code></td>
+</tr>
+<tr>
+<td>Danh sách giá trị cố định (VD cột sắp xếp)</td>
+<td><code>^(?:id\|name\|price\|created_at\|asc\|desc)$</code></td>
+</tr>
+<tr>
+<td>Tên file an toàn (không có <code>/</code> hay <code>\</code>)</td>
+<td><code>^[A-Za-z0-9._-]{1,64}\.(?:pdf\|png\|jpe?g\|gif\|txt\|csv)$</code></td>
+</tr>
+<tr>
+<td>Đường dẫn nội bộ (chống Open Redirect)</td>
+<td><code>^/(?!/)[A-Za-z0-9._~!$&amp;'()*+,;=:@%/?-]*$</code></td>
+</tr>
+<tr>
+<td>Địa chỉ IPv4 hoặc Hostname sạch</td>
+<td><code>^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$\|^(?:\d{1,3}\.){3}\d{1,3}$</code></td>
+</tr>
+<tr>
+<td>Chuỗi Hex 64 ký tự (hash SHA-256 / token)</td>
+<td><code>^[0-9a-fA-F]{64}$</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>⚠️ Bẫy copy regex từ bảng Markdown:</strong> Các regex trong bảng trên (và bảng 4.1, 6.1) dùng <code>\|</code> để escape ký tự pipe cho Markdown. Khi copy sang ModSecurity, <code>\|</code> là <strong>literal pipe</strong>, không phải phép OR → regex sẽ sai. Hãy bỏ <code>\</code> trước mọi <code>|</code>, hoặc copy từ file <a href="FHACKER2026_Regex_CopySafe.html">FHACKER2026_Regex_CopySafe.md</a> (toàn bộ nằm trong code fence, copy trực tiếp được).</p>
+</blockquote>
+<h3 id="43-tránh-lỗi-redos-regex-làm-treo-waf-mất-svc">4.3. Tránh lỗi ReDoS (Regex làm treo WAF, mất SVC!)</h3>
+<p>WAF của BTC chỉ cấp <strong>2 CPU, 3 GB RAM</strong>. Một regex viết ẩu có thể làm CPU lên 100% khi gặp chuỗi dài → bot chấm bị timeout → rớt sạch SVC.
+- <strong>TUYỆT ĐỐI TRÁNH:</strong>
+  - Lặp lồng nhau kiểu <code>(a+)+</code>, <code>([a-zA-Z]+)*</code>, <code>(.*a){10}</code>.
+  - Dùng <code>.*</code> không giới hạn giữa 2 từ khóa trên <code>REQUEST_BODY</code> lớn (ví dụ <code>\{\{.*__class__.*\}\}</code>).
+- <strong>CÁCH VIẾT AN TOÀN:</strong>
+  - Luôn đặt giới hạn độ dài rõ ràng: thay <code>.*</code> bằng <code>[^}]{0,300}</code> hoặc <code>.{0,200}</code>.
+  - Khi chỉ cần so chuỗi cố định, dùng <code>@streq</code>, <code>@beginsWith</code>, <code>@endsWith</code>, <code>@contains</code>, <code>@pm</code> thay vì <code>@rx</code> (nhanh hơn gấp nhiều lần).</p>
+<hr />
+<h2 id="5-hướng-dẫn-viết-rule-modsecurity-v3-từ-az-tư-duy-cú-pháp--bẫy-thực-chiến">5. Hướng dẫn viết Rule ModSecurity v3 từ A–Z (Tư duy, Cú pháp &amp; Bẫy thực chiến)</h2>
+<p>Nếu file Cheatsheet cung cấp các rule dựng sẵn để copy–dán, mục này giúp bạn <strong>tự viết, tùy biến và sửa lỗi mọi rule ModSecurity v3</strong> khi gặp bài thi mới hoặc lỗi logic đặc thù.</p>
+<h3 id="50-viết-rule-từ-con-số-0-dành-cho-người-chưa-biết-gì">5.0. Viết rule từ con số 0 (dành cho người chưa biết gì)</h3>
+<blockquote>
+<p><strong>Mục này dành cho ai?</strong> Người chưa từng viết rule ModSecurity, nhìn vào một rule thấy toàn dấu <code>"</code>, <code>\</code>, <code>@</code>, <code>t:</code>… và không biết bắt đầu từ đâu. Đọc hết 5.0, bạn sẽ hiểu:
+- Một rule gồm những phần nào, mỗi phần trả lời câu hỏi gì.
+- Dữ liệu request nằm ở biến nào.
+- Muốn chặn một hành vi thì chọn biến / toán tử / phase nào.
+- Khi app đổi route, đổi param, đổi kiểu dữ liệu thì sửa đúng dòng nào.
+- Làm sao biết rule chạy đúng, chạy sai, hay chặn nhầm bot.</p>
+<p>Các mục 5.1–5.10 phía dưới là bảng tra cứu chi tiết. Mục 5.0 này là <strong>phần học nền</strong>; đọc 5.0 trước rồi quay lại 5.1–5.10 sẽ dễ hơn nhiều.</p>
+</blockquote>
+<h4 id="501-một-rule-waf-là-gì">5.0.1. Một rule WAF là gì?</h4>
+<p>Hãy nghĩ rule WAF là một câu:</p>
+<blockquote>
+<p><strong>NẾU</strong> request có đặc điểm X <strong>THÌ</strong> làm hành động Y.</p>
+</blockquote>
+<p>Ví dụ đời thường: một bảo vệ đứng cửa có danh sách khách được vào. Anh ta làm 3 việc:</p>
+<ol>
+<li><strong>Nhìn vào đâu?</strong> → khuôn mặt / thẻ / CMND (tương ứng <strong>biến</strong>).</li>
+<li><strong>So với cái gì?</strong> → danh sách khách mời (tương ứng <strong>toán tử</strong>).</li>
+<li><strong>Nếu không khớp thì làm gì?</strong> → mời ra ngoài hoặc ghi sổ (tương ứng <strong>hành động</strong>).</li>
+</ol>
+<p>ModSecurity cũng vậy. Nó không sửa code app, không diệt virus. Nó chỉ <strong>đứng giữa request/response</strong>, đọc dữ liệu, so khớp, rồi cho qua hoặc chặn.</p>
+<p>Một rule tốt không phải rule “bắt được nhiều nhất”, mà là rule:</p>
+<ul>
+<li><strong>Đúng chỗ:</strong> chỉ áp dụng cho đúng route, đúng tham số.</li>
+<li><strong>Đúng dạng:</strong> biết cái gì là hợp lệ, cái gì là bất thường.</li>
+<li><strong>Không chặn nhầm bot chấm điểm</strong> (SVC).</li>
+</ul>
+<h4 id="502-cấu-trúc-3-phần-của-một-secrule">5.0.2. Cấu trúc 3 phần của một <code>SecRule</code></h4>
+<p>Mọi rule đều có dạng:</p>
+<pre><code class="language-apache">SecRule &lt;BIẾN&gt; &quot;&lt;TOÁN_TỬ&gt; &lt;GIÁ_TRỊ&gt;&quot; \
+    &quot;&lt;CÁC_HÀNH_ĐỘNG&gt;&quot;
+</code></pre>
+<p>Ví dụ rule đơn giản nhất — chặn dò file <code>/.env</code>:</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@streq /.env&quot; \
+    &quot;id:23001,phase:1,pass,log,t:none,msg:'Block .env scan',tag:'recon',logdata:'%{REQUEST_FILENAME}'&quot;
+</code></pre>
+<blockquote>
+<p><strong>Lưu ý:</strong> Đây là ví dụ <strong>đơn giản nhất</strong> để học cú pháp: <code>@streq</code> chỉ khớp đúng <code>/.env</code>, không bắt <code>/.env.local</code> hay <code>/foo/.env</code>. Bản đầy đủ hơn ở <strong>5.0.11</strong> dùng <code>@rx</code> để bắt các biến thể.</p>
+</blockquote>
+<p>Đọc thành tiếng Việt:</p>
+<blockquote>
+<p>“Nếu đường dẫn request <strong>bằng đúng</strong> <code>/.env</code>, thì ở phase 1, <strong>cho qua nhưng ghi log</strong>, gắn id 23001, msg ‘Block .env scan’, tag ‘recon’, và ghi lại đường dẫn vào logdata.”</p>
+</blockquote>
+<p>Bảng giải phẫu:</p>
+<table>
+<thead>
+<tr>
+<th>Phần</th>
+<th>Trả lời câu hỏi</th>
+<th>Ví dụ trong rule trên</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SecRule</code></td>
+<td>Bắt đầu một rule</td>
+<td><code>SecRule</code></td>
+</tr>
+<tr>
+<td><strong>Biến</strong></td>
+<td>Soi cái gì?</td>
+<td><code>REQUEST_FILENAME</code> (đường dẫn)</td>
+</tr>
+<tr>
+<td><strong>Toán tử</strong></td>
+<td>So kiểu gì?</td>
+<td><code>@streq</code> (bằng đúng)</td>
+</tr>
+<tr>
+<td><strong>Giá trị</strong></td>
+<td>So với cái gì?</td>
+<td><code>/.env</code></td>
+</tr>
+<tr>
+<td><strong>Hành động</strong></td>
+<td>Khớp thì làm gì?</td>
+<td><code>pass,log</code> (cho qua, ghi log)</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>Số định danh rule</td>
+<td><code>23001</code></td>
+</tr>
+<tr>
+<td><code>phase</code></td>
+<td>Chạy ở giai đoạn nào?</td>
+<td><code>phase:1</code></td>
+</tr>
+<tr>
+<td><code>msg</code></td>
+<td>Tên hiển thị trên log</td>
+<td><code>Block .env scan</code></td>
+</tr>
+<tr>
+<td><code>tag</code></td>
+<td>Nhãn để lọc log</td>
+<td><code>recon</code></td>
+</tr>
+<tr>
+<td><code>logdata</code></td>
+<td>Ghi thêm dữ liệu để điều tra</td>
+<td><code>%{REQUEST_FILENAME}</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Quy ước đọc nhanh:</strong> <code>SecRule</code> = “xét”; biến = “soi cái gì”; toán tử = “so kiểu gì”; actions = “khớp thì làm gì”.</p>
+<p><strong>Về ID trong mục này:</strong> các số <code>230xx</code> chỉ là ví dụ để học. Khi dán vào WAF thật, đổi sang ID 5 chữ số <strong>chưa trùng</strong> (kiểm tra bằng <code>grep -oE 'id:[0-9]{5}' team-rules.conf | sort | uniq -d</code>).</p>
+</blockquote>
+<h4 id="503-đọc-một-rule-thành-tiếng-việt">5.0.3. Đọc một rule thành tiếng Việt</h4>
+<p>Lấy rule allowlist <code>id</code> số trên <code>/api/product</code>:</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/product/?$&quot; \
+    &quot;id:23002,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Non-numeric product id',tag:'sqli',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:id|ARGS:json.id &quot;!@rx ^[0-9]{1,10}$&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p>Đọc từ trên xuống:</p>
+<ol>
+<li><strong>Dòng 1 — điều kiện 1:</strong> <code>REQUEST_FILENAME</code> khớp regex <code>(?i)^/api/product/?$</code>.
+   - <code>(?i)</code> = không phân biệt hoa/thường.
+   - <code>^/api/product</code> = bắt đầu bằng <code>/api/product</code>.
+   - <code>/?$</code> = có hoặc không có dấu <code>/</code> cuối, rồi hết chuỗi.
+   - <code>t:normalizePath</code> = chuẩn hóa <code>//</code>, <code>/./</code>, <code>/../</code> trước khi so.</li>
+<li><strong>Dòng 2 — điều kiện 2:</strong> tham số <code>id</code> (form) hoặc <code>json.id</code> (JSON) <strong>không khớp</strong> regex <code>^[0-9]{1,10}$</code>.
+   - <code>!@rx</code> = phủ định: “không khớp”.
+   - <code>^[0-9]{1,10}$</code> = chỉ gồm 1–10 chữ số, từ đầu đến cuối.
+   - <code>t:urlDecodeUni</code> hai lần = giải mã URL 2 lớp để chống <code>%252e</code>.</li>
+<li><strong><code>chain</code></strong> = cả hai điều kiện phải <strong>cùng đúng</strong>.</li>
+<li><strong><code>pass,log</code></strong> = hiện chỉ ghi log, <strong>chưa chặn</strong>. Sau khi test ổn mới đổi thành <code>deny,status:403,log</code>.</li>
+</ol>
+<p>Đọc gọn:</p>
+<blockquote>
+<p>“Nếu request vào đúng route <code>/api/product</code> (kể cả <code>/API/product/</code>) <strong>VÀ</strong> tham số <code>id</code> không phải số 1–10 chữ số, thì ghi log lại. Nếu đổi <code>pass</code> thành <code>deny</code> thì trả 403.”</p>
+<p><strong>Mẹo:</strong> Khi đọc rule của người khác, hãy đọc <strong>dòng 1 trước</strong>, rồi <strong>dòng cuối</strong>, rồi mới đọc các dòng <code>chain</code> ở giữa. Dòng 1 cho biết rule nhắm vào đâu; dòng cuối cho biết payload bị bắt là gì.</p>
+</blockquote>
+<h4 id="504-biến--dữ-liệu-nằm-ở-đâu">5.0.4. Biến — dữ liệu nằm ở đâu?</h4>
+<p>Muốn viết rule, việc đầu tiên là biết dữ liệu mình cần kiểm tra nằm ở biến nào.</p>
+<table>
+<thead>
+<tr>
+<th>Biến</th>
+<th>Chứa gì?</th>
+<th>Dùng khi nào?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>REQUEST_METHOD</code></td>
+<td><code>GET</code>, <code>POST</code>, <code>PUT</code>…</td>
+<td>Chỉ cho phép method nhất định</td>
+</tr>
+<tr>
+<td><code>REQUEST_FILENAME</code></td>
+<td>Đường dẫn, <strong>không gồm query</strong></td>
+<td>Chặn route, dò file, LFI</td>
+</tr>
+<tr>
+<td><code>REQUEST_URI</code></td>
+<td>Đường dẫn <strong>kèm query</strong>, dạng thô</td>
+<td>Cần thấy cả <code>?id=...</code></td>
+</tr>
+<tr>
+<td><code>QUERY_STRING</code></td>
+<td>Chỉ phần sau dấu <code>?</code></td>
+<td>Kiểm tra query thô</td>
+</tr>
+<tr>
+<td><code>REQUEST_HEADERS:Host</code></td>
+<td>Header <code>Host</code></td>
+<td>Tách rule theo service</td>
+</tr>
+<tr>
+<td><code>REQUEST_HEADERS:User-Agent</code></td>
+<td>Header <code>User-Agent</code></td>
+<td>Chặn tool/scanner</td>
+</tr>
+<tr>
+<td><code>REQUEST_COOKIES:session</code></td>
+<td>Cookie tên <code>session</code></td>
+<td>Kiểm tra cookie cụ thể</td>
+</tr>
+<tr>
+<td><code>ARGS</code></td>
+<td>Tất cả tham số: query + form + JSON</td>
+<td>Quét rộng, dễ false positive</td>
+</tr>
+<tr>
+<td><code>ARGS:id</code></td>
+<td>Riêng tham số <code>id</code> dạng form/query</td>
+<td>Allowlist 1 param</td>
+</tr>
+<tr>
+<td><code>ARGS:json.id</code></td>
+<td>Riêng tham số <code>id</code> trong JSON body</td>
+<td>Allowlist 1 param JSON</td>
+</tr>
+<tr>
+<td><code>ARGS_NAMES</code></td>
+<td><strong>Tên</strong> các tham số, không phải giá trị</td>
+<td>Mass assignment, NoSQL <code>$ne</code></td>
+</tr>
+<tr>
+<td><code>REQUEST_BODY</code></td>
+<td>Body thô</td>
+<td>Soi XML, multipart, payload đặc biệt</td>
+</tr>
+<tr>
+<td><code>FILES</code></td>
+<td>Tên file upload</td>
+<td>Chặn đuôi file</td>
+</tr>
+<tr>
+<td><code>FILES_NAMES</code></td>
+<td>Tên field upload</td>
+<td>Kiểm tra field upload</td>
+</tr>
+<tr>
+<td><code>RESPONSE_STATUS</code></td>
+<td>Mã trạng thái response</td>
+<td>Phase 3/4</td>
+</tr>
+<tr>
+<td><code>RESPONSE_HEADERS:Location</code></td>
+<td>Header <code>Location</code></td>
+<td>Chống open redirect</td>
+</tr>
+<tr>
+<td><code>RESPONSE_BODY</code></td>
+<td>Body response</td>
+<td>Phase 4, chặn lọt flag</td>
+</tr>
+<tr>
+<td><code>&amp;ARGS:id</code></td>
+<td><strong>Số lượng</strong> tham số <code>id</code></td>
+<td>Chống trùng tham số HPP</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Bẫy JSON quan trọng nhất:</strong></p>
+<p>Khi app nhận <code>Content-Type: application/json</code>:</p>
+<pre><code class="language-json">{&quot;id&quot;: 1}
+</code></pre>
+<p>ModSecurity đặt tên tham số là <code>json.id</code>, không phải <code>id</code>. Vì vậy:</p>
+<pre><code class="language-apache"># SAI: chỉ bắt form/query, bỏ lọt JSON
+SecRule ARGS:id &quot;!@rx ^[0-9]+$&quot; ...
+
+# ĐÚNG: bắt cả form/query lẫn JSON
+SecRule ARGS:id|ARGS:json.id &quot;!@rx ^[0-9]+$&quot; ...
+</code></pre>
+<p>Các dạng JSON khác:</p>
+<table>
+<thead>
+<tr>
+<th>JSON gửi lên</th>
+<th>Tên ModSecurity nhìn thấy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{"id": 1}</code></td>
+<td><code>ARGS:json.id</code></td>
+</tr>
+<tr>
+<td><code>{"id": [1, 2]}</code></td>
+<td><code>ARGS:json.id.array_0</code>, <code>ARGS:json.id.array_1</code></td>
+</tr>
+<tr>
+<td><code>{"user": {"id": 1}}</code></td>
+<td><code>ARGS:json.user.id</code></td>
+</tr>
+<tr>
+<td><code>{"role": ["admin"]}</code></td>
+<td><code>ARGS:json.role.array_0</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Vì vậy, nếu app không cần nhận mảng cho <code>id</code>, hãy thêm rule chặn <code>json.id.array_*</code> (xem ví dụ 2 bên dưới). Nếu app có JSON lồng nhau, phải dùng đúng tên đầy đủ như <code>ARGS:json.user.id</code>.</p>
+</blockquote>
+<h4 id="505-toán-tử--so-sánh-như-thế-nào">5.0.5. Toán tử — so sánh như thế nào?</h4>
+<table>
+<thead>
+<tr>
+<th>Toán tử</th>
+<th>Ý nghĩa</th>
+<th>Ví dụ</th>
+<th>Ghi chú</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@streq</code></td>
+<td>Bằng đúng, phân biệt hoa/thường</td>
+<td><code>REQUEST_FILENAME "@streq /api/login"</code></td>
+<td>Không bắt <code>/api/login/</code></td>
+</tr>
+<tr>
+<td><code>@beginsWith</code></td>
+<td>Bắt đầu bằng</td>
+<td><code>REQUEST_FILENAME "@beginsWith /admin/"</code></td>
+<td>Nhẹ, nhanh</td>
+</tr>
+<tr>
+<td><code>@endsWith</code></td>
+<td>Kết thúc bằng</td>
+<td><code>REQUEST_FILENAME "@endsWith .php"</code></td>
+<td>Hợp với đuôi file</td>
+</tr>
+<tr>
+<td><code>@contains</code></td>
+<td>Có chứa chuỗi con</td>
+<td><code>REQUEST_BODY "@contains &lt;!ENTITY"</code></td>
+<td>Đơn giản, dễ FP nếu chuỗi ngắn</td>
+</tr>
+<tr>
+<td><code>@rx</code></td>
+<td>Khớp regex</td>
+<td><code>ARGS:id "@rx ^[0-9]+$"</code></td>
+<td>Mạnh nhất, cần cẩn thận ReDoS</td>
+</tr>
+<tr>
+<td><code>!@rx</code></td>
+<td><strong>Không</strong> khớp regex</td>
+<td><code>ARGS:id "!@rx ^[0-9]+$"</code></td>
+<td>Dùng cho allowlist</td>
+</tr>
+<tr>
+<td><code>@pm</code></td>
+<td>Nhiều từ khóa, cách nhau dấu cách</td>
+<td><code>ARGS "@pm union select sleep"</code></td>
+<td>Mặc định phân biệt hoa/thường</td>
+</tr>
+<tr>
+<td><code>@detectSQLi</code></td>
+<td>Engine phát hiện SQLi</td>
+<td><code>ARGS:q "@detectSQLi"</code></td>
+<td>Dùng cho ô text tự do</td>
+</tr>
+<tr>
+<td><code>@detectXSS</code></td>
+<td>Engine phát hiện XSS</td>
+<td><code>ARGS:comment "@detectXSS"</code></td>
+<td>Dùng cho ô text tự do</td>
+</tr>
+<tr>
+<td><code>@within</code></td>
+<td>Kiểm tra <strong>chuỗi con</strong> có nằm trong danh sách không <em>(dễ bị bẫy!)</em></td>
+<td><code>REQUEST_METHOD "!@within GET POST"</code></td>
+<td><strong>Cẩn thận:</strong> <code>@within</code> so chuỗi con nên <code>"a"</code> vẫn khớp <code>@within "id name"</code>! Với Allowlist nên dùng <code>!@rx ^(?:GET\|POST)\z</code> cho chắc tuyệt đối.</td>
+</tr>
+<tr>
+<td><code>@eq</code>, <code>@gt</code>, <code>@lt</code></td>
+<td>So sánh số</td>
+<td><code>&amp;ARGS:id "@gt 1"</code></td>
+<td>Dùng với <code>&amp;</code> hoặc <code>t:length</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Hiểu <code>!@rx</code> cho đúng:</strong></p>
+<ul>
+<li><code>ARGS:id "@rx ^[0-9]+$"</code> = “id <strong>là</strong> số” → khớp khi id hợp lệ.</li>
+<li><code>ARGS:id "!@rx ^[0-9]+$"</code> = “id <strong>không phải</strong> số” → khớp khi id bất thường.</li>
+</ul>
+<p>Vì vậy allowlist luôn dùng <code>!@rx</code>. Nhưng nếu regex viết sai, <code>!@rx</code> sẽ khớp <strong>mọi thứ</strong> → chặn sạch route. Đây là lỗi người mới hay mắc nhất.</p>
+<p><strong><code>@rx</code> là tìm kiếm, không phải so khớp toàn chuỗi.</strong> Muốn so cả chuỗi, phải có <code>^...$</code>:</p>
+<pre><code class="language-apache"># Chỉ cần chứa &quot;admin&quot; ở bất kỳ đâu
+ARGS:user &quot;@rx admin&quot;
+
+# Phải đúng toàn bộ là &quot;admin&quot;
+ARGS:user &quot;@rx ^admin$&quot;
+</code></pre>
+<blockquote>
+<p><strong><code>$</code> trong PCRE</strong> có thể khớp trước newline cuối. Với allowlist cần chặt tuyệt đối, dùng <code>\z</code> thay <code>$</code> (ví dụ <code>^[0-9]{1,10}\z</code>).</p>
+</blockquote>
+<h4 id="506-hành-động--chặn-log-hay-chỉ-quan-sát">5.0.6. Hành động — chặn, log hay chỉ quan sát?</h4>
+<table>
+<thead>
+<tr>
+<th>Hành động</th>
+<th>Ý nghĩa</th>
+<th>Khi nào dùng?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id:23001</code></td>
+<td>Số định danh rule</td>
+<td>Luôn có; 5 chữ số; không trùng</td>
+</tr>
+<tr>
+<td><code>phase:1</code></td>
+<td>Chạy sau request line + headers</td>
+<td>URI, header, cookie, <code>ctl:</code></td>
+</tr>
+<tr>
+<td><code>phase:2</code></td>
+<td>Chạy sau khi đọc body</td>
+<td><code>ARGS</code>, JSON, form, upload</td>
+</tr>
+<tr>
+<td><code>phase:3</code></td>
+<td>Chạy khi có response headers</td>
+<td><code>Location</code>, <code>Content-Type</code></td>
+</tr>
+<tr>
+<td><code>phase:4</code></td>
+<td>Chạy khi có response body</td>
+<td>Chặn lọt flag, lộ source</td>
+</tr>
+<tr>
+<td><code>pass</code></td>
+<td>Cho qua</td>
+<td>Giai đoạn test</td>
+</tr>
+<tr>
+<td><code>deny</code></td>
+<td>Chặn</td>
+<td>Sau khi đã test</td>
+</tr>
+<tr>
+<td><code>status:403</code></td>
+<td>Mã trả về khi chặn</td>
+<td>Thường dùng 403</td>
+</tr>
+<tr>
+<td><code>log</code></td>
+<td>Ghi log</td>
+<td>Luôn dùng khi test</td>
+</tr>
+<tr>
+<td><code>nolog</code></td>
+<td>Không ghi log</td>
+<td>Rule phụ, <code>ctl:</code></td>
+</tr>
+<tr>
+<td><code>msg:'...'</code></td>
+<td>Tên rule trên log</td>
+<td>Luôn đặt tên dễ hiểu</td>
+</tr>
+<tr>
+<td><code>tag:'...'</code></td>
+<td>Nhãn lọc log</td>
+<td><code>sqli</code>, <code>xss</code>, <code>lfi</code>…</td>
+</tr>
+<tr>
+<td><code>logdata:'...'</code></td>
+<td>Dữ liệu điều tra</td>
+<td><code>%{MATCHED_VAR_NAME}=%{MATCHED_VAR}</code></td>
+</tr>
+<tr>
+<td><code>chain</code></td>
+<td>Nối điều kiện AND</td>
+<td>Khi cần đúng route + đúng param</td>
+</tr>
+<tr>
+<td><code>t:none</code></td>
+<td>Xóa transform mặc định</td>
+<td>Luôn đặt đầu danh sách <code>t:</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Quy trình an toàn bắt buộc:</strong></p>
+<pre><code class="language-apache"># Bước 1: test
+&quot;id:23002,phase:2,pass,log,t:none,...&quot;
+
+# Bước 2: sau khi test 200/403 và chờ 1 chu kỳ 30 giây
+&quot;id:23002,phase:2,deny,status:403,log,t:none,...&quot;
+</code></pre>
+<blockquote>
+<p><code>pass,log</code> <strong>không chặn</strong>. Nếu bạn thấy request tấn công vẫn trả <code>200</code>, đó là bình thường khi đang test. Đừng vội kết luận rule sai.</p>
+<p><strong>Hiểu lầm phổ biến nhất của người mới về <code>pass</code>:</strong> <code>pass</code> chỉ có nghĩa là <em>"rule này không chặn, cho đi tiếp tới các rule phía sau"</em> — <strong><code>pass</code> KHÔNG làm request miễn nhiễm với OWASP CRS!</strong> Nếu bạn viết 1 rule <code>pass</code> nhưng request vẫn trả <code>403</code>, hãy xem cột <code>WAF</code>: có thể chính OWASP CRS (<code>9xxxxx</code> + <code>949110</code>) đang chặn nó → lúc đó phải dùng <code>ctl:ruleRemoveTargetById</code> (xem <strong>5.0.19</strong>).</p>
+</blockquote>
+<h4 id="507-transformations--vì-sao-payload-encode-vẫn-lọt">5.0.7. Transformations — vì sao payload encode vẫn lọt?</h4>
+<p>Kẻ tấn công không gửi <code>../</code> trần. Họ gửi <code>%2e%2e%2f</code>, <code>%252e%252e%252f</code>, <code>&amp;lt;script&amp;gt;</code>, <code>\u003cscript\u003e</code>… Nếu rule so regex trên chuỗi thô, nó sẽ không thấy.</p>
+<p>Transformations (<code>t:</code>) là các bước <strong>giải mã / chuẩn hóa</strong> trước khi so:</p>
+<table>
+<thead>
+<tr>
+<th>Transform</th>
+<th>Tác dụng</th>
+<th>Dùng cho</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>t:none</code></td>
+<td>Xóa transform mặc định</td>
+<td>Luôn đặt đầu tiên</td>
+</tr>
+<tr>
+<td><code>t:urlDecodeUni</code></td>
+<td>Giải mã URL</td>
+<td>SQLi, LFI, XSS, mọi thứ</td>
+</tr>
+<tr>
+<td><code>t:urlDecodeUni,t:urlDecodeUni</code></td>
+<td>Giải mã 2 lần</td>
+<td>Chống double-encode</td>
+</tr>
+<tr>
+<td><code>t:htmlEntityDecode</code></td>
+<td>Giải mã <code>&amp;lt;</code>, <code>&amp;#x3c;</code></td>
+<td>XSS, SSTI</td>
+</tr>
+<tr>
+<td><code>t:jsDecode</code></td>
+<td>Giải mã <code>\u003c</code>, <code>\x3c</code></td>
+<td>XSS, SSTI</td>
+</tr>
+<tr>
+<td><code>t:normalizePath</code></td>
+<td>Gộp <code>//</code>, xử lý <code>/./</code>, <code>/../</code></td>
+<td>Route, LFI</td>
+</tr>
+<tr>
+<td><code>t:normalizePathWin</code></td>
+<td>Đổi <code>\</code> thành <code>/</code></td>
+<td>LFI trên Windows</td>
+</tr>
+<tr>
+<td><code>t:lowercase</code></td>
+<td>Chuyển chữ thường</td>
+<td>So với regex chữ thường</td>
+</tr>
+</tbody>
+</table>
+<p>Ví dụ:</p>
+<pre><code class="language-text">Input:  %252e%252e%252f
+Sau 1 lần urlDecodeUni: %2e%2e%2f
+Sau 2 lần urlDecodeUni: ../
+</code></pre>
+<p>Thứ tự chuẩn:</p>
+<pre><code class="language-apache">&quot;t:none,t:urlDecodeUni,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,t:lowercase&quot;
+</code></pre>
+<blockquote>
+<p><strong>Lưu ý:</strong> <code>t:lowercase</code> chỉ đổi <strong>giá trị request</strong>, không đổi regex. Nếu regex của bạn viết hoa, nó vẫn không khớp. Hãy viết regex chữ thường hoặc dùng <code>(?i)</code>.</p>
+</blockquote>
+<h4 id="508-phase--đặt-rule-ở-đâu">5.0.8. Phase — đặt rule ở đâu?</h4>
+<pre><code class="language-text">Request → Phase 1 (line + headers) → Phase 2 (body/ARGS) → App
+        → Phase 3 (response headers) → Phase 4 (response body) → Client
+</code></pre>
+<p>Quy tắc dễ nhớ:</p>
+<ul>
+<li>Đụng tới <code>ARGS</code>, <code>ARGS_NAMES</code>, <code>REQUEST_BODY</code>, <code>FILES</code> → <strong><code>phase:2</code></strong>.</li>
+<li>Đụng tới <code>RESPONSE_BODY</code> → <strong><code>phase:4</code></strong>.</li>
+<li>Đụng tới <code>REQUEST_FILENAME</code>, <code>REQUEST_HEADERS</code>, <code>REQUEST_COOKIES</code>, <code>REQUEST_METHOD</code> → <strong><code>phase:1</code></strong> hoặc <code>phase:2</code> đều được, nhưng phase 1 sớm hơn và nhẹ hơn.</li>
+<li>Đụng tới <code>ctl:ruleRemoveTargetById</code> → <strong><code>phase:1</code></strong>, đặt ở <code>MODSEC_CRS</code>.</li>
+</ul>
+<blockquote>
+<p><strong>Sai phase là rule vô tác dụng.</strong> Ví dụ: viết <code>ARGS:id</code> ở <code>phase:1</code> thì lúc đó body chưa được đọc, <code>ARGS</code> rỗng → rule không bao giờ khớp.</p>
+<p><strong>Với <code>REQUEST_FILENAME</code>:</strong> nếu Traffic log còn thấy <code>%2e</code> / <code>%2f</code> trong path, thêm <code>t:urlDecodeUni</code> trước <code>t:normalizePath</code>.</p>
+</blockquote>
+<h4 id="509-chain--and-nhiều-điều-kiện">5.0.9. Chain — AND nhiều điều kiện</h4>
+<p>Rule đơn chỉ kiểm tra 1 điều kiện. Muốn “đúng route <strong>VÀ</strong> đúng param <strong>VÀ</strong> sai định dạng” thì dùng <code>chain</code>.</p>
+<pre><code class="language-apache">SecRule REQUEST_METHOD &quot;@streq POST&quot; \
+    &quot;id:23020,phase:2,pass,log,t:none,chain,msg:'Invalid order_id',tag:'allowlist',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/orders/?$&quot; &quot;t:none,t:normalizePath,chain&quot;
+        SecRule ARGS:order_id|ARGS:json.order_id &quot;!@rx ^[0-9]{1,10}$&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p><strong>4 quy tắc sống còn:</strong></p>
+<ol>
+<li><code>id</code>, <code>phase</code>, <code>pass</code>/<code>deny</code>, <code>status</code>, <code>log</code>, <code>msg</code>, <code>tag</code>, <code>logdata</code> <strong>chỉ viết ở dòng đầu</strong>.</li>
+<li>Dòng cuối <strong>không</strong> có <code>chain</code>.</li>
+<li>Mỗi dòng tự khai báo <code>t:</code> riêng; <code>t:</code> <strong>không kế thừa</strong>.</li>
+<li>Không có dòng trống / comment chen giữa các dòng <code>chain</code>.</li>
+</ol>
+<p><strong>OR thì sao?</strong> ModSecurity không có từ khóa <code>or</code>. Có 3 cách:</p>
+<ul>
+<li>Gộp regex: <code>@rx ^/(?:api/v1|api/v2)/orders$</code></li>
+<li>Gộp <code>@pm</code>: <code>ARGS "@pm union select sleep benchmark"</code></li>
+<li>Tách thành 2 rule độc lập với 2 <code>id</code> khác nhau.</li>
+</ul>
+<p><strong>Quy tắc dấu ngoặc &amp; ký tự đặc biệt (tránh lỗi <code>nginx -t</code> 100%):</strong></p>
+<ol>
+<li><strong>Ngoài cùng dùng ngoặc kép <code>"..."</code>:</strong> cả phần <code>"&lt;TOÁN_TỬ&gt; &lt;GIÁ_TRỊ&gt;"</code> lẫn phần <code>"&lt;CÁC_HÀNH_ĐỘNG&gt;"</code> đều bọc bằng ngoặc kép <code>"..."</code>.</li>
+<li><strong>Bên trong <code>msg</code>, <code>tag</code>, <code>logdata</code> dùng ngoặc đơn <code>'...'</code>:</strong> tuyệt đối không gõ dấu nháy đơn <code>'</code> (như <code>can't</code>) ở giữa <code>msg:'...'</code> vì sẽ làm ngắt chuỗi sớm!</li>
+<li><strong>Muốn match ký tự <code>"</code>, <code>'</code>, <code>\</code> bên trong regex:</strong> dùng mã hex <strong><code>\x22</code></strong> (dấu <code>"</code>), <strong><code>\x27</code></strong> (dấu <code>'</code>), <strong><code>\x5c</code></strong> (dấu <code>\</code>) để không bao giờ đụng cú pháp ModSecurity. Ví dụ: <code>@rx [\x22\x27]</code> khớp <code>"</code> hoặc <code>'</code>.</li>
+<li><strong>Dấu <code>\</code> nối dòng:</strong> đặt ở cuối dòng 1 để tách phần <code>ACTIONS</code> xuống dòng 2 cho dễ đọc — <strong>cấm tuyệt đối</strong> để khoảng trắng hoặc <code># comment</code> phía sau dấu <code>\</code>!</li>
+</ol>
+<h4 id="5010-quy-trình-7-bước-viết-một-rule-mới">5.0.10. Quy trình 7 bước viết một rule mới</h4>
+<p>Khi phát hiện một hành vi cần chặn, đừng viết rule ngay. Làm theo 7 bước:</p>
+<ol>
+<li><strong>Viết yêu cầu bằng tiếng Việt.</strong> Ví dụ: “Chặn <code>id</code> không phải số trên <code>/api/product</code>.”</li>
+<li><strong>Xác định dữ liệu:</strong> route nằm ở <code>REQUEST_FILENAME</code>; <code>id</code> nằm ở <code>ARGS:id</code> và <code>ARGS:json.id</code>.</li>
+<li><strong>Xác định phase:</strong> có <code>ARGS</code> → <code>phase:2</code>.</li>
+<li><strong>Chọn toán tử:</strong> <code>id</code> phải là số → allowlist <code>!@rx ^[0-9]{1,10}$</code>.</li>
+<li><strong>Chọn action:</strong> <code>pass,log</code> trước.</li>
+<li><strong>Thêm <code>id</code>, <code>msg</code>, <code>tag</code>, <code>logdata</code>:</strong> để đọc log và tắt rule khi cần.</li>
+<li><strong>Test 200/403 → chờ 1 chu kỳ 30 giây → đổi <code>deny,status:403,log</code> → Save.</strong></li>
+</ol>
+<p>Chỉ cần 7 bước này, bạn có thể tự viết 90% rule vá lỗ hổng.</p>
+<h4 id="5011-ví-dụ-1--chặn-dò-env">5.0.11. Ví dụ 1 — Chặn dò <code>/.env</code></h4>
+<p><strong>Yêu cầu:</strong> chặn request dò file cấu hình <code>/.env</code>, <code>/.env.local</code>, <code>/foo/.env</code>.</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)(?:^|/)\.env(?:$|[/.])&quot; \
+    &quot;id:23001,phase:1,pass,log,t:none,t:urlDecodeUni,t:normalizePath,msg:'Block .env scan',tag:'recon',logdata:'%{REQUEST_FILENAME}'&quot;
+</code></pre>
+<p>Giải thích từng phần:</p>
+<ul>
+<li><code>REQUEST_FILENAME</code>: chỉ lấy đường dẫn, không lấy query.</li>
+<li><code>(?i)</code>: không phân biệt hoa/thường.</li>
+<li><code>(?:^|/)</code>: bắt đầu chuỗi hoặc sau dấu <code>/</code> → bắt cả <code>/.env</code> và <code>/foo/.env</code>.</li>
+<li><code>\.env</code>: dấu chấm literal + <code>env</code>.</li>
+<li><code>(?:$|[/.])</code>: kết thúc, hoặc <code>/</code>, hoặc <code>.</code> → bắt <code>/.env</code>, <code>/.env/</code>, <code>/.env.local</code>.</li>
+<li><code>phase:1</code>: đường dẫn có ngay từ đầu, không cần đọc body.</li>
+<li><code>t:urlDecodeUni</code>: giải mã <code>%2e</code> → <code>.</code> trước khi so (chống <code>/.%65nv</code>).</li>
+<li><code>t:normalizePath</code>: gộp <code>//</code>, xử lý <code>/./</code>.</li>
+<li><code>pass,log</code>: test trước; rule này gần như không false positive nên có thể đổi <code>deny</code> sớm.</li>
+</ul>
+<p>Test:</p>
+<pre><code class="language-bash"># Sau khi đổi deny, các request này phải 403
+curl -i 'http://TARGET/.env'
+curl -i 'http://TARGET/.env.local'
+curl -i 'http://TARGET/foo/.env'
+
+# Request bình thường phải 200
+curl -i 'http://TARGET/index.html'
+</code></pre>
+<p><strong>Sửa ở đâu nếu app có route khác?</strong> Rule này không phụ thuộc app; chỉ cần đổi regex nếu muốn chặn thêm đuôi khác (ví dụ <code>/.git</code>).</p>
+<h4 id="5012-ví-dụ-2--allowlist-id-số-trên-apiproduct">5.0.12. Ví dụ 2 — Allowlist <code>id</code> số trên <code>/api/product</code></h4>
+<p><strong>Yêu cầu:</strong> <code>/api/product?id=42</code> hợp lệ; <code>id=1 OR 1=1</code> phải bị chặn; JSON <code>{"id":"1 OR 1=1"}</code> cũng phải bị chặn.</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/product/?$&quot; \
+    &quot;id:23002,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Non-numeric product id',tag:'sqli',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:id|ARGS:json.id &quot;!@rx ^[0-9]{1,10}$&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p>Giải thích:</p>
+<ul>
+<li>Dòng 1 khóa đúng route, chấp nhận hoa/thường và dấu <code>/</code> cuối.</li>
+<li>Dòng 2 bắt cả form/query (<code>ARGS:id</code>) lẫn JSON (<code>ARGS:json.id</code>).</li>
+<li><code>!@rx ^[0-9]{1,10}$</code>: nếu <strong>không phải</strong> 1–10 chữ số → khớp → ghi log/chặn. <em>(Mẹo nâng cao: trong PCRE, <code>$</code> vẫn khớp trước ký tự xuống dòng cuối <code>%0a</code> nên <code>42%0a</code> có thể lọt; muốn khóa chặt tuyệt đối cả newline cuối, đổi <code>$</code> thành </em><em><code>\z</code></em><em>: <code>^[0-9]{1,10}\z</code>.)</em></li>
+<li><code>t:urlDecodeUni</code> hai lần: chống <code>%31%20OR%201%3D1</code>.</li>
+</ul>
+<blockquote>
+<p>Nếu app cho phép <code>?id=</code> rỗng (không có giá trị), đổi regex thành <code>^[0-9]{0,10}\z</code>; nếu không, rule sẽ chặn cả trường hợp rỗng.</p>
+</blockquote>
+<p>Test:</p>
+<pre><code class="language-bash"># Hợp lệ — phải 200
+curl -i 'http://TARGET/api/product?id=42'
+
+# Bẩn — sau khi đổi deny phải 403
+curl -i 'http://TARGET/api/product?id=1%20OR%201=1'
+
+# JSON bẩn — phải 403
+curl -i -X POST 'http://TARGET/api/product' \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;id&quot;:&quot;1 OR 1=1&quot;}'
+</code></pre>
+<p><strong>Bẫy JSON array (phải <code>chain</code> theo đúng route để không chặn nhầm route khác dùng mảng hợp lệ!):</strong> <code>{"id":[1,2]}</code> không nằm trong <code>ARGS:json.id</code> mà là <code>json.id.array_0</code>, <code>json.id.array_1</code>. Nếu <code>/api/product</code> không nhận mảng, thêm guard:</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/product/?$&quot; \
+    &quot;id:23006,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Array not allowed for product id',tag:'hpp',logdata:'%{MATCHED_VAR_NAME}'&quot;
+    SecRule ARGS_NAMES &quot;@rx ^json\.id\.array_[0-9]+$&quot; &quot;t:none&quot;
+</code></pre>
+<p><strong>Bẫy HPP (cũng nên <code>chain</code> theo đúng route):</strong> <code>?id=1&amp;id=2</code> có thể lách allowlist. Nếu <code>/api/product</code> không cho phép gửi trùng <code>id</code>, thêm:</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/product/?$&quot; \
+    &quot;id:23007,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Duplicate product id',tag:'hpp',logdata:'count=%{MATCHED_VAR} uri=%{REQUEST_FILENAME}'&quot;
+    SecRule &amp;ARGS:id &quot;@gt 1&quot; &quot;t:none&quot;
+</code></pre>
+<p><strong>Sửa ở đâu khi app đổi?</strong></p>
+<ul>
+<li>Route <code>/api/product</code> → sửa regex dòng 1.</li>
+<li>Param <code>id</code> → sửa <code>ARGS:id|ARGS:json.id</code> ở dòng 2.</li>
+<li>Kiểu dữ liệu số → đổi regex <code>^[0-9]{1,10}$</code>.</li>
+<li>Thêm method POST → thêm <code>SecRule REQUEST_METHOD "@streq POST"</code> làm dòng đầu chain.</li>
+</ul>
+<h4 id="5013-ví-dụ-3--sqli-trên-ô-tìm-kiếm">5.0.13. Ví dụ 3 — SQLi trên ô tìm kiếm</h4>
+<p><strong>Yêu cầu:</strong> ô search <code>q</code> là text tự do, không thể allowlist cứng; cần bắt SQLi.</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/search/?$&quot; \
+    &quot;id:23003,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'SQLi in search',tag:'sqli',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:q|ARGS:json.q &quot;@detectSQLi&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p>Giải thích:</p>
+<ul>
+<li><code>@detectSQLi</code> dùng engine libinjection, phù hợp với text tự do.</li>
+<li>Không dùng <code>!@rx</code> vì search có thể chứa chữ, số, dấu câu hợp lệ.</li>
+<li>Vẫn phải giới hạn đúng route + đúng param để tránh quét mù toàn site.</li>
+<li><code>pass,log</code> nên giữ lâu hơn vì <code>@detectSQLi</code> có thể false positive với câu văn có dấu <code>'</code>.</li>
+</ul>
+<p>Test:</p>
+<pre><code class="language-bash">curl -i 'http://TARGET/api/search?q=hello'
+curl -i 'http://TARGET/api/search?q=%27%20OR%201%3D1--'
+</code></pre>
+<p><strong>Nếu là ô bình luận/hồ sơ:</strong> đổi <code>@detectSQLi</code> thành <code>@detectXSS</code>, đổi <code>msg</code>/<code>tag</code> cho đúng, và thêm <code>t:htmlEntityDecode,t:jsDecode</code>:</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/comment/?$&quot; \
+    &quot;id:23019,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'XSS in comment',tag:'xss',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:comment|ARGS:json.comment &quot;@detectXSS&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode&quot;
+</code></pre>
+<p><strong>Sửa ở đâu:</strong> route, tên param, và chọn <code>@detectSQLi</code> hay <code>@detectXSS</code>.</p>
+<h4 id="5014-ví-dụ-4--mass-assignment-role-isadmin">5.0.14. Ví dụ 4 — Mass assignment (<code>role</code>, <code>isAdmin</code>)</h4>
+<p><strong>Yêu cầu:</strong> chặn client gửi trường <code>role</code>, <code>is_admin</code>, <code>isAdmin</code>, <code>balance</code> lên <code>/api/profile</code>.</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/profile/?$&quot; \
+    &quot;id:23004,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Privileged field',tag:'mass-assignment',logdata:'%{MATCHED_VAR_NAME}'&quot;
+    SecRule ARGS_NAMES &quot;@rx (?i)(?:^|[.\[])(?:role|is_admin|isAdmin|balance)(?:\]|\.array_\d+|$)&quot; &quot;t:none&quot;
+</code></pre>
+<p>Giải thích:</p>
+<ul>
+<li>Dùng <code>ARGS_NAMES</code>, không dùng <code>ARGS</code>: ta quan tâm <strong>tên trường</strong>, không quan tâm giá trị.</li>
+<li><code>(?:^|[.\[])</code>: tên bắt đầu, hoặc sau dấu <code>.</code> / <code>[</code>.</li>
+<li><code>(?:role|is_admin|isAdmin|balance)</code>: danh sách trường cấm.</li>
+<li><code>(?:\]|\.array_\d+|$)</code>: kết thúc, hoặc <code>]</code>, hoặc <code>.array_0</code> → bắt cả <code>role</code>, <code>user[role]</code>, <code>json.role</code>, <code>json.role.array_0</code>.</li>
+<li>Không bắt <code>user_role</code> (vì không có ranh giới <code>.</code>/<code>[</code>).</li>
+</ul>
+<p>Test:</p>
+<pre><code class="language-bash"># Bẩn — phải 403 sau khi đổi deny
+curl -i -X POST 'http://TARGET/api/profile' \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;role&quot;:&quot;admin&quot;}'
+
+curl -i -X POST 'http://TARGET/api/profile' \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;role&quot;:[&quot;admin&quot;]}'
+
+# Hợp lệ — phải 200
+curl -i -X POST 'http://TARGET/api/profile' \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;username&quot;:&quot;alice&quot;}'
+</code></pre>
+<p><strong>Sửa ở đâu:</strong> route và danh sách trường trong regex. Nếu app có field <code>role</code> hợp lệ (ví dụ role công việc), đừng đưa <code>role</code> vào danh sách cấm.</p>
+<h4 id="5015-ví-dụ-5--phase-4-chặn-lọt-flag">5.0.15. Ví dụ 5 — Phase 4 chặn lọt Flag</h4>
+<p><strong>Yêu cầu:</strong> flag chỉ được trả ở <code>/api/flag</code>; nếu flag xuất hiện ở route khác thì ghi log/chặn.</p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;!@rx (?i)^/api/flag(?:/|$)&quot; \
+    &quot;id:23005,phase:4,pass,log,t:none,t:normalizePath,chain,msg:'FLAG leak detected',tag:'flag-leak',logdata:'%{REQUEST_METHOD} %{REQUEST_URI}'&quot;
+    SecRule RESPONSE_BODY &quot;@rx FHACKER(?:2026)?\{[0-9a-fA-F]{64}\}&quot; &quot;t:none&quot;
+</code></pre>
+<p>Giải thích:</p>
+<ul>
+<li><code>!@rx (?i)^/api/flag(?:/|$)</code>: <strong>loại trừ</strong> route cờ hợp lệ. Nếu không loại trừ, bot chấm bị chặn → mất SVC.</li>
+<li><code>phase:4</code>: phải đọc response body.</li>
+<li><code>RESPONSE_BODY</code>: nội dung app trả về.</li>
+<li>Regex flag: đúng 64 ký tự hex.</li>
+<li><code>pass,log</code>: test trước. Đổi <code>deny,status:403</code> sau khi chắc chắn không cắt nhầm route cờ.</li>
+</ul>
+<p>Test:</p>
+<pre><code class="language-bash"># Route cờ hợp lệ — phải đi qua, không bị 403/500
+curl -i 'http://TARGET/api/flag'
+
+# Route khác trả flag giả — phải bị log/chặn
+# (dùng route echo của lab hoặc tự tạo response chứa flag giả)
+curl -i 'http://TARGET/api/echo?msg=FHACKER2026{0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}'
+</code></pre>
+<p><strong>Cảnh báo sống còn:</strong></p>
+<ul>
+<li>Phase 4 <code>deny</code> có thể cắt response / gây <code>500</code> → bot báo lỗi → mất SVC. Phải test với route cờ thật và response lớn.</li>
+<li>Nếu chính <code>/api/flag</code> là route bị lỗ hổng, rule này <strong>không cứu được</strong> vì đã loại trừ nó. Phải vá gốc ở phase 1–2.</li>
+<li>Nếu flag format đổi, sửa regex.</li>
+</ul>
+<h4 id="5016-ví-dụ-6--upload-file--chặn-webshell-files--request_body">5.0.16. Ví dụ 6 — Upload File &amp; Chặn Webshell (<code>FILES</code> + <code>REQUEST_BODY</code>)</h4>
+<p><strong>Yêu cầu:</strong> Route <code>/api/upload</code> chỉ cho tải ảnh (<code>png</code>, <code>jpg</code>, <code>jpeg</code>, <code>gif</code>) và <code>pdf</code>; phải chặn cả tên file độc (<code>shell.php</code>, <code>shell.php.jpg</code>, <code>../a.png</code>) lẫn ảnh giả nhét mã PHP bên trong (<code>GIF89a&lt;?php system($_GET['c']); ?&gt;</code>).</p>
+<blockquote>
+<p><strong>Vì sao phải viết 2 rule riêng?</strong> Một file upload có <strong>2 thứ phải soi</strong>: (1) <strong>tên file</strong> nằm ở biến <code>FILES</code> <em>(nhớ: <code>FILES</code> là tên file như <code>avatar.png</code>, còn <code>FILES_NAMES</code> là tên ô input như <code>file</code>)</em>; (2) <strong>nội dung file</strong> nằm trong <code>REQUEST_BODY</code> <em>(trên BunkerWeb mặc định <code>FILES_TMP_CONTENT</code> bị rỗng nên KHÔNG dùng được)</em>.</p>
+</blockquote>
+<pre><code class="language-apache"># Lớp 1: Allowlist tên file sạch (chỉ 1 dấu chấm, không cho / \ .. hay 2 đuôi .php.jpg)
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/upload/?$&quot; \
+    &quot;id:23008,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Disallowed upload filename',tag:'upload',logdata:'file=%{MATCHED_VAR}'&quot;
+    SecRule FILES &quot;!@rx ^[A-Za-z0-9_-]{1,64}\.(?:png|jpe?g|gif|pdf)\z&quot; &quot;t:none,t:lowercase&quot;
+
+# Lớp 2: Soi nội dung multipart trong REQUEST_BODY chặn mã webshell giấu trong ảnh giả
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/upload/?$&quot; \
+    &quot;id:23009,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Webshell payload in upload',tag:'upload',logdata:'uri=%{REQUEST_FILENAME}'&quot;
+    SecRule REQUEST_BODY &quot;@rx (?i)(?:&lt;\?php|&lt;\?=|&lt;%|&lt;jsp|Runtime\.getRuntime|/bin/(?:ba)?sh)&quot; &quot;t:none&quot;
+</code></pre>
+<p>Giải thích từng điểm quan trọng:</p>
+<ul>
+<li><code>^[A-Za-z0-9_-]{1,64}\.(?:png|jpe?g|gif|pdf)\z</code>: trong phần tên file <strong>không có dấu chấm <code>.</code></strong> → tự động chặn luôn cả <code>../evil.png</code> lẫn <code>shell.php.jpg</code>! <em>(Nếu bot chấm upload tên file hợp lệ có dấu chấm như <code>report.v1.pdf</code>, đổi <code>[A-Za-z0-9_-]</code> thành <code>[A-Za-z0-9._-]</code> và dùng thêm rule <code>20411</code> chặn double-extension <code>.php.jpg</code> trong file Cheatsheet.)</em></li>
+<li><code>phase:2</code>: bắt buộc vì <code>FILES</code> và <code>REQUEST_BODY</code> chỉ có sau khi đọc body.</li>
+</ul>
+<p>Test:</p>
+<pre><code class="language-bash"># Tạo file ảnh giả hợp lệ (phải 200) và file chứa mã PHP (phải 403 sau khi đổi deny)
+printf 'PNG_FAKE_OK' &gt; /tmp/ok.png
+printf 'GIF89a&lt;?php system(&quot;id&quot;); ?&gt;' &gt; /tmp/bad.png
+
+curl -i -F 'file=@/tmp/ok.png'  'http://TARGET/api/upload'
+curl -i -F 'file=@/tmp/bad.png' 'http://TARGET/api/upload'
+curl -i -F 'file=@/tmp/ok.png;filename=shell.php.jpg' 'http://TARGET/api/upload'
+</code></pre>
+<p><strong>Sửa ở đâu khi app khác?</strong> Đổi <code>/api/upload</code> thành route upload của app; thêm/bớt đuôi file hợp lệ trong <code>(?:png|jpe?g|gif|pdf)</code> dựa theo những file mà bot chấm upload trên <code>Traffic log</code>.</p>
+<h4 id="5017-ví-dụ-7--path-parameter-apiusers42--rcessrf-khi-nào-allowlist-vs-blacklist">5.0.17. Ví dụ 7 — Path Parameter (<code>/api/users/42</code>) &amp; RCE/SSRF (Khi nào Allowlist vs Blacklist?)</h4>
+<p><strong>Tình huống A — Tham số nằm ngay trong đường dẫn (Path Parameter):</strong>
+Nhiều app hiện đại (Flask, FastAPI, Express, Laravel) gọi <code>/api/users/42/profile</code> thay vì <code>/api/users?id=42</code>. Lúc này <strong><code>ARGS:id</code> hoàn toàn rỗng!</strong> Bạn phải viết rule trực tiếp lên <strong><code>REQUEST_FILENAME</code></strong>:</p>
+<pre><code class="language-apache"># Chỉ cho phép /api/users/&lt;1-10 chữ số&gt; (hoặc kèm /profile)
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/users/&quot; \
+    &quot;id:23014,phase:1,pass,log,t:none,t:urlDecodeUni,t:normalizePath,chain,msg:'Invalid user path id',tag:'allowlist',logdata:'path=%{REQUEST_FILENAME}'&quot;
+    SecRule REQUEST_FILENAME &quot;!@rx (?i)^/api/users/[0-9]{1,10}(?:/profile)?/?\z&quot; &quot;t:none,t:urlDecodeUni,t:normalizePath&quot;
+</code></pre>
+<ul>
+<li>Dòng 1 bắt mọi request đi vào nhánh <code>/api/users/</code>.</li>
+<li>Dòng 2 kiểm tra toàn bộ đường dẫn: nếu phần sau <code>/api/users/</code> <strong>không phải số 1–10 chữ số</strong> (vd <code>/api/users/1' OR 1=1</code>, <code>/api/users/../../flag</code>) → khớp → ghi log/chặn!</li>
+<li><code>phase:1</code>: nhẹ và nhanh vì chỉ đụng <code>REQUEST_FILENAME</code>.</li>
+</ul>
+<p><strong>Tình huống B — Chọn Allowlist hay Blacklist cho RCE (<code>/api/ping</code>) và SSRF (<code>/api/fetch</code>)?</strong>
+- <strong>Với <code>/api/ping?host=8.8.8.8</code> (RCE):</strong> đầu vào chỉ có thể là IP hoặc tên miền sạch → <strong>dùng Allowlist <code>!@rx</code></strong> (chặn sạch <code>;</code>, <code>|</code>, <code>&amp;&amp;</code>, <code>`</code>, <code>$()</code> mà không cần đoán từng ký tự):
+  <code>apache
+  SecRule REQUEST_FILENAME "@rx (?i)^/api/ping/?$" \
+      "id:23015,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Invalid ping host',tag:'rce',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"
+      SecRule ARGS:host|ARGS:json.host "!@rx ^(?:[A-Za-z0-9-]{1,63}\.)*[A-Za-z0-9-]{1,63}\z|^(?:\d{1,3}\.){3}\d{1,3}\z" "t:none,t:urlDecodeUni,t:urlDecodeUni"</code>
+- <strong>Với <code>/api/fetch?url=https://...</code> (SSRF):</strong> nếu app cho phép tải nhiều URL ngoài tự do (không cố định 1 domain), không thể Allowlist cứng 1 tên miền → <strong>dùng Blacklist <code>@rx</code></strong> chặn scheme nguy hiểm (<code>file://</code>, <code>gopher://</code>) và các địa chỉ nội bộ (<code>127.0.0.1</code>, <code>localhost</code>, <code>169.254.169.254</code>, <code>10.x</code>, <code>192.168.x</code>, <code>172.16-31.x</code>, <code>[::1]</code>):
+  <code>apache
+  SecRule REQUEST_FILENAME "@rx (?i)^/api/fetch/?$" \
+      "id:23016,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'SSRF internal/scheme blocked',tag:'ssrf',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"
+      SecRule ARGS:url|ARGS:json.url "@rx (?i)^(?:(?:file|gopher|dict|php|ftp)://|https?://(?:[^/@]*@)?(?:localhost|127(?:\.\d{1,3}){0,3}|0(?:\.0){0,3}|\[?::1\]?|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|0x[0-9a-f]+|\d{8,10})(?::\d+)?(?:/|$))" "t:none,t:urlDecodeUni,t:urlDecodeUni,t:lowercase"</code></p>
+<h4 id="5018-ví-dụ-8--case-study-trọn-vẹn-từ-2-dòng-traffic-log-bot-vs-hacker--tự-viết-rule">5.0.18. Ví dụ 8 — Case study trọn vẹn: Từ 2 dòng <code>Traffic log</code> (Bot vs Hacker) → Tự viết Rule</h4>
+<p>Trong phòng thi, bạn không nhận đề bài viết sẵn — bạn chỉ thấy <strong>2 dòng Raw Request</strong> trên <code>Traffic log</code>. Hãy tập cách nhìn và dịch ra Rule trong 60 giây:</p>
+<p><strong>1) Request sạch của Bot chấm SVC (lặp đều mỗi 30 giây, trả <code>200</code>):</strong></p>
+<pre><code class="language-http">POST /v2/invoice/export HTTP/1.1
+Host: app1.team01.local
+Content-Type: application/json
+
+{&quot;invoice_id&quot;: &quot;INV-2026-0042&quot;, &quot;format&quot;: &quot;pdf&quot;}
+</code></pre>
+<p><strong>2) Request của Đối thủ (trả <code>200</code> và response bị lộ <code>FHACKER2026{...}</code>!):</strong></p>
+<pre><code class="language-http">POST /v2/invoice/export HTTP/1.1
+Host: app1.team01.local
+Content-Type: application/json
+
+{&quot;invoice_id&quot;: &quot;INV-2026-0042&quot;, &quot;format&quot;: &quot;pdf; cat /flag&quot;}
+</code></pre>
+<p><strong>Bước phân tích 4 câu hỏi (làm trong đầu mất 15 giây):</strong>
+1. <strong>Route + Method là gì?</strong> <code>POST</code> tới <code>/v2/invoice/export</code> → <code>REQUEST_METHOD "@streq POST"</code> + <code>REQUEST_FILENAME "@rx (?i)^/v2/invoice/export/?$"</code>.
+2. <strong>Dữ liệu tấn công nằm ở đâu?</strong> Trong <strong>JSON body</strong>, tên trường là <code>format</code> → biến ModSecurity là <strong><code>ARGS:json.format</code></strong> (nên viết luôn <code>ARGS:format|ARGS:json.format</code> cho chắc) → có <code>ARGS</code> nên phải là <strong><code>phase:2</code></strong>.
+3. <strong>Giá trị sạch vs bẩn khác nhau chỗ nào?</strong> Bot gửi <code>"pdf"</code> (ngó thêm các request sạch khác trên log xem có <code>"csv"</code> hoặc <code>"xlsx"</code> không). Đối thủ chèn <code>; cat /flag</code> → đây là <strong>Command Injection (RCE)</strong>!
+4. <strong>Chọn chiến lược gì?</strong> <code>format</code> chỉ nhận vài giá trị cố định (<code>pdf</code>, <code>csv</code>, <code>xlsx</code>) → <strong>Allowlist enum <code>!@rx ^(?:pdf|csv|xlsx)\z</code></strong> là mạnh nhất (đồng thời khóa thêm <code>invoice_id</code> ở 1 rule riêng nếu thấy đối thủ cũng thử tiêm vào <code>invoice_id</code>).</p>
+<p><strong>Lắp ghép thành Rule hoàn chỉnh:</strong></p>
+<pre><code class="language-apache">SecRule REQUEST_METHOD &quot;@streq POST&quot; \
+    &quot;id:23017,phase:2,pass,log,t:none,chain,msg:'Invalid invoice export format',tag:'rce',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule REQUEST_FILENAME &quot;@rx (?i)^/v2/invoice/export/?$&quot; &quot;t:none,t:normalizePath,chain&quot;
+        SecRule ARGS:format|ARGS:json.format &quot;!@rx ^(?:pdf|csv|xlsx)\z&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni,t:lowercase&quot;
+</code></pre>
+<p><strong>Kiểm tra trước khi đổi <code>deny</code>:</strong> Dán rule với <code>pass,log</code> → gửi thử JSON sạch (<code>"pdf"</code>) không hiện <code>23017</code> trên cột <code>WAF</code>; gửi JSON bẩn (<code>"pdf; id"</code>) thấy <code>23017</code> hiện ở cột <code>WAF</code> với <code>logdata: ARGS:json.format=pdf; id</code> → chờ 30 giây xem bot chấm qua trót lọt không dính <code>23017</code> → đổi <code>pass</code> thành <code>deny,status:403</code> → <strong>Save</strong>!</p>
+<h4 id="5019-ví-dụ-9--đọc-log-949110-và-tự-viết-rule-gỡ-false-positive-owasp-crs">5.0.19. Ví dụ 9 — Đọc log <code>949110</code> và tự viết Rule gỡ False Positive OWASP CRS</h4>
+<p><strong>Tình huống thực tế hay gặp nhất lúc thi:</strong> Bạn vừa bật WAF sang <code>On</code>, 30 giây sau thấy request sạch của bot gửi <code>POST /api/notes</code> với JSON <code>{"content": "Don't forget order 1 or 2 -- urgent"}</code> bị trả <strong><code>403</code></strong>!</p>
+<p><strong>Bước 1 — Tìm thủ phạm thật (KHÔNG đụng vào <code>949110</code>!):</strong>
+Mở <strong>Traffic log → bấm vào dòng <code>403</code> → xem cột <code>WAF</code> hoặc chuyển nguồn sang <code>modsec_audit.log</code> (phần H)</strong>. Bạn sẽ thấy dạng:</p>
+<pre><code class="language-text">Message: Warning. detected SQLi using libinjection with fingerprint 's&amp;1c' at ARGS:json.content. [id &quot;942100&quot;]
+Message: Access denied with code 403 (phase 2). Operator GE matched 5 at TX:blocking_inbound_anomaly_score. [id &quot;949110&quot;]
+</code></pre>
+<p>Đọc 2 dòng trên lấy đúng <strong>3 thông tin</strong>:
+- <strong>Route bị chặn nhầm:</strong> <code>/api/notes</code>
+- <strong>Rule CRS gốc đứng trước <code>949110</code>:</strong> <strong><code>942100</code></strong>
+- <strong>Biến bị bắt nhầm:</strong> <strong><code>ARGS:json.content</code></strong> (gỡ luôn cả <code>ARGS:content</code> phòng form).</p>
+<p><strong>Bước 2 — Viết Rule gỡ ngoại lệ vào Config loại <code>MODSEC_CRS</code> (KHÔNG phải <code>MODSEC</code>!):</strong></p>
+<blockquote>
+<p><strong>Nhớ:</strong> <code>MODSEC_CRS</code> chạy <strong>TRƯỚC</strong> OWASP CRS, nên lệnh <code>ctl:ruleRemoveTargetById</code> ở <code>phase:1</code> sẽ báo trước cho CRS: <em>"riêng route <code>/api/notes</code>, đừng chạy rule <code>942100</code> lên <code>content</code> nữa, các route và tham số khác vẫn bảo vệ bình thường!"</em></p>
+</blockquote>
+<pre><code class="language-apache"># Đặt trong Config Type: MODSEC_CRS (chạy TRƯỚC CRS)
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/notes/?$&quot; \
+    &quot;id:22020,phase:1,pass,nolog,t:none,t:normalizePath,ctl:ruleRemoveTargetById=942100;ARGS:content,ctl:ruleRemoveTargetById=942100;ARGS:json.content&quot;
+</code></pre>
+<ul>
+<li><strong>Nếu bị chặn nhầm bởi 2 rule CRS cùng lúc</strong> (vd cả <code>942100</code> lẫn <code>941100</code>): chỉ cần nối thêm <code>,ctl:ruleRemoveTargetById=941100;ARGS:json.content</code> vào cuối chuỗi action.</li>
+<li><strong>Nếu lỗi do Cookie <code>session</code> bị <code>942440</code> bắt nhầm trên mọi trang:</strong> không cần <code>MODSEC_CRS</code>, dán 1 dòng này thẳng vào <strong><code>MODSEC</code></strong> (chạy sau CRS):
+  <code>apache
+  SecRuleUpdateTargetById 942440 "!REQUEST_COOKIES:session"</code></li>
+<li><strong>Nếu nhiều Service trùng route <code>/api/notes</code>:</strong> thêm <code>chain</code> theo <code>REQUEST_HEADERS:Host</code> ở dòng 1 và <strong>đặt toàn bộ <code>ctl:...</code> ở dòng cuối của <code>chain</code></strong> (xem Mẫu 3 ở Mục 5.10).</li>
+</ul>
+<h4 id="5020-bảng-sửa-ở-đâu-khi-app-khác">5.0.20. Bảng “sửa ở đâu” khi app khác</h4>
+<p>Đây là bảng quan trọng nhất khi vào thi. Khi copy một rule mẫu, hãy tự hỏi: “app của mình khác chỗ nào?” rồi sửa đúng dòng.</p>
+<table>
+<thead>
+<tr>
+<th>App của bạn khác ở đâu?</th>
+<th>Sửa dòng nào trong rule?</th>
+<th>Ví dụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Route khác</td>
+<td><code>REQUEST_FILENAME</code> (dòng 1)</td>
+<td><code>/api/product</code> → <code>/api/orders</code></td>
+</tr>
+<tr>
+<td>Param nằm trong URL path</td>
+<td>Soi thẳng <code>REQUEST_FILENAME</code> (xem 5.0.17)</td>
+<td><code>/api/users/42</code> → <code>@rx ^/api/users/[0-9]+</code></td>
+</tr>
+<tr>
+<td>Param khác</td>
+<td><code>ARGS:...</code> (dòng cuối chain)</td>
+<td><code>id</code> → <code>order_id</code></td>
+</tr>
+<tr>
+<td>Param nằm trong JSON</td>
+<td>Thêm <code>ARGS:json.&lt;tên&gt;</code></td>
+<td><code>ARGS:id</code> → <code>ARGS:id</code> + <code>ARGS:json.id</code></td>
+</tr>
+<tr>
+<td>Kiểu dữ liệu khác</td>
+<td>Regex trong <code>!@rx</code></td>
+<td>số → UUID</td>
+</tr>
+<tr>
+<td>Chỉ áp dụng POST</td>
+<td>Thêm <code>REQUEST_METHOD</code> làm dòng đầu chain</td>
+<td><code>@streq POST</code></td>
+</tr>
+<tr>
+<td>Chỉ áp dụng 1 service</td>
+<td>Thêm <code>REQUEST_HEADERS:Host</code> làm dòng đầu chain</td>
+<td><code>shop.team01.local</code></td>
+</tr>
+<tr>
+<td>Đổi phase</td>
+<td><code>phase:</code> trong action</td>
+<td>response → <code>phase:4</code></td>
+</tr>
+<tr>
+<td>Đổi hành động</td>
+<td><code>pass</code> → <code>deny,status:403</code></td>
+<td>sau khi test</td>
+</tr>
+<tr>
+<td>Đổi ID</td>
+<td><code>id:</code></td>
+<td>5 chữ số, không trùng</td>
+</tr>
+<tr>
+<td>Đổi tên log</td>
+<td><code>msg:</code>, <code>tag:</code></td>
+<td>dễ lọc trên Traffic log</td>
+</tr>
+<tr>
+<td>Đổi kiểu encode</td>
+<td>Thêm/bớt <code>t:</code></td>
+<td>XSS thêm <code>htmlEntityDecode</code></td>
+</tr>
+<tr>
+<td>Route cờ khác</td>
+<td><code>!@rx</code> trong Phase 4</td>
+<td><code>/api/flag</code> → <code>/flag</code></td>
+</tr>
+<tr>
+<td>CRS chặn nhầm 1 param</td>
+<td>Thêm rule <code>ctl:ruleRemoveTargetById</code> vào <code>MODSEC_CRS</code></td>
+<td><code>942100;ARGS:json.content</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ví dụ áp dụng thực tế:</strong> rule mẫu là <code>/api/product?id=42</code>, nhưng app của bạn là <code>POST /api/orders</code> với JSON <code>{"order_id":"12"}</code>. Sửa:</p>
+<pre><code class="language-apache">SecRule REQUEST_METHOD &quot;@streq POST&quot; \
+    &quot;id:23030,phase:2,pass,log,t:none,chain,msg:'Invalid order_id',tag:'sqli',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/orders/?$&quot; &quot;t:none,t:normalizePath,chain&quot;
+        SecRule ARGS:order_id|ARGS:json.order_id &quot;!@rx ^[0-9]{1,10}\z&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p>Chỉ 3 chỗ nội dung cần đổi: thêm method, đổi route, đổi tên param; <code>id</code> đổi để không trùng.</p>
+<h4 id="5021-debug-rule-không-chạy--chạy-quá-nhiều">5.0.21. Debug: rule không chạy / chạy quá nhiều</h4>
+<table>
+<thead>
+<tr>
+<th>Hiện tượng</th>
+<th>Nguyên nhân thường gặp</th>
+<th>Cách kiểm tra / sửa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rule không bao giờ khớp</td>
+<td>Sai phase (dùng <code>ARGS</code> ở phase 1)</td>
+<td>Đổi sang <code>phase:2</code></td>
+</tr>
+<tr>
+<td>Rule không khớp JSON</td>
+<td>Chỉ viết <code>ARGS:id</code>, quên <code>ARGS:json.id</code></td>
+<td>Thêm <code>ARGS:json.id</code></td>
+</tr>
+<tr>
+<td>Rule không khớp URL <code>/users/42</code></td>
+<td>ID nằm trong path, không nằm ở <code>ARGS</code></td>
+<td>Chuyển sang soi <code>REQUEST_FILENAME</code> (xem 5.0.17)</td>
+</tr>
+<tr>
+<td>Rule không khớp route</td>
+<td>Route có dấu <code>/</code> cuối, hoa/thường, <code>//</code></td>
+<td>Dùng <code>@rx (?i)^.../?$</code> + <code>t:normalizePath</code></td>
+</tr>
+<tr>
+<td>Rule khớp mọi request</td>
+<td><code>!@rx</code> regex sai / quên thay placeholder (<code>__...__</code> hoặc <code>&lt;&lt;&lt;...&gt;&gt;&gt;</code>)</td>
+<td>Xem <code>logdata</code>; test regex bằng Python</td>
+</tr>
+<tr>
+<td>Rule khớp mọi request</td>
+<td><code>ARGS</code> quá rộng, gồm cả param rỗng</td>
+<td>Thu hẹp về đúng param, thêm route chain</td>
+</tr>
+<tr>
+<td>Rule đội để <code>pass</code> nhưng vẫn <code>403</code></td>
+<td><code>pass</code> không miễn nhiễm CRS; OWASP CRS (<code>9xxxxx</code> + <code>949110</code>) đang chặn</td>
+<td>Xem cột <code>WAF</code> / audit log, gỡ FP ở <code>MODSEC_CRS</code> (xem 5.0.19)</td>
+</tr>
+<tr>
+<td>Rule chặn nhầm bot</td>
+<td>Rule quá rộng hoặc Phase 4 sai route cờ</td>
+<td><code>pass,log</code> 1 chu kỳ 30 giây, loại trừ route</td>
+</tr>
+<tr>
+<td>Không thấy rule trên log</td>
+<td>Thiếu <code>log</code>, dùng <code>nolog</code>, rule chưa nạp</td>
+<td>Thêm <code>log</code>; xem <code>error.log</code></td>
+</tr>
+<tr>
+<td>Reload fail / syntax error</td>
+<td>Thiếu <code>"</code>, có space sau <code>\</code>, chain con có <code>id/phase/deny</code>, trùng <code>id</code>, placeholder chưa thay</td>
+<td>Đọc <code>error.log</code>; grep trùng id</td>
+</tr>
+<tr>
+<td>Phase 4 không thấy flag</td>
+<td>Response body không được bật / bị nén / quá lớn</td>
+<td>Kiểm tra <code>SecResponseBodyAccess</code>, test response nhỏ</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cách dùng <code>logdata</code> để debug:</strong></p>
+<pre><code class="language-apache">logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'
+</code></pre>
+<ul>
+<li><code>MATCHED_VAR_NAME</code> cho biết <strong>biến nào</strong> khớp (ví dụ <code>ARGS:json.id</code>).</li>
+<li><code>MATCHED_VAR</code> cho biết <strong>giá trị nào</strong> khớp (ví dụ <code>1 OR 1=1</code>).</li>
+</ul>
+<p>Nếu logdata hiện <code>ARGS:id=42</code> (giá trị hợp lệ) mà rule vẫn khớp → regex allowlist của bạn sai hoặc bạn quên thay placeholder (<code>__REGEX__</code> / <code>&lt;&lt;&lt;...&gt;&gt;&gt;</code>).</p>
+<h4 id="5022-bài-tập-tự-luyện-6-bài-có-đáp-án">5.0.22. Bài tập tự luyện (6 bài có đáp án)</h4>
+<p><strong>Bài 1:</strong> Chặn mọi method khác <code>GET</code>/<code>POST</code> tới <code>/api/login</code>.</p>
+<p><strong>Đáp án:</strong></p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/login/?$&quot; \
+    &quot;id:23010,phase:1,pass,log,t:none,t:normalizePath,chain,msg:'Bad method',tag:'protocol',logdata:'%{REQUEST_METHOD}'&quot;
+    SecRule REQUEST_METHOD &quot;!@rx ^(?:GET|POST)\z&quot; &quot;t:none&quot;
+</code></pre>
+<p><em>(Ghi chú: dùng <code>!@rx ^(?:GET|POST)\z</code> chính xác tuyệt đối, tránh bẫy so chuỗi con của <code>@within</code>.)</em></p>
+<p><strong>Bài 2:</strong> Chỉ cho <code>page</code> là số 1–3 chữ số trên <code>/api/list</code>.</p>
+<p><strong>Đáp án:</strong></p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/list/?$&quot; \
+    &quot;id:23011,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Bad page',tag:'allowlist',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:page|ARGS:json.page &quot;!@rx ^[0-9]{1,3}\z&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p><strong>Bài 3:</strong> Chặn <code>file</code> chứa <code>../</code> hoặc <code>..\</code> trên <code>/download</code>.</p>
+<p><strong>Đáp án:</strong></p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/download/?$&quot; \
+    &quot;id:23012,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Path traversal',tag:'lfi',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:file|ARGS:json.file &quot;@rx (?i)\.\.[/\x5c]&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p>Ghi chú: <code>t:urlDecodeUni</code> hai lần để chống cả double-encode (<code>%252e%252e%252f</code>). Nếu biết tên file hợp lệ luôn là dạng <code>report.pdf</code>, nâng cấp lên Allowlist <code>!@rx ^[A-Za-z0-9_-]{1,64}\.(?:pdf|png|jpg)\z</code> sẽ chặn luôn cả <code>/etc/passwd</code> và <code>php://filter</code>.</p>
+<p><strong>Bài 4:</strong> Chặn field <code>isAdmin</code> trên <code>/api/register</code>.</p>
+<p><strong>Đáp án:</strong></p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/register/?$&quot; \
+    &quot;id:23013,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Privileged field',tag:'mass-assignment',logdata:'%{MATCHED_VAR_NAME}'&quot;
+    SecRule ARGS_NAMES &quot;@rx (?i)(?:^|[.\[])(?:isAdmin|is_admin|role)(?:\]|\.array_\d+|$)&quot; &quot;t:none&quot;
+</code></pre>
+<p><strong>Bài 5:</strong> Endpoint <code>/api/orders/123</code> truyền ID đơn hàng ngay trong URL path (không có <code>?id=</code>). Chỉ cho phép ID là số 1–8 chữ số.</p>
+<p><strong>Đáp án:</strong></p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/orders/&quot; \
+    &quot;id:23018,phase:1,pass,log,t:none,t:urlDecodeUni,t:normalizePath,chain,msg:'Bad order path id',tag:'allowlist',logdata:'path=%{REQUEST_FILENAME}'&quot;
+    SecRule REQUEST_FILENAME &quot;!@rx (?i)^/api/orders/[0-9]{1,8}/?\z&quot; &quot;t:none,t:urlDecodeUni,t:normalizePath&quot;
+</code></pre>
+<p><strong>Bài 6:</strong> Bot chấm gửi bình luận hợp lệ tới <code>/api/comments</code> dạng JSON <code>{"body": "&lt;b&gt;Good&lt;/b&gt;"}</code> nhưng bị OWASP CRS rule <code>941100</code> chặn <code>403</code> (trước <code>949110</code>). Hãy viết rule gỡ False Positive mà vẫn giữ bảo vệ cho mọi route khác.</p>
+<p><strong>Đáp án (đặt trong Config Type: <code>MODSEC_CRS</code>):</strong></p>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/comments/?$&quot; \
+    &quot;id:22021,phase:1,pass,nolog,t:none,t:normalizePath,ctl:ruleRemoveTargetById=941100;ARGS:body,ctl:ruleRemoveTargetById=941100;ARGS:json.body&quot;
+</code></pre>
+<blockquote>
+<p><strong>Cách tự kiểm tra bài làm:</strong> thay <code>TARGET</code>, dán rule với <code>pass,log</code>, gửi request sạch và request bẩn, xem <code>Traffic log</code> có đúng <code>id</code> rule không. Nếu có → sửa <code>pass</code> thành <code>deny,status:403,log</code>, test lại, rồi Save.</p>
+</blockquote>
+<h4 id="5023-checklist-trước-khi-save">5.0.23. Checklist trước khi Save</h4>
+<ul>
+<li>[ ] Đã xác định đúng route và param từ <code>Traffic log</code> / source / DevTools.</li>
+<li>[ ] Đã chọn đúng phase (<code>ARGS</code> → 2, <code>RESPONSE_BODY</code> → 4).</li>
+<li>[ ] Đã có <code>t:none</code> ở đầu mỗi dòng.</li>
+<li>[ ] Đã test regex bằng Python hoặc đã thử với request sạch/bẩn.</li>
+<li>[ ] Đang để <code>pass,log</code>, chưa vội <code>deny</code>.</li>
+<li>[ ] Đã test 1 request hợp lệ (200) + 1 request bẩn (khớp rule).</li>
+<li>[ ] Đã chờ 1 chu kỳ 30 giây, xem bot có bị ảnh hưởng không.</li>
+<li>[ ] Đã đổi <code>pass</code> → <code>deny,status:403,log</code>.</li>
+<li>[ ] <code>id</code> là 5 chữ số, không trùng rule khác.</li>
+<li>[ ] Không có dòng trống/comment giữa các dòng <code>chain</code>.</li>
+<li>[ ] Không có space sau dấu <code>\</code> nối dòng.</li>
+<li>[ ] Đã backup bản rule đang xanh trước khi Save.</li>
+</ul>
+<h4 id="5024-tóm-tắt-10-dòng-để-nhớ-nhanh">5.0.24. Tóm tắt 10 dòng để nhớ nhanh</h4>
+<ol>
+<li>Rule = <strong>biến</strong> (soi cái gì) + <strong>toán tử</strong> (so kiểu gì) + <strong>action</strong> (khớp thì làm gì).</li>
+<li>Route → <code>REQUEST_FILENAME</code>; param → <code>ARGS:x</code> và <code>ARGS:json.x</code>.</li>
+<li><code>ARGS</code>, <code>ARGS_NAMES</code>, <code>REQUEST_BODY</code>, <code>FILES</code> → <code>phase:2</code>; <code>RESPONSE_BODY</code> → <code>phase:4</code>.</li>
+<li>Số/UUID/enum/tên file → allowlist <code>!@rx ^...$</code>.</li>
+<li>Text tự do → <code>@detectSQLi</code> / <code>@detectXSS</code>, không allowlist cứng.</li>
+<li>Luôn bắt đầu <code>t:none</code>; chống encode bằng <code>t:urlDecodeUni</code> (2 lần nếu cần).</li>
+<li>Muốn đúng route + đúng param → dùng <code>chain</code>; chỉ dòng đầu có <code>id/phase/action/msg/tag/logdata</code>.</li>
+<li>Test bằng <code>pass,log</code> → xem <code>Traffic log</code> / <code>logdata</code> → chờ 1 chu kỳ 30 giây → đổi <code>deny,status:403,log</code>.</li>
+<li><code>id</code> phải 5 chữ số, không trùng; backup trước khi Save.</li>
+<li>Khi app đổi: sửa route ở dòng 1, sửa param ở dòng cuối, sửa regex theo kiểu dữ liệu, sửa <code>id</code> nếu cần.</li>
+</ol>
+<hr />
+<h3 id="51-giải-phẫu-1-secrule--thứ-tự-thực-thi-nội-bộ">5.1. Giải phẫu 1 <code>SecRule</code> &amp; Thứ tự thực thi nội bộ</h3>
+<p>Một rule ModSecurity luôn gồm đúng <strong>3 phần</strong>:</p>
+<pre><code class="language-apache">SecRule &lt;BIẾN_MỤC_TIÊU&gt; &quot;&lt;TOÁN_TỬ&gt;&quot; \
+    &quot;id:&lt;SỐ&gt;,phase:&lt;1-4&gt;,&lt;ACTION&gt;,t:none,&lt;TRANSFORMS&gt;,msg:'&lt;MÔ_TẢ&gt;',tag:'&lt;NHÃN&gt;',logdata:'&lt;CHI_TIẾT&gt;'&quot;
+</code></pre>
+<p><strong>Thứ tự ModSecurity xử lý một rule (bắt buộc phải nhớ để tránh viết sai logic):</strong>
+1. <strong>Lấy giá trị</strong> từ <code>&lt;BIẾN_MỤC_TIÊU&gt;</code> (ví dụ <code>ARGS:id</code>). Nếu biến không tồn tại trong request, rule <strong>bị bỏ qua</strong> (không khớp).
+2. <strong>Chạy lần lượt các <code>t:...</code> (Transformations)</strong> từ trái sang phải lên bản sao của giá trị đó (không làm thay đổi request gốc gửi vào app).
+3. <strong>So khớp <code>&lt;TOÁN_TỬ&gt;</code></strong> (<code>@streq</code>, <code>@rx</code>, <code>!@rx</code>, <code>@detectSQLi</code>...) với giá trị sau khi transform.
+4. <strong>Nếu khớp</strong>, thực thi <code>&lt;ACTION&gt;</code> (<code>deny,status:403</code> hoặc <code>pass</code>) và ghi log với <code>msg</code>, <code>tag</code>, <code>logdata</code>.</p>
+<h3 id="52-chọn-đúng-phase-1--4--sai-phase-là-rule-vô-tác-dụng">5.2. Chọn đúng <code>Phase</code> (1 → 4) — Sai Phase là Rule vô tác dụng!</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Thời điểm chạy</th>
+<th>Biến nào có dữ liệu ở Phase này?</th>
+<th>Dùng để viết loại Rule nào?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>phase:1</code></strong></td>
+<td>Ngay khi nhận xong Request Line + Headers (chưa đọc Body)</td>
+<td><code>REQUEST_METHOD</code>, <code>REQUEST_FILENAME</code>, <code>REQUEST_URI</code>, <code>REQUEST_HEADERS</code>, <code>REQUEST_COOKIES</code>, <code>ARGS_GET</code></td>
+<td>Chặn dò file <code>.env</code>/<code>.git</code>, chặn Null byte trong URI, chặn Header lạ, đặt <code>ctl:ruleRemoveTargetById</code> ở <code>MODSEC_CRS</code>, đổi <code>ctl:requestBodyProcessor</code>.</td>
+</tr>
+<tr>
+<td><strong><code>phase:2</code></strong></td>
+<td>Sau khi đọc và parse toàn bộ Request Body (Form, JSON, Multipart, XML)</td>
+<td>Toàn bộ biến Phase 1 <strong>+</strong> <code>ARGS</code>, <code>ARGS_POST</code>, <code>ARGS_NAMES</code>, <code>REQUEST_BODY</code>, <code>FILES</code>, <code>FILES_NAMES</code></td>
+<td><strong>90% rule vá lỗ hổng nằm ở đây:</strong> Allowlist tham số, chống SQLi/NoSQLi/XSS/SSTI/LFI/RCE/SSRF/XXE/Mass Assignment/Upload.</td>
+</tr>
+<tr>
+<td><strong><code>phase:3</code></strong></td>
+<td>Khi app trả về Response Headers (chưa gửi Body)</td>
+<td><code>RESPONSE_STATUS</code>, <code>RESPONSE_HEADERS</code></td>
+<td>Kiểm tra header <code>Location</code> (chống Open Redirect/CRLF ở đầu ra) hoặc phát hiện <code>Content-Type</code> bất thường.</td>
+</tr>
+<tr>
+<td><strong><code>phase:4</code></strong></td>
+<td>Khi app trả về Response Body (tối đa 512 KiB)</td>
+<td><code>RESPONSE_BODY</code>, <code>RESPONSE_STATUS</code>, <code>REQUEST_FILENAME</code></td>
+<td><strong>Lưới chắn cuối chống lọt Flag (<code>FHACKER2026{...}</code>)</strong> hoặc chặn lộ stack trace/mã nguồn.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Quy tắc dễ nhớ:</strong> Hễ động tới <code>ARGS</code>, <code>ARGS_NAMES</code>, <code>REQUEST_BODY</code>, <code>FILES</code> → <strong>luôn viết <code>phase:2</code></strong>. Chỉ viết <code>phase:1</code> cho URI/Header/Cookie hoặc <code>ctl:...</code>.</p>
+</blockquote>
+<h3 id="53-cách-chọn--kết-hợp-biến-variables-linh-hoạt">5.3. Cách chọn &amp; kết hợp Biến (<code>Variables</code>) linh hoạt</h3>
+<ul>
+<li><strong>Kết hợp nhiều biến (dấu <code>|</code>):</strong> Kiểm tra đồng thời cả Query/Form lẫn JSON body:
+  <code>ARGS:id|ARGS:json.id</code></li>
+<li><strong>Loại trừ biến cụ thể (dấu <code>!</code>):</strong> Quét toàn bộ tham số <strong>trừ</strong> ô nhập nội dung dài dễ gây False Positive:
+  <code>ARGS|!ARGS:bio|!ARGS:json.bio|!ARGS:comment|!ARGS:json.comment</code></li>
+<li><strong>Đếm số lượng phần tử (tiền tố <code>&amp;</code>):</strong> Trả về số nguyên (<code>0</code>, <code>1</code>, <code>2</code>...) thay vì giá trị chuỗi. Dùng để:</li>
+<li>Chống trùng tham số (HPP): <code>SecRule &amp;ARGS:id "@gt 1" ...</code></li>
+<li>Bắt buộc tham số phải tồn tại: <code>SecRule &amp;ARGS:token "@eq 0" ...</code></li>
+<li>Cấm sự xuất hiện của 1 Header nguy hiểm: <code>SecRule &amp;REQUEST_HEADERS:X-Original-URL "@gt 0" ...</code></li>
+<li><strong>Macro hữu ích trong <code>logdata</code> (xem ngay nguyên nhân trên Traffic log / Audit log):</strong></li>
+<li><code>%{MATCHED_VAR_NAME}</code>: Tên biến vừa khớp (vd <code>ARGS:json.id</code>).</li>
+<li><code>%{MATCHED_VAR}</code>: Giá trị thực tế vừa làm kích hoạt rule (vd <code>1 OR 1=1</code>).</li>
+<li><code>%{REQUEST_FILENAME}</code>: Đường dẫn đang bị gọi.</li>
+<li>Ví dụ: <code>logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'</code> → đọc log phát biết ngay thủ phạm!</li>
+</ul>
+<h3 id="54-chọn-toán-tử-operators-nhanh-và-chuẩn">5.4. Chọn Toán tử (<code>Operators</code>) nhanh và chuẩn</h3>
+<table>
+<thead>
+<tr>
+<th>Nhóm</th>
+<th>Toán tử</th>
+<th>Khi nào nên dùng?</th>
+<th>Ví dụ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>So chuỗi tốc độ cao</strong> <em>(ưu tiên hơn <code>@rx</code>)</em></td>
+<td><code>@streq</code></td>
+<td>Khớp chính xác đường dẫn / method</td>
+<td><code>REQUEST_FILENAME "@streq /api/login"</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>@beginsWith</code> / <code>@endsWith</code></td>
+<td>Khớp tiền tố route hoặc đuôi file</td>
+<td><code>REQUEST_FILENAME "@beginsWith /admin/"</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>@contains</code></td>
+<td>Kiểm tra có chứa chuỗi con cố định</td>
+<td><code>REQUEST_BODY "@contains &lt;!ENTITY"</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>@pm</code></td>
+<td>Tìm nhanh nhiều từ khóa cách nhau bằng dấu cách (<strong>mặc định phân biệt hoa/thường — thêm <code>t:lowercase</code> nếu cần</strong>)</td>
+<td><code>ARGS "@pm __proto__ constructor prototype"</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>@within</code></td>
+<td>Kiểm tra <strong>chuỗi con</strong> có nằm trong danh sách <em>(cẩn thận: chỉ dùng cho tập nhỏ không trùng chuỗi con; với Allowlist enum nên dùng <code>!@rx ^(?:a\|b)\z</code>)</em></td>
+<td><code>REQUEST_METHOD "!@rx ^(?:GET\|POST)\z"</code></td>
+</tr>
+<tr>
+<td><strong>Regex &amp; Engine</strong></td>
+<td><code>@rx</code> / <code>!@rx</code></td>
+<td>Pattern phức tạp hoặc <strong>Allowlist</strong> (<code>!@rx ^...$</code>)</td>
+<td><code>ARGS:id "!@rx ^[0-9]{1,10}$"</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>@detectSQLi</code></td>
+<td>Bắt SQLi trên ô text tự do (dùng <code>libinjection</code>)</td>
+<td><code>ARGS:q "@detectSQLi"</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>@detectXSS</code></td>
+<td>Bắt XSS trên ô text tự do (dùng <code>libinjection</code>)</td>
+<td><code>ARGS:comment "@detectXSS"</code></td>
+</tr>
+<tr>
+<td><strong>So sánh số</strong></td>
+<td><code>@eq</code>, <code>@gt</code>, <code>@lt</code>, <code>@ge</code>, <code>@le</code></td>
+<td>Dùng cùng tiền tố <code>&amp;</code> (đếm) hoặc <code>t:length</code> (độ dài chuỗi)</td>
+<td><code>ARGS:username "@gt 64" "...,t:none,t:length"</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="55-thứ-tự-ghép-transformations-t-chống-bypass">5.5. Thứ tự ghép Transformations (<code>t:...</code>) chống bypass</h3>
+<ul>
+<li><strong>Luôn đặt <code>t:none</code> đầu tiên</strong> để xóa transform mặc định, tránh hành vi bất ngờ.</li>
+<li><strong>Thứ tự giải mã chuẩn</strong> (từ lớp ngoài vào lớp trong):
+  1. <code>t:urlDecodeUni,t:urlDecodeUni</code> — Giải mã URL <strong>2 lần</strong> để chống double-encoding (<code>%252e%252e%252f</code> → <code>../</code>).
+  2. <code>t:htmlEntityDecode</code> / <code>t:jsDecode</code> — Giải mã <code>&amp;lt;</code>, <code>&amp;#x3c;</code>, <code>\u003c</code> (dùng cho rule chống XSS/SSTI).
+  3. <code>t:normalizePathWin</code> — Chuẩn hóa <code>\</code> thành <code>/</code> và rút gọn <code>/a/../b</code> (dùng cho rule đường dẫn/LFI).
+  4. <code>t:lowercase</code> — Chuyển chữ thường (nên đặt sau cùng trước khi so với mẫu chữ thường).</li>
+<li><strong>Mẹo giới hạn độ dài input không cần Regex:</strong> Dùng <code>t:none,t:length</code> kèm <code>@gt 200</code> → chạy tức thì, miễn nhiễm ReDoS.</li>
+</ul>
+<h3 id="56-viết-rule-chain-and-nhiều-điều-kiện--cách-xử-lý-điều-kiện-or">5.6. Viết Rule <code>chain</code> (AND nhiều điều kiện) &amp; Cách xử lý điều kiện OR</h3>
+<p>Trong thực tế, <strong>90% rule phòng thủ tốt đều dùng <code>chain</code></strong> để khoanh vùng đúng <strong>1 endpoint + 1 method + 1 tham số</strong>, tránh chặn lan sang chức năng khác.</p>
+<pre><code class="language-apache"># Ví dụ chain 3 tầng: Đúng Method POST + Đúng Route /api/orders + Sai định dạng order_id
+SecRule REQUEST_METHOD &quot;@streq POST&quot; \
+    &quot;id:20150,phase:2,pass,log,t:none,chain,msg:'Invalid order_id',tag:'allowlist',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/orders/?$&quot; &quot;t:none,t:normalizePath,chain&quot;
+        SecRule ARGS:order_id|ARGS:json.order_id &quot;!@rx ^[0-9]{1,10}$&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<p><strong>4 nguyên tắc sống còn khi viết <code>chain</code>:</strong>
+1. <strong><code>id</code>, <code>phase</code>, <code>deny</code>/<code>pass</code>, <code>status</code>, <code>log</code>, <code>msg</code>, <code>tag</code>, <code>logdata</code> CHỈ ĐƯỢC viết ở dòng đầu tiên</strong> (rule cha). Ghi vào dòng 2/3 sẽ gây lỗi cú pháp NGINX!
+2. Dòng cuối cùng của chuỗi <strong>KHÔNG được có từ khóa <code>chain</code></strong>.
+3. <code>t:...</code> <strong>không kế thừa</strong> sang dòng sau — mỗi dòng tự khai báo <code>t:none,...</code> riêng cho biến của dòng đó.
+4. <strong>Cần điều kiện OR?</strong> ModSecurity không có từ khóa <code>or</code>; hãy chọn 1 trong 3 cách:
+   - Gộp bằng regex: <code>REQUEST_FILENAME "@rx ^/(?:api/v1/orders|api/v2/orders)$"</code>
+   - Gộp bằng <code>@pm</code>: <code>ARGS "@pm union select sleep benchmark"</code>
+   - Tách thành <strong>2 rule độc lập</strong> với 2 <code>id</code> khác nhau (dễ đọc, dễ tắt riêng từng rule khi có False Positive).</p>
+<h3 id="57-tư-duy-viết-rule-theo-4-cấp-độ-ưu-tiên-từ-trên-xuống-dưới">5.7. Tư duy viết Rule theo 4 cấp độ (Ưu tiên từ trên xuống dưới)</h3>
+<ol>
+<li><strong>Cấp 1 — Strict Allowlist (Khuyên dùng số 1):</strong> Áp dụng cho mọi tham số có định dạng cố định (<code>id</code>, <code>page</code>, <code>uuid</code>, <code>sort</code>, <code>filename</code>, <code>date</code>, <code>host</code>, <code>redirect</code>). Dùng <code>!@rx ^...$</code> khóa chặt từ đầu đến cuối chuỗi. Chặn được cả payload lạ/0-day mà <strong>gần như 0% False Positive</strong> nếu lấy mẫu đúng từ Traffic log của bot.</li>
+<li><strong>Cấp 2 — Ép chuẩn giao thức &amp; cấu trúc (Protocol/Schema):</strong>
+   - Khóa <code>REQUEST_METHOD</code> đúng loại endpoint cần (<code>!@within GET POST</code>).
+   - Cấm lặp tham số (<code>&amp;ARGS:id "@gt 1"</code>) và cấm mảng JSON lạ (<code>ARGS_NAMES "@rx ^json\.id\.array_"</code>).
+   - Cấm gửi trộm trường nhạy cảm ở <code>ARGS_NAMES</code> (<code>role</code>, <code>isAdmin</code>, <code>price</code>, <code>balance</code>, <code>__proto__</code>).</li>
+<li><strong>Cấp 3 — Signature / Engine có ngữ cảnh (Cho ô text tự do):</strong> Với ô tìm kiếm, ghi chú, bình luận không thể ép Allowlist cứng, gắn <code>@detectSQLi</code> / <code>@detectXSS</code> / regex ngắn có giới hạn độ dài lên <strong>đúng endpoint + đúng tham số</strong> đó (không quét mù toàn site).</li>
+<li><strong>Cấp 4 — Response Guard (Phase 4):</strong> Khi chưa kịp vá tận gốc hoặc cần lớp bảo vệ cuối, chặn <code>RESPONSE_BODY</code> chứa định dạng Flag (<code>FHACKER2026\{[0-9a-fA-F]{0,64}</code>) trên mọi route <strong>ngoại trừ</strong> route trả cờ hợp lệ của bot.</li>
+</ol>
+<h3 id="58-6-bẫy-ngầm-thực-chiến-khi-viết-rule-trên-bunkerweb--modsecurity-v3">5.8. 6 "Bẫy ngầm" thực chiến khi viết Rule trên BunkerWeb / ModSecurity v3</h3>
+<ol>
+<li><strong>Bẫy tiền tố <code>json.</code> và mảng JSON:</strong> Khi client gửi <code>Content-Type: application/json</code>, ModSecurity v3 biến <code>{"id": 1}</code> thành <code>ARGS:json.id</code> và <code>{"id": [1, 2]}</code> thành <code>ARGS:json.id.array_0</code>, <code>ARGS:json.id.array_1</code>. Nếu chỉ viết <code>ARGS:id</code> sẽ <strong>bỏ lọt 100% JSON</strong>! Luôn viết tường minh <code>ARGS:id|ARGS:json.id</code> (không dùng regex tên biến chứa <code>|</code> như <code>ARGS:/(?:^|\.)id$/</code> vì dễ gây lỗi cú pháp trên <code>libmodsecurity3</code>).</li>
+<li><strong>Bẫy tham số tùy chọn rỗng (<code>?sort=</code>):</strong> Nếu tham số <code>sort</code> vắng mặt hoàn toàn, <code>SecRule ARGS:sort "!@rx ..."</code> sẽ không chạy. Nhưng nếu bot gửi <code>?sort=</code> (có key nhưng giá trị rỗng), <code>!@rx ^(?:asc|desc)$</code> sẽ <strong>chặn nhầm</strong>! Khi giá trị rỗng là hợp lệ, hãy thêm <code>?</code> thành <code>^(?:asc|desc)?$</code>.</li>
+<li><strong>Bẫy đường dẫn biến thể (<code>/API/orders</code>, <code>//api/orders</code>, <code>/api/orders/</code>):</strong> Nếu chỉ viết <code>REQUEST_FILENAME "@streq /api/orders"</code> không có transform, kẻ tấn công có thể thử <code>//api/orders</code> hoặc <code>/API/orders</code> (tùy framework) để lách. Hãy thêm <code>t:none,t:normalizePath,t:lowercase</code> hoặc dùng <code>@rx ^/api/orders/?$</code>.</li>
+<li><strong>Bẫy File Upload (<code>FILES_TMP_CONTENT</code> rỗng):</strong> Trên BunkerWeb mặc định, <code>FILES_TMP_CONTENT</code> không có dữ liệu. Để chặn upload webshell: dùng <code>FILES</code> để kiểm tra <strong>tên &amp; đuôi file gốc</strong> (allowlist đuôi ảnh/tài liệu, cấm 2 đuôi như <code>.php.jpg</code>), đồng thời soi <code>REQUEST_BODY</code> của request multipart để chặn mã thực thi (<code>&lt;?php</code>, <code>&lt;%</code>, <code>#!/bin/</code>).</li>
+<li><strong>Bẫy XML Body (<code>XXE</code>):</strong> Rule nội bộ <code>id:200000</code> bật XML parser cho <code>application/xml</code> và <code>text/xml</code>, làm regex trên <code>REQUEST_BODY</code> có thể không thấy chuỗi <code>&lt;!ENTITY</code>. Muốn soi raw XML ở Phase 2, cần 1 rule Phase 1 ở <code>MODSEC</code> gắn <code>ctl:requestBodyProcessor=URLENCODED</code> <em>(lưu ý: chỉ đổi <code>deny</code> thành <code>pass</code> không tắt được <code>ctl:</code>, muốn tắt phải comment/xóa hẳn rule đó)</em>.</li>
+<li><strong>Bẫy Phase 4 (<code>deny</code> không trả <code>403</code>):</strong> Ở Phase 4, HTTP Response Header đã gửi đi trước nên <code>deny</code> sẽ cắt đứt kết nối TCP và Traffic log ghi <code>500</code>. Nếu đặt nhầm lên route hợp lệ của bot chấm, bot sẽ báo lỗi dịch vụ → <strong>bắt buộc test <code>pass,log</code> trước ở Phase 4</strong>.</li>
+</ol>
+<h3 id="59-hiểu-cơ-chế-owasp-crs-v4-anomaly-scoring--cách-gỡ-false-positive-chuẩn">5.9. Hiểu cơ chế OWASP CRS v4 (Anomaly Scoring) &amp; Cách gỡ False Positive chuẩn</h3>
+<p>OWASP CRS v4 <strong>không chặn ngay ở từng rule nhỏ</strong> (<code>942100</code>, <code>941100</code>...). Thay vào đó:
+- Mỗi rule CRS khớp sẽ <strong>cộng điểm bất thường</strong> (<code>TX:ANOMALY_SCORE</code>, thường <code>+5</code> cho lỗi Critical).
+- Đến cuối Phase 2, rule tổng kết <strong><code>949110</code></strong> kiểm tra: nếu điểm <code>&gt;= 5</code> → <strong>chặn <code>403</code></strong>! (Tương tự ở Phase 4 là rule <strong><code>959100</code></strong>).
+- <strong>SAI LẦM CHẾT NGƯỜI:</strong> Thấy Traffic log báo <code>949110</code> rồi đi viết <code>SecRuleRemoveById 949110</code> → làm <strong>vô hiệu hóa khả năng chặn của toàn bộ CRS</strong> (CRS vẫn detect/log, nhưng không còn chặn <code>403</code>)!
+- <strong>CÁCH SỬA ĐÚNG (chọn mức hẹp nhất trước):</strong>
+  1. <strong>Mức 1 — Tắt 1 rule CRS trên đúng 1 route + 1 tham số (đặt ở <code>MODSEC_CRS</code>, nạp TRƯỚC CRS):</strong>
+     <code>apache
+     SecRule REQUEST_FILENAME "@rx (?i)^/api/notes/?$" \
+         "id:22010,phase:1,pass,nolog,t:none,t:normalizePath,ctl:ruleRemoveTargetById=942100;ARGS:content,ctl:ruleRemoveTargetById=942100;ARGS:json.content"</code>
+  2. <strong>Mức 2 — Gỡ 1 Cookie/Tham số khỏi 1 rule CRS trên toàn site (đặt ở <code>MODSEC</code>, nạp SAU CRS):</strong>
+     <code>apache
+     SecRuleUpdateTargetById 942440 "!REQUEST_COOKIES:session"</code>
+  3. <strong>Mức 3 — Tắt hẳn 1 rule CRS gây nhiễu toàn cục (chỉ dùng cho rule quá ồn như <code>920350</code> cấm Host là IP, đặt ở <code>MODSEC</code>):</strong>
+     <code>apache
+     SecRuleRemoveById 920350</code></p>
+<h3 id="510-tách-rule-khi-nhiều-service-chạy-chung-1-waf-tránh-chặn-chéo-mất-svc">5.10. Tách Rule khi nhiều Service chạy chung 1 WAF (tránh chặn chéo mất SVC)</h3>
+<p>Khi nhiều bài thi (vd bài Level 1 &amp; bài Level 2 mở ở Round 4) đi chung qua 1 WAF và <strong>trùng đường dẫn</strong> (vd <code>shop.team01.local/api/item?id=42</code> dùng số nguyên, còn <code>blog.team01.local/api/item?id=bai-viet-1</code> dùng chữ/slug), nếu viết Allowlist ở <code>Global</code> mà chỉ lọc <code>REQUEST_FILENAME</code> thì sẽ <strong>chặn nhầm service còn lại → rớt SVC ngay</strong>.</p>
+<p><strong>Kiểm tra trong 5 giây trên <code>Traffic log → Raw Request</code>:</strong>
+- Nếu 2 service khác tiền tố đường dẫn (<code>/shop/api/item</code> vs <code>/blog/api/item</code>): <code>REQUEST_FILENAME</code> đã tách sẵn, không cần lọc <code>Host</code>.
+- Nếu 2 service khác <strong><code>Host</code></strong> (khác subdomain hoặc khác port như <code>:8001</code> vs <code>:8002</code>): dùng 1 trong 2 cách sau:
+  1. <strong>Tách theo <code>Service</code> trên UI BunkerWeb <em>(ưu tiên nếu dropdown <code>Service</code> có liệt kê riêng từng bài)</em>:</strong> Rule nền dùng chung (<code>.env</code>, NoSQL <code>$ne</code>, XXE, webshell) để ở <code>Global</code>; rule đặc thù từng bài đặt vào đúng <code>Service</code> của bài đó. <em>(Vẫn phải giữ <code>id</code> không trùng nhau giữa các file!)</em>
+  2. <strong>Đặt ở <code>Global</code> và thêm 1 tầng <code>chain</code> lọc <code>REQUEST_HEADERS:Host</code>:</strong>
+     <em>(Quy ước placeholder đồng bộ với Cheatsheet &amp; 5 Khuôn Copy-Safe: thay </em><em>tất cả</em><em> <code>__...__</code> trước khi Save; trong <code>__HOST__</code> nhớ escape dấu chấm như <code>shop\.team01\.local</code>, còn <code>__ROUTE__</code> không gồm <code>/</code> cuối. Test <code>pass,log</code> ổn rồi đổi sang <code>deny,status:403,log</code>.)</em>
+     ```apache
+     # 1) Tách theo Subdomain trùng route
+     # Thay: <strong>HOST</strong> | <strong>ID</strong> | <strong>ROUTE</strong> | <strong>PARAM</strong> (tên trần) | <strong>REGEX</strong>
+     SecRule REQUEST_HEADERS:Host "@rx (?i)^<strong>HOST</strong>.?(?::\d+)?$" \
+         "id:<strong>ID</strong>,phase:2,pass,log,t:none,chain,msg:'Invalid <strong>PARAM</strong>',tag:'sqli',logdata:'host=%{REQUEST_HEADERS.Host} %{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"
+         SecRule REQUEST_FILENAME "@rx (?i)^<strong>ROUTE</strong>/?$" "t:none,t:normalizePath,chain"
+             SecRule ARGS:<strong>PARAM</strong>|ARGS:json.<strong>PARAM</strong> "!@rx <strong>REGEX</strong>" "t:none,t:urlDecodeUni,t:urlDecodeUni"</p>
+<pre><code> # 2) Tách theo Port trong Host (vd 10.10.1.5:8001 vs 10.10.1.5:8002)
+ # Thay: __PORT__ (gồm dấu hai chấm, vd :8001) | __ID__ | __ROUTE__ | __PARAM__ | __REGEX__
+ # (Nếu proxy BTC bỏ port khỏi Host, thay dòng 1 bằng: SecRule SERVER_PORT "@streq 8001")
+ SecRule REQUEST_HEADERS:Host "@endsWith __PORT__" \
+     "id:__ID__,phase:2,pass,log,t:none,chain,msg:'Invalid __PARAM__ on __PORT__',tag:'sqli',logdata:'host=%{REQUEST_HEADERS.Host} %{MATCHED_VAR_NAME}=%{MATCHED_VAR}'"
+     SecRule REQUEST_FILENAME "@rx (?i)^__ROUTE__/?$" "t:none,t:normalizePath,chain"
+         SecRule ARGS:__PARAM__|ARGS:json.__PARAM__ "!@rx __REGEX__" "t:none,t:urlDecodeUni,t:urlDecodeUni"
+
+ # 3) Gỡ False Positive CRS riêng cho 1 Service (MODSEC_CRS, phase:1)
+ # Thay: __HOST__ | __ID__ (22xxx) | __ROUTE__ | __CRS_ID__ (trước 949110) | __PARAM__
+ # LƯU Ý: ctl:... BẮT BUỘC đặt ở dòng CUỐI của chain (không đặt ở dòng đầu!)
+ SecRule REQUEST_HEADERS:Host "@rx (?i)^__HOST__\.?(?::\d+)?$" \
+     "id:__ID__,phase:1,pass,nolog,t:none,chain"
+     SecRule REQUEST_FILENAME "@rx (?i)^__ROUTE__(?:/|$)" \
+         "t:none,t:normalizePath,ctl:ruleRemoveTargetById=__CRS_ID__;ARGS:__PARAM__,ctl:ruleRemoveTargetById=__CRS_ID__;ARGS:json.__PARAM__"
+
+ # 4) Chặn lọt Flag (Phase 4) riêng theo từng Service khi mỗi bài có route cờ khác nhau
+ # Thay: __HOST__ | __ID__ | __FLAG_ROUTE__ (vd /api/flag)
+ SecRule REQUEST_HEADERS:Host "@rx (?i)^__HOST__\.?(?::\d+)?$" \
+     "id:__ID__,phase:4,pass,log,t:none,chain,msg:'FLAG leak detected',tag:'flag-leak',logdata:'%{REQUEST_HEADERS.Host} %{REQUEST_URI}'"
+     SecRule REQUEST_FILENAME "!@rx (?i)^__FLAG_ROUTE__(?:/|$)" "t:none,t:normalizePath,chain"
+         SecRule RESPONSE_BODY "@rx FHACKER(?:2026)?\{[0-9a-fA-F]{64}\}" "t:none"
+ ```
+</code></pre>
+<ul>
+<li><strong>3 bẫy cần tránh:</strong> (1) Luôn copy đúng dòng <code>Host:</code> từ <code>Traffic log → Raw Request</code> (proxy BTC có thể rewrite <code>Host</code>); (2) Luôn cho phép phần port tùy chọn <code>(?::\d+)?$</code> thay vì <code>@streq</code> cứng; (3) Khi dùng <code>chain</code> để gỡ CRS, luôn đặt <code>ctl:ruleRemoveTargetById=...</code> ở <strong>dòng cuối cùng</strong> để chỉ tắt trên đúng route đó, không tắt nhầm cả service.</li>
+</ul>
+<hr />
+<h2 id="6-nhận-diện-nhanh-lỗ-hổng-từ-traffic-log--tra-cứu-đầu-số-owasp-crs-v4">6. Nhận diện nhanh lỗ hổng từ Traffic Log &amp; Tra cứu đầu số OWASP CRS v4</h2>
+<h3 id="61-bảng-nhận-diện-nhanh-12-nhóm-lỗ-hổng-từ-dấu-hiệu-trong-traffic-log">6.1. Bảng nhận diện nhanh 12 nhóm lỗ hổng từ dấu hiệu trong Traffic Log</h3>
+<blockquote>
+<p><strong>Nhắc lại:</strong> regex trong bảng dưới dùng <code>\|</code> để escape Markdown. Khi copy sang ModSecurity phải bỏ <code>\</code> trước <code>|</code>, hoặc lấy bản sạch trong <a href="FHACKER2026_Regex_CopySafe.html">FHACKER2026_Regex_CopySafe.md</a>.</p>
+</blockquote>
+<p>Khi thấy request lạ trên <code>Traffic log</code> (đặc biệt các dòng trả về <code>200</code> hoặc làm lộ Flag), đối chiếu bảng này để chọn ngay chiến lược viết Rule vá:</p>
+<table>
+<thead>
+<tr>
+<th>Dấu hiệu thấy trong Request trên <code>Traffic log</code></th>
+<th>Nhóm lỗ hổng</th>
+<th>Biến cần soi &amp; Chiến lược viết Rule vá</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>'</code>, <code>"</code>, <code>--</code>, <code>#</code>, <code>UNION</code>, <code>SELECT</code>, <code>OR 1=1</code>, <code>SLEEP(</code>, <code>BENCHMARK(</code></td>
+<td><strong>SQL Injection</strong></td>
+<td>Tham số số/ID → Allowlist <code>!@rx ^[0-9]{1,10}$</code> trên <code>ARGS:x\|ARGS:json.x</code>. Ô text tự do → <code>@detectSQLi</code> + <code>t:urlDecodeUni,t:urlDecodeUni</code>.</td>
+</tr>
+<tr>
+<td>Key JSON/Form có dấu <code>$</code>: <code>$ne</code>, <code>$gt</code>, <code>$regex</code>, <code>$where</code>, <code>$or</code></td>
+<td><strong>NoSQL Injection</strong></td>
+<td>Soi <code>ARGS_NAMES\|REQUEST_BODY</code> với <code>@rx (?i)(?:^\$\|\.\$\|\$(?:ne\|eq\|gt\|gte\|lt\|lte\|in\|nin\|where\|regex\|exists\|or\|and\|not\|nor\|expr)\b)</code> (bắt cả JSON <code>json.password.$ne</code> lẫn form <code>password[$ne]</code>).</td>
+</tr>
+<tr>
+<td><code>&lt;script</code>, <code>onerror=</code>, <code>onload=</code>, <code>&lt;svg</code>, <code>javascript:</code></td>
+<td><strong>XSS</strong></td>
+<td>Ô text tự do → <code>@detectXSS</code> kết hợp <code>t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode</code>.</td>
+</tr>
+<tr>
+<td><code>{{...}}</code>, <code>${...}</code>, <code>&lt;%=</code>, <code>__class__</code>, <code>__mro__</code>, <code>cycler</code>, <code>Runtime</code></td>
+<td><strong>SSTI (Template Injection)</strong></td>
+<td>Soi <code>ARGS</code> với <code>@rx (?:\{\{.{0,200}\}\}|\$\{.{0,200}\}|__(?:class\|mro\|subclasses\|globals\|builtins)__)</code> (giới hạn <code>{0,200}</code> tránh ReDoS).</td>
+</tr>
+<tr>
+<td><code>../</code>, <code>..\</code>, <code>%2e%2e%2f</code>, <code>/etc/passwd</code>, <code>php://filter</code>, <code>file://</code></td>
+<td><strong>LFI / Path Traversal</strong></td>
+<td>Ưu tiên Allowlist tên file sạch (<code>^[A-Za-z0-9._-]{1,64}\.(?:pdf\|png\|jpg\|txt)$</code>) + rule chặn <code>\.\.[/\x5c]</code> với 2 lần <code>t:urlDecodeUni</code>.</td>
+</tr>
+<tr>
+<td><code>;</code>, <code>\|</code>, <code>&amp;&amp;</code>, <code>`</code>, <code>$(...)</code>, <code>/bin/sh</code>, <code>cat</code>, <code>curl</code>, <code>wget</code></td>
+<td><strong>RCE / Command Injection</strong></td>
+<td>Tham số host/IP/tên → Allowlist chặt. Nếu cần blacklist trên route cụ thể → chặn <code>[;&amp;\|\</code>\r\n&lt;&gt;]|\$(<code>trên</code>ARGS:x|ARGS:json.x`.</td>
+</tr>
+<tr>
+<td>Upload tên file <code>.php</code>, <code>.phtml</code>, <code>.jsp</code>, <code>a.php.jpg</code>, nội dung <code>&lt;?php</code></td>
+<td><strong>File Upload / Webshell</strong></td>
+<td>Allowlist đuôi file trên <code>FILES</code> (chỉ 1 dấu chấm, đúng đuôi ảnh/tài liệu) + chặn <code>&lt;?php</code> trong <code>REQUEST_BODY</code>.</td>
+</tr>
+<tr>
+<td>URL trỏ vào <code>127.0.0.1</code>, <code>localhost</code>, <code>0.0.0.0</code>, <code>169.254.169.254</code>, <code>10.x</code>, <code>172.16-31.x</code>, <code>192.168.x</code>, <code>[::1]</code>, <code>file://</code>, <code>gopher://</code></td>
+<td><strong>SSRF</strong></td>
+<td>Allowlist domain/scheme <code>https?://</code> hợp lệ trên param URL; chặn scheme lạ và dải IP nội bộ / metadata cloud (kể cả dạng số thập phân/hex như <code>2130706433</code>, <code>0x7f000001</code>).</td>
+</tr>
+<tr>
+<td><code>&lt;!DOCTYPE</code>, <code>&lt;!ENTITY</code>, <code>SYSTEM "file://</code>, <code>PUBLIC "</code> trong XML</td>
+<td><strong>XXE</strong></td>
+<td>Phase 1 <code>ctl:requestBodyProcessor=URLENCODED</code> (ở <code>MODSEC</code>) + Phase 2 chặn <code>&lt;!(?:ENTITY\|DOCTYPE)</code> trong <code>REQUEST_BODY</code>.</td>
+</tr>
+<tr>
+<td><code>rO0AB</code> (Java), <code>O:4:"..."</code> (PHP), <code>!!python/object</code> (YAML), <code>gASV</code> (Pickle)</td>
+<td><strong>Insecure Deserialization</strong></td>
+<td>Soi <code>ARGS\|REQUEST_COOKIES\|REQUEST_BODY</code> với <code>@pm</code> hoặc <code>@rx</code> bắt chữ ký chuỗi serialize nguy hiểm.</td>
+</tr>
+<tr>
+<td>Header JWT <code>eyJhbGciOiJub25l</code> (<code>alg:none</code>), hoặc key <code>__proto__</code>, <code>constructor.prototype</code></td>
+<td><strong>JWT / Prototype Pollution</strong></td>
+<td>Chặn <code>eyJhbGciOiJub25l</code> trong <code>REQUEST_HEADERS:Authorization\|REQUEST_COOKIES</code>; chặn <code>__proto__\|prototype</code> trong <code>ARGS_NAMES\|REQUEST_BODY</code>.</td>
+</tr>
+<tr>
+<td>Trường <code>role</code>, <code>isAdmin</code>, <code>admin</code>, <code>balance</code>, <code>price</code> lạ; hoặc <code>?id=1&amp;id=2</code>; hoặc <code>X-Original-URL</code></td>
+<td><strong>Mass Assignment / HPP / Header Bypass</strong></td>
+<td>Chặn tên trường nhạy cảm trên <code>ARGS_NAMES</code> theo route; chặn <code>&amp;ARGS:id "@gt 1"</code> và mảng <code>json.id.array_</code>; chặn header <code>X-Original-URL</code>/<code>X-Rewrite-URL</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-bảng-tra-cứu-nhanh-đầu-số-rule-owasp-crs-v4-trên-cột-waf">6.2. Bảng tra cứu nhanh đầu số Rule OWASP CRS v4 trên cột <code>WAF</code></h3>
+<p>Khi thấy cột <code>WAF</code> hiện mã <code>9xxxxx</code>, tra nhanh bảng sau để biết ngay CRS đang báo loại gì:</p>
+<table>
+<thead>
+<tr>
+<th>Đầu số CRS</th>
+<th>Nhóm bảo vệ</th>
+<th>Ghi chú xử lý False Positive</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>920xxx</code></strong></td>
+<td>Protocol Enforcement (HTTP chuẩn, URL encoding, Content-Type)</td>
+<td><strong><code>920350</code></strong>: hay chặn nhầm khi bot gọi bằng IP thay vì domain → có thể gỡ bằng <code>SecRuleRemoveById 920350</code>.</td>
+</tr>
+<tr>
+<td><strong><code>921xxx</code></strong></td>
+<td>Protocol Attack (HTTP Smuggling, CRLF, HPP)</td>
+<td>Kiểm tra header lạ hoặc tham số lặp của app.</td>
+</tr>
+<tr>
+<td><strong><code>930xxx</code> / <code>931xxx</code></strong></td>
+<td>LFI / Path Traversal (<code>930</code>) &amp; RFI (<code>931</code>)</td>
+<td>Thường ít FP; nếu FP hay rơi vào param chứa đường dẫn hợp lệ.</td>
+</tr>
+<tr>
+<td><strong><code>932xxx</code></strong></td>
+<td>RCE / Unix &amp; Windows Command Injection</td>
+<td>Hay FP với chuỗi mô tả kỹ thuật hoặc Cookie/JWT dài → gỡ target theo route/cookie.</td>
+</tr>
+<tr>
+<td><strong><code>933xxx</code> / <code>934xxx</code></strong></td>
+<td>PHP Injection (<code>933</code>) &amp; Node.js / SSTI / Generic (<code>934</code>)</td>
+<td>Kiểm tra param JSON hoặc nội dung bài viết có chứa dấu <code>;</code>, <code>{</code>, <code>$</code>.</td>
+</tr>
+<tr>
+<td><strong><code>941xxx</code></strong></td>
+<td>XSS (Cross-Site Scripting)</td>
+<td>Hay FP ở ô nhập HTML/Markdown hoặc Cookie → gỡ target ở <code>MODSEC_CRS</code> cho đúng param đó.</td>
+</tr>
+<tr>
+<td><strong><code>942xxx</code></strong></td>
+<td>SQL Injection</td>
+<td>Hay FP nhất (<code>942100</code>, <code>942430</code>, <code>942440</code> trên Cookie/JWT/text có dấu <code>'</code>, <code>--</code>, <code>or</code>) → gỡ target theo param/cookie, <strong>không tắt toàn cục</strong>.</td>
+</tr>
+<tr>
+<td><strong><code>943xxx</code> / <code>944xxx</code></strong></td>
+<td>Session Fixation (<code>943</code>) &amp; Java Injection (<code>944</code>)</td>
+<td>Giữ nguyên, chỉ gỡ target nếu thực sự đụng bot.</td>
+</tr>
+<tr>
+<td><strong><code>949110</code></strong></td>
+<td><strong>Inbound Anomaly Blocking</strong> (Rule tổng kết chặn Request)</td>
+<td><strong>TUYỆT ĐỐI KHÔNG TẮT!</strong> Luôn tìm rule <code>9xxxxx</code> đứng ngay phía trên nó để xử lý.</td>
+</tr>
+<tr>
+<td><strong><code>95xxxx</code> / <code>959100</code></strong></td>
+<td>Outbound Data Leakage (<code>950–955</code>) &amp; Outbound Blocking (<code>959100</code>)</td>
+<td>Nếu CRS chặn nhầm response hợp lệ của app, gỡ đúng rule <code>95xxxx</code> (không tắt <code>959100</code>).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-đọc--phân-tích-log-phòng-thủ-traffic-log-audit-log-error-log">7. Đọc &amp; Phân tích Log phòng thủ (Traffic log, Audit log, Error log)</h2>
+<h3 id="71-cách-phân-biệt-bot-chấm-svc-vs-traffic-bất-thường-trên-traffic-log">7.1. Cách phân biệt Bot chấm SVC vs Traffic bất thường trên <code>Traffic log</code></h3>
+<table>
+<thead>
+<tr>
+<th>Dấu hiệu</th>
+<th>Bot chấm SVC của BTC</th>
+<th>Traffic tấn công / dò quét</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tần suất</strong></td>
+<td>Đều đặn theo chu kỳ <strong>30 giây</strong></td>
+<td>Dồn dập theo từng đợt hoặc xuất hiện bất thường</td>
+</tr>
+<tr>
+<td><strong>Endpoint</strong></td>
+<td>Chỉ gọi đúng các chức năng thật của app</td>
+<td>Hay dò <code>/.env</code>, <code>/.git</code>, <code>/admin</code>, <code>/phpmyadmin</code>, hoặc đường dẫn chứa <code>../</code></td>
+</tr>
+<tr>
+<td><strong>Tham số gửi lên</strong></td>
+<td>Đúng kiểu dữ liệu (ID là số, tên người dùng sạch, JSON đúng cấu trúc)</td>
+<td>Có ký tự lạ (<code>'</code>, <code>"</code>, <code>;</code>, <code>|</code>, <code>&lt;script&gt;</code>, <code>{{</code>, <code>$ne</code>, <code>../</code>, <code>127.0.0.1</code>)</td>
+</tr>
+<tr>
+<td><strong>Cột <code>WAF</code></strong></td>
+<td>Thường trống (nếu có số <code>9xxxxx</code> → kiểm tra ngay kẻo CRS chặn nhầm!)</td>
+<td>Hiện nhiều rule CRS (<code>942100</code>, <code>941100</code>, <code>930110</code>...) hoặc rule đội (<code>20xxx</code>)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Quan trọng — DetectionOnly có "cảnh báo từng request" không? (đã test trên bản tập)</strong></p>
+<p><strong>Có, nhưng là log từng request chứ không phải thông báo kiểu "request X đáng ngờ".</strong></p>
+<ul>
+<li>Mỗi request = <strong>1 transaction riêng</strong> trong <code>modsec_audit.log</code>, có <code>unique_id</code> riêng, kèm <code>method</code>, <code>uri</code>, <code>status</code>, và <strong>danh sách rule khớp ngay trong <code>messages</code></strong> (<code>ruleId</code> + <code>data</code> + <code>match</code>). Muốn biết chính xác request nào nghi ngờ thì mở đúng dòng đó, không có chuyện gộp chung.</li>
+<li><strong>Rule <code>deny</code> vẫn được ghi log dù đang DetectionOnly</strong>; chỉ khác <code>status</code> trả về <code>200</code>. Do đó đừng dùng status code để đánh giá rule có chạy hay không — phải xem cột <code>WAF</code> / <code>messages</code>.</li>
+<li><strong>Request của bot healthcheck cũng bị ghi log bình thường</strong>, kể cả khi không khớp rule nào (audit log không có ngoại lệ cho bot). Bot còn có thể khớp rule CRS vô hại — bản tập hay gặp <code>920350</code> (<code>Host header is a numeric IP address</code>) khi bot gọi <code>127.0.0.1:8000</code>.</li>
+<li><strong>Không có nhãn "bot" trong log.</strong> Muốn nhận ra bot phải dựa vào <strong>nhịp lặp ~30 giây + dữ liệu sạch</strong>. Bản tập có script <code>2026-waf-practice/svc-fingerprint.py</code> gom nhóm theo (method, uri, User-Agent, shape body) và in "vân tay" bot; <code>detect-report.py --uri /health --last 1</code> cho thấy đúng 1 transaction của bot và rule nào khớp.</li>
+<li><strong>Cách làm thực chiến khi vào thi:</strong> mở <code>Traffic log</code> <strong>không lọc</strong> trong 60–90 giây, xem nhóm nào lặp đều đặn → đó là bot. Sau đó mới lọc <code>modsec.id:</code> để tìm request nghi vấn. Nếu chỉ lọc <code>modsec.id:</code> ngay, bạn sẽ <strong>không thấy bot</strong> và dễ viết rule chặn nhầm.</li>
+</ul>
+</blockquote>
+<h3 id="72-ý-nghĩa-các-phần-trong-modsec_auditlog-bcefh">7.2. Ý nghĩa các phần trong <code>modsec_audit.log</code> (<code>BCEFH</code>)</h3>
+<p>Trên hệ thống BTC, <code>MODSECURITY_SEC_AUDIT_LOG_PARTS</code> mặc định là <code>BCEFH</code>:
+- <strong>B:</strong> Request Headers (xem Method, URI, Host, Cookie, Content-Type, User-Agent).
+- <strong>C:</strong> Request Body (xem dữ liệu Form/JSON/XML gửi lên — lưu tới <strong>64 KiB</strong>, lớn hơn <code>traffic.log</code> chỉ lưu 16 KiB).
+- <strong>E:</strong> Response Body (xem nội dung web trả về — lưu tới <strong>64 KiB</strong>, lớn hơn <code>traffic.log</code> chỉ lưu 8 KiB).
+- <strong>F:</strong> Response Headers (xem Status Code, <code>Set-Cookie</code>, <code>Location</code>).
+- <strong>H:</strong> Audit Log Trailer — <strong>quan trọng nhất</strong>: liệt kê chi tiết từng rule ID đã khớp, <code>msg</code>, <code>tag</code>, <code>logdata</code> và lý do chặn!
+  - <em>Mẹo đọc phần H khi gỡ False Positive:</em> Đọc từ trên xuống dưới, tìm dòng <code>Message: Warning. Matched ... at ARGS:ten_param. [id "942xxx"]</code> nằm <strong>trước</strong> dòng <code>Access denied with code 403 ... [id "949110"]</code> → bạn sẽ biết chính xác <strong>Rule ID CRS gốc</strong> và <strong>tên biến gây chặn nhầm</strong> để viết <code>ctl:ruleRemoveTargetById</code>!</p>
+<h3 id="73-tra-nhanh-lỗi-cú-pháp-trên-errorlog-khi-lưu-config-bị-báo-đỏ">7.3. Tra nhanh lỗi cú pháp trên <code>error.log</code> khi lưu Config bị báo đỏ</h3>
+<p>Khi bạn bấm <strong>Save</strong> trong <code>Configs</code>, BunkerWeb chạy <code>nginx -t</code> trước khi reload. Nếu có lỗi cú pháp, <strong>WAF KHÔNG bị sập</strong> (vẫn giữ cấu hình cũ), nhưng rule mới <strong>chưa được nạp</strong> và chuông thông báo góc trên phải sẽ báo lỗi. Tra nhanh bảng sau:</p>
+<table>
+<thead>
+<tr>
+<th>Thông báo lỗi trong <code>error.log</code></th>
+<th>Nguyên nhân</th>
+<th>Cách sửa trong 10 giây</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Rule id: 20100 is duplicated</code></td>
+<td>Hai rule có cùng <code>id</code></td>
+<td>Đổi <code>id</code> của rule mới thành số khác chưa dùng trong <code>20000–29999</code>.</td>
+</tr>
+<tr>
+<td><code>ModSecurity: Disruptive actions can only be specified in the first rule of a chain</code></td>
+<td>Ghi nhầm <code>deny</code>, <code>pass</code>, <code>id:</code>, <code>phase:</code> hoặc <code>msg:</code> vào rule con (dòng thứ 2) của <code>chain</code></td>
+<td>Xóa hết <code>id</code>, <code>phase</code>, <code>deny</code>, <code>msg</code> ở rule con; chỉ giữ biến + toán tử + <code>t:...</code>.</td>
+</tr>
+<tr>
+<td><code>syntax error, unexpected ...</code> quanh dấu <code>\</code></td>
+<td>Viết comment <code># ...</code> phía sau dấu <code>\</code> nối dòng, hoặc thiếu dấu <code>"</code> đóng chuỗi</td>
+<td>Xóa mọi ký tự/comment sau dấu <code>\</code>; kiểm tra đủ cặp ngoặc kép <code>"..."</code>.</td>
+</tr>
+<tr>
+<td><code>unexpected FREE_TEXT_QUOTE_MACRO_EXPANSION</code></td>
+<td>Dùng dấu <code>\|</code> bên trong tên biến regex (vd <code>ARGS:/(?:^\|.)id$/</code>)</td>
+<td>Viết tường minh <code>ARGS:id\|ARGS:json.id</code> thay vì regex tên biến.</td>
+</tr>
+<tr>
+<td>Rule lưu không lỗi nhưng <strong>không khớp JSON</strong></td>
+<td>Đặt rule soi <code>ARGS</code> ở <code>phase:1</code> hoặc quên tiền tố <code>json.</code></td>
+<td>Đổi sang <code>phase:2</code> và thêm <code>ARGS:json.&lt;tên_trường&gt;</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-playbook-5-tình-huống-khẩn-cấp--cách-cứu-điểm-trong-60-giây">8. Playbook 5 tình huống khẩn cấp &amp; Cách cứu điểm trong 60 giây</h2>
+<h3 id="tình-huống-1-bảng-điểm-báo-svc-tụt-đỏ-đột-ngột">Tình huống 1: Bảng điểm báo <code>SVC</code> tụt đỏ đột ngột!</h3>
+<ol>
+<li><strong>Giữ bình tĩnh (chỉ có 30 giây giữa mỗi lần chấm).</strong></li>
+<li>Mở <strong>Traffic log</strong>, lọc ngay <code>status:403</code> và <code>status:500</code> trong 2 phút gần nhất.</li>
+<li>Nhìn request sạch của bot chấm bị trả <code>403</code> hoặc <code>500</code>, xem cột <strong>WAF</strong>:
+   - <strong>Nếu là rule đội (<code>20xxx</code>):</strong> Vào <strong>Configs → file rule của đội</strong>, đổi rule đó từ <code>deny,status:403,log</code> về <code>pass,log</code> (hoặc comment <code>#</code> lại) → <strong>Save</strong> ngay lập tức!
+   - <strong>Nếu là rule OWASP CRS (<code>9xxxxx</code>):</strong> Tìm rule ngay <strong>phía trên <code>949110</code></strong> (vd <code>942100</code>, <code>941100</code>, <code>920350</code>), thêm ngoại lệ vào <code>MODSEC_CRS</code> (theo route + param) hoặc <code>SecRuleUpdateTargetById</code> ở <code>MODSEC</code> → <strong>Save</strong>.
+   - <strong>Nếu không tìm ra ngay trong 30 giây và SVC sắp về 0:</strong> Tạm thời ra <strong>Trang chủ</strong> tắt chặn về <code>DetectionOnly</code> để cứu SVC trước, sau đó soi kỹ Traffic log rồi bật <code>On</code> lại!</li>
+</ol>
+<h3 id="tình-huống-2-waf-đang-on-nhưng-cột-def-vẫn-tụt-đang-bị-cướp-cờ">Tình huống 2: WAF đang <code>On</code> nhưng cột <code>DEF</code> vẫn tụt (đang bị cướp cờ)!</h3>
+<ol>
+<li>Mở <strong>Traffic log</strong>, gõ chính xác <code>"FHACKER2026{"</code> vào ô tìm kiếm.</li>
+<li>Nhìn tất cả các dòng có Flag trong Response <strong>mà URI không phải là route đọc cờ hợp lệ của bot</strong>.</li>
+<li>Bấm vào dòng đó xem Request:
+   - Đối thủ gọi endpoint nào? Gửi qua Query, Form, JSON, Header hay Cookie?
+   - Kiểm tra 4 nguyên nhân hay làm lọt rule nhất:<ol>
+<li>Quên <code>ARGS:json.&lt;tên&gt;</code> khi đối thủ gửi JSON.</li>
+<li>Quên <code>t:urlDecodeUni,t:urlDecodeUni</code> (2 lần) khi đối thủ double-encode.</li>
+<li>Rule viết ở <code>phase:1</code> cho <code>ARGS</code> (phải là <code>phase:2</code>).</li>
+<li>Endpoint bị lỗi chưa có rule Allowlist.</li>
+</ol>
+</li>
+<li><strong>Cấp cứu tức thì:</strong> Nếu chưa kịp hiểu rõ cách vá chuẩn, bật ngay rule Phase 4 (<code>21201</code>) để chặn Flag lọt ra ngoài mọi route khác route cờ hợp lệ (nhớ kiểm tra kỹ route loại trừ để không cắt nhầm bot!), rồi quay lại viết Allowlist vá tận gốc.</li>
+</ol>
+<h3 id="tình-huống-3-sửa-rule-rồi-bấm-save-nhưng-test-lại-không-thấy-đổi-gì">Tình huống 3: Sửa rule rồi bấm Save nhưng test lại không thấy đổi gì</h3>
+<ol>
+<li>Nhìn <strong>chuông thông báo</strong> góc trên phải UI WAF → có báo lỗi reload không?</li>
+<li>Mở <strong>Logs → <code>error.log</code></strong> xem dòng lỗi cuối cùng và sửa theo bảng ở Mục 7.3.</li>
+<li>Kiểm tra xem WAF đang ở <code>On</code> hay vẫn đang <code>DetectionOnly</code> (<strong>Trang chủ</strong> hoặc <strong>Global Settings → ModSecurity</strong>).</li>
+<li>Chờ 3–5 giây sau khi bấm Save để scheduler sinh lại cấu hình và reload NGINX.</li>
+</ol>
+<h3 id="tình-huống-4-owasp-crs-chặn-nhầm-tính-năng-hợp-lệ-của-app">Tình huống 4: OWASP CRS chặn nhầm tính năng hợp lệ của app</h3>
+<ul>
+<li><strong>Khi nào đặt ở <code>MODSEC_CRS</code> (nạp TRƯỚC CRS):</strong> Khi muốn tắt 1 rule CRS <strong>chỉ trên 1 route cụ thể + 1 tham số cụ thể</strong> (cách chuẩn nhất, giữ nguyên bảo vệ ở các route khác):
+  <code>apache
+  SecRule REQUEST_FILENAME "@rx (?i)^/api/notes/?$" \
+      "id:22010,phase:1,pass,nolog,t:none,t:normalizePath,ctl:ruleRemoveTargetById=942100;ARGS:content,ctl:ruleRemoveTargetById=942100;ARGS:json.content"</code></li>
+<li><strong>Khi nào đặt ở <code>MODSEC</code> (nạp SAU CRS):</strong> Khi muốn gỡ 1 cookie/tham số khỏi 1 rule CRS trên toàn site (<code>SecRuleUpdateTargetById 942440 "!REQUEST_COOKIES:session"</code>), hoặc tắt hẳn 1 rule gây nhiễu toàn cục (<code>SecRuleRemoveById 920350</code>).</li>
+</ul>
+<h3 id="tình-huống-5-bắt-đầu-round-4-mở-level-2--thêm-bài-mới-thêm-cờ-thứ-3">Tình huống 5: Bắt đầu Round 4 (Mở Level 2 — thêm bài mới, thêm cờ thứ 3)</h3>
+<ol>
+<li>Trong 2 phút đầu Round 4, theo dõi sát <code>Traffic log</code> để ghi nhận toàn bộ endpoint mới mà bot chấm SVC gọi.</li>
+<li>Kiểm tra ngay xem có request nào của bài mới bị trả <code>403</code> hoặc <code>500</code> không (do rule cũ hoặc rule Phase 4 <code>21201</code> chưa loại trừ route cờ mới).</li>
+<li>Nếu bài mới có endpoint trả cờ riêng, bổ sung ngay vào regex loại trừ của <code>21201</code> (ví dụ <code>^/(?:api/flag|v2/secret)(?:/|$)</code>).</li>
+</ol>
+<hr />
+<h2 id="9-bộ-lệnh-offline-curl--python-kiểm-tra-dịch-vụ--kiểm-thử-rule">9. Bộ lệnh Offline (<code>curl</code> &amp; Python) kiểm tra dịch vụ &amp; kiểm thử Rule</h2>
+<h3 id="91-lệnh-curl-kiểm-tra-dịch-vụ--tốc-độ-phản-hồi-waf">9.1. Lệnh <code>curl</code> kiểm tra dịch vụ &amp; tốc độ phản hồi WAF</h3>
+<pre><code class="language-bash"># 1. Chỉ in HTTP status code và tổng thời gian phản hồi (kiểm tra WAF có bị chậm không)
+curl -s -o /dev/null -w 'HTTP %{http_code} | time=%{time_total}s\n' 'http://TARGET/api/health'
+
+# 2. Gửi GET kèm Header và Cookie (mô phỏng người dùng đăng nhập)
+curl -i -H 'Cookie: session=abc123' -H 'User-Agent: HealthCheck/1.0' 'http://TARGET/api/profile'
+
+# 3. Gửi POST dạng Form URL-encoded
+curl -i -X POST 'http://TARGET/api/login' --data 'username=alice&amp;password=123'
+
+# 4. Gửi POST dạng JSON
+curl -i -X POST 'http://TARGET/api/orders' \
+  -H 'Content-Type: application/json' \
+  -d '{&quot;order_id&quot;: 42}'
+
+# 5. Gửi upload file multipart hợp lệ (test xem rule upload có chặn nhầm ảnh thật không)
+curl -i -F 'file=@/tmp/test.png' 'http://TARGET/api/upload'
+
+# 6. Giữ nguyên ../ trong URL để test rule Phase 1 (không cho curl tự rút gọn đường dẫn)
+curl --path-as-is -i 'http://TARGET/static/../../etc/passwd'
+</code></pre>
+<h3 id="92-lệnh-python-1-dòng-offline-thay-thế-công-cụ-online-khi-mất-mạng">9.2. Lệnh Python 1 dòng offline (thay thế công cụ online khi mất mạng)</h3>
+<pre><code class="language-bash"># 1. Giải mã URL-encode (kể cả double-encode: chạy unquote 2 lần)
+python3 -c 'import urllib.parse, sys; s=sys.argv[1]; print(urllib.parse.unquote(urllib.parse.unquote(s)))' '%252e%252e%252f'
+
+# 2. Giải mã Base64 hoặc HTML Entities nhanh
+python3 -c 'import base64, sys; s=sys.argv[1]; print(base64.b64decode(s + &quot;=&quot; * (-len(s) % 4)).decode(&quot;utf-8&quot;, &quot;replace&quot;))' 'PD9waHAgc3lzdGVtKCRfR0VUWzBdKTs/Pg=='
+python3 -c 'import html, sys; print(html.unescape(sys.argv[1]))' '&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;'
+
+# 3. Giải mã nhanh phần Header và Payload của một JWT token (không cần cài thư viện)
+python3 -c '
+import base64, sys
+parts = sys.argv[1].split(&quot;.&quot;)
+for p in parts[:2]:
+    p += &quot;=&quot; * (-len(p) % 4)
+    print(base64.urlsafe_b64decode(p).decode(&quot;utf-8&quot;, &quot;replace&quot;))
+' 'eyJhbGciOiJub25lIn0.eyJ1c2VyIjoiYWRtaW4ifQ.'
+
+# 4. Test nhanh một Regex Allowlist trước khi dán vào ModSecurity
+python3 -c '
+import re
+pat = r&quot;^[A-Za-z0-9._-]{1,64}\.(?:pdf|png|jpg)$&quot;
+for sample in [&quot;report.pdf&quot;, &quot;avatar_1.png&quot;, &quot;../secret.pdf&quot;, &quot;shell.php.jpg&quot;]:
+    print(sample, &quot;=&gt;&quot;, bool(re.match(pat, sample)))
+'
+
+# 5. Kiểm tra trùng Rule ID &amp; phát hiện lỗi trailing space/comment sau dấu \ trong file rule
+grep -oE 'id:[0-9]{5}' team-rules.conf | sort | uniq -d   # ID đội là 5 chữ số; nếu msg có 'id:' thì lọc thêm dòng SecRule
+grep -nE '\\[[:space:]]+#|\\[[:space:]]+$' team-rules.conf
+</code></pre>
+<hr />
+<h2 id="10-tóm-gọn-1-trang-quy-tắc-an-toàn-phòng-thi--checklist-quản-lý-rule">10. Tóm gọn 1 trang: Quy tắc an toàn phòng thi &amp; Checklist quản lý Rule</h2>
+<h3 id="101-checklist-5-bước-trước-khi-bấm-save-rule-mới">10.1. Checklist 5 bước trước khi bấm <code>Save</code> Rule mới</h3>
+<ol>
+<li><strong>Sao lưu bản đang chạy xanh</strong> ra file local (<code>rules-r1.conf</code>, <code>rules-r4.conf</code>...) để rollback trong 10 giây nếu có sự cố.</li>
+<li><strong>Kiểm tra trùng <code>id</code></strong> trong dải <code>20000–29999</code> và đảm bảo không có khoảng trắng/comment sau dấu <code>\</code> nối dòng.</li>
+<li><strong>Bắt đầu bằng <code>pass,log</code></strong> (đặc biệt ở Round 6–10 hoặc rule Phase 4) → test 2 chiều (<code>200</code> cho request sạch, có gắn cờ ở cột <code>WAF</code> cho request bẩn).</li>
+<li><strong>Chờ đủ 1 chu kỳ 30 giây</strong> của bot chấm SVC, kiểm tra <code>Traffic log</code> không có False Positive rồi mới đổi sang <code>deny,status:403,log</code>.</li>
+<li><strong>Bấm Save → nhìn chuông thông báo</strong> không báo lỗi reload → theo dõi cột <code>SVC</code> xanh ở chu kỳ tiếp theo.</li>
+</ol>
+<h3 id="102-quy-tắc-an-toàn-phòng-thi-tránh-mất-điểm-oan">10.2. Quy tắc an toàn phòng thi (tránh mất điểm oan)</h3>
+<table>
+<thead>
+<tr>
+<th>ĐƯỢC PHÉP LÀM</th>
+<th>TUYỆT ĐỐI KHÔNG LÀM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dùng tài liệu, cheatsheet, ghi chú, script tự viết đã lưu sẵn <strong>offline</strong> trên laptop trước giờ thi.</td>
+<td>Truy cập <strong>Internet</strong> dưới mọi hình thức (hotspot, 4G/5G, VPN, proxy, Wi-Fi ngoài).</td>
+</tr>
+<tr>
+<td>Dùng công cụ offline không có AI (CyberChef offline, Burp Suite, <code>curl</code>, Python, trình đọc PDF/Markdown).</td>
+<td>Dùng <strong>bất kỳ AI nào</strong>, kể cả AI chạy cục bộ (Ollama, LM Studio, Copilot, plugin IDE/trình duyệt).</td>
+</tr>
+<tr>
+<td>Viết rule WAF chặn payload bất hợp lệ và cho request bình thường đi qua.</td>
+<td>Chặn hẳn endpoint có bug, <code>deny all</code>, chặn API đọc cờ, hoặc chặn theo IP.</td>
+</tr>
+<tr>
+<td>Giữ nguyên lịch sử trình duyệt để BTC kiểm tra ngẫu nhiên.</td>
+<td><strong>Xóa lịch sử trình duyệt, mở tab ẩn danh</strong>, hoặc từ chối kiểm tra laptop <em>(bị hủy kết quả ngay!)</em>.</td>
+</tr>
+<tr>
+<td>Nộp cờ tối đa <code>&lt; 30 lần/phút</code> và lọc bỏ cờ của chính đội mình.</td>
+<td>Nộp nhầm cờ nhà <em>(mất <code>2 × BP</code> DEF)</em>, nộp quá 30 lần/phút, hoặc tấn công UI WAF / hạ tầng BTC / laptop đội khác.</td>
+</tr>
+<tr>
+<td>Khi có sự cố hệ thống/mạng/điểm, <strong>đội trưởng</strong> báo BTC trực tiếp hoặc qua kênh Discord đội.</td>
+<td>Chia sẻ rule/flag với đội khác hoặc trao đổi với người ngoài đội <em>(1 người vi phạm, xử lý chung cả đội!)</em>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-attack-mini-playbook-atk-cho-người-phòng-thủ">11. Attack mini-playbook (ATK) cho người phòng thủ</h2>
+<blockquote>
+<p><strong>Vì sao người phòng thủ phải biết tấn công:</strong>
+1. <strong>ATK là một nửa điểm</strong> — chỉ ngồi thủ thì không thể thắng.
+2. <strong>Muốn vá đúng phải hiểu payload</strong> — chính bạn nên khai thác service nhà mình (hoặc service cùng code) để biết lỗ hổng nằm ở đâu.
+3. <strong>Traffic log là mỏ vàng</strong> — request của đối thủ làm lộ flag chính là PoC để bạn mang đi đánh đội khác, đồng thời là mẫu để viết rule chặn.</p>
+</blockquote>
+<h3 id="111-quy-tắc-an-toàn-khi-đi-tấn-công">11.1. Quy tắc an toàn khi đi tấn công</h3>
+<ul>
+<li>Chỉ tấn công service của đối thủ <strong>trong thời gian thi</strong>; chỉ lấy flag, <strong>không phá file/DB, không xóa dữ liệu, không DoS</strong>.</li>
+<li><strong>Không</strong> tấn công Dashboard/UI WAF/hạ tầng BTC/laptop đội khác.</li>
+<li>Không dùng Internet/AI; không chia sẻ flag/exploit ra ngoài đội.</li>
+<li>Nộp <strong>&lt; 30 lần/phút</strong>; không nộp cờ nhà.</li>
+<li>Nếu service đối thủ chết/treo do bạn → dừng ngay, tránh bị quy là DoS (trừ 100–300 điểm hoặc loại).</li>
+</ul>
+<h3 id="112-quy-trình-6-bước-1520-phútđội">11.2. Quy trình 6 bước (15–20 phút/đội)</h3>
+<ol>
+<li><strong>Chọn mục tiêu &amp; xác nhận cùng app:</strong> mở service đối thủ, so sánh route với nhà mình. Cùng bộ service thì lỗ hổng giống nhau.</li>
+<li><strong>Recon nhanh (3–5 phút):</strong> xem trang chủ, form, file JS, <code>robots.txt</code>, <code>sitemap.xml</code>, <code>/api</code>, swagger/openapi, response header. Dùng Burp/curl; <strong>không chạy scanner ồn ào</strong>.</li>
+<li><strong>Lập danh sách nghi vấn:</strong> login, register/profile, search, product/detail, download, upload, ping/fetch, XML, comment, admin, endpoint flag.</li>
+<li><strong>Thử theo thứ tự ưu tiên:</strong> auth bypass (SQLi/NoSQLi/JWT) → IDOR → LFI/download → SSTI → SSRF → upload → mass assignment → deserialization. Ưu tiên cái cho flag trực tiếp.</li>
+<li><strong>Khai thác &amp; lưu PoC:</strong> một request <code>curl</code> tái hiện được; lưu response có flag; ghi lại endpoint/param/payload.</li>
+<li><strong>Nộp flag:</strong> xem Mục 13; lưu flag vào file, script tự lọc trùng/cờ nhà.</li>
+</ol>
+<h3 id="113-bảng-payload-nhớ-nhanh">11.3. Bảng payload nhớ nhanh</h3>
+<table>
+<thead>
+<tr>
+<th>Nhóm</th>
+<th>Thử nhanh</th>
+<th>Dấu hiệu thành công</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQLi auth</td>
+<td><code>' OR 1=1--</code>, <code>" OR 1=1--</code>, <code>admin'--</code></td>
+<td>login không cần pass; lỗi SQL; response khác biệt</td>
+</tr>
+<tr>
+<td>SQLi data</td>
+<td><code>1 UNION SELECT 1,2,3--</code>, <code>1 AND SLEEP(3)--</code></td>
+<td>lộ số cột; delay; flag trong response</td>
+</tr>
+<tr>
+<td>NoSQLi</td>
+<td><code>{"username":{"$ne":null},"password":{"$ne":null}}</code>, <code>?username[$ne]=x</code></td>
+<td>login bypass</td>
+</tr>
+<tr>
+<td>IDOR</td>
+<td>đổi <code>id=1</code> → <code>2,3,...</code>; đổi UUID; đổi <code>user_id</code></td>
+<td>thấy dữ liệu người khác/flag</td>
+</tr>
+<tr>
+<td>LFI</td>
+<td><code>../../etc/passwd</code>, <code>....//....//</code>, <code>%2e%2e%2f</code>, <code>php://filter/convert.base64-encode/resource=index.php</code></td>
+<td>file content/base64</td>
+</tr>
+<tr>
+<td>SSTI</td>
+<td><code>{{7*7}}</code>, <code>${7*7}</code>, <code>&lt;%= 7*7 %&gt;</code>, <code>{{config}}</code></td>
+<td>trả <code>49</code>/config</td>
+</tr>
+<tr>
+<td>RCE</td>
+<td><code>;id</code>, <code>&amp;&amp; id</code>, <code>$(id)</code>, <code>`id`</code>, <code>; cat /flag</code></td>
+<td>output lệnh</td>
+</tr>
+<tr>
+<td>SSRF</td>
+<td><code>http://127.0.0.1:80/</code>, <code>http://169.254.169.254/</code>, <code>http://2130706433/</code>, <code>file:///flag</code></td>
+<td>response nội bộ/flag</td>
+</tr>
+<tr>
+<td>XXE</td>
+<td><code>&lt;!DOCTYPE x [&lt;!ENTITY e SYSTEM "file:///flag"&gt;]&gt;&lt;x&gt;&amp;e;&lt;/x&gt;</code></td>
+<td>flag trong response</td>
+</tr>
+<tr>
+<td>Upload</td>
+<td><code>shell.php</code>, <code>shell.php.jpg</code>, <code>shell.phtml</code>, Content-Type giả, magic byte <code>GIF89a</code></td>
+<td>truy cập file upload chạy được</td>
+</tr>
+<tr>
+<td>JWT</td>
+<td>đổi <code>alg</code> thành <code>none</code>, xóa signature; thử secret yếu <code>secret</code>, <code>changeme</code></td>
+<td>token được chấp nhận</td>
+</tr>
+<tr>
+<td>Mass assignment</td>
+<td>thêm <code>"role":"admin"</code>, <code>"isAdmin":true</code>, <code>"balance":999</code></td>
+<td>quyền/số dư thay đổi</td>
+</tr>
+<tr>
+<td>Open redirect</td>
+<td><code>?next=//evil.com</code>, <code>?next=https://evil.com</code></td>
+<td><code>302</code> ra ngoài</td>
+</tr>
+<tr>
+<td>Deserialization</td>
+<td><code>rO0AB...</code>, <code>O:4:"..."</code>, <code>!!python/object</code></td>
+<td>lỗi/exec</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Không có Internet:</strong> dùng Burp Repeater/Intruder, <code>curl</code>, Python; không cần tool online. Với payload cần callback, dùng service của đội mình nếu đối thủ truy cập được (nội bộ BTC), hoặc ưu tiên payload phản hồi trực tiếp.</p>
+</blockquote>
+<h3 id="114-cách-lấy-flag-nhanh">11.4. Cách lấy flag nhanh</h3>
+<ul>
+<li>Flag thường nằm trong: response body, header, cookie, file tải về, lỗi stack trace, endpoint admin/flag.</li>
+<li><strong>SQLi:</strong> thử <code>UNION SELECT</code> đọc bảng <code>flags/secrets</code>; nếu blind: <code>SLEEP</code>, <code>SUBSTRING</code>, hoặc lỗi.</li>
+<li><strong>LFI:</strong> đọc <code>/flag</code>, <code>/flag.txt</code>, <code>/app/flag</code>, <code>/proc/self/environ</code>, source để tìm đường dẫn flag.</li>
+<li><strong>SSTI/RCE:</strong> <code>cat /flag*</code>, <code>env</code>, <code>find / -name '*flag*' 2&gt;/dev/null</code>.</li>
+<li><strong>SSRF:</strong> gọi endpoint nội bộ/admin/cloud metadata.</li>
+<li><strong>Mẹo học ngược:</strong> mở Traffic log nhà mình, tìm <code>"FHACKER2026{"</code>; request của đối thủ làm lộ flag chính là PoC để bạn mang đi đánh đội khác. Đồng thời dùng chính PoC đó để viết rule vá.</li>
+</ul>
+<h3 id="115-khi-nào-dừng-tấn-công">11.5. Khi nào dừng tấn công</h3>
+<ul>
+<li>Khi đã có flag mới để nộp, hoặc đã thử 2–3 payload/endpoint mà không khác biệt.</li>
+<li>Khi service đối thủ có dấu hiệu chết/treo → dừng ngay.</li>
+<li>Khi gần cuối round → quay về kiểm tra SVC/DEF nhà mình.</li>
+</ul>
+<hr />
+<h2 id="12-audit-app-15-phút--bảng-inventory-endpointparam">12. Audit app 15 phút &amp; bảng inventory endpoint/param</h2>
+<h3 id="121-mục-tiêu">12.1. Mục tiêu</h3>
+<p>Biến "thấy traffic" thành "biết đúng định dạng hợp lệ" để viết allowlist. Không có bảng này thì rule rất dễ chặn nhầm bot.</p>
+<h3 id="122-nguồn-thông-tin-ưu-tiên-từ-trên-xuống">12.2. Nguồn thông tin (ưu tiên từ trên xuống)</h3>
+<ol>
+<li><strong>Source code</strong> (nếu BTC cho đọc; Bảng C cấm sửa, không cấm đọc).</li>
+<li><strong>Traffic log của bot chấm</strong> (request sạch, lặp mỗi 30 giây).</li>
+<li><strong>DevTools/Network</strong> khi tự bấm web; Burp history.</li>
+<li><strong>File JS</strong> (route/API ẩn), <code>robots.txt</code>, <code>sitemap.xml</code>, swagger/openapi.</li>
+<li><strong>Thông báo lỗi/stack trace</strong> (đôi khi lộ route/param).</li>
+</ol>
+<h3 id="123-mẫu-bảng-inventory-copy-ra-giấyexcel">12.3. Mẫu bảng inventory (copy ra giấy/Excel)</h3>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Method</th>
+<th>Param</th>
+<th>Vị trí</th>
+<th>Kiểu</th>
+<th>Giá trị hợp lệ (mẫu)</th>
+<th>Trả flag?</th>
+<th>Rule ID</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/product</code></td>
+<td>GET</td>
+<td><code>id</code></td>
+<td>query</td>
+<td>số</td>
+<td><code>1..9999</code></td>
+<td>không</td>
+<td>20100</td>
+</tr>
+<tr>
+<td><code>/api/login</code></td>
+<td>POST</td>
+<td><code>username</code>,<code>password</code></td>
+<td>JSON</td>
+<td>text</td>
+<td><code>alice</code>/<code>***</code></td>
+<td>không</td>
+<td>20102</td>
+</tr>
+<tr>
+<td><code>/download</code></td>
+<td>GET</td>
+<td><code>file</code></td>
+<td>query</td>
+<td>filename</td>
+<td><code>report.pdf</code></td>
+<td>có thể</td>
+<td>20302</td>
+</tr>
+<tr>
+<td><code>/api/upload</code></td>
+<td>POST</td>
+<td><code>file</code></td>
+<td>multipart</td>
+<td>file</td>
+<td><code>png/jpg/pdf</code></td>
+<td>không</td>
+<td>20410</td>
+</tr>
+<tr>
+<td><code>/api/flag</code></td>
+<td>GET</td>
+<td><code>token</code></td>
+<td>header</td>
+<td>hex64</td>
+<td><code>...</code></td>
+<td><strong>có</strong></td>
+<td>loại trừ 21201</td>
+</tr>
+</tbody>
+</table>
+<h3 id="124-quy-trình-5-bước">12.4. Quy trình 5 bước</h3>
+<ol>
+<li><strong>Liệt kê route:</strong> từ source/router/JS; đánh dấu route có tham số.</li>
+<li><strong>Xác định vị trí param:</strong> query, form, JSON (<code>json.x</code>), header, cookie, multipart (<code>FILES</code>).</li>
+<li><strong>Lấy mẫu hợp lệ:</strong> từ bot traffic (an toàn nhất), hoặc tự gửi request đúng.</li>
+<li><strong>Đánh dấu route trả flag hợp lệ</strong> của bot (để loại trừ Phase 4).</li>
+<li><strong>Chọn rule:</strong> id/số → allowlist; text tự do → <code>@detectSQLi</code>/<code>@detectXSS</code>; file → allowlist đuôi; URL → allowlist scheme/host.</li>
+</ol>
+<h3 id="125-checklist-endpoint-đặc-biệt">12.5. Checklist endpoint đặc biệt</h3>
+<ul>
+<li><strong>Login/register/profile:</strong> mass assignment (<code>role</code>, <code>isAdmin</code>), SQLi/NoSQLi, JWT.</li>
+<li><strong>Search/comment:</strong> XSS/SSTI/SQLi; text tự do nên ưu tiên detect, không allowlist cứng.</li>
+<li><strong>Product/detail:</strong> IDOR/SQLi; id số/UUID.</li>
+<li><strong>Download/export:</strong> LFI/path traversal; allowlist filename.</li>
+<li><strong>Upload/avatar:</strong> webshell/double extension; <code>FILES</code> + <code>REQUEST_BODY</code>.</li>
+<li><strong>Ping/fetch/webhook:</strong> RCE/SSRF; allowlist host/IP, chặn scheme lạ.</li>
+<li><strong>XML/SOAP:</strong> XXE; <code>ctl:requestBodyProcessor=URLENCODED</code> + chặn <code>&lt;!ENTITY</code>.</li>
+<li><strong>Flag endpoint:</strong> chỉ bot được đọc; Phase 4 loại trừ đúng route.</li>
+</ul>
+<hr />
+<h2 id="13-nộp-cờ--dashboard-script-an-toàn">13. Nộp cờ &amp; Dashboard (script an toàn)</h2>
+<h3 id="131-cơ-chế-cần-nhớ">13.1. Cơ chế cần nhớ</h3>
+<ul>
+<li>Nộp đúng: <code>+BP</code> cho đội bạn, đối thủ <code>-BP</code> DEF.</li>
+<li>Nộp cờ nhà: <code>0</code> ATK và bị trừ <code>2 × BP</code> DEF.</li>
+<li><strong>&gt; 30 lần/phút:</strong> <code>429</code> + vi phạm Điều 6.1.h.</li>
+<li>Flag đúng dạng <code>FHACKER2026{64 hex}</code>; cờ cũ hết hạn sau mỗi round.</li>
+<li>Chỉ nộp flag lấy được từ service đối thủ trong round hiện tại; không nộp lại flag cũ.</li>
+</ul>
+<h3 id="132-quy-trình-nộp">13.2. Quy trình nộp</h3>
+<ol>
+<li>Lưu flag thô vào <code>flags.txt</code>, mỗi dòng một flag.</li>
+<li>Chạy script ở chế độ <code>--dry-run</code> để xem danh sách, lọc trùng/cờ nhà.</li>
+<li>Chạy thật với rate <strong>&lt; 30/phút</strong> (khuyến nghị 1 flag/2.2 giây ≈ 27/phút).</li>
+<li>Theo dõi mã <code>200</code>/<code>429</code>; gặp <code>429</code> thì dừng 60 giây rồi tiếp.</li>
+<li>Ghi lại kết quả để đối chiếu điểm: <code>python3 flags-submit.py ... | tee -a flags-submitted.log</code>.</li>
+</ol>
+<h3 id="133-script-mẫu-offline-không-cần-thư-viện-ngoài">13.3. Script mẫu (offline, không cần thư viện ngoài)</h3>
+<blockquote>
+<p><strong>Lưu ý:</strong> endpoint/payload của Dashboard do BTC cung cấp; mở DevTools → Network → nộp thử 1 flag → copy URL/method/body/header vào script. Không hardcode mật khẩu vào file chia sẻ; dùng biến môi trường.</p>
+</blockquote>
+<pre><code class="language-python">#!/usr/bin/env python3
+# flags-submit.py — chạy offline, chỉ dùng thư viện chuẩn
+import argparse, json, os, re, sys, time, urllib.request, urllib.error, urllib.parse
+
+FLAG_RE = re.compile(r&quot;FHACKER(?:2026)?\{[0-9a-fA-F]{64}\}&quot;)
+
+def load_flags(path):
+    seen, out = set(), []
+    for line in open(path, encoding=&quot;utf-8&quot;, errors=&quot;replace&quot;):
+        for f in FLAG_RE.findall(line):
+            if f not in seen:
+                seen.add(f); out.append(f)
+    return out
+
+def load_own(path):
+    if not path or not os.path.exists(path):
+        return set()
+    return set(load_flags(path))
+
+def submit(url, flag, token=None, cookie=None, timeout=10):
+    # SỬA payload theo Dashboard BTC; ví dụ dưới là JSON {&quot;flag&quot;: &quot;...&quot;}
+    data = json.dumps({&quot;flag&quot;: flag}).encode()
+    req = urllib.request.Request(url, data=data, method=&quot;POST&quot;)
+    req.add_header(&quot;Content-Type&quot;, &quot;application/json&quot;)
+    if token:
+        req.add_header(&quot;Authorization&quot;, &quot;Bearer &quot; + token)
+    if cookie:
+        req.add_header(&quot;Cookie&quot;, cookie)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, r.read(500).decode(&quot;utf-8&quot;, &quot;replace&quot;)
+    except urllib.error.HTTPError as e:
+        return e.code, e.read(500).decode(&quot;utf-8&quot;, &quot;replace&quot;)
+    except Exception as e:
+        return 0, str(e)
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument(&quot;--file&quot;, default=&quot;flags.txt&quot;)
+    ap.add_argument(&quot;--own&quot;, default=&quot;own-flags.txt&quot;, help=&quot;cờ nhà cần bỏ qua&quot;)
+    ap.add_argument(&quot;--url&quot;, default=os.getenv(&quot;FLAG_URL&quot;, &quot;&quot;))
+    ap.add_argument(&quot;--token&quot;, default=os.getenv(&quot;FLAG_TOKEN&quot;, &quot;&quot;))
+    ap.add_argument(&quot;--cookie&quot;, default=os.getenv(&quot;FLAG_COOKIE&quot;, &quot;&quot;))
+    ap.add_argument(&quot;--rate&quot;, type=float, default=2.2, help=&quot;giây giữa 2 lần nộp&quot;)
+    ap.add_argument(&quot;--dry-run&quot;, action=&quot;store_true&quot;)
+    a = ap.parse_args()
+    flags = load_flags(a.file)
+    own = load_own(a.own)
+    todo = [f for f in flags if f not in own]
+    print(f&quot;Tổng {len(flags)} flag, bỏ {len(flags)-len(todo)} cờ nhà/trùng, nộp {len(todo)}&quot;)
+    if a.dry_run:
+        for f in todo:
+            print(&quot;DRY&quot;, f)
+        return
+    if not a.url:
+        sys.exit(&quot;Thiếu --url hoặc FLAG_URL&quot;)
+    for i, f in enumerate(todo, 1):
+        code, body = submit(a.url, f, a.token, a.cookie)
+        print(f&quot;[{i}/{len(todo)}] {code} {f} {body[:120]}&quot;)
+        if code == 429:
+            print(&quot;Bị 429 — nghỉ 60 giây&quot;)
+            time.sleep(60)
+        time.sleep(a.rate)
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<p>Cách dùng:</p>
+<pre><code class="language-bash">python3 flags-submit.py --dry-run
+python3 flags-submit.py --url 'https://dashboard.../api/submit' --cookie 'session=...'
+</code></pre>
+<blockquote>
+<p><strong>An toàn:</strong> script chỉ gửi đúng chuỗi flag khớp regex, tự lọc cờ nhà, không gửi trùng. Nếu Dashboard dùng form-urlencoded thay vì JSON, sửa <code>data = urllib.parse.urlencode({"flag": flag}).encode()</code> và <code>Content-Type: application/x-www-form-urlencoded</code>.</p>
+</blockquote>
+<h3 id="134-nếu-không-kịp-viết-script">13.4. Nếu không kịp viết script</h3>
+<ul>
+<li>Nộp tay theo lô 5–10 flag, bấm chậm hơn 2 giây/lần.</li>
+<li>Dùng một người chuyên nộp, một người kiếm flag; tránh cả đội cùng bấm.</li>
+<li>Ghi lại flag đã nộp để không nộp trùng.</li>
+</ul>
+<hr />
+<h2 id="14-rollback-versioning--checklist-theo-round">14. Rollback, versioning &amp; checklist theo round</h2>
+<h3 id="141-versioning-rule-bắt-buộc">14.1. Versioning rule (bắt buộc)</h3>
+<ul>
+<li>Trước mỗi thay đổi: copy file rule hiện tại ra <code>rules-rN-stable.conf</code> (N = round).</li>
+<li>Chỉ sửa trên UI WAF; giữ 1 bản local trên máy.</li>
+<li>Đặt tên: <code>rules-r1.conf</code>, <code>rules-r1-hotfix1.conf</code>, <code>rules-r4-level2.conf</code>.</li>
+<li>Khi một rule mới gây nghi ngờ: đổi <code>deny</code> → <code>pass,log</code>, không xóa vội.</li>
+</ul>
+<h3 id="142-rollback-10-giây">14.2. Rollback 10 giây</h3>
+<ol>
+<li>Mở <strong>Configs → file rule của đội</strong>.</li>
+<li>Dán lại nội dung bản <code>stable</code> gần nhất.</li>
+<li><strong>Save</strong> → nhìn chuông báo lỗi.</li>
+<li>Nếu báo đỏ: mở <code>error.log</code>, sửa theo Mục 7.3; nếu không kịp, quay lại bản stable trước đó.</li>
+<li>Test 1 request sạch + 1 request bẩn; xem SVC 30 giây.</li>
+</ol>
+<h3 id="143-tắt-nhanh-1-rule">14.3. Tắt nhanh 1 rule</h3>
+<ul>
+<li>Cách an toàn nhất: đổi <code>deny,status:403</code> → <code>pass,log</code> (giữ nguyên id/msg để còn thấy trên Traffic log).</li>
+<li>Cách tắt hẳn: comment <code>#</code> <strong>cả khối</strong> <code>SecRule</code> (kể cả các dòng chain con) — nếu chỉ comment dòng đầu, các dòng con gây lỗi cú pháp.</li>
+<li>Không xóa rule nếu chưa chắc; không sửa <code>id</code> khi đang chạy.</li>
+</ul>
+<h3 id="144-checklist-theo-round">14.4. Checklist theo round</h3>
+<p><strong>Trước round (2 phút):</strong>
+- [ ] Kiểm tra WAF <code>On</code>/<code>DetectionOnly</code>; SVC/DEF round trước.
+- [ ] Backup rule ra <code>rules-rN-stable.conf</code>.
+- [ ] Mở sẵn Traffic log + Dashboard + error.log.
+- [ ] Ghi giờ bắt đầu/kết thúc round.</p>
+<p><strong>2 phút đầu round:</strong>
+- [ ] Lọc <code>status:403</code> và <code>status:500</code> — có request bot nào bị chặn nhầm không?
+- [ ] Round 4+: tìm route mới của Level 2; kiểm tra rule cũ/Phase 4 có chặn nhầm không.
+- [ ] Xác nhận bot vẫn gọi đúng các route quen thuộc.</p>
+<p><strong>Giữa round:</strong>
+- [ ] Chỉ vá lỗ hổng đã xác nhận; rule mới bắt đầu <code>pass,log</code>.
+- [ ] Chờ 1 chu kỳ 30 giây, xem không có FP rồi mới <code>deny</code>.
+- [ ] Mỗi lần chỉ sửa 1–2 rule; không sửa diện rộng.</p>
+<p><strong>2 phút cuối round:</strong>
+- [ ] Không thêm rule mới; chỉ rollback nếu cần.
+- [ ] Backup bản đang xanh.
+- [ ] Ghi lại endpoint/param/payload phát hiện được cho round sau.
+- [ ] Kiểm tra SVC/DEF lần cuối.</p>
+<h3 id="145-quy-tắc-đóng-băng-r8r10">14.5. Quy tắc "đóng băng" R8–R10</h3>
+<ul>
+<li>R8–R10 điểm BP rất cao; <strong>không sửa rule diện rộng</strong> nếu SVC đang xanh.</li>
+<li>Chỉ xử lý sự cố trực tiếp; ưu tiên giữ SVC hơn thêm rule mới.</li>
+<li>Nếu phải sửa, dùng <code>pass,log</code> ít nhất 1 chu kỳ rồi mới <code>deny</code>.</li>
+</ul>
+<h3 id="146-phân-công-khi-sự-cố">14.6. Phân công khi sự cố</h3>
+<ul>
+<li><strong>1 người</strong> thao tác WAF (duy nhất, tránh save chồng).</li>
+<li><strong>1 người</strong> đọc Traffic log/audit log, hô to rule ID + param.</li>
+<li><strong>1 người</strong> test bằng <code>curl</code> và theo dõi SVC.</li>
+<li><strong>Đội trưởng</strong> quyết định rollback/DetectionOnly và liên hệ BTC nếu cần.</li>
+</ul>
+<hr />
+<h2 id="15-những-lỗ-hổng-waf-không-vá-được">15. Những lỗ hổng WAF không vá được</h2>
+<table>
+<thead>
+<tr>
+<th>Lỗ hổng</th>
+<th>Vì sao WAF khó vá</th>
+<th>Cách xử lý thực tế</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CSRF</td>
+<td>Request hợp lệ về cú pháp; bot có thể không gửi <code>Origin</code>/<code>Referer</code></td>
+<td>Chỉ log, không chặn; ưu tiên vá lỗ hổng khác</td>
+</tr>
+<tr>
+<td>IDOR/BOLA</td>
+<td>WAF không biết chủ sở hữu object</td>
+<td>Allowlist format ID; log ID bất thường; chấp nhận rủi ro</td>
+</tr>
+<tr>
+<td>Race condition</td>
+<td>Lỗi logic thời gian</td>
+<td>Không vá được bằng WAF; bỏ qua</td>
+</tr>
+<tr>
+<td>Business logic</td>
+<td>Phụ thuộc ngữ cảnh</td>
+<td>Không vá được; chỉ chặn payload rõ ràng</td>
+</tr>
+<tr>
+<td>HTTP request smuggling</td>
+<td>Tầng proxy/HTTP</td>
+<td>Dựa vào CRS <code>921xxx</code>; không tự viết rule phức tạp</td>
+</tr>
+<tr>
+<td>Host header</td>
+<td>Proxy BTC có thể gắn header</td>
+<td>Không chặn <code>X-Forwarded-Host</code>; chỉ chặn <code>X-Original-URL</code>/<code>X-Rewrite-URL</code> nếu thấy</td>
+</tr>
+<tr>
+<td>Cache poisoning</td>
+<td>Tầng cache</td>
+<td>Không vá được bằng ModSecurity</td>
+</tr>
+<tr>
+<td>GraphQL/WebSocket</td>
+<td>WAF khó parse sâu</td>
+<td>Allowlist query/JSON nếu biết cấu trúc; còn lại log</td>
+</tr>
+<tr>
+<td>JWT yếu/secret</td>
+<td>WAF chỉ thấy token</td>
+<td>Chặn <code>alg:none</code>; không chặn token hợp lệ</td>
+</tr>
+<tr>
+<td>Zip slip</td>
+<td>Phụ thuộc xử lý file</td>
+<td>Allowlist filename + chặn <code>../</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Tư duy:</strong> WAF là virtual patch, không phải bản vá code. Cái gì WAF không vá được thì ghi nhận, đừng ép rule rộng làm rớt SVC.</p>
+</blockquote>
+<hr />
+<h2 id="phụ-lục-3-câu-chốt">Phụ lục: 3 câu chốt</h2>
+<ol>
+<li><strong>SVC là số 1</strong> — mọi rule phải test <code>pass,log</code> trước, không chặn bot.</li>
+<li><strong>ATK để học, DEF để giữ</strong> — tấn công đội khác để biết payload, rồi vá nhà mình.</li>
+<li><strong>Backup trước khi sửa, rollback trong 10 giây</strong> — đừng để một rule mới phá cả round.</li>
+</ol>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

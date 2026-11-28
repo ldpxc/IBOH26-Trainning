@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bộ Rule Phòng Thủ Đã Tách Nhỏ (`team-rules.conf` → 13 File)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">2026-waf-practice/rules/README.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#danh-sách-13-file--thứ-tự-nạp-khi-thi">Danh sách 13 file &amp; Thứ tự nạp khi thi</a></li>
+<li><a href="#mẹo-thao-tác-nhanh">Mẹo thao tác nhanh</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="bộ-rule-phòng-thủ-đã-tách-nhỏ-team-rulesconf--13-file">Bộ Rule Phòng Thủ Đã Tách Nhỏ (<code>team-rules.conf</code> → 13 File)</h1>
+<p>Toàn bộ 53 dòng <code>SecRule</code> từ <a href="../../2026-waf-practice/team-rules.conf.html">team-rules.conf</a> đã được tách giữ nguyên 100% nội dung và Rule ID thành <strong>13 file riêng</strong> để dễ tìm, bật/tắt nhanh từng mảng trên WAF UI mà không sợ sửa nhầm chỗ khác.</p>
+<h2 id="danh-sách-13-file--thứ-tự-nạp-khi-thi">Danh sách 13 file &amp; Thứ tự nạp khi thi</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>File</th>
+<th>Dải ID</th>
+<th>Config Type</th>
+<th>Ghi chú trước khi bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>00</td>
+<td><a href="../../2026-waf-practice/rules/00_disable_fp_crs.conf.html">00_disable_fp_crs.conf</a></td>
+<td><em>(CRS <code>9xxxxx</code>)</em></td>
+<td><code>MODSEC</code></td>
+<td><strong>Nạp đầu tiên!</strong> Tắt <code>920350</code> (Host IP), <code>Accept</code>/<code>UA</code> rỗng &amp; gỡ FP cookie/JWT</td>
+</tr>
+<tr>
+<td>01</td>
+<td><a href="../../2026-waf-practice/rules/01_200xx_recon.conf.html">01_200xx_recon.conf</a></td>
+<td><code>20001–20007</code></td>
+<td><code>MODSEC</code></td>
+<td>Bật ngay được từ Round 1</td>
+</tr>
+<tr>
+<td>02</td>
+<td><a href="../../2026-waf-practice/rules/02_201xx_sqli_nosqli.conf.html">02_201xx_sqli_nosqli.conf</a></td>
+<td><code>20100–20107</code></td>
+<td><code>MODSEC</code></td>
+<td>Sửa đúng route của <code>20100</code>, <code>20101</code>, <code>20102</code>, <code>20106</code>; theo dõi <code>20107</code></td>
+</tr>
+<tr>
+<td>03</td>
+<td><a href="../../2026-waf-practice/rules/03_202xx_xss_ssti.conf.html">03_202xx_xss_ssti.conf</a></td>
+<td><code>20200–20250</code></td>
+<td><code>MODSEC</code></td>
+<td>Bật sớm; kiểm tra <code>Traffic log</code> nếu app có rich-text</td>
+</tr>
+<tr>
+<td>04</td>
+<td><a href="../../2026-waf-practice/rules/04_203xx_lfi_rfi.conf.html">04_203xx_lfi_rfi.conf</a></td>
+<td><code>20300–20302</code></td>
+<td><code>MODSEC</code></td>
+<td>Sửa đúng route/đuôi file ở <code>20302</code></td>
+</tr>
+<tr>
+<td>05</td>
+<td><a href="../../2026-waf-practice/rules/05_204xx_rce_upload.conf.html">05_204xx_rce_upload.conf</a></td>
+<td><code>20400–20415</code></td>
+<td><code>MODSEC</code></td>
+<td>Sửa route ở <code>20400</code>, <code>20410</code>, <code>20414</code>; chú ý <code>20401</code>/<code>20402</code></td>
+</tr>
+<tr>
+<td>06</td>
+<td><a href="../../2026-waf-practice/rules/06_205xx_ssrf.conf.html">06_205xx_ssrf.conf</a></td>
+<td><code>20500–20502</code></td>
+<td><code>MODSEC</code></td>
+<td>Bật ngay được</td>
+</tr>
+<tr>
+<td>07</td>
+<td><a href="../../2026-waf-practice/rules/07_206xx_xxe.conf.html">07_206xx_xxe.conf</a></td>
+<td><code>20600–20602</code></td>
+<td><code>MODSEC</code></td>
+<td>Bật ngay được (xem chú thích <code>20602</code> nếu cần CRS parse XML)</td>
+</tr>
+<tr>
+<td>08</td>
+<td><a href="../../2026-waf-practice/rules/08_207xx_deserialization.conf.html">08_207xx_deserialization.conf</a></td>
+<td><code>20700</code></td>
+<td><code>MODSEC</code></td>
+<td>Bật ngay được (kiểm tra nếu app tự dùng cookie serialize)</td>
+</tr>
+<tr>
+<td>09</td>
+<td><a href="../../2026-waf-practice/rules/09_208xx_crlf_jwt_jndi_proto.conf.html">09_208xx_crlf_jwt_jndi_proto.conf</a></td>
+<td><code>20800–20804</code></td>
+<td><code>MODSEC</code></td>
+<td>Bật ngay được</td>
+</tr>
+<tr>
+<td>10</td>
+<td><a href="../../2026-waf-practice/rules/10_209xx_open_redirect.conf.html">10_209xx_open_redirect.conf</a></td>
+<td><code>20900</code></td>
+<td><code>MODSEC</code></td>
+<td>Kiểm tra xem tham số <code>next</code>/<code>redirect</code> có cho phép rỗng không</td>
+</tr>
+<tr>
+<td>11</td>
+<td><a href="../../2026-waf-practice/rules/11_210xx_mass_assign_hpp_headers.conf.html">11_210xx_mass_assign_hpp_headers.conf</a></td>
+<td><code>21001–21004</code></td>
+<td><code>MODSEC</code></td>
+<td>Sửa route <code>21001</code>; kiểm tra FP ở <code>21002</code>/<code>21004</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><a href="../../2026-waf-practice/rules/12_212xx_flag_data_leak.conf.html">12_212xx_flag_data_leak.conf</a></td>
+<td><code>21200–21202</code></td>
+<td><code>MODSEC</code></td>
+<td><strong>BẮT BUỘC sửa route trả cờ hợp lệ ở <code>21201</code></strong> trước khi bật <code>deny</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td><a href="../../2026-waf-practice/rules/13_220xx_fix_crs_fp.conf.html">13_220xx_fix_crs_fp.conf</a></td>
+<td><code>22000+</code></td>
+<td><strong><code>MODSEC_CRS</code></strong></td>
+<td>Nạp <strong>TRƯỚC</strong> CRS để gỡ False Positive theo từng route</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mẹo-thao-tác-nhanh">Mẹo thao tác nhanh</h2>
+<ul>
+<li><strong>Chuyển 1 file bất kỳ sang chế độ chỉ ghi log (<code>pass</code>) trước khi dán:</strong>
+  <code>bash
+  sed -E 's/deny,status:(400|403|414)/pass/g' 02_201xx_sqli_nosqli.conf</code></li>
+<li><strong>Test nhanh riêng 1 file bằng <code>waf_rule_tester.py</code>:</strong>
+  <code>bash
+  python3 /home/kali/Documents/waf_rule_tester.py /home/kali/Documents/2026-waf-practice/rules/02_201xx_sqli_nosqli.conf</code></li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

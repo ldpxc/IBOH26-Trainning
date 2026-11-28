@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: JWT Attacks &amp; Session/Cookie Forge</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/12_jwt_and_session.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-app-lưu-jwt-trong-header-tùy-chỉnh-x-auth-token-hoặc-tham-số-query-tokeneyj">Ví dụ 1: App lưu JWT trong header tùy chỉnh X-Auth-Token hoặc tham số query ?token=eyJ...</a></li>
+<li><a href="#ví-dụ-2-app-dùng-rs256-và-đối-thủ-gửi-hs256-để-lừa-server-verify-bằng-public-key">Ví dụ 2: App dùng RS256 và đối thủ gửi HS256 để lừa server verify bằng public key</a></li>
+<li><a href="#ví-dụ-3-đối-thủ-giả-mạo-flask-session-cookie-có-role-admin-trên-route-chỉ-dành-cho-user-thường">Ví dụ 3: Đối thủ giả mạo Flask session cookie có "role": "admin" trên route chỉ dành cho user thường</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive--giới-hạn-waf">5. Lưu ý tránh False Positive &amp; Giới hạn WAF</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-jwt-attacks--sessioncookie-forge">Mẫu Luật Phòng Thủ: JWT Attacks &amp; Session/Cookie Forge</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/jwt_attacks.html</code>, <code>attack/session_cookie_forge.html</code>, <code>attack/access.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-protocol</code> / <code>attack-injection-generic</code></li>
+<li><strong>Dải Rule ID:</strong> <code>25200–25299</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Trung bình–Cao đối với lỗ hổng header JWT (<code>alg:none</code>, <code>kid</code> traversal/SQLi, <code>jku</code>/<code>x5u</code> SSRF, <code>jwk</code> injection); <strong>WAF không vá được</strong> secret yếu bị crack offline để tự ký lại token (cần đổi secret ở app nếu được phép).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li>JWT dùng thuật toán <code>none</code> (<code>"alg":"none"</code>, Base64URL bắt đầu bằng <code>eyJhbGciOiJub25l</code>, <code>eyJhbGciOiJOT05F</code>, <code>eyJhbGciOiJOb25l</code>) hoặc thiếu phần chữ ký (<code>header.payload.</code>).</li>
+<li>Tiêm vào header JWT: <code>jku</code>, <code>x5u</code>, <code>jwk</code>, <code>x5c</code> (ép server tải public key của kẻ tấn công) hoặc <code>kid</code> chứa <code>../</code>, <code>'</code>, <code>;</code>, <code>|</code> (LFI/SQLi/CMDi qua <code>kid</code>).</li>
+<li>Lạm dụng thuật toán đổi từ <code>RS256</code> sang <code>HS256</code> nếu app chỉ dùng <code>RS256</code>.</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [25201] Chặn JWT có alg=none (sau khi giải mã Base64 ở Authorization header và Cookie)
+SecRule REQUEST_HEADERS:Authorization|REQUEST_COOKIES &quot;@rx (?i)\&quot;alg\&quot;\s*:\s*\&quot;none\&quot;&quot; \
+    &quot;id:25201,phase:1,pass,log,t:none,t:base64Decode,msg:'JWT: alg none rejected',tag:'jwt',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [25202] Chặn JWT không có chữ ký (dạng header.payload. rỗng phần 3)
+SecRule REQUEST_HEADERS:Authorization|REQUEST_COOKIES &quot;@rx (?i)(?:^|Bearer\s+)eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.(?:\s*$)&quot; \
+    &quot;id:25202,phase:1,pass,log,t:none,msg:'JWT: Empty signature segment',tag:'jwt',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [25203] Chặn JWT header chứa jku / x5u / jwk / x5c (key injection / SSRF)
+SecRule REQUEST_HEADERS:Authorization|REQUEST_COOKIES &quot;@rx (?i)\&quot;(?:jku|x5u|jwk|x5c)\&quot;\s*:&quot; \
+    &quot;id:25203,phase:1,pass,log,t:none,t:base64Decode,msg:'JWT: Untrusted key header (jku/x5u/jwk)',tag:'jwt',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [25204] Chặn tấn công qua trường kid trong JWT (Path Traversal / SQLi / CMDi)
+SecRule REQUEST_HEADERS:Authorization|REQUEST_COOKIES &quot;@rx (?i)\&quot;kid\&quot;\s*:\s*\&quot;[^\&quot;]{0,120}(?:\.\.|/|\\|'|--|;|\||`|\$\()&quot; \
+    &quot;id:25204,phase:1,pass,log,t:none,t:base64Decode,msg:'JWT: Suspicious kid injection',tag:'jwt',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [25205] Nếu app CHỈ dùng RS256, chặn HS256/HS384/HS512 (chống Algorithm Confusion)
+# (Chỉ bật rule này sau khi xác nhận trên Traffic log rằng token hợp lệ dùng RS256!)
+SecRule REQUEST_HEADERS:Authorization|REQUEST_COOKIES &quot;@rx (?i)\&quot;alg\&quot;\s*:\s*\&quot;HS(?:256|384|512)\&quot;&quot; \
+    &quot;id:25205,phase:1,pass,log,t:none,t:base64Decode,msg:'JWT: Unexpected HMAC alg (possible confusion)',tag:'jwt',logdata:'%{MATCHED_VAR_NAME}'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>25201</code></td>
+<td><code>REQUEST_HEADERS:Authorization\|REQUEST_COOKIES</code> (<code>t:base64Decode</code>)</td>
+<td>Chặn tấn công <code>alg: none</code> (không phân biệt hoa/thường <code>None</code>, <code>NONE</code>) khi kẻ tấn công bỏ qua bước kiểm tra chữ ký JWT.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25202</code></td>
+<td><code>REQUEST_HEADERS:Authorization\|REQUEST_COOKIES</code></td>
+<td>Chặn JWT có phần chữ ký rỗng (<code>header.payload.</code>) kể cả khi header không ghi <code>alg: none</code>.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25203</code></td>
+<td><code>REQUEST_HEADERS:Authorization\|REQUEST_COOKIES</code> (<code>t:base64Decode</code>)</td>
+<td>Chặn các trường header JWT dùng để tiêm khóa giả (<code>jku</code>, <code>x5u</code>, <code>jwk</code>, <code>x5c</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25204</code></td>
+<td><code>REQUEST_HEADERS:Authorization\|REQUEST_COOKIES</code> (<code>t:base64Decode</code>)</td>
+<td>Chặn injection trong trường <code>kid</code> của JWT header (chứa <code>..</code>, <code>/</code>, <code>\</code>, <code>'</code>, <code>--</code>, <code>;</code>, <code>|</code>, <code>$(</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25205</code></td>
+<td><code>REQUEST_HEADERS:Authorization\|REQUEST_COOKIES</code> (<code>t:base64Decode</code>)</td>
+<td>Chống Algorithm Confusion (<code>RS256</code> → <code>HS256</code>): chặn token dùng <code>HS256</code>/<code>HS384</code>/<code>HS512</code>.</td>
+<td><strong>CHỈ bật nếu app dùng RS256/ES256</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-app-lưu-jwt-trong-header-tùy-chỉnh-x-auth-token-hoặc-tham-số-query-tokeneyj">Ví dụ 1: App lưu JWT trong header tùy chỉnh <code>X-Auth-Token</code> hoặc tham số query <code>?token=eyJ...</code></h3>
+<p>Mặc định <code>25201–25204</code> chỉ soi <code>Authorization</code> và <code>REQUEST_COOKIES</code>. Nếu <code>Traffic log</code> cho thấy app dùng header <code>X-Auth-Token</code>:
+- <strong>Cách sửa:</strong> Thêm <code>|REQUEST_HEADERS:X-Auth-Token</code> vào danh sách biến của <code>25201–25204</code>:</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [25201] khi app truyền JWT qua header X-Auth-Token
+SecRule REQUEST_HEADERS:Authorization|REQUEST_HEADERS:X-Auth-Token|REQUEST_COOKIES &quot;@rx (?i)\&quot;alg\&quot;\s*:\s*\&quot;none\&quot;&quot; \
+    &quot;id:25201,phase:1,deny,status:403,log,t:none,t:base64Decode,msg:'JWT: alg none rejected',tag:'jwt',logdata:'%{MATCHED_VAR_NAME}'&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-dùng-rs256-và-đối-thủ-gửi-hs256-để-lừa-server-verify-bằng-public-key">Ví dụ 2: App dùng <code>RS256</code> và đối thủ gửi <code>HS256</code> để lừa server verify bằng public key</h3>
+<p>Kiểm tra 1 request hợp lệ của bot trên <code>Traffic log</code>: decode phần đầu JWT thấy <code>{"alg":"RS256","typ":"JWT"}</code>. Lúc này bạn đổi <code>25205</code> từ <code>pass,log</code> sang <code>deny,status:403,log</code> để chặn ngay mọi token <code>HS256</code>.</p>
+<h3 id="ví-dụ-3-đối-thủ-giả-mạo-flask-session-cookie-có-role-admin-trên-route-chỉ-dành-cho-user-thường">Ví dụ 3: Đối thủ giả mạo Flask session cookie có <code>"role": "admin"</code> trên route chỉ dành cho user thường</h3>
+<p>Nếu app để lộ <code>SECRET_KEY</code> mà bạn không sửa được code, bạn có thể tạm chặn cookie chứa payload <code>"is_admin":true</code> trên các route không phải admin (nếu bot SVC không đăng nhập admin trên route đó) và kết hợp rule Phase 4 chặn lộ Flag (<code>26205</code>).</p>
+<h2 id="5-lưu-ý-tránh-false-positive--giới-hạn-waf">5. Lưu ý tránh False Positive &amp; Giới hạn WAF</h2>
+<ul>
+<li><strong>Cẩn thận với <code>25205</code>:</strong> Phần lớn bài CTF dùng <code>HS256</code> mặc định — <strong>tuyệt đối không đổi <code>25205</code> sang <code>deny</code></strong> trừ khi đã xác nhận 100% app dùng <code>RS256</code>/<code>ES256</code>.</li>
+<li>Nếu đối thủ crack được <code>SECRET_KEY</code> yếu của Flask/JWT rồi tự ký cookie giả có cấu trúc hợp lệ y hệt user thật, WAF không phân biệt được chữ ký hợp lệ giả mạo; khi đó tập trung chặn các hành vi leo thang đặc quyền (xem thêm <code>13_idor_mass_assignment.md</code>) và chặn lộ Flag ở Phase 4.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

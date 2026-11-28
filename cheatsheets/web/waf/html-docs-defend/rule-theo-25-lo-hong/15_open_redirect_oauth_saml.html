@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: Open Redirect, OAuth &amp; SAML</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/15_open_redirect_oauth_saml.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-oauth-của-app-yêu-cầu-redirect_uri-là-url-đầy-đủ-httpteam05fhackerlocaloauthcallback">Ví dụ 1: OAuth của app yêu cầu redirect_uri là URL đầy đủ (http://team05.fhacker.local/oauth/callback)</a></li>
+<li><a href="#ví-dụ-2-app-gửi-next-rỗng-khi-đăng-nhập-bình-thường">Ví dụ 2: App gửi ?next= rỗng khi đăng nhập bình thường</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-open-redirect-oauth--saml">Mẫu Luật Phòng Thủ: Open Redirect, OAuth &amp; SAML</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/open_redirect.html</code>, <code>attack/oauth_saml.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-generic</code> / <code>attack-protocol</code></li>
+<li><strong>Dải Rule ID:</strong> <code>25500–25599</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Cao đối với Open Redirect và OAuth <code>redirect_uri</code> (bằng Allowlist đường dẫn nội bộ / domain hợp lệ); trung bình với SAML XML Signature Wrapping (cần chặn DTD/XXE kèm kiểm tra số lượng thẻ <code>&lt;Assertion&gt;</code>).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li><strong>Open Redirect &amp; OAuth <code>redirect_uri</code>:</strong> Tham số <code>next</code>, <code>url</code>, <code>redirect</code>, <code>redirect_uri</code>, <code>return</code>, <code>returnTo</code>, <code>continue</code>, <code>callback</code> chứa URL ngoài (<code>http://evil.com</code>), protocol-relative (<code>//evil.com</code>), backslash (<code>/\evil.com</code>), hoặc userinfo trick (<code>https://app.local@evil.com</code>).</li>
+<li><strong>OAuth thiếu <code>state</code> / path traversal trong <code>redirect_uri</code>:</strong> <code>redirect_uri=http://app.local/cb/../../evil</code> hoặc <code>http://app.local.evil.com</code>.</li>
+<li><strong>SAML:</strong> Chèn nhiều thẻ <code>&lt;Assertion&gt;</code> (XML Signature Wrapping) hoặc DTD/XXE trong <code>SAMLResponse</code> (Base64).</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [25501] Chặn Open Redirect: ép tham số chuyển hướng chỉ được là đường dẫn nội bộ bắt đầu bằng / (không phải // hoặc /\)
+SecRule ARGS:next|ARGS:json.next|ARGS:redirect|ARGS:json.redirect|ARGS:return|ARGS:json.return|ARGS:returnTo|ARGS:json.returnTo|ARGS:continue|ARGS:json.continue &quot;!@rx ^/(?![/\\])[A-Za-z0-9._~!$&amp;'()*+,;=:@%/?-]{0,256}\z&quot; \
+    &quot;id:25501,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:'Redirect: External or malformed redirect target',tag:'open-redirect',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [25502] Chặn OAuth redirect_uri trỏ ra ngoài domain cho phép hoặc chứa .. / @ / \
+SecRule ARGS:redirect_uri|ARGS:json.redirect_uri|ARGS:callback|ARGS:json.callback &quot;@rx (?i)(?:^//|@|\\|\.\./|\.\.%2f|^javascript:)&quot; \
+    &quot;id:25502,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:'OAuth: Suspicious redirect_uri bypass attempt',tag:'oauth',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [25503] Phase 3: Phát hiện/chặn header Location chuyển hướng ra ngoài với scheme lạ (javascript:/data:)
+SecRule RESPONSE_HEADERS:Location &quot;@rx (?i)^(?:javascript|data|vbscript):&quot; \
+    &quot;id:25503,phase:3,pass,log,t:none,t:urlDecodeUni,msg:'Redirect: Dangerous scheme in Location header',tag:'open-redirect',logdata:'Location=%{MATCHED_VAR}'&quot;
+
+# [25504] Chặn SAML XXE / DOCTYPE ẩn trong tham số SAMLResponse (Base64)
+SecRule ARGS:SAMLResponse|ARGS:SAMLRequest &quot;@rx (?i)&lt;!\s*(?:DOCTYPE|ENTITY)\b&quot; \
+    &quot;id:25504,phase:2,pass,log,t:none,t:urlDecodeUni,t:base64Decode,msg:'SAML: DOCTYPE/ENTITY inside SAML payload',tag:'saml',logdata:'%{MATCHED_VAR_NAME}'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>25501</code></td>
+<td><code>ARGS:next\|redirect\|return\|returnTo\|continue</code> (cả <code>json.*</code>)</td>
+<td>Ép các tham số chuyển hướng chỉ được là đường dẫn nội bộ bắt đầu bằng đúng 1 dấu <code>/</code> (dùng negative lookahead <code>(?![/\\])</code> để chặn <code>//evil.com</code> và <code>/\evil.com</code>).</td>
+<td>Cao (nếu app chỉ redirect nội bộ)</td>
+</tr>
+<tr>
+<td><code>25502</code></td>
+<td><code>ARGS:redirect_uri\|callback</code> (cả <code>json.*</code>)</td>
+<td>Chặn các mẹo bypass OAuth <code>redirect_uri</code>: <code>//</code>, <code>@</code> (userinfo), <code>\</code>, <code>../</code> (path traversal) và <code>javascript:</code>.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25503</code></td>
+<td><code>RESPONSE_HEADERS:Location</code> (Phase 3)</td>
+<td>Lớp bảo vệ thứ 2 ở response: chặn trường hợp backend trả header <code>Location: javascript:...</code> hoặc <code>data:...</code>.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25504</code></td>
+<td><code>ARGS:SAMLResponse\|ARGS:SAMLRequest</code> (<code>t:base64Decode</code>)</td>
+<td>Giải mã Base64 của gói SAML rồi chặn mọi khai báo <code>&lt;!DOCTYPE</code> / <code>&lt;!ENTITY</code> (chống SAML XXE).</td>
+<td>Rất cao</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-oauth-của-app-yêu-cầu-redirect_uri-là-url-đầy-đủ-httpteam05fhackerlocaloauthcallback">Ví dụ 1: OAuth của app yêu cầu <code>redirect_uri</code> là URL đầy đủ (<code>http://team05.fhacker.local/oauth/callback</code>)</h3>
+<p>Nếu bạn muốn khóa cứng <code>redirect_uri</code> trên route <code>/oauth/authorize</code> chỉ nhận đúng callback của app (chống đối thủ trỏ sang server ngoài để trộm <code>code</code>):</p>
+<pre><code class="language-apache"># Bản sửa thực tế: Allowlist cứng cho OAuth redirect_uri
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/oauth/authorize/?$&quot; \
+    &quot;id:25510,phase:2,deny,status:403,log,t:none,t:normalizePath,chain,msg:'OAuth: Untrusted redirect_uri',tag:'oauth',logdata:'redirect_uri=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:redirect_uri &quot;!@rx (?i)^https?://team05\.fhacker\.local(?::\d{1,5})?/oauth/callback\z&quot; &quot;t:none,t:urlDecodeUni&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-gửi-next-rỗng-khi-đăng-nhập-bình-thường">Ví dụ 2: App gửi <code>?next=</code> rỗng khi đăng nhập bình thường</h3>
+<p>Nếu <code>Traffic log</code> thấy bot gửi <code>POST /login?next=</code> (giá trị rỗng) bị <code>25501</code> chặn vì <code>^/(?![/\\])</code> yêu cầu phải có ít nhất dấu <code>/</code>:
+- <strong>Cách sửa <code>25501</code>:</strong> Cho phép rỗng bằng cách thêm <code>(?:$|...)</code>:
+  - <code>!@rx ^(?:$|/(?![/\\])[A-Za-z0-9._~!$&amp;'()*+,;=:@%/?-]{0,256})\z</code></p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li>Nếu app hợp lệ truyền <code>redirect_uri=http://team01.fhacker.local/callback</code> (full URL nội bộ) vào tham số <code>redirect</code> hoặc <code>next</code>, hãy bổ sung domain của app vào <code>25501</code> thay vì chỉ cho phép đường dẫn bắt đầu bằng <code>/</code>.</li>
+<li>Nếu <code>next</code> có thể để trống (<code>?next=</code>), áp dụng Ví dụ 2 ngay trước khi bật <code>deny</code>.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

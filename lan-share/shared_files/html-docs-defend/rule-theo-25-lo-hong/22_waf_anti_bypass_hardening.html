@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: WAF Anti-Bypass Hardening &amp; Bảo Vệ Lộ Flag</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/22_waf_anti_bypass_hardening.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-các-kỹ-thuật-bypass-waf-phổ-biến-cần-bịt">1. Các kỹ thuật Bypass WAF phổ biến cần bịt</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-cập-nhật-26205-khi-đã-biết-đúng-route-trả-cờ-của-bot-svc-round-1-và-khi-mở-level-2-ở-round-4">Ví dụ 1: Cập nhật 26205 khi đã biết đúng route trả cờ của bot SVC (Round 1 và khi mở Level 2 ở Round 4)</a></li>
+<li><a href="#ví-dụ-2-app-hợp-lệ-truyền-url-chứa-ký-tự-25-trong-tham-số-return_url-bị-26204-chặn-nhầm">Ví dụ 2: App hợp lệ truyền URL chứa ký tự %25 trong tham số return_url bị 26204 chặn nhầm</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-waf-anti-bypass-hardening--bảo-vệ-lộ-flag">Mẫu Luật Phòng Thủ: WAF Anti-Bypass Hardening &amp; Bảo Vệ Lộ Flag</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/waf_bypass_rules.html</code>, <code>attack/ad_automation_checklist.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-protocol</code> (<code>920xxx</code>) + Phase 4 DLP</li>
+<li><strong>Dải Rule ID:</strong> <code>26200–26299</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Rất cao (bịt các lỗ hổng parser differential, body quá khổ, charset lạ và chặn lọt Flag ở Phase 4).</li>
+</ul>
+<h2 id="1-các-kỹ-thuật-bypass-waf-phổ-biến-cần-bịt">1. Các kỹ thuật Bypass WAF phổ biến cần bịt</h2>
+<ul>
+<li><strong>Parser differential &amp; Content-Type mismatch:</strong> Gửi JSON nhưng đặt <code>Content-Type: text/plain</code>, hoặc thêm charset lạ (<code>IBM037</code>, <code>UTF-16</code>, <code>UTF-7</code>) để WAF không decode được còn backend vẫn đọc.</li>
+<li><strong>Double / Triple URL encoding &amp; Overlong URI:</strong> Nhồi rác vào đầu body để đẩy payload vượt quá <code>SecRequestBodyNoFilesLimit</code> hoặc URL dài bất thường.</li>
+<li><strong>Lộ Flag ở Response (Phase 4 DLP):</strong> Khi một lỗ hổng chưa kịp vá ở Phase 1–2 làm lộ chuỗi <code>FHACKER2026{...}</code> ra ngoài trên route không phải route trả cờ hợp lệ.</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [26201] Chặn charset lạ dùng để lách WAF (chỉ cho phép UTF-8 / ISO-8859-1 / ASCII khi có charset=)
+SecRule REQUEST_HEADERS:Content-Type &quot;@rx (?i)charset\s*=\s*(?!(?:utf-?8|iso-8859-1|us-ascii)\b)[A-Za-z0-9_.-]+&quot; \
+    &quot;id:26201,phase:1,pass,log,t:none,msg:'WAF-Bypass: Unusual Content-Type charset',tag:'waf-hardening',logdata:'CT=%{MATCHED_VAR}'&quot;
+
+# [26202] Chặn URL quá dài (&gt; 4096 ký tự) dùng để né kiểm tra hoặc gây ReDoS
+SecRule REQUEST_URI &quot;@gt 4096&quot; \
+    &quot;id:26202,phase:1,pass,log,t:none,t:length,msg:'WAF-Bypass: Overlong REQUEST_URI',tag:'waf-hardening',logdata:'Len=%{MATCHED_VAR}'&quot;
+
+# [26203] Chặn HTTP Method lạ không cần thiết (chỉ giữ GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
+SecRule REQUEST_METHOD &quot;!@rx ^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\z&quot; \
+    &quot;id:26203,phase:1,pass,log,t:none,msg:'WAF-Bypass: Disallowed HTTP method',tag:'waf-hardening',logdata:'Method=%{REQUEST_METHOD}'&quot;
+
+# [26204] Chặn mã hóa URL lồng 2 lớp bất thường (%25xx đi kèm ký tự nguy hiểm)
+SecRule REQUEST_URI|ARGS &quot;@rx (?i)%25(?:27|22|2e|2f|3c|3e|3b|00|0a|0d|5c)&quot; \
+    &quot;id:26204,phase:2,pass,log,t:none,msg:'WAF-Bypass: Double URL-encoded metacharacter',tag:'waf-hardening',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [26205] Phase 4: Giám sát/chặn rò rỉ Flag trên mọi route KHÔNG phải endpoint trả cờ hợp lệ
+# (BẮT BUỘC cập nhật regex loại trừ route cờ hợp lệ của bot SVC trước khi đổi sang deny!)
+SecRule REQUEST_FILENAME &quot;!@rx (?i)^/api/(?:legit-flag-route-1|legit-flag-route-2)/?$&quot; \
+    &quot;id:26205,phase:4,pass,log,t:none,t:normalizePath,chain,msg:'DLP: Flag leaked on unexpected route',tag:'flag-leak',logdata:'URI=%{REQUEST_FILENAME}'&quot;
+    SecRule RESPONSE_BODY &quot;@rx FHACKER2026\{[A-Za-z0-9_=-]{8,128}\}&quot; &quot;t:none&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>26201</code></td>
+<td><code>REQUEST_HEADERS:Content-Type</code></td>
+<td>Chặn kỹ thuật đổi <code>charset=</code> sang bảng mã lạ (<code>IBM037</code>, <code>UTF-16</code>, <code>UTF-7</code>) khiến ModSecurity không đọc được payload nhưng backend lại giải mã được.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>26202</code></td>
+<td><code>REQUEST_URI</code> (<code>t:length</code>, <code>@gt 4096</code>)</td>
+<td>Chặn URL quá dài (&gt; 4096 ký tự) dùng để làm tràn bộ đệm kiểm tra hoặc gây quá tải CPU (ReDoS).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>26203</code></td>
+<td><code>REQUEST_METHOD</code></td>
+<td>Chỉ cho phép 7 phương thức HTTP chuẩn (<code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>, <code>HEAD</code>, <code>OPTIONS</code>), chặn method lạ (<code>TRACE</code>, <code>TRACK</code>, <code>CONNECT</code>, <code>PROPFIND</code>, <code>ARBITRARY</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>26204</code></td>
+<td><code>REQUEST_URI\|ARGS</code></td>
+<td>Chặn mã hóa URL 2 lớp (<code>%2527</code>, <code>%252e</code>, <code>%252f</code>, <code>%253c</code>, <code>%2500</code>...) — dấu hiệu điển hình của tool bypass WAF.</td>
+<td>Cao (kiểm tra app có truyền URL lồng URL không)</td>
+</tr>
+<tr>
+<td><code>26205</code></td>
+<td><code>REQUEST_FILENAME</code> + <code>RESPONSE_BODY</code> (Phase 4)</td>
+<td>Lớp phòng thủ cuối cùng (DLP): phát hiện hoặc chặn ngay nếu chuỗi cờ <code>FHACKER2026{...}</code> bị lọt ra ngoài ở bất kỳ route nào <strong>không nằm trong</strong> danh sách route trả cờ hợp lệ.</td>
+<td><strong>Để <code>pass,log</code> trước, cập nhật route rồi mới bật <code>deny</code></strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-cập-nhật-26205-khi-đã-biết-đúng-route-trả-cờ-của-bot-svc-round-1-và-khi-mở-level-2-ở-round-4">Ví dụ 1: Cập nhật <code>26205</code> khi đã biết đúng route trả cờ của bot SVC (Round 1 và khi mở Level 2 ở Round 4)</h3>
+<p>Sau 2 phút đầu quan sát <code>Traffic log</code> (lọc <code>"FHACKER2026{"</code>), bạn thấy bot SVC chỉ lấy cờ hợp lệ ở 2 route: <code>/api/flag/check</code> và <code>/admin/secret-flag</code>. Khi Round 4 mở Level 2, có thêm route <code>/v2/vault/item</code>.
+- <strong>Cách sửa <code>26205</code>:</strong> Đưa chính xác 3 route đó vào danh sách loại trừ <code>!@rx</code>, sau đó mới đổi <code>pass,log</code> thành <code>deny,status:403,log</code>:</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [26205] sau khi đã xác định 3 route trả cờ hợp lệ của bot SVC
+SecRule REQUEST_FILENAME &quot;!@rx (?i)^(?:/api/flag/check|/admin/secret-flag|/v2/vault/item)/?$&quot; \
+    &quot;id:26205,phase:4,deny,status:403,log,t:none,t:normalizePath,chain,msg:'DLP: Flag leaked on unexpected route',tag:'flag-leak',logdata:'URI=%{REQUEST_FILENAME}'&quot;
+    SecRule RESPONSE_BODY &quot;@rx FHACKER2026\{[A-Za-z0-9_=-]{8,128}\}&quot; &quot;t:none&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-hợp-lệ-truyền-url-chứa-ký-tự-25-trong-tham-số-return_url-bị-26204-chặn-nhầm">Ví dụ 2: App hợp lệ truyền URL chứa ký tự <code>%25</code> trong tham số <code>return_url</code> bị <code>26204</code> chặn nhầm</h3>
+<p>Nếu bot gửi <code>?return_url=%2Fsearch%3Fq%3Da%2520b</code> dính <code>26204</code>, loại trừ riêng tham số đó khỏi <code>26204</code>:
+- Đổi <code>REQUEST_URI|ARGS</code> thành <code>REQUEST_URI|ARGS|!ARGS:return_url</code>.</p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li><strong>Cực kỳ quan trọng với <code>26205</code>:</strong> Giữ nguyên <code>pass,log</code> ở đầu trận để theo dõi trên <code>Traffic log</code> (lọc <code>modsec.tag:flag-leak</code>) nhằm lập danh sách đầy đủ các route trả cờ hợp lệ của bot SVC (kể cả khi mở Level 2 ở Round 4!). Chỉ đổi sang <code>deny,status:403,log</code> sau khi đã loại trừ đúng toàn bộ route hợp lệ.</li>
+<li>Luôn ưu tiên viết rule theo mô hình <strong>Allowlist cho từng route cụ thể</strong> hơn là blacklist toàn cục để vừa an toàn SVC vừa miễn nhiễm bypass.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

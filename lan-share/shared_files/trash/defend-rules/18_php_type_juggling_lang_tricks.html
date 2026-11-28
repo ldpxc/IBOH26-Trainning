@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: PHP Type Juggling &amp; Language Tricks</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/18_php_type_juggling_lang_tricks.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-bot-svc-gửi-mã-xác-thực-otp-dạng-số-nguyên-json-otp-482910">Ví dụ 1: Bot SVC gửi mã xác thực OTP dạng số nguyên JSON {"otp": 482910}</a></li>
+<li><a href="#ví-dụ-2-app-php-kiểm-tra-in_arrayinput-admin-mod-không-có-strict--true">Ví dụ 2: App PHP kiểm tra in_array($input, ['admin', 'mod']) không có strict = true</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-php-type-juggling--language-tricks">Mẫu Luật Phòng Thủ: PHP Type Juggling &amp; Language Tricks</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/php_type_juggling.html</code>, <code>attack/lang_tricks_misc.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-php</code> (<code>933xxx</code>)</li>
+<li><strong>Dải Rule ID:</strong> <code>25800–25899</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Cao với kiểu mảng (<code>password[]=1</code> làm <code>strcmp</code>/<code>md5</code> trả <code>NULL</code>) và JSON boolean/number thay cho chuỗi (<code>{"password": true}</code> hoặc <code>{"password": 0}</code>); trung bình với Magic Hash (<code>0e...</code>).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li><strong>Array Type Juggling (PHP):</strong> Gửi <code>username[]=a&amp;password[]=b</code> để <code>md5($_POST['password'])</code> hoặc <code>strcmp()</code> trả về <code>NULL</code> → <code>NULL == NULL</code> là <code>true</code>.</li>
+<li><strong>JSON Type Juggling:</strong> Gửi <code>{"password": true}</code>, <code>{"password": 0}</code>, <code>{"password": []}</code> hoặc <code>{"token": 0}</code> vào endpoint so sánh lỏng <code>==</code>.</li>
+<li><strong>Magic Hash:</strong> Gửi chuỗi dạng <code>0e\d+</code> (vd <code>0e215962017</code>) hoặc chuỗi sinh ra MD5/SHA1 dạng <code>0e...</code> (<code>QNKCDZO</code>, <code>240610708</code>, <code>s878926199a</code>).</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [25801] Chặn truyền tham số dạng mảng ([]) vào các trường đăng nhập/xác thực (chống strcmp/md5 NULL)
+SecRule ARGS_NAMES &quot;@rx (?i)^(?:username|user|email|password|pass|token|otp|pin|code|hash|sig|signature)\[&quot; \
+    &quot;id:25801,phase:2,pass,log,t:none,t:urlDecodeUni,msg:'TypeJuggling: Array syntax on auth parameter',tag:'type-juggling',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [25802] Chặn JSON truyền boolean/null/number/array cho password hoặc token thay vì chuỗi &quot;...&quot;
+SecRule REQUEST_HEADERS:Content-Type &quot;@contains application/json&quot; \
+    &quot;id:25802,phase:2,pass,log,t:none,t:lowercase,chain,msg:'TypeJuggling: Non-string JSON value for auth field',tag:'type-juggling',logdata:'%{MATCHED_VAR}'&quot;
+    SecRule REQUEST_BODY &quot;@rx (?i)\&quot;(?:password|pass|token|secret|otp|pin|hash|sig)\&quot;\s*:\s*(?:true|false|null|\[|\{|-?\d+(?:\.\d+)?(?:\s*[,}]))&quot; &quot;t:none&quot;
+
+# [25803] Chặn giá trị Magic Hash (0e + toàn chữ số) trong các tham số hash/token/password
+SecRule ARGS:hash|ARGS:json.hash|ARGS:token|ARGS:json.token|ARGS:password|ARGS:json.password|ARGS:sig|ARGS:json.sig &quot;@rx ^0[eE][0-9]{4,}\z&quot; \
+    &quot;id:25803,phase:2,pass,log,t:none,msg:'TypeJuggling: Magic hash 0e... pattern',tag:'type-juggling',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>25801</code></td>
+<td><code>ARGS_NAMES</code> (<code>t:urlDecodeUni</code>)</td>
+<td>Chặn kỹ thuật truyền mảng <code>password[]=1</code> hoặc <code>token[0]=a</code> khiến các hàm PHP (<code>strcmp</code>, <code>md5</code>, <code>sha1</code>, <code>hash_equals</code> sai kiểu) trả <code>NULL</code> và vượt qua phép so sánh lỏng <code>==</code>.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25802</code></td>
+<td><code>REQUEST_HEADERS:Content-Type</code> + <code>REQUEST_BODY</code></td>
+<td>Chặn JSON truyền kiểu không phải chuỗi (<code>true</code>, <code>false</code>, <code>null</code>, <code>0</code>, <code>[]</code>, <code>{}</code>) cho các trường <code>password</code>, <code>token</code>, <code>secret</code>, <code>hash</code>, <code>sig</code> (vì trong PHP <code>0 == "abc"</code> hoặc <code>true == "batky"</code> là <code>true</code>).</td>
+<td>Cao (kiểm tra <code>otp</code>/<code>pin</code> có phải số không)</td>
+</tr>
+<tr>
+<td><code>25803</code></td>
+<td><code>ARGS:hash\|token\|password\|sig</code> (cả <code>json.*</code>)</td>
+<td>Chặn chuỗi Magic Hash dạng <code>0e</code> + chữ số (<code>0e215962017</code>) khi backend so sánh hash bằng <code>==</code>.</td>
+<td>Rất cao</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-bot-svc-gửi-mã-xác-thực-otp-dạng-số-nguyên-json-otp-482910">Ví dụ 1: Bot SVC gửi mã xác thực OTP dạng số nguyên JSON <code>{"otp": 482910}</code></h3>
+<p>Nếu <code>25802</code> chặn nhầm vì có <code>otp</code> trong danh sách field bắt buộc phải là chuỗi <code>"..."</code>:
+- <strong>Cách sửa <code>25802</code>:</strong> Xóa <code>otp|pin</code> khỏi regex trong <code>25802</code>, chỉ giữ các trường bắt buộc phải là chuỗi (<code>password</code>, <code>pass</code>, <code>token</code>, <code>secret</code>, <code>hash</code>, <code>sig</code>):</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [25802] khi otp/pin hợp lệ là số JSON
+SecRule REQUEST_HEADERS:Content-Type &quot;@contains application/json&quot; \
+    &quot;id:25802,phase:2,deny,status:403,log,t:none,t:lowercase,chain,msg:'TypeJuggling: Non-string JSON auth value',tag:'type-juggling',logdata:'%{MATCHED_VAR}'&quot;
+    SecRule REQUEST_BODY &quot;@rx (?i)\&quot;(?:password|pass|token|secret|hash|sig)\&quot;\s*:\s*(?:true|false|null|\[|\{|-?\d+(?:\.\d+)?(?:\s*[,}]))&quot; &quot;t:none&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-php-kiểm-tra-in_arrayinput-admin-mod-không-có-strict--true">Ví dụ 2: App PHP kiểm tra <code>in_array($input, ['admin', 'mod'])</code> không có <code>strict = true</code></h3>
+<p>Nếu đối thủ gửi <code>role=0</code> (dạng số trong JSON hoặc chuỗi <code>0</code> trên PHP &lt; 8), thêm Allowlist chặt theo danh sách chuỗi hợp lệ (<code>!@rx ^(?:user|guest)\z</code>) cho tham số đó.</p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li>Nếu app hợp lệ có trường <code>otp</code> hoặc <code>pin</code> dạng số JSON (<code>{"pin": 123456}</code> không có dấu ngoặc kép), áp dụng Ví dụ 1 ngay để không chặn nhầm bot SVC.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

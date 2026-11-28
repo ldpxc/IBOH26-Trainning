@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+results/
+logs/
+*.log
+.DS_Store
+Thumbs.db
+
+# Local config with credentials
+scripts/config.yaml
+
+# A/D local runtime files
+scripts/targets.txt
+scripts/targets.local.txt
+results/own_flags.txt
+results/submitted_flags.json

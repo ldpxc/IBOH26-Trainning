@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: XSS &amp; Advanced Bypass (Admin Bot)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/06_xss_and_bypass.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-đối-thủ-tiêm-xss-qua-http-header-referer-hoặc-user-agent-được-admin-panel-hiển-thị-lại">Ví dụ 1: Đối thủ tiêm XSS qua HTTP Header (Referer hoặc User-Agent) được admin panel hiển thị lại</a></li>
+<li><a href="#ví-dụ-2-app-có-ô-nhập-liệu-chứa-từ-tiếng-anh-có-on-ví-dụ-query-string-hoặc-cấu-hình">Ví dụ 2: App có ô nhập liệu chứa từ tiếng Anh có on...= (ví dụ query string hoặc cấu hình)</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-xss--advanced-bypass-admin-bot">Mẫu Luật Phòng Thủ: XSS &amp; Advanced Bypass (Admin Bot)</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/xss_adminbot.html</code>, <code>attack/xss_advanced_bypass.html</code>, <code>attack/injection.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-xss</code> (<code>941xxx</code>)</li>
+<li><strong>Dải Rule ID:</strong> <code>24600–24699</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Cao (cần chuẩn hóa nhiều lớp decode để chống bypass filter đơn giản).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li>Thẻ thực thi script/tải tài nguyên: <code>&lt;script&gt;</code>, <code>&lt;svg&gt;</code>, <code>&lt;iframe&gt;</code>, <code>&lt;object&gt;</code>, <code>&lt;embed&gt;</code>, <code>&lt;math&gt;</code>, <code>&lt;details&gt;</code>, <code>&lt;base&gt;</code>, <code>&lt;meta http-equiv="refresh"&gt;</code>.</li>
+<li>Thuộc tính event handler: <code>onerror=</code>, <code>onload=</code>, <code>onfocus=</code>, <code>onmouseover=</code>, <code>ontoggle=</code>, <code>onanimationstart=</code>, <code>autofocus</code>.</li>
+<li>Scheme nguy hiểm &amp; exfiltrate cho Admin Bot: <code>javascript:</code>, <code>data:text/html</code>, <code>vbscript:</code>, <code>document.cookie</code>, <code>fetch(</code>, <code>navigator.sendBeacon(</code>, <code>location.href</code>.</li>
+<li>Kỹ thuật bypass: chèn lồng (<code>&lt;scr&lt;script&gt;ipt&gt;</code>), HTML entity (<code>&amp;#x3c;</code>), JS unicode escape (<code>\u003c</code>), double URL-encode.</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [24601] Chặn thẻ HTML nguy hiểm sau khi giải mã nhiều lớp (URL + HTML Entity + JS Escape)
+SecRule ARGS &quot;@rx (?i)&lt;\s*/?\s*(?:script|iframe|object|embed|svg|math|base|form|meta|link|style|applet|body|details)\b&quot; \
+    &quot;id:24601,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,msg:'XSS: Dangerous HTML tag',tag:'xss',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [24602] Chặn mọi thuộc tính event handler onXXXX=
+SecRule ARGS &quot;@rx (?i)(?:[\s/\&quot;'&gt;]|^)on[a-z]{3,20}\s*=&quot; \
+    &quot;id:24602,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,msg:'XSS: Inline event handler attribute',tag:'xss',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [24603] Chặn scheme javascript:/vbscript:/data:text/html (kể cả chèn tab/newline bên trong)
+SecRule ARGS &quot;@rx (?i)(?:javascript|vbscript)\s*:|data\s*:\s*text/html&quot; \
+    &quot;id:24603,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,t:htmlEntityDecode,t:removeWhitespace,msg:'XSS: Dangerous URI scheme',tag:'xss',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [24604] Chặn hành vi đánh cắp cookie / gọi ra ngoài trong bài XSS Admin Bot
+SecRule ARGS &quot;@rx (?i)(?:document\s*\.\s*(?:cookie|domain|location)|window\s*\.\s*location|navigator\s*\.\s*sendBeacon|\bfetch\s*\(|\bXMLHttpRequest\b|String\s*\.\s*fromCharCode)&quot; \
+    &quot;id:24604,phase:2,pass,log,t:none,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,msg:'XSS: Cookie/exfiltration JS primitive',tag:'xss',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [24605] Bắt bổ sung bằng libinjection XSS cho các trường nội dung/comment
+SecRule ARGS:comment|ARGS:json.comment|ARGS:bio|ARGS:json.bio|ARGS:message|ARGS:json.message &quot;@detectXSS&quot; \
+    &quot;id:24605,phase:2,pass,log,t:none,t:urlDecodeUni,t:htmlEntityDecode,msg:'XSS: libinjection match',tag:'xss',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>24601</code></td>
+<td><code>ARGS</code> (<code>t:urlDecodeUni</code> ×2 + <code>t:htmlEntityDecode</code> + <code>t:jsDecode</code>)</td>
+<td>Chặn các thẻ HTML có khả năng chạy JS hoặc thay đổi DOM (<code>script</code>, <code>svg</code>, <code>iframe</code>, <code>object</code>, <code>details</code>, <code>meta</code>, <code>base</code>...) sau khi giải mã 4 lớp.</td>
+<td>Cao</td>
+</tr>
+<tr>
+<td><code>24602</code></td>
+<td><code>ARGS</code> (giải mã 4 lớp)</td>
+<td>Chặn mọi thuộc tính sự kiện <code>onXXXX=</code> (<code>onerror=</code>, <code>onload=</code>, <code>onfocus=</code>, <code>ontoggle=</code>, <code>onanimationstart=</code>).</td>
+<td>Cao</td>
+</tr>
+<tr>
+<td><code>24603</code></td>
+<td><code>ARGS</code> (<code>t:urlDecodeUni</code> ×2 + <code>t:htmlEntityDecode</code> + <code>t:removeWhitespace</code>)</td>
+<td>Chặn <code>javascript:</code>, <code>vbscript:</code>, <code>data:text/html</code> kể cả khi đối thủ chèn tab/xuống dòng (<code>java\tscript:</code>) để né filter.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>24604</code></td>
+<td><code>ARGS</code> (<code>t:urlDecodeUni</code> + <code>t:htmlEntityDecode</code> + <code>t:jsDecode</code>)</td>
+<td>Chặn các hàm JS chuyên dùng để ăn cắp cookie/exfiltrate dữ liệu khi bài có Admin Bot (<code>document.cookie</code>, <code>fetch(</code>, <code>sendBeacon</code>).</td>
+<td>Cao</td>
+</tr>
+<tr>
+<td><code>24605</code></td>
+<td><code>ARGS:comment\|bio\|message</code> (cả <code>json.*</code>)</td>
+<td>Bắt bổ sung bằng engine <code>libinjection</code> (<code>@detectXSS</code>) trên các trường bình luận/tiểu sử.</td>
+<td>Trung bình (test với bot trước)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-đối-thủ-tiêm-xss-qua-http-header-referer-hoặc-user-agent-được-admin-panel-hiển-thị-lại">Ví dụ 1: Đối thủ tiêm XSS qua HTTP Header (<code>Referer</code> hoặc <code>User-Agent</code>) được admin panel hiển thị lại</h3>
+<p>Nếu trên <code>Traffic log</code> thấy đối thủ gửi <code>User-Agent: &lt;img src=x onerror=fetch(...)&gt;</code> vào trang báo cáo cho Admin Bot:
+- <strong>Cách sửa:</strong> Mở rộng biến ở <code>24601</code> và <code>24602</code> thêm <code>REQUEST_HEADERS:User-Agent|REQUEST_HEADERS:Referer</code>:</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [24602] để bắt thêm XSS trong User-Agent và Referer
+SecRule ARGS|REQUEST_HEADERS:User-Agent|REQUEST_HEADERS:Referer &quot;@rx (?i)(?:[\s/\&quot;'&gt;]|^)on[a-z]{3,20}\s*=&quot; \
+    &quot;id:24602,phase:2,deny,status:403,log,t:none,t:urlDecodeUni,t:urlDecodeUni,t:htmlEntityDecode,t:jsDecode,msg:'XSS: Event handler in ARGS or headers',tag:'xss',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-có-ô-nhập-liệu-chứa-từ-tiếng-anh-có-on-ví-dụ-query-string-hoặc-cấu-hình">Ví dụ 2: App có ô nhập liệu chứa từ tiếng Anh có <code>on...=</code> (ví dụ query string hoặc cấu hình)</h3>
+<p>Nếu <code>24602</code> bắt nhầm tham số hợp lệ như <code>options=action=save</code> (vì <code>action=</code> kết thúc bằng <code>on=</code> nếu regex quá rộng):
+- Lưu ý <code>24602</code> đã bắt đầu bằng ranh giới <code>(?:[\s/"'&gt;]|^)on[a-z]{3,20}\s*=</code> nên <code>action=</code> <strong>không</strong> bị bắt; nếu vẫn có chữ tiếng Anh bắt đầu bằng <code>on</code> kèm dấu <code>=</code> (vd <code>only=1</code> trong trường text), thu hẹp <code>24602</code> chỉ bắt khi có dấu <code>&lt;</code> hoặc <code>"</code> ở gần, hoặc dùng danh sách event phổ biến (<code>on(?:error|load|click|focus|blur|mouse\w+|key\w+|toggle|animation\w+|pointer\w+|input|submit)=</code>).</p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li>Nếu app có tính năng rich-text hợp lệ (cho phép <code>&lt;p&gt;</code>, <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>), bộ rule trên vẫn an toàn vì <code>24601</code> chỉ chặn thẻ thực thi/nhúng nguy hiểm.</li>
+<li>Header <code>Cookie</code> và <code>Authorization</code> không nằm trong <code>ARGS</code>, nên không gây FP cho session token.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

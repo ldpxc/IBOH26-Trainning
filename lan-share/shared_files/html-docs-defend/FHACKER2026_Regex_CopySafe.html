@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FHACKER 2026 — Regex Copy-Safe (ModSecurity v3 / PCRE)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="index.html">⌂ Trang chủ</a>
+    <span class="doc-path">FHACKER2026_Regex_CopySafe.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-allowlist-patterns-dùng-với-rx">1. Allowlist patterns (dùng với !@rx)</a></li>
+<li><a href="#2-detection-patterns-dùng-với-rx">2. Detection patterns (dùng với @rx)</a></li>
+<li><a href="#3-rule-skeletons-copy-trực-tiếp-pipe-thật">3. Rule skeletons (copy trực tiếp, pipe thật)</a><ul>
+<li><a href="#31-allowlist-id-form--json">3.1. Allowlist id (Form + JSON)</a></li>
+<li><a href="#32-sqli-trên-ô-tìm-kiếm">3.2. SQLi trên ô tìm kiếm</a></li>
+<li><a href="#33-ssrf-trên-tham-số-url">3.3. SSRF trên tham số URL</a></li>
+<li><a href="#34-flag-leak-phase-4-test-passlog-trước">3.4. Flag leak Phase 4 (test pass,log trước)</a></li>
+</ul>
+</li>
+<li><a href="#4-test-regex-bằng-python-trước-khi-dán">4. Test regex bằng Python trước khi dán</a></li>
+<li><a href="#5-checklist-trước-khi-dán-rule">5. Checklist trước khi dán rule</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="fhacker-2026--regex-copy-safe-modsecurity-v3--pcre">FHACKER 2026 — Regex Copy-Safe (ModSecurity v3 / PCRE)</h1>
+<blockquote>
+<p><strong>Vì sao có file này:</strong> Trong bảng Markdown, ký tự <code>|</code> phải viết thành <code>\|</code>. Nếu copy nguyên regex từ bảng vào ModSecurity, <code>\|</code> là <strong>literal pipe</strong>, không phải phép OR → regex sai và rule không bắt được gì. File này chứa toàn bộ regex trong <strong>code fence</strong>, copy trực tiếp là dùng được.</p>
+<p><strong>Quy ước chung:</strong>
+- Luôn bắt đầu action bằng <code>t:none</code>.
+- Chống double-encode: <code>t:urlDecodeUni,t:urlDecodeUni</code>.
+- Chống HTML/JS encode: thêm <code>t:htmlEntityDecode,t:jsDecode</code>.
+- So với chữ thường: thêm <code>t:lowercase</code> ở cuối.
+- Test regex bằng Python (Mục 4) trước khi dán vào WAF.
+- Không dùng regex lặp lồng nhau kiểu <code>(a+)+</code>, <code>(.*a){10}</code> — dễ ReDoS, rớt SVC.</p>
+</blockquote>
+<hr />
+<h2 id="1-allowlist-patterns-dùng-với-rx">1. Allowlist patterns (dùng với <code>!@rx</code>)</h2>
+<pre><code class="language-regex"># Số nguyên dương 1-10 chữ số (id, page, limit)
+^[0-9]{1,10}$
+
+# Số nguyên có thể rỗng (tham số tùy chọn)
+^[0-9]{0,10}$
+
+# UUID 36 ký tự (KHÔNG kiểm tra version)
+^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+
+# Username / slug đơn giản
+^[A-Za-z0-9_.-]{1,64}$
+
+# Ngày YYYY-MM-DD
+^\d{4}-\d{2}-\d{2}$
+
+# Danh sách cố định (sort/order/status)
+^(?:id|name|price|created_at|asc|desc)$
+
+# Danh sách cố định nhưng cho phép rỗng
+^(?:id|name|price|created_at|asc|desc)?$
+
+# Tên file an toàn (không có / hoặc \)
+^[A-Za-z0-9._-]{1,64}\.(?:pdf|png|jpe?g|gif|txt|csv)$
+
+# Đường dẫn nội bộ chống open redirect (không bắt đầu bằng //)
+^/(?!/)[A-Za-z0-9._~!$&amp;'()*+,;=:@%/?-]*$
+
+# Đường dẫn nội bộ chặt hơn: không cho ..
+^/(?!/)(?!.*\.\.)[A-Za-z0-9._~!$&amp;'()*+,;=:@%/?-]*$
+
+# Hostname hoặc IPv4 (dùng cho ping/allowlist host)
+^(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)*[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$|^(?:\d{1,3}\.){3}\d{1,3}$
+
+# IPv4 đúng dải 0-255 (chặt hơn)
+^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$
+
+# Chuỗi hex 64 ký tự (SHA-256/token)
+^[0-9a-fA-F]{64}$
+
+# Email đơn giản
+^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}$
+
+# JWT dạng JWS: 3 phần, cho phép signature rỗng
+^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$
+
+# JWT chặt: bắt buộc CÓ phần chữ ký (chặn header.payload. rỗng)
+^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$
+
+# Base64 chuẩn
+^[A-Za-z0-9+/]+={0,2}$
+
+# Base64URL (JWT)
+^[A-Za-z0-9_-]+={0,2}$
+
+# MongoDB ObjectId (24 ký tự hex — hay gặp ở app Node.js/MongoDB)
+^[0-9a-fA-F]{24}$
+
+# Boolean / cờ bật tắt
+^(?:true|false|0|1)$
+
+# Số thập phân dương (giá tiền, số lượng, tỷ lệ)
+^\d{1,10}(?:\.\d{1,4})?$
+
+# Số thập phân có dấu âm (tọa độ, chênh lệch)
+^-?\d{1,10}(?:\.\d{1,4})?$
+
+# Mã ngôn ngữ / locale (chống LFI qua ?lang=vi / en-US)
+^[a-z]{2}(?:-[A-Z]{2})?$
+
+# Biểu thức số học an toàn (chống Code Injection eval trên route máy tính)
+^[0-9+\-*/().\s]{1,128}$
+
+# Đường dẫn file tương đối có thư mục con (cho phép 2026/a.pdf, cấm .. và /)
+^(?!.*\.\.)[A-Za-z0-9_-]+(?:/[A-Za-z0-9._-]+){0,4}\.(?:pdf|png|jpe?g|gif|txt|csv)$
+
+# HTTP Method chuẩn (chống Verb Tampering)
+^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$
+</code></pre>
+<blockquote>
+<p><strong>Lưu ý:</strong>
+- <code>$</code> trong PCRE có thể khớp trước newline cuối. Nếu cần chặt tuyệt đối, dùng <code>\z</code> thay cho <code>$</code> (PCRE hỗ trợ), nhưng đa số rule ModSecurity dùng <code>$</code> là đủ.
+- Regex tên file ở trên vẫn cho <code>shell.php.jpg</code> (vì phần tên được phép chứa dấu chấm). Phải dùng thêm rule <code>20411</code> chặn double-extension, hoặc siết regex thành <code>^[A-Za-z0-9_-]{1,64}\.(?:pdf|png|jpe?g|gif|txt|csv)$</code> nếu app không cần tên file có dấu chấm.</p>
+</blockquote>
+<hr />
+<h2 id="2-detection-patterns-dùng-với-rx">2. Detection patterns (dùng với <code>@rx</code>)</h2>
+<pre><code class="language-regex"># SQLi auth cơ bản (' OR 1=1--, &quot; OR 1=1--) — dùng \x22 thay &quot; để không vỡ chuỗi &quot;@rx ...&quot;
+(?i)(?:'\s*(?:or|and)\s*'?\d+'?\s*=\s*'?\d+|\x22\s*(?:or|and)\s*\x22?\d+\x22?\s*=\s*\x22?\d+|'\s*or\s+1\s*=\s*1|--\s|#\s)
+
+# SQLi keyword / time-based (giới hạn độ dài để tránh ReDoS)
+(?i)\b(?:union\s+(?:all\s+)?select|select\s+[^;]{0,200}\s+from|insert\s+into|update\s+[^;]{0,200}\s+set|delete\s+from|drop\s+table|sleep\s*\(|benchmark\s*\(|pg_sleep\s*\(|waitfor\s+delay|load_file\s*\(|into\s+outfile)
+
+# Time-based / file SQLi
+(?i)\b(?:(?:sleep|benchmark|pg_sleep|extractvalue|updatexml|load_file)\s*\(|waitfor\s+delay\b|into\s+(?:out|dump)file\b)
+
+# NoSQL operator trong tên biến (json.password.$ne, password[$ne], $where)
+(?i)(?:^\$|\.\$|\$(?:ne|eq|gt|gte|lt|lte|in|nin|where|regex|exists|or|and|not|nor|expr|jsonSchema|mod|type)\b)
+
+# XSS pattern (sau khi decode URL/HTML/JS)
+(?i)(?:&lt;\s*script\b|javascript\s*:|vbscript\s*:|data\s*:\s*text/html|\bon(?:error|load|click|mouseover|mouseout|mouseenter|mouseleave|focus|blur|submit|change|input|keyup|keydown|keypress|toggle|animationstart|transitionend|pointerover)\s*=|&lt;svg\b|&lt;iframe\b|&lt;object\b|&lt;embed\b|srcdoc\s*=|formaction\s*=)
+
+# SSTI (Jinja2/Twig/Spring/Freemarker/ERB)
+(?i)(?:\{\{[^}]{0,300}(?:__class__|__mro__|__subclasses__|__globals__|__builtins__|__import__|config|request|self|lipsum|cycler|joiner|namespace|popen|system|7\s*\*\s*7)[^}]{0,300}\}\}|\$\{[^}]{0,300}(?:T\s*\(|Runtime|getClass|forName|exec|7\s*\*\s*7)[^}]{0,300}\}|&lt;%=?[\s\S]{0,300}?%&gt;|#set\s*\(|#assign\s+|\?new\s*\(|\{php\})
+
+# LFI / Path Traversal / wrapper
+(?i)(?:(?:\.\.|%2e%2e|%252e%252e|%c0%ae%c0%ae)(?:[/\x5c]|%2f|%5c|%252f|%255c)|(?:php|phar|zip|data|expect|glob|file)://|^(?:/etc/|/proc/|/var/|/home/|/root/|[A-Za-z]:\x5c))
+
+# Shell metacharacter
+[;&amp;|`\r\n&lt;&gt;]|\$\(|\$\{|\|\||&amp;&amp;|\x00
+
+# Code execution pattern (PHP/Java/Python/Node)
+(?i)(?:\b(?:system|exec|shell_exec|passthru|popen|proc_open|pcntl_exec)\s*\(|\b(?:eval|assert|create_function)\s*\(|\b(?:include|require)(?:_once)?\s*\(|\b(?:base64_decode|gzinflate|str_rot13|convert_uudecode)\s*\(|java\.lang\.(?:Runtime|ProcessBuilder)|getRuntime\s*\(\s*\)\s*\.\s*exec|ProcessBuilder\s*\(|jndi\s*:\s*(?:ldap|rmi|dns|iiop)|InitialContext|lookup\s*\(\s*[\x22\x27](?:ldap|rmi)://)
+
+# SSRF vào localhost/private/metadata
+(?i)^(?:https?|ftp)://(?:[^/@]*@)?(?:localhost|127(?:\.\d{1,3}){0,3}|0(?:\.0){0,3}|\[?::1\]?|\[?::ffff:(?:127(?:\.\d{1,3}){1,3}|7f00:[0-9a-f]+)\]?|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|100\.100\.100\.200|metadata\.google\.internal)(?::\d+)?(?:/|$)
+
+# SSRF IP obfuscated (decimal/hex/octal)
+(?i)^(?:https?|ftp)://(?:[^/@]*@)?(?:0x[0-9a-f]+|\d{8,10}|0[0-7]+(?:\.[0-7]+){0,3})(?::\d+)?(?:/|$)
+
+# SSRF scheme nguy hiểm
+(?i)^(?:file|gopher|dict|jar|ldap|ldaps|rmi|tftp|php|expect)://
+
+# XXE
+(?i)(&lt;!ENTITY|&lt;!DOCTYPE[^&gt;]*\[|SYSTEM\s+[\x22\x27]|PUBLIC\s+[\x22\x27]|file://|php://|expect://|jar:|gopher://)
+
+# Insecure deserialization
+(?i)(?:rO0AB|aced0005|\bO:\d+:\x22|\bC:\d+:\x22|__wakeup|__destruct|!!python/object|!!javax\.script|!!java\.|cos\x5cnsystem|AAEAAAD/////|BinaryFormatter|ObjectDataProvider|TypeConfuseDelegate)
+
+# CRLF injection
+(?:%0d|%0a|\r|\n)
+
+# JWT alg:none (các biến thể hoa/thường &amp; {&quot;typ&quot;:&quot;JWT&quot;,&quot;alg&quot;:&quot;none&quot;})
+(?i)(?:eyJhbGciOiJub25l|eyJhbGciOiJOb25l|eyJhbGciOiJOT05F|LCJhbGciOiJub25l|[\x22\x27]alg[\x22\x27]\s*:\s*[\x22\x27]none[\x22\x27])
+
+# Prototype pollution
+(?i)(?:__proto__|constructor\s*(?:\[|\.)\s*[\x22\x27]?prototype|prototype\s*(?:\[|\.)\s*[\x22\x27]?(?:isAdmin|admin|role|polluted))
+
+# Log4Shell / JNDI
+(?i)(?:\$\{[^}]{0,200}(?:jndi|ldap|rmi|dns|env|sys|java|lower|upper|date|::-))|(?:jndi\s*:\s*(?:ldap|rmi|dns|iiop))
+
+# Flag (Phase 4)
+FHACKER(?:2026)?\{[0-9a-fA-F]{64}\}
+
+# Lộ stack trace / private key / passwd trong response
+(?i)(?:root:x:0:0:|SQL syntax|mysql_fetch|ORA-\d{5}|Traceback \(most recent call last\)|java\.lang\.[A-Za-z.]+Exception|BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY|AWS_SECRET_ACCESS_KEY|Warning: mysqli?)
+
+# Recon: tệp ẩn / repo / cấu hình (.env, .git, .svn, .htaccess, .DS_Store)
+(?i)(?:^|/)\.(?:git|svn|hg|env|htaccess|htpasswd|DS_Store|ssh|aws)(?:/|\.|$)
+
+# Recon: tệp backup / dump DB / swap editor
+(?i)\.(?:bak|backup|old|orig|save|swp|swo|sql|sqlite|sqlite3|db|tar\.gz|tgz|zip|7z|rar|dist|inc)$
+
+# File Upload: đuôi thực thi &amp; double extension (shell.php.jpg, .phtml, .jsp, .svg)
+(?i)\.(?:php\d?|phtml|phar|pht|shtml|htaccess|htpasswd|jsp|jspx|asp|aspx|py|pl|rb|sh|cgi|exe|svg|html?)(?:\.|$)
+
+# File Upload: mã thực thi nhúng trong multipart body (polyglot webshell)
+(?i)(?:&lt;\?(?:php|=)|&lt;script\b|&lt;%[\s=@]|Runtime\.getRuntime|ProcessBuilder|/bin/(?:ba)?sh)
+
+# Code Injection: Python &amp; Node.js eval/exec
+(?i)(?:__import__|__builtins__|__globals__|__subclasses__|os\.(?:system|popen)|subprocess\.(?:Popen|run|check_output)|\brequire\s*\(|child_process|mainModule|global\.process|constructor\s*\[\s*[\x22\x27]constructor[\x22\x27]\s*\])
+
+# XXE XInclude (bypass không cần DOCTYPE)
+(?i)(?:xmlns:xi\s*=|&lt;\s*xi:include\b)
+
+# JWT: tiêm khóa ngoài (jku/x5u/jwk/x5c) hoặc injection trong kid (dùng sau t:base64Decode)
+(?i)(?:\x22(?:jku|x5u|jwk|x5c)\x22\s*:|\x22kid\x22\s*:\s*\x22[^\x22]{0,120}(?:\.\.|/|\x5c|\x27|--|;|\||`|\$\())
+
+# GraphQL: Introspection (__schema / __type)
+(?i)\b__(?:schema|type)\b
+
+# Mass Assignment: tên trường đặc quyền (dùng với ARGS_NAMES)
+(?i)(?:^|[.\[])(?:role|roles|is_?admin|admin|balance|credit|permissions?|verified|is_?staff|is_?superuser|group_?id)(?:\]|\.array_\d+|$)
+
+# PHP Type Juggling: truyền mảng password[] (dùng với ARGS_NAMES)
+(?i)^(?:username|user|email|password|pass|token|otp|pin|code|hash|sig)\[
+
+# PHP Type Juggling: JSON truyền bool/null/number thay vì chuỗi cho password/token (REQUEST_BODY)
+(?i)\x22(?:password|pass|token|secret|hash|sig)\x22\s*:\s*(?:true|false|null|\[|\{|-?\d+(?:\.\d+)?(?:\s*[,}]))
+
+# PHP Type Juggling: Magic Hash (0e + toàn chữ số)
+^0[eE][0-9]{4,}$
+
+# Crypto: Hash Length Extension padding bytes (%80%00%00... hoặc \x80\x00\x00...)
+(?:%80(?:%00){2,}|\x80\x00{2,})
+
+# Crypto: Lộ thông báo lỗi Padding Oracle trong RESPONSE_BODY (Phase 4)
+(?i)(?:BadPaddingException|Invalid\s+padding|padding\s+is\s+incorrect|PKCS7\s+padding|decryption\s+failed)
+
+# WAF Bypass: Double URL-encoded metacharacter (%2527, %252e, %252f, %253c, %2500...)
+(?i)%25(?:27|22|2e|2f|3c|3e|3b|00|0a|0d|5c)
+
+# Access Control / Cache Poisoning: Header override nguy hiểm (REQUEST_HEADERS_NAMES)
+(?i)^(?:X-Original-URL|X-Rewrite-URL|X-Override-URL|X-HTTP-Method-Override|X-Method-Override|X-Custom-IP-Authorization|X-Host|X-Forwarded-Server|X-Forwarded-Scheme)$
+
+# Spring4Shell (CVE-2022-22965)
+(?i)class\.module\.classLoader\.
+</code></pre>
+<hr />
+<h2 id="3-rule-skeletons-copy-trực-tiếp-pipe-thật">3. Rule skeletons (copy trực tiếp, pipe thật)</h2>
+<h3 id="31-allowlist-id-form--json">3.1. Allowlist id (Form + JSON)</h3>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/product/?$&quot; \
+    &quot;id:20100,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'Non-numeric product id',tag:'sqli',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:id|ARGS:json.id &quot;!@rx ^[0-9]{1,10}$&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<h3 id="32-sqli-trên-ô-tìm-kiếm">3.2. SQLi trên ô tìm kiếm</h3>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/search/?$&quot; \
+    &quot;id:20101,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'SQLi in search',tag:'sqli',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:q|ARGS:json.q &quot;@detectSQLi&quot; &quot;t:none,t:urlDecodeUni,t:urlDecodeUni&quot;
+</code></pre>
+<h3 id="33-ssrf-trên-tham-số-url">3.3. SSRF trên tham số URL</h3>
+<pre><code class="language-apache">SecRule ARGS:url|ARGS:uri|ARGS:link|ARGS:json.url|ARGS:json.uri|ARGS:json.link \
+    &quot;@rx (?i)^(?:https?|ftp)://(?:[^/@]*@)?(?:localhost|127(?:\.\d{1,3}){0,3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|metadata\.google\.internal)(?::\d+)?(?:/|$)&quot; \
+    &quot;id:20500,phase:2,pass,log,t:none,t:urlDecodeUni,t:lowercase,msg:'SSRF internal host',tag:'ssrf',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+</code></pre>
+<h3 id="34-flag-leak-phase-4-test-passlog-trước">3.4. Flag leak Phase 4 (test <code>pass,log</code> trước)</h3>
+<pre><code class="language-apache">SecRule REQUEST_FILENAME &quot;!@rx (?i)^/(?:api/)?flag(?:/|$)&quot; \
+    &quot;id:21201,phase:4,pass,log,t:none,t:normalizePath,chain,msg:'FLAG leak outside flag endpoint',tag:'flag-leak',logdata:'%{REQUEST_METHOD} %{REQUEST_URI}'&quot;
+    SecRule RESPONSE_BODY &quot;@rx FHACKER(?:2026)?\{[0-9a-fA-F]{64}\}&quot; &quot;t:none&quot;
+</code></pre>
+<blockquote>
+<p><strong>Nhớ:</strong> đổi <code>pass</code> → <code>deny,status:403</code> sau khi đã test 1 chu kỳ 30 giây và chắc chắn không cắt nhầm route cờ hợp lệ của bot.</p>
+</blockquote>
+<hr />
+<h2 id="4-test-regex-bằng-python-trước-khi-dán">4. Test regex bằng Python trước khi dán</h2>
+<pre><code class="language-python">import re
+
+def check(pattern, samples, fullmatch=False):
+    rx = re.compile(pattern)
+    fn = rx.fullmatch if fullmatch else rx.search
+    for s in samples:
+        print(&quot;MATCH&quot; if fn(s) else &quot;MISS &quot;, repr(s))
+
+# Allowlist: phải fullmatch
+check(r&quot;^[0-9]{1,10}$&quot;, [&quot;42&quot;, &quot;1 OR 1=1&quot;, &quot;&quot;, &quot;12345678901&quot;], fullmatch=True)
+
+# XSS: search
+check(r&quot;(?i)(?:&lt;\s*script\b|javascript\s*:|\bonerror\s*=)&quot;, [
+    &quot;&lt;script&gt;alert(1)&lt;/script&gt;&quot;,
+    &quot;hello world&quot;,
+    &quot;onerror=alert(1)&quot;,
+])
+
+# SQLi: search
+check(r&quot;(?i)\b(?:union\s+(?:all\s+)?select|sleep\s*\(|benchmark\s*\()&quot;, [
+    &quot;1 UNION SELECT 1,2,3--&quot;,
+    &quot;hello&quot;,
+    &quot;1 AND SLEEP(3)--&quot;,
+])
+</code></pre>
+<blockquote>
+<p>Python <code>re</code> gần giống PCRE nhưng không 100% (PCRE có <code>\K</code>, <code>\R</code>, possessive quantifier...). Với các regex trên, test Python là đủ để bắt lỗi cú pháp và logic cơ bản.</p>
+</blockquote>
+<hr />
+<h2 id="5-checklist-trước-khi-dán-rule">5. Checklist trước khi dán rule</h2>
+<ul>
+<li>[ ] Không còn <code>\|</code> do copy từ bảng Markdown (chỉ giữ <code>\|</code> nếu bạn cố ý muốn match literal pipe).</li>
+<li>[ ] Không có comment <code>#</code> hoặc khoảng trắng sau dấu <code>\</code> nối dòng.</li>
+<li>[ ] <code>t:none</code> đứng đầu danh sách transform.</li>
+<li>[ ] Đã thêm <code>t:urlDecodeUni</code> 2 lần nếu cần chống double-encode.</li>
+<li>[ ] Đã thêm <code>t:htmlEntityDecode,t:jsDecode</code> nếu chống XSS/SSTI.</li>
+<li>[ ] <code>id</code> mới nằm trong <code>20000–29999</code> và không trùng.</li>
+<li>[ ] Rule mới bắt đầu <code>pass,log</code>, test 200/403, chờ 1 chu kỳ 30 giây rồi mới <code>deny</code>.</li>
+<li>[ ] Với Phase 4: đã loại trừ đúng route cờ hợp lệ của bot.</li>
+<li>[ ] Đã backup bản rule đang xanh trước khi Save.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

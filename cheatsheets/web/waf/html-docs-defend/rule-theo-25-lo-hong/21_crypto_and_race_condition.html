@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: Crypto (Hash Length Extension / Padding Oracle) &amp; Race Condition</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/21_crypto_and_race_condition.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-app-ký-số-tham-số-tên-payload-và-gửi-chữ-ký-ở-mac-payloaduseramac">Ví dụ 1: App ký số tham số tên payload và gửi chữ ký ở mac (?payload=user=a&amp;mac=...)</a></li>
+<li><a href="#ví-dụ-2-app-bị-padding-oracle-ở-cookie-auth_enc-hex-64-ký-tự--32-byte">Ví dụ 2: App bị Padding Oracle ở cookie auth_enc (hex 64 ký tự = 32 byte)</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive--giới-hạn-waf">5. Lưu ý tránh False Positive &amp; Giới hạn WAF</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-crypto-hash-length-extension--padding-oracle--race-condition">Mẫu Luật Phòng Thủ: Crypto (Hash Length Extension / Padding Oracle) &amp; Race Condition</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/crypto_hash_length_ext.html</code>, <code>attack/crypto_padding_oracle.html</code>, <code>attack/race_condition.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> Không có rule chuẩn (đây là nhóm lỗ hổng tầng mật mã &amp; đồng thời).</li>
+<li><strong>Dải Rule ID:</strong> <code>26100–26199</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> <strong>Hạn chế / Chỉ giảm nhẹ một phần!</strong></li>
+<li><strong>Hash Length Extension:</strong> WAF chặn được rất tốt vì payload <code>hash_extender</code> luôn chèn byte padding Merkle–Damgård (<code>\x80\x00...</code>, <code>%80%00...</code>) và thường gây trùng tham số (HPP).</li>
+<li><strong>Padding Oracle:</strong> WAF không sửa được thuật toán CBC, nhưng có thể chặn các request có định dạng ciphertext sai chiều dài bội số 16 byte hoặc phát hiện lỗi padding rò rỉ ở response (Phase 4).</li>
+<li><strong>Race Condition:</strong> WAF <strong>không khóa được giao dịch song song trong DB</strong> (và BTC đã khóa rate-limit theo IP vì chung IP proxy); cần vá ở tầng ứng dụng (lock/transaction) hoặc chặn hành vi bất thường ở payload nếu có.</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li><strong>Hash Length Extension:</strong> Tham số/cookie chứa chuỗi padding <code>%80%00</code> (hoặc byte <code>\x80</code> theo sau bởi nhiều byte <code>\x00</code>) đi kèm chuỗi mở rộng (<code>&amp;admin=true</code>, <code>&amp;role=admin</code>).</li>
+<li><strong>Padding Oracle (<code>PadBuster</code>):</strong> Gửi hàng trăm request liên tục với ciphertext bị sửa byte cuối, nhận về thông báo lỗi padding khác biệt (<code>PaddingException</code>, <code>Invalid padding</code>, <code>PKCS7</code>, <code>BadPaddingException</code>).</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [26101] Chặn chuỗi padding Merkle-Damgard (\x80\x00\x00...) của Hash Length Extension
+SecRule REQUEST_URI|ARGS|REQUEST_COOKIES|REQUEST_BODY &quot;@rx (?:%80(?:%00){2,}|\x80\x00{2,})&quot; \
+    &quot;id:26101,phase:2,pass,log,t:none,msg:'Crypto: Hash length extension padding bytes detected',tag:'crypto',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [26102] Chặn ký tự không in được / control byte (0x00, 0x80-0xff) trong tham số văn bản ký số
+SecRule ARGS:data|ARGS:json.data|ARGS:msg|ARGS:json.msg|ARGS:file|ARGS:json.file &quot;@rx (?:%00|%80|\x00|\x80)&quot; \
+    &quot;id:26102,phase:2,pass,log,t:none,msg:'Crypto: Binary padding byte in signed parameter',tag:'crypto',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [26103] Phase 4: Cảnh báo/chặn response làm lộ thông báo lỗi Padding Oracle chi tiết
+SecRule RESPONSE_BODY &quot;@rx (?i)(?:BadPaddingException|Invalid\s+padding|padding\s+is\s+incorrect|PKCS7\s+padding|decryption\s+failed)&quot; \
+    &quot;id:26103,phase:4,pass,log,t:none,msg:'Crypto: Padding oracle error message leaked in response',tag:'crypto'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>26101</code></td>
+<td><code>REQUEST_URI\|ARGS\|REQUEST_COOKIES\|REQUEST_BODY</code></td>
+<td>Chặn byte padding Merkle–Damgård (<code>\x80\x00\x00...</code> hoặc <code>%80%00%00...</code>) vốn bắt buộc phải có khi khai thác Hash Length Extension bằng <code>hash_extender</code>.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>26102</code></td>
+<td><code>ARGS:data\|msg\|file</code> (cả <code>json.*</code>)</td>
+<td>Chặn byte nhị phân không in được (<code>%00</code>, <code>%80</code>, <code>\x00</code>, <code>\x80</code>) trong các tham số văn bản được app ký bằng <code>MD5(secret + data)</code> hoặc <code>SHA256(secret + data)</code>.</td>
+<td>Cao (chỉ dùng cho tham số text)</td>
+</tr>
+<tr>
+<td><code>26103</code></td>
+<td><code>RESPONSE_BODY</code> (Phase 4)</td>
+<td>Giám sát response xem backend có đang để lộ thông báo lỗi giải mã/padding (<code>BadPaddingException</code>, <code>PKCS7 padding</code>, <code>Invalid padding</code>) cho phép đối thủ chạy <code>PadBuster</code> hay không.</td>
+<td>Nên để <code>pass,log</code> để phát hiện sớm</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-app-ký-số-tham-số-tên-payload-và-gửi-chữ-ký-ở-mac-payloaduseramac">Ví dụ 1: App ký số tham số tên <code>payload</code> và gửi chữ ký ở <code>mac</code> (<code>?payload=user=a&amp;mac=...</code>)</h3>
+<p>Khi đối thủ dùng <code>hash_extender</code>, trên <code>Traffic log</code> bạn sẽ thấy <code>payload=user=a%80%00%00...&amp;admin=1</code>.
+- <strong>Cách sửa <code>26102</code>:</strong> Thay tên biến trong <code>26102</code> thành <code>ARGS:payload|ARGS:json.payload</code> (và bật thêm Allowlist ký tự in được <code>^[A-Za-z0-9_=&amp;.-]{1,256}\z</code>):</p>
+<pre><code class="language-apache"># Bản sửa thực tế theo [26102] cho tham số ký số payload (chặn tuyệt đối Hash Length Extension)
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/verify/?$&quot; \
+    &quot;id:26102,phase:2,deny,status:403,log,t:none,t:normalizePath,chain,msg:'Crypto: Non-printable byte in signed payload',tag:'crypto',logdata:'%{MATCHED_VAR_NAME}'&quot;
+    SecRule ARGS:payload|ARGS:json.payload &quot;!@rx ^[A-Za-z0-9_=&amp;.,:/-]{1,256}\z&quot; &quot;t:none&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-bị-padding-oracle-ở-cookie-auth_enc-hex-64-ký-tự--32-byte">Ví dụ 2: App bị Padding Oracle ở cookie <code>auth_enc</code> (hex 64 ký tự = 32 byte)</h3>
+<p>Nếu <code>Traffic log</code> cho thấy cookie hợp lệ của bot luôn là chuỗi hex độ dài chia hết cho 32 ký tự (bội số block AES 16 byte), bạn có thể thêm 1 rule chặn mọi cookie <code>auth_enc</code> sai định dạng hex hoặc độ dài không chia hết cho 32 (<code>!@rx ^(?:[0-9a-fA-F]{32}){1,16}\z</code>). <em>(Lưu ý: cách này chỉ chặn được probe sai độ dài, không chặn được probe hợp lệ từng byte của PadBuster — muốn chặn hoàn toàn cần không để lộ thông báo lỗi khác nhau giữa lỗi padding và lỗi logic).</em></p>
+<h2 id="5-lưu-ý-tránh-false-positive--giới-hạn-waf">5. Lưu ý tránh False Positive &amp; Giới hạn WAF</h2>
+<ul>
+<li><strong>Không bật rate-limit theo IP</strong> cho Padding Oracle hay Race Condition vì toàn bộ traffic (kể cả bot chấm SVC) đi qua 1 IP proxy chung của BTC.</li>
+<li>Rule <code>26103</code> chạy ở Phase 4: giữ <code>pass,log</code> để phát hiện endpoint đang bị dò Padding Oracle; nếu chuyển sang <code>deny,status:400</code> cần kiểm tra kỹ không làm bot chấm nhận sai status mong đợi.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

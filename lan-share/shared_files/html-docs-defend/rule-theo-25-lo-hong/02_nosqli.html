@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: NoSQL Injection (NoSQLi)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/02_nosqli.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-route-đăng-nhập-là-authv2signin-và-dùng-trường-account--passwd">Ví dụ 1: Route đăng nhập là /auth/v2/signin và dùng trường account + passwd</a></li>
+<li><a href="#ví-dụ-2-app-dùng-form-url-encoded-có-bracket-filterstatusactive">Ví dụ 2: App dùng form URL-encoded có bracket (filter[status]=active)</a></li>
+<li><a href="#ví-dụ-3-app-có-chức-năng-tìm-kiếm-truyền-thẳng-object-lọc-json">Ví dụ 3: App có chức năng tìm kiếm truyền thẳng object lọc JSON</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-nosql-injection-nosqli">Mẫu Luật Phòng Thủ: NoSQL Injection (NoSQLi)</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/nosqli.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-injection-generic</code> / <code>attack-sqli</code> (<code>942xxx</code>)</li>
+<li><strong>Dải Rule ID:</strong> <code>24200–24299</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Rất cao (chặn trực tiếp toán tử <code>$</code> của MongoDB và ép kiểu chuỗi).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li>Chèn toán tử MongoDB (<code>$ne</code>, <code>$gt</code>, <code>$gte</code>, <code>$lt</code>, <code>$lte</code>, <code>$regex</code>, <code>$where</code>, <code>$in</code>, <code>$nin</code>, <code>$exists</code>, <code>$or</code>, <code>$and</code>, <code>$expr</code>, <code>$function</code>) qua JSON body hoặc query bracket (<code>username[$ne]=</code>).</li>
+<li>Biến trường chuỗi đơn (<code>username</code>, <code>password</code>) thành object/array trong JSON (<code>{"password":{"$ne":""}}</code>) khiến ModSecurity parse thành <code>ARGS:json.password.$ne</code>.</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [24201] Chặn tên tham số chứa toán tử NoSQL ($ne, $gt, $regex, $where...)
+SecRule ARGS_NAMES &quot;@rx (?i)(?:^|\.|\[)\$(?:ne|eq|gt|gte|lt|lte|in|nin|regex|where|exists|or|and|nor|not|expr|function|accumulator|options|elemMatch|jsonSchema)(?:\]|$|\.)&quot; \
+    &quot;id:24201,phase:2,pass,log,t:none,t:urlDecodeUni,msg:'NoSQLi: Operator in parameter name',tag:'nosqli',logdata:'%{MATCHED_VAR_NAME}'&quot;
+
+# [24202] Chặn JSON body thô chứa key bắt đầu bằng $ (bắt cả JSON lồng nhau)
+SecRule REQUEST_HEADERS:Content-Type &quot;@contains application/json&quot; \
+    &quot;id:24202,phase:2,pass,log,t:none,t:lowercase,chain,msg:'NoSQLi: Mongo operator key in JSON body',tag:'nosqli',logdata:'%{MATCHED_VAR}'&quot;
+    SecRule REQUEST_BODY &quot;@rx \&quot;\$(?:ne|eq|gt|gte|lt|lte|in|nin|regex|where|exists|or|and|nor|not|expr|function|options)\&quot;\s*:&quot; &quot;t:none&quot;
+
+# [24203] Chặn truyền mảng/object vào các trường đăng nhập phải là chuỗi phẳng
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/(?:login|auth|signin)/?$&quot; \
+    &quot;id:24203,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'NoSQLi: Nested object/array on login field',tag:'nosqli',logdata:'%{MATCHED_VAR_NAME}'&quot;
+    SecRule ARGS_NAMES &quot;@rx ^json\.(?:username|user|email|password|pass)\.&quot; &quot;t:none&quot;
+
+# [24204] Chặn biểu thức JS injection trong $where / mapReduce
+SecRule ARGS &quot;@rx (?i)(?:this\.(?:password|passwd|secret|flag)|sleep\s*\(\s*\d|function\s*\(\s*\)\s*\{)&quot; \
+    &quot;id:24204,phase:2,pass,log,t:none,t:urlDecodeUni,msg:'NoSQLi: JS expression probe',tag:'nosqli',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>24201</code></td>
+<td><code>ARGS_NAMES</code> (<code>t:urlDecodeUni</code>)</td>
+<td>Kiểm tra <strong>tên tham số</strong> (không phải giá trị) xem có chứa toán tử MongoDB (<code>$ne</code>, <code>$gt</code>, <code>$regex</code>, <code>$where</code>...) dạng <code>password[$ne]</code> hoặc <code>json.password.$ne</code>.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>24202</code></td>
+<td><code>REQUEST_HEADERS:Content-Type</code> + <code>REQUEST_BODY</code></td>
+<td>Bổ sung lớp soi body JSON thô để bắt các key <code>"$ne":</code>, <code>"$regex":</code> ngay cả khi lồng sâu nhiều tầng trong mảng/object.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>24203</code></td>
+<td><code>REQUEST_FILENAME</code> + <code>ARGS_NAMES</code></td>
+<td>Chặn mọi trường hợp biến <code>username</code>/<code>password</code> từ chuỗi phẳng thành object lồng (<code>json.password.xxx</code>) trên route đăng nhập.</td>
+<td>Cao (cần đúng route login)</td>
+</tr>
+<tr>
+<td><code>24204</code></td>
+<td><code>ARGS</code> (<code>t:urlDecodeUni</code>)</td>
+<td>Chặn biểu thức JavaScript chèn vào <code>$where</code> / <code>mapReduce</code> như <code>this.password</code>, <code>sleep(5000)</code>, <code>function(){...}</code>.</td>
+<td>Cao</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-route-đăng-nhập-là-authv2signin-và-dùng-trường-account--passwd">Ví dụ 1: Route đăng nhập là <code>/auth/v2/signin</code> và dùng trường <code>account</code> + <code>passwd</code></h3>
+<p>Trên <code>Traffic log</code>, đối thủ gửi <code>POST /auth/v2/signin</code> với JSON <code>{"account": "admin", "passwd": {"$regex": "^a"}}</code>.
+- <strong>Cách sửa <code>24203</code>:</strong> Cập nhật route và tên field trong regex:</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [24203] cho route /auth/v2/signin
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/auth/v2/signin/?$&quot; \
+    &quot;id:24203,phase:2,deny,status:403,log,t:none,t:normalizePath,chain,msg:'NoSQLi: Nested object on signin',tag:'nosqli',logdata:'%{MATCHED_VAR_NAME}'&quot;
+    SecRule ARGS_NAMES &quot;@rx ^json\.(?:account|passwd)\.&quot; &quot;t:none&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-dùng-form-url-encoded-có-bracket-filterstatusactive">Ví dụ 2: App dùng form URL-encoded có bracket (<code>filter[status]=active</code>)</h3>
+<p>Nếu đối thủ tấn công qua <code>?filter[price][$gt]=0</code>, <code>24201</code> vẫn bắt chuẩn <code>[$gt]</code> mà <strong>không</strong> chặn nhầm <code>filter[status]=active</code> (vì chỉ khớp khi có dấu <code>$</code> trước tên toán tử).</p>
+<h3 id="ví-dụ-3-app-có-chức-năng-tìm-kiếm-truyền-thẳng-object-lọc-json">Ví dụ 3: App có chức năng tìm kiếm truyền thẳng object lọc JSON</h3>
+<p>Nếu đối thủ gửi <code>{"search": {"$where": "1==1"}}</code> trên <code>/api/items/search</code>, bạn không cần sửa <code>24201</code>/<code>24202</code> vì cả hai đã tự động chặn mọi toán tử <code>$where</code> trên toàn site.</p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li>Rule <code>24201</code> và <code>24202</code> chỉ nhắm vào tên key chứa <code>$operator</code> của MongoDB nên gần như không bao giờ đụng traffic hợp lệ.</li>
+<li>Kiểm tra <code>Traffic log</code> với <code>modsec.tag:nosqli</code> trước khi đổi <code>pass,log</code> sang <code>deny,status:403,log</code>.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

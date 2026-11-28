@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: HTTP Request Smuggling &amp; Cache Poisoning</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/19_http_smuggling_cache.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-bot-svc-gửi-form-bình-luận-nhiều-dòng-chứa-0d0a-bị-25905-chặn-nhầm">Ví dụ 1: Bot SVC gửi form bình luận nhiều dòng chứa %0d%0a bị 25905 chặn nhầm</a></li>
+<li><a href="#ví-dụ-2-app-bị-cache-poisoning-qua-header-x-forwarded-host-mà-proxy-btc-không-tự-gắn">Ví dụ 2: App bị Cache Poisoning qua header X-Forwarded-Host mà proxy BTC KHÔNG tự gắn</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-http-request-smuggling--cache-poisoning">Mẫu Luật Phòng Thủ: HTTP Request Smuggling &amp; Cache Poisoning</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/http_smuggling_cache.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-protocol</code> (<code>920xxx</code> / <code>921xxx</code>)</li>
+<li><strong>Dải Rule ID:</strong> <code>25900–25999</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Cao đối với CL.TE / TE.CL / TE.TE obfuscation, trùng header <code>Content-Length</code>, CRLF injection và unkeyed cache poisoning headers.</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li><strong>HTTP Request Smuggling:</strong> Gửi đồng thời cả <code>Content-Length</code> và <code>Transfer-Encoding</code>; gửi 2 header <code>Content-Length</code> trở lên; biến thể <code>Transfer-Encoding</code> bị obfuscate (vd <code>Transfer-Encoding: xchunked</code>, khoảng trắng lạ).</li>
+<li><strong>Web Cache Poisoning:</strong> Chèn các header unkeyed thường bị app phản chiếu vào link/HTML: <code>X-Forwarded-Host</code>, <code>X-Forwarded-Scheme</code>, <code>X-Host</code>, <code>X-Forwarded-Server</code>, <code>Forwarded</code>.</li>
+<li><strong>HTTP Response Splitting / CRLF:</strong> Chèn <code>%0d%0a</code> (<code>\r\n</code>) vào tham số hoặc header để tiêm thêm header HTTP.</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [25901] Chặn request gửi đồng thời cả Content-Length và Transfer-Encoding (CL.TE / TE.CL)
+SecRule &amp;REQUEST_HEADERS:Content-Length &quot;@ge 1&quot; \
+    &quot;id:25901,phase:1,pass,log,t:none,chain,msg:'Smuggling: Both Content-Length and Transfer-Encoding present',tag:'http-smuggling'&quot;
+    SecRule &amp;REQUEST_HEADERS:Transfer-Encoding &quot;@ge 1&quot; &quot;t:none&quot;
+
+# [25902] Chặn trùng lặp nhiều hơn 1 header Content-Length hoặc Transfer-Encoding
+SecRule &amp;REQUEST_HEADERS:Content-Length|&amp;REQUEST_HEADERS:Transfer-Encoding &quot;@gt 1&quot; \
+    &quot;id:25902,phase:1,pass,log,t:none,msg:'Smuggling: Duplicate CL or TE header',tag:'http-smuggling'&quot;
+
+# [25903] Chặn biến thể Transfer-Encoding obfuscated (không đúng chuẩn chunked/gzip/deflate)
+SecRule REQUEST_HEADERS:Transfer-Encoding &quot;!@rx (?i)^(?:chunked|gzip|deflate|compress|br)(?:\s*,\s*(?:chunked|gzip|deflate|compress|br))*\z&quot; \
+    &quot;id:25903,phase:1,pass,log,t:none,msg:'Smuggling: Obfuscated Transfer-Encoding value',tag:'http-smuggling',logdata:'TE=%{MATCHED_VAR}'&quot;
+
+# [25904] Chặn header hay dùng cho Cache Poisoning (kiểm tra kỹ xem proxy BTC có gắn X-Forwarded-Host không!)
+SecRule REQUEST_HEADERS_NAMES &quot;@rx (?i)^(?:X-Host|X-Forwarded-Server|X-Forwarded-Scheme|X-HTTP-Host-Override)\z&quot; \
+    &quot;id:25904,phase:1,pass,log,t:none,msg:'CachePoison: Suspicious unkeyed host/scheme header',tag:'cache-poisoning',logdata:'%{MATCHED_VAR}'&quot;
+
+# [25905] Chặn CRLF injection (\r\n) trong URI và header đầu vào
+SecRule REQUEST_URI|ARGS &quot;@rx (?:%0[da]|%250[da])&quot; \
+    &quot;id:25905,phase:2,pass,log,t:none,msg:'CRLF: Encoded CR/LF sequence detected',tag:'crlf',logdata:'%{MATCHED_VAR_NAME}'&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>25901</code></td>
+<td><code>&amp;REQUEST_HEADERS:Content-Length</code> + <code>&amp;REQUEST_HEADERS:Transfer-Encoding</code></td>
+<td>Chặn request vi phạm RFC 7230 khi gửi đồng thời cả <code>Content-Length</code> và <code>Transfer-Encoding</code> — gốc rễ của CL.TE và TE.CL Smuggling.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25902</code></td>
+<td><code>&amp;REQUEST_HEADERS:Content-Length\|&amp;REQUEST_HEADERS:Transfer-Encoding</code></td>
+<td>Chặn request gửi 2 header <code>Content-Length</code> hoặc 2 header <code>Transfer-Encoding</code> trở lên (chống CL.CL và TE.TE).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25903</code></td>
+<td><code>REQUEST_HEADERS:Transfer-Encoding</code></td>
+<td>Chặn giá trị <code>Transfer-Encoding</code> bị bóp méo (<code>xchunked</code>, <code>chunked;q=1</code>, khoảng trắng lạ) chỉ cho phép đúng tên encoding chuẩn.</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25904</code></td>
+<td><code>REQUEST_HEADERS_NAMES</code></td>
+<td>Chặn các header unkeyed thường dùng để đầu độc cache (<code>X-Host</code>, <code>X-Forwarded-Server</code>, <code>X-Forwarded-Scheme</code>, <code>X-HTTP-Host-Override</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>25905</code></td>
+<td><code>REQUEST_URI\|ARGS</code></td>
+<td>Chặn chuỗi CRLF mã hóa (<code>%0d</code>, <code>%0a</code>, <code>%250d</code>, <code>%250a</code>) dùng cho HTTP Response Splitting và tiêm header giả.</td>
+<td>Trung bình (tránh FP trên textarea)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-bot-svc-gửi-form-bình-luận-nhiều-dòng-chứa-0d0a-bị-25905-chặn-nhầm">Ví dụ 1: Bot SVC gửi form bình luận nhiều dòng chứa <code>%0d%0a</code> bị <code>25905</code> chặn nhầm</h3>
+<p>Form <code>application/x-www-form-urlencoded</code> khi có dấu xuống dòng trong <code>&lt;textarea&gt;</code> sẽ mã hóa thành <code>%0d%0a</code>.
+- <strong>Cách sửa <code>25905</code>:</strong> Chỉ soi CRLF trên <code>REQUEST_URI</code> và các tham số ngắn hay bị đưa vào HTTP header (<code>next</code>, <code>redirect</code>, <code>lang</code>, <code>filename</code>), không soi toàn bộ <code>ARGS</code>:</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [25905] chỉ chặn CRLF trên URI và các tham số đưa vào header
+SecRule REQUEST_URI|ARGS:next|ARGS:redirect|ARGS:lang|ARGS:filename &quot;@rx (?:%0[da]|%250[da])&quot; \
+    &quot;id:25905,phase:2,deny,status:403,log,t:none,msg:'CRLF: Encoded CR/LF in URI or header param',tag:'crlf',logdata:'%{MATCHED_VAR_NAME}'&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-bị-cache-poisoning-qua-header-x-forwarded-host-mà-proxy-btc-không-tự-gắn">Ví dụ 2: App bị Cache Poisoning qua header <code>X-Forwarded-Host</code> mà proxy BTC KHÔNG tự gắn</h3>
+<p>Kiểm tra <code>Traffic log</code> ở request sạch của bot SVC: nếu <strong>không thấy</strong> header <code>X-Forwarded-Host</code> xuất hiện, bạn có thể thêm <code>|X-Forwarded-Host</code> vào <code>25904</code> để chặn triệt để.</p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li>Cố ý <strong>không</strong> đưa <code>X-Forwarded-Host</code> hoặc <code>X-Forwarded-For</code> vào <code>25904</code> mặc định vì reverse proxy của BTC có thể tự chèn các header này.</li>
+<li>Với <code>25901</code>, <code>25902</code>, <code>25903</code>, nên bật <code>deny,status:400,log</code> sớm vì request HTTP hợp lệ không bao giờ vi phạm 3 quy tắc này.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

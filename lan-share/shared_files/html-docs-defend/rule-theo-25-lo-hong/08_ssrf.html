@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mẫu Luật Phòng Thủ: Server-Side Request Forgery (SSRF)</title>
+<style>
+:root {
+  --bg: #f6f5f1; --surface: #ffffff; --surface2: #efede6; --fg: #1f1e1a;
+  --muted: #66635a; --line: #dcd8cd; --accent: #c2410c; --accent-soft: #ffedd5;
+  --code-bg: #16181d; --code-fg: #e6edf3; --ok: #15803d;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --surface: #171a21; --surface2: #212530; --fg: #e6e8ee;
+  --muted: #9aa0ad; --line: #2b303d; --accent: #fb923c; --accent-soft: #2e1d14;
+  --code-bg: #0b0d11; --code-fg: #e6edf3; --ok: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 15.5px; line-height: 1.65;
+}
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.home-btn, .theme-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); text-decoration: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.home-btn:hover, .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+.doc-path {
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.layout {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr);
+  max-width: 1320px; margin: 0 auto; gap: 24px; padding: 24px 20px 60px;
+}
+.sidebar {
+  position: sticky; top: 64px; align-self: start;
+  max-height: calc(100vh - 84px); overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 14px; font-size: 13px;
+}
+.sidebar-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin: 0 0 10px;
+}
+.toc ul { list-style: none; padding-left: 12px; margin: 0; }
+.toc > ul { padding-left: 0; }
+.toc li { margin: 4px 0; }
+.toc a { color: var(--muted); text-decoration: none; display: block; padding: 2px 4px; border-radius: 4px; }
+.toc a:hover { color: var(--accent); background: var(--surface2); }
+.content {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px 34px; min-width: 0;
+}
+h1, h2, h3, h4 { line-height: 1.3; scroll-margin-top: 72px; }
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
+h2 { font-size: 1.38em; margin-top: 28px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+h3 { font-size: 1.12em; margin-top: 20px; color: var(--accent); }
+a { color: var(--accent); }
+blockquote {
+  margin: 14px 0; padding: 10px 16px; border-left: 4px solid var(--accent);
+  background: var(--surface2); border-radius: 0 8px 8px 0;
+}
+code {
+  font-family: var(--font-mono); font-size: 0.87em;
+  background: var(--surface2); padding: 2px 6px; border-radius: 5px;
+  word-break: break-word;
+}
+.code-wrap { position: relative; margin: 14px 0; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 16px 18px; padding-top: 38px; border-radius: 10px;
+  overflow-x: auto; margin: 0; font-family: var(--font-mono);
+  font-size: 13px; line-height: 1.55; border: 1px solid var(--line);
+}
+pre code { background: none; padding: 0; color: inherit; font-size: inherit; word-break: normal; }
+.copy-btn {
+  position: absolute; top: 8px; right: 8px;
+  padding: 4px 10px; border-radius: 6px; border: 1px solid #3a4152;
+  background: #232834; color: #e6edf3; font-family: var(--font-sans);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.copy-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.copy-btn.copied { background: var(--ok); border-color: var(--ok); color: #fff; }
+.code-lang {
+  position: absolute; top: 9px; left: 14px;
+  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+  color: #8b949e; letter-spacing: .06em; user-select: none;
+}
+table {
+  width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+  display: block; overflow-x: auto;
+}
+th, td { padding: 8px 11px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { background: var(--surface2); font-weight: 700; white-space: nowrap; }
+tr:nth-child(even) td { background: rgba(127,127,127,0.03); }
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+.grid-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 12px; margin: 14px 0 24px;
+}
+.card {
+  display: block; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface2);
+  text-decoration: none; color: var(--fg); transition: border-color .15s, transform .1s;
+}
+.card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.card-title { font-weight: 700; font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+.card-sub { font-size: 12.5px; color: var(--muted); font-family: var(--font-mono); }
+.search-box {
+  width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface2); color: var(--fg); font-size: 14px; margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; padding: 14px; }
+  .sidebar { position: static; max-height: none; }
+  .content { padding: 20px 18px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="home-btn" href="../index.html">⌂ Trang chủ</a>
+    <span class="doc-path">defense_rules/08_ssrf.md</span>
+  </div>
+  <button id="themeToggle" class="theme-btn" type="button">☀ Sáng</button>
+</header>
+<div class="layout">
+  <aside class="sidebar"><div class="sidebar-title">Mục lục</div><div class="toc"><div class="toc">
+<ul>
+<li><a href="#1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</a></li>
+<li><a href="#2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</a></li>
+<li><a href="#3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</a></li>
+<li><a href="#4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</a><ul>
+<li><a href="#ví-dụ-1-app-có-chức-năng-tải-ảnh-đại-diện-từ-url-apiavatarimport-nhận-param-image_url">Ví dụ 1: App có chức năng tải ảnh đại diện từ URL (/api/avatar/import) nhận param image_url</a></li>
+<li><a href="#ví-dụ-2-app-có-tên-container-nội-bộ-đặc-thù-vd-flag-service-bot-backend">Ví dụ 2: App có tên container nội bộ đặc thù (vd flag-service, bot, backend)</a></li>
+</ul>
+</li>
+<li><a href="#5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</a></li>
+</ul>
+</div>
+</div></aside>
+  <main class="content">
+    <h1 id="mẫu-luật-phòng-thủ-server-side-request-forgery-ssrf">Mẫu Luật Phòng Thủ: Server-Side Request Forgery (SSRF)</h1>
+<ul>
+<li><strong>Nguồn tham chiếu:</strong> <code>attack/ssrf.html</code>, <code>attack/files_protocol.html</code></li>
+<li><strong>Nhóm OWASP CRS liên quan:</strong> <code>attack-ssrf</code> (<code>931xxx</code> / <code>934xxx</code>)</li>
+<li><strong>Dải Rule ID:</strong> <code>24800–24899</code> (<code>Config Type: MODSEC</code>)</li>
+<li><strong>Khả năng vá bằng WAF:</strong> Cao với IP/host nội bộ và scheme nguy hiểm; <strong>hạn chế</strong> với DNS rebinding hoặc redirect từ domain ngoài (cần phối hợp allowlist domain).</li>
+</ul>
+<h2 id="1-dấu-hiệu-tấn-công-chính-cần-chặn">1. Dấu hiệu tấn công chính cần chặn</h2>
+<ul>
+<li>Scheme ngoài HTTP(S): <code>gopher://</code>, <code>dict://</code>, <code>file://</code>, <code>ftp://</code>, <code>ldap://</code>, <code>sftp://</code>, <code>jar://</code>.</li>
+<li>Đích loopback, mạng nội bộ và metadata cloud: <code>127.0.0.1</code>, <code>localhost</code>, <code>0.0.0.0</code>, <code>[::1]</code>, <code>169.254.169.254</code>, <code>10.x</code>, <code>172.16-31.x</code>, <code>192.168.x</code>, <code>metadata.google.internal</code>.</li>
+<li>Kỹ thuật bypass IP: dạng thập phân (<code>2130706433</code>), hex (<code>0x7f000001</code>), bát phân (<code>0177.0.0.1</code>), IPv6 mapped (<code>[::ffff:127.0.0.1]</code>), userinfo trick (<code>http://allowed.com@127.0.0.1</code>).</li>
+</ul>
+<h2 id="2-bộ-luật-modsecurity-v3-mẫu">2. Bộ luật ModSecurity v3 mẫu</h2>
+<pre><code class="language-apache"># [24801] Chặn mọi scheme nguy hiểm dùng cho SSRF (gopher, file, dict, ldap...)
+SecRule ARGS &quot;@rx (?i)\b(?:gopher|dict|file|ftp|ftps|sftp|tftp|ldap|ldaps|jar|netdoc)://&quot; \
+    &quot;id:24801,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:'SSRF: Disallowed URI scheme',tag:'ssrf',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [24802] Chặn URL trỏ tới loopback, private IP, cloud metadata và tên nội bộ
+SecRule ARGS &quot;@rx (?i)https?://(?:[^/\s@]*@)?(?:\[?(?:localhost|0\.0\.0\.0|127(?:\.\d{1,3}){1,3}|10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2}|169\.254\.169\.254|::1|::ffff:127\.0\.0\.1|0:0:0:0:0:0:0:1|metadata\.google\.internal|instance-data|fuap_edge|redis|postgres|mysql|mongo)\]?)(?:[:/?#]|$)&quot; \
+    &quot;id:24802,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:'SSRF: Loopback/private/metadata host',tag:'ssrf',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [24803] Chặn bypass IP dạng số nguyên, hex (0x7f...), octal (0177...) hoặc ký tự @ trong URL
+SecRule ARGS:url|ARGS:json.url|ARGS:uri|ARGS:json.uri|ARGS:target|ARGS:json.target|ARGS:webhook|ARGS:json.webhook &quot;@rx (?i)https?://(?:[^/\s]*@|0x[0-9a-f]+|0[0-7]+\.|[0-9]{8,10}(?:[:/?#]|$))&quot; \
+    &quot;id:24803,phase:2,pass,log,t:none,t:urlDecodeUni,t:urlDecodeUni,msg:'SSRF: Obfuscated IP or userinfo @ trick',tag:'ssrf',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+
+# [24804] Allowlist domain cụ thể cho chức năng fetch/preview (bật và sửa domain theo bài)
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/(?:fetch|preview|webhook|proxy)/?$&quot; \
+    &quot;id:24804,phase:2,pass,log,t:none,t:normalizePath,chain,msg:'SSRF: URL not in allowed domain list',tag:'ssrf',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:url|ARGS:json.url &quot;!@rx ^https?://(?:[A-Za-z0-9-]+\.)?trusted-domain\.local(?::\d{1,5})?(?:/|$)&quot; &quot;t:none,t:urlDecodeUni&quot;
+</code></pre>
+<h2 id="3-giải-thích-chi-tiết-từng-luật">3. Giải thích chi tiết từng luật</h2>
+<table>
+<thead>
+<tr>
+<th>Rule ID</th>
+<th>Biến &amp; Transform</th>
+<th>Cơ chế hoạt động</th>
+<th>Mức độ an toàn bật <code>deny</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>24801</code></td>
+<td><code>ARGS</code> (<code>t:urlDecodeUni</code> ×2)</td>
+<td>Chặn toàn bộ giao thức không phải HTTP(S) thường dùng trong SSRF (<code>gopher://</code>, <code>dict://</code>, <code>file://</code>, <code>ftp://</code>, <code>ldap://</code>, <code>jar://</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>24802</code></td>
+<td><code>ARGS</code> (<code>t:urlDecodeUni</code> ×2)</td>
+<td>Chặn URL trỏ vào loopback (<code>127.x</code>, <code>localhost</code>, <code>[::1]</code>, <code>0.0.0.0</code>), mạng private RFC1918 (<code>10.x</code>, <code>172.16-31.x</code>, <code>192.168.x</code>), cloud metadata (<code>169.254.169.254</code>) và hostname service Docker nội bộ (<code>redis</code>, <code>postgres</code>, <code>mysql</code>, <code>fuap_edge</code>).</td>
+<td>Cao (kiểm tra xem bot có gọi nội bộ không)</td>
+</tr>
+<tr>
+<td><code>24803</code></td>
+<td><code>ARGS:url\|uri\|target\|webhook</code> (cả <code>json.*</code>)</td>
+<td>Chặn các mẹo che giấu IP: dạng số nguyên (<code>2130706433</code>), hex (<code>0x7f000001</code>), bát phân (<code>0177.0.0.1</code>) và userinfo <code>@</code> (<code>http://safe.com@127.0.0.1</code>).</td>
+<td>Rất cao</td>
+</tr>
+<tr>
+<td><code>24804</code></td>
+<td><code>REQUEST_FILENAME</code> + <code>ARGS:url\|ARGS:json.url</code></td>
+<td>Khuôn Allowlist chặt theo domain được phép gọi cho các API fetch/preview/webhook.</td>
+<td>Rất cao (sau khi điền đúng domain của app)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-cách-sửa-khi-gặp-trường-hợp-thực-tế-ví-dụ">4. Cách sửa khi gặp trường hợp thực tế (Ví dụ)</h2>
+<h3 id="ví-dụ-1-app-có-chức-năng-tải-ảnh-đại-diện-từ-url-apiavatarimport-nhận-param-image_url">Ví dụ 1: App có chức năng tải ảnh đại diện từ URL (<code>/api/avatar/import</code>) nhận param <code>image_url</code></h3>
+<p>Trên <code>Traffic log</code>, bot SVC gửi <code>{"image_url": "http://cdn.fhacker.local/img/a.png"}</code>, còn đối thủ gửi <code>{"image_url": "http://127.0.0.1:6379/"}</code> hoặc <code>{"image_url": "http://internal-admin:8080/flag"}</code>.
+- <strong>Cách sửa <code>24804</code>:</strong> Đổi route, tên param và điền đúng domain <code>cdn.fhacker.local</code> (chặn luôn cả redirect sang IP nội bộ từ host lạ):</p>
+<pre><code class="language-apache"># Bản sửa thực tế từ [24804] cho chức năng import avatar
+SecRule REQUEST_FILENAME &quot;@rx (?i)^/api/avatar/import/?$&quot; \
+    &quot;id:24804,phase:2,deny,status:403,log,t:none,t:normalizePath,chain,msg:'SSRF: Untrusted avatar image_url host',tag:'ssrf',logdata:'%{MATCHED_VAR_NAME}=%{MATCHED_VAR}'&quot;
+    SecRule ARGS:image_url|ARGS:json.image_url &quot;!@rx ^https?://cdn\.fhacker\.local(?::\d{1,5})?/[A-Za-z0-9._/-]{1,128}\z&quot; &quot;t:none,t:urlDecodeUni&quot;
+</code></pre>
+<h3 id="ví-dụ-2-app-có-tên-container-nội-bộ-đặc-thù-vd-flag-service-bot-backend">Ví dụ 2: App có tên container nội bộ đặc thù (vd <code>flag-service</code>, <code>bot</code>, <code>backend</code>)</h3>
+<p>Nếu bạn phát hiện trong source/log có hostname nội bộ như <code>http://flag-service:5000</code>, thêm <code>|flag-service|bot|backend</code> vào danh sách host trong <code>24802</code>.</p>
+<h2 id="5-lưu-ý-tránh-false-positive-svc">5. Lưu ý tránh False Positive (SVC)</h2>
+<ul>
+<li>Trong phòng thi offline, nhớ kiểm tra <code>Traffic log</code> xem bot SVC có gọi chức năng fetch ảnh/webhook tới domain/IP nội bộ hợp lệ nào không để đưa vào <code>24804</code> (hoặc loại trừ khỏi <code>24802</code>).</li>
+<li>Rule <code>24804</code> là ví dụ mẫu: <strong>chỉ đổi sang <code>deny</code> sau khi đã thay <code>trusted-domain.local</code> bằng đúng domain mà bot SVC dùng</strong>.</li>
+</ul>
+  </main>
+</div>
+<script>
+(function() {
+  const root = document.documentElement;
+  const saved = localStorage.getItem('fhacker_theme') || 'dark';
+  root.setAttribute('data-theme', saved);
+
+  const btn = document.getElementById('themeToggle');
+  function syncBtn() {
+    if (!btn) return;
+    btn.textContent = root.getAttribute('data-theme') === 'dark' ? '☀ Sáng' : '🌙 Tối';
+  }
+  syncBtn();
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('fhacker_theme', next);
+      syncBtn();
+    });
+  }
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.querySelectorAll('pre > code').forEach((codeEl) => {
+    const pre = codeEl.parentElement;
+    const wrap = document.createElement('div');
+    wrap.className = 'code-wrap';
+    pre.parentNode.insertBefore(wrap, pre);
+    wrap.appendChild(pre);
+
+    const langMatch = (codeEl.className || '').match(/language-([a-zA-Z0-9_-]+)/);
+    const langLabel = document.createElement('span');
+    langLabel.className = 'code-lang';
+    langLabel.textContent = langMatch ? langMatch[1] : 'text';
+    wrap.appendChild(langLabel);
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', () => {
+      const text = codeEl.innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      copyBtn.textContent = '✓ Đã copy';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy';
+        copyBtn.classList.remove('copied');
+      }, 1400);
+    });
+    wrap.appendChild(copyBtn);
+  });
+
+  const search = document.getElementById('indexSearch');
+  if (search) {
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>

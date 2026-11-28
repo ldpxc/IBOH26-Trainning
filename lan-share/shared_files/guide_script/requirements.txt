@@ -1,0 +1,29 @@
+# Core HTTP
+requests>=2.31.0,<3
+
+# Response parsing
+beautifulsoup4>=4.12.0,<5
+lxml>=5.0.0,<6
+
+# Config / utilities
+PyYAML>=6.0.1,<7
+tenacity>=8.3.0,<10
+
+# WebSocket (xem 03_Thao_Tac_Nang_Cao/04_WebSocket.md)
+websocket-client>=1.7.0,<2
+
+# JWT: tự ký lại token khi biết secret (xem JWT_Attacks.md, 02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md)
+pyjwt>=2.8.0,<3
+
+# Session/Cookie Forge: tự ký cookie Flask khi biết SECRET_KEY (xem Session_Cookie_Forge.md)
+flask>=3.0.0,<4
+flask-unsign>=1.2.0,<2
+
+# Crypto: tự mã hoá/giải mã cho các bài padding oracle, hash length extension
+pycryptodome>=3.20.0,<4
+
+# Optional: async concurrency
+# aiohttp>=3.9.0,<4
+
+# Optional: browser automation (XSS/CSRF victim simulation)
+# playwright>=1.44.0,<2

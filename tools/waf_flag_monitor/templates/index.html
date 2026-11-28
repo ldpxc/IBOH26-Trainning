@@ -1,0 +1,1173 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WAF Flag Leak Monitor — Realtime</title>
+<style>
+  :root {
+    --bg: #0b0f17;
+    --panel: #121826;
+    --panel-2: #182032;
+    --border: #253047;
+    --text: #e6edf7;
+    --muted: #8b9bb4;
+    --red: #ff4d5e;
+    --red-bg: rgba(255, 77, 94, 0.14);
+    --amber: #ffb020;
+    --amber-bg: rgba(255, 176, 32, 0.15);
+    --green: #22c55e;
+    --green-bg: rgba(34, 197, 94, 0.15);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59, 130, 246, 0.15);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; font-size: 13px; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    flex-shrink: 0; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px;
+    border-radius: 999px; font-size: 11px; font-weight: 600; font-family: var(--mono);
+  }
+  .pill.live { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.35); }
+  .pill.error { background: var(--red-bg); color: var(--red); border: 1px solid rgba(255,77,94,0.35); }
+  .pill.stopped { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(255,176,32,0.35); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.live .dot { animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .stats { display: flex; align-items: center; gap: 14px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .stats b { color: var(--text); }
+  .stats b.alert-count { color: var(--red); }
+
+  .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  button, .btn {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  button:hover { border-color: #3d4f73; background: #1e283d; }
+  button.active { background: var(--blue-bg); border-color: var(--blue); color: #93c5fd; }
+  button.danger:hover { background: var(--red-bg); border-color: var(--red); color: var(--red); }
+  button.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  button.primary:hover { background: #2563eb; }
+
+  /* Error banner */
+  #err-banner {
+    display: none; padding: 8px 16px; background: var(--red-bg); color: #fda4af;
+    border-bottom: 1px solid rgba(255,77,94,0.35); font-family: var(--mono); font-size: 12px;
+  }
+
+  /* Main layout */
+  .main { display: flex; flex: 1; min-height: 0; }
+  .sidebar {
+    width: 380px; min-width: 300px; max-width: 48vw; display: flex; flex-direction: column;
+    border-right: 1px solid var(--border); background: var(--panel);
+  }
+  .filter-bar { padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+  .filter-bar input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; outline: none;
+  }
+  .filter-bar input:focus { border-color: var(--blue); }
+  .sidebar-stats {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 7px 10px; background: var(--panel-2); border-bottom: 1px solid var(--border);
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .unread-pill {
+    display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(255, 176, 32, 0.16); color: #fcd34d; border: 1px solid rgba(255, 176, 32, 0.45);
+    font-weight: 700;
+  }
+  .unread-pill.zero {
+    background: var(--green-bg); color: var(--green); border-color: rgba(34,197,94,0.35);
+  }
+  .btn-xs { padding: 2px 7px; font-size: 11px; border-radius: 4px; }
+
+  .alert-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .alert-card {
+    padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2);
+    cursor: pointer; transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+    opacity: 0.72;
+  }
+  .alert-card:hover { border-color: #3e5178; opacity: 0.95; }
+  .alert-card.unread {
+    opacity: 1;
+    background: rgba(255, 176, 32, 0.11);
+    border-color: rgba(255, 176, 32, 0.5);
+    border-left: 4px solid var(--amber);
+  }
+  .alert-card.unread:hover { background: rgba(255, 176, 32, 0.17); border-color: var(--amber); }
+  .alert-card.selected { opacity: 1; border-color: var(--blue); background: #1a253b; }
+  .alert-card.unread.selected { border-color: var(--blue); border-left: 4px solid var(--amber); background: #262520; }
+  .alert-card.flash { animation: flashNew 1.2s ease-out; }
+  @keyframes flashNew {
+    0% { box-shadow: 0 0 0 2px var(--red), 0 0 20px rgba(255,77,94,0.5); background: rgba(255,77,94,0.25); }
+    100% { box-shadow: none; }
+  }
+
+  .card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 5px; }
+  .badges { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .badge {
+    font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  }
+  .b-method { background: var(--blue-bg); color: #93c5fd; }
+  .b-status-2 { background: var(--green-bg); color: var(--green); }
+  .b-status-3 { background: var(--blue-bg); color: #93c5fd; }
+  .b-status-4 { background: var(--amber-bg); color: var(--amber); }
+  .b-status-5 { background: var(--red-bg); color: var(--red); }
+  .b-new { background: var(--red); color: #fff; }
+  .b-modsec { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; }
+  .card-time { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .card-uri {
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 5px;
+  }
+  .card-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
+  .card-flag {
+    font-family: var(--mono); font-size: 11px; color: #fca5a5; background: var(--red-bg);
+    border: 1px solid rgba(255,77,94,0.3); padding: 3px 6px; border-radius: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Inspector */
+  .inspector { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--muted); text-align: center; padding: 24px; gap: 8px;
+  }
+  .insp-head {
+    padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .insp-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .insp-title h2 { margin: 0; font-family: var(--mono); font-size: 14px; word-break: break-all; }
+  .flag-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    padding: 8px 10px; border-radius: 6px; background: var(--red-bg); border: 1px solid rgba(255,77,94,0.4);
+  }
+  .flag-list { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .flag-chip {
+    font-family: var(--mono); font-size: 12px; color: #fecaca; background: rgba(0,0,0,0.35);
+    padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,77,94,0.4); cursor: pointer;
+  }
+  .modsec-bar {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; color: var(--muted);
+  }
+  .modsec-item {
+    font-family: var(--mono); background: rgba(168, 85, 247, 0.14); color: #e9d5ff;
+    border: 1px solid rgba(168, 85, 247, 0.35); padding: 2px 7px; border-radius: 4px;
+  }
+
+  .panes { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+  @media (max-width: 1100px) { .panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
+  .pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+  .pane:last-child { border-right: none; }
+  .pane-head {
+    padding: 8px 12px; background: var(--panel-2); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .pane-head strong { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+  .pane-body {
+    flex: 1; overflow: auto; padding: 12px; margin: 0; font-family: var(--mono);
+    font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #dbeafe;
+  }
+  .hl-flag {
+    background: #fde047; color: #111827; font-weight: 800; padding: 1px 3px;
+    border-radius: 3px; box-shadow: 0 0 0 2px rgba(255, 77, 94, 0.8);
+  }
+  .hl-line { color: #93c5fd; font-weight: 700; }
+  .hl-hdr { color: #94a3b8; }
+  .hl-method { color: #34d399; font-weight: 800; }
+  .hl-uri { color: #e2e8f0; font-weight: 600; }
+  .hl-qkey { color: #fbbf24; }
+  .hl-qval { color: #a7f3d0; }
+  .hl-ver { color: #64748b; }
+  .hl-hname { color: #38bdf8; font-weight: 600; }
+  .hl-hval { color: #cbd5e1; }
+  .hl-s2 { color: #4ade80; font-weight: 800; }
+  .hl-s3 { color: #60a5fa; font-weight: 800; }
+  .hl-s4 { color: #fbbf24; font-weight: 800; }
+  .hl-s5 { color: #f87171; font-weight: 800; }
+  .hl-jkey { color: #7dd3fc; }
+  .hl-jstr { color: #86efac; }
+  .hl-jnum { color: #f9a8d4; }
+  .hl-jlit { color: #c084fc; font-weight: 600; }
+  .hl-tag { color: #f472b6; }
+  .hl-aname { color: #fbbf24; }
+  .hl-aval { color: #86efac; }
+  .hl-comment { color: #64748b; font-style: italic; }
+
+  .seg-tabs { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--bg); }
+  .seg-tabs button {
+    border: none; border-radius: 0; padding: 3px 9px; font-size: 11px; background: transparent; color: var(--muted);
+  }
+  .seg-tabs button.active { background: var(--blue); color: #fff; }
+  .render-frame {
+    flex: 1; width: 100%; border: none; background: #ffffff; display: none;
+  }
+
+  /* Settings Modal */
+  dialog {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px; width: min(480px, 92vw);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  }
+  dialog::backdrop { background: rgba(0,0,0,0.65); }
+  .form-grid { display: grid; gap: 10px; margin: 12px 0 16px; }
+  .form-row { display: flex; flex-direction: column; gap: 4px; }
+  .form-row label { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .form-row input, .form-row select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    padding: 7px 10px; border-radius: 6px; font-family: var(--mono); font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span>🛡️ WAF Flag Leak Monitor</span>
+    <span id="status-pill" class="pill stopped"><span class="dot"></span><span id="status-text">CONNECTING</span></span>
+  </div>
+  <div class="stats">
+    <span>Mode: <b id="st-mode">http</b></span>
+    <span>Scanned: <b id="st-scanned">0</b></span>
+    <span>Skipped: <b id="st-skipped">0</b></span>
+    <span>Alerts: <b id="st-alerts" class="alert-count">0</b></span>
+    <span>Last: <b id="st-last">—</b></span>
+  </div>
+  <div class="actions">
+    <button id="btn-sound" class="active" title="Bật/tắt âm thanh cảnh báo">🔊 Sound: ON</button>
+    <button id="btn-notify" title="Bật thông báo desktop">🔔 Desktop</button>
+    <button id="btn-autoselect" class="active" title="Tự động mở alert mới nhất">🎯 Auto-select</button>
+    <button id="btn-scan-recent" title="Quét 100 request gần nhất trong log">🔍 Scan Recent (100)</button>
+    <button id="btn-export-basket" title="Xem / xuất bộ Rule WAF đã thu thập">📦 Rules (<b id="st-basket">0</b>)</button>
+    <button id="btn-settings">⚙️ Settings</button>
+    <button id="btn-clear" class="danger">🗑️ Clear</button>
+    <a href="/logout" class="btn" style="text-decoration:none;">🚪 Logout</a>
+  </div>
+</header>
+
+<div id="err-banner"></div>
+
+<div class="main">
+  <aside class="sidebar">
+    <div class="filter-bar">
+      <input id="filter-input" type="search" placeholder="Lọc theo URI, IP, flag, status...">
+    </div>
+    <div class="sidebar-stats">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="unread-pill" class="unread-pill zero">Chưa xem: <b id="st-unread">0</b></span>
+        <span>Tổng: <b id="st-sidebar-total">0</b></span>
+      </div>
+      <button id="btn-mark-all-read" class="btn-xs" title="Đánh dấu tất cả đã xem">✓ Đã xem hết</button>
+    </div>
+    <div id="alert-list" class="alert-list"></div>
+  </aside>
+
+  <section class="inspector">
+    <div id="empty-state" class="empty-state">
+      <div style="font-size: 32px;">📡</div>
+      <div><b>Đang giám sát response từ WAF realtime...</b></div>
+      <div style="max-width: 440px; font-size: 12px;">
+        Mỗi khi có response mới chứa chuỗi khớp regex <code>FHACKER2026{&lt;64hex&gt;}</code> (trong cả Response Headers hoặc Body đã giải nén gzip), cảnh báo sẽ bật ngay tại đây.
+      </div>
+    </div>
+
+    <div id="insp-content" style="display:none; flex-direction:column; flex:1; min-height:0;">
+      <div class="insp-head">
+        <div class="insp-title">
+          <h2 id="insp-uri"></h2>
+          <div style="display:flex; gap:8px; align-items:center; font-family:var(--mono); font-size:11px; color:var(--muted);">
+            <span id="insp-meta"></span>
+            <button id="btn-gen-rule" class="primary" title="Phân tích request và sinh rule ModSecurity chặn tấn công này">🛡️ Tạo Rule WAF</button>
+            <button id="btn-gen-exploit" title="Sinh script Python replay request này sang các đội khác để farm cờ">⚔️ Sinh Exploit Script</button>
+          </div>
+        </div>
+        <div class="flag-banner">
+          <div class="flag-list" id="insp-flags"></div>
+          <div id="insp-locs" style="font-family:var(--mono); font-size:11px; color:#fca5a5;"></div>
+        </div>
+        <div class="modsec-bar" id="insp-modsec"></div>
+      </div>
+
+      <div class="panes">
+        <div class="pane">
+          <div class="pane-head">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong>Request</strong>
+              <div class="seg-tabs" id="req-tabs">
+                <button type="button" data-req-mode="pretty" class="active">Pretty</button>
+                <button type="button" data-req-mode="raw">Raw</button>
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button id="btn-copy-curl">Copy cURL</button>
+              <button id="btn-copy-req">Copy Raw</button>
+            </div>
+          </div>
+          <pre id="pane-req" class="pane-body"></pre>
+        </div>
+        <div class="pane">
+          <div class="pane-head">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong>Response</strong>
+              <div class="seg-tabs" id="resp-tabs">
+                <button type="button" data-resp-mode="pretty" class="active">Pretty</button>
+                <button type="button" data-resp-mode="raw">Raw</button>
+                <button type="button" data-resp-mode="render">Render</button>
+              </div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button id="btn-jump-flag" class="primary">Jump to Flag</button>
+              <button id="btn-copy-resp">Copy Raw</button>
+            </div>
+          </div>
+          <pre id="pane-resp" class="pane-body"></pre>
+          <iframe id="pane-resp-render" sandbox="" class="render-frame" title="HTML Render"></iframe>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<dialog id="settings-dialog">
+  <h3 style="margin:0 0 4px;">Cấu hình kết nối WAF</h3>
+  <div style="font-size:12px; color:var(--muted);">Thay đổi nguồn log hoặc regex phát hiện flag.</div>
+  <form id="settings-form" method="dialog" autocomplete="off">
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Mode</label>
+        <select id="cfg-mode">
+          <option value="range">HTTP Range Tail (siêu nhẹ cho WAF 2 CPU, khuyên dùng)</option>
+          <option value="http">HTTP API (/trafficlog/api/history, có ModSec IDs)</option>
+          <option value="docker">Docker Tail (traffic.log trực tiếp qua Docker)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>WAF URL</label>
+        <input id="cfg-url" type="text" placeholder="http://localhost:9110" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label>Username</label>
+        <input id="cfg-user" type="text" placeholder="admin" autocomplete="off">
+      </div>
+      <div class="form-row">
+        <label>Password (để trống nếu giữ nguyên)</label>
+        <input id="cfg-pass" type="password" placeholder="Để trống nếu không đổi" autocomplete="new-password">
+      </div>
+      <div class="form-row">
+        <label>Docker Container (cho Docker mode)</label>
+        <input id="cfg-container" type="text" placeholder="b_notevault-fuap_bunkerweb-1">
+      </div>
+      <div class="form-row">
+        <label>Poll Interval (giây, cho HTTP mode)</label>
+        <input id="cfg-interval" type="number" step="0.1" min="0.3" value="1.0">
+      </div>
+      <div class="form-row">
+        <label>Flag Regex</label>
+        <input id="cfg-pattern" type="text">
+      </div>
+      <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+        <input id="cfg-smart-filter" type="checkbox" checked>
+        <span>Lọc nhanh (bỏ qua 403/429/304 &amp; file tĩnh để tăng tốc HTTP API)</span>
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; font-size:12px; cursor:pointer;">
+        <input id="cfg-insecure" type="checkbox">
+        <span>Bỏ qua lỗi SSL (dùng cho HTTPS self-signed)</span>
+      </label>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button type="button" id="btn-cfg-cancel">Hủy</button>
+      <button type="submit" class="primary">Áp dụng & Khởi động lại</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="rule-dialog" style="width:min(820px, 95vw);">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+    <h3 style="margin:0;">🛡️ Sinh Rule ModSecurity từ Request</h3>
+    <div style="display:flex; align-items:center; gap:10px; font-size:12px; flex-wrap:wrap;">
+      <label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
+        <span style="color:var(--muted);">Action:</span>
+        <select id="rule-action-mode" style="background:var(--bg); color:var(--text); border:1px solid var(--border); padding:4px 8px; border-radius:6px; font-family:var(--mono); font-size:12px;">
+          <option value="pass" selected>pass,log (An toàn — test 30s trước)</option>
+          <option value="deny">deny,status:403,log (Chặn ngay)</option>
+        </select>
+      </label>
+      <label style="display:flex; align-items:center; gap:5px; cursor:pointer;" title="Khóa rule theo REQUEST_HEADERS:Host nếu nhiều service chạy chung 1 WAF">
+        <input id="rule-scope-host" type="checkbox">
+        <span>Khóa theo Host</span>
+      </label>
+      <label for="rule-base-id" style="color:var(--muted);">Rule ID:</label>
+      <input id="rule-base-id" type="number" value="27200" min="20000" max="29999" style="width:84px; background:var(--bg); color:var(--text); border:1px solid var(--border); padding:4px 8px; border-radius:6px; font-family:var(--mono);">
+    </div>
+  </div>
+  <div style="margin-top:8px; display:flex; align-items:center; gap:8px; font-size:12px;" title="Bắt buộc điền nếu alert lộ flag qua Response Body — route trả cờ THẬT cho bot SVC, không phải đoán. Để trống nếu chưa chắc chắn (sẽ không sinh rule Phase 4, chỉ cảnh báo).">
+    <label for="rule-flag-routes" style="color:var(--muted); white-space:nowrap;">Route cờ hợp lệ (Phase 4):</label>
+    <input id="rule-flag-routes" type="text" placeholder="/api/flag/123, /healthz (cách nhau bởi dấu phẩy, để trống nếu chưa xác nhận)" style="flex:1; background:var(--bg); color:var(--text); border:1px solid var(--border); padding:4px 8px; border-radius:6px; font-family:var(--mono); font-size:12px;">
+  </div>
+  <div id="rule-findings" style="margin:10px 0; padding:8px 10px; border-radius:6px; background:var(--blue-bg); border:1px solid rgba(59,130,246,0.35); font-size:12px;"></div>
+  <div id="rule-options" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px; max-height:175px; overflow-y:auto;"></div>
+  <label style="display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px;">Rule Preview (có thể sửa trực tiếp trước khi test &amp; copy):</label>
+  <textarea id="rule-preview" rows="10" style="width:100%; background:var(--bg); color:#a7f3d0; border:1px solid var(--border); border-radius:6px; padding:10px; font-family:var(--mono); font-size:12px; line-height:1.45; resize:vertical;"></textarea>
+  <div id="rule-val-box" style="margin-top:8px; padding:8px 10px; border-radius:6px; font-family:var(--mono); font-size:11px; display:none;"></div>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap;">
+    <button type="button" id="btn-rule-close">Đóng</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" id="btn-rule-validate">🧪 Kiểm tra Rule (ReDoS + FP + Syntax)</button>
+      <button type="button" id="btn-rule-copy">📋 Copy Rule</button>
+      <button type="button" id="btn-rule-download">💾 Tải .conf</button>
+      <button type="button" id="btn-rule-add-basket" class="primary">➕ Thêm vào bộ Rule</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="exploit-dialog" style="width:min(820px, 95vw);">
+  <h3 style="margin:0 0 4px;">⚔️ Sinh Exploit Script (Replay sang đội khác)</h3>
+  <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">
+    Script Python độc lập, có hướng dẫn từng bước ngay trong file — không cần biết viết code.
+    <b>Script không tự nộp cờ</b>, bạn phải tự đối chiếu đúng đội rồi nộp tay.
+  </div>
+  <div id="exploit-notes" style="margin:0 0 10px; padding:8px 10px; border-radius:6px; background:var(--blue-bg); border:1px solid rgba(59,130,246,0.35); font-size:12px;"></div>
+  <label style="display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:4px;">Script Preview (có thể sửa trực tiếp trước khi tải):</label>
+  <textarea id="exploit-preview" rows="16" style="width:100%; background:var(--bg); color:#a7f3d0; border:1px solid var(--border); border-radius:6px; padding:10px; font-family:var(--mono); font-size:12px; line-height:1.45; resize:vertical;"></textarea>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap;">
+    <button type="button" id="btn-exploit-close">Đóng</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" id="btn-exploit-copy">📋 Copy Script</button>
+      <button type="button" id="btn-exploit-download" class="primary">💾 Tải .py</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="basket-dialog" style="width:min(820px, 95vw);">
+  <h3 style="margin:0 0 6px;">📦 Bộ Rule Phòng Thủ Đã Thu Thập</h3>
+  <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">Tổng hợp các rule bạn đã chọn (Config Type: <code>MODSEC</code> cho SecRule; nếu có <code>proxy_hide_header</code> thì tách sang <code>SERVER_HTTP</code>).</div>
+  <textarea id="basket-preview" rows="13" style="width:100%; background:var(--bg); color:#a7f3d0; border:1px solid var(--border); border-radius:6px; padding:10px; font-family:var(--mono); font-size:12px; line-height:1.45; resize:vertical;"></textarea>
+  <div id="basket-val-box" style="margin-top:8px; padding:8px 10px; border-radius:6px; font-family:var(--mono); font-size:11px; display:none;"></div>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap;">
+    <button type="button" id="btn-basket-clear" class="danger">🗑️ Xóa hết</button>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" id="btn-basket-validate">🧪 Kiểm tra bộ Rule</button>
+      <button type="button" id="btn-basket-close">Đóng</button>
+      <button type="button" id="btn-basket-copy">📋 Copy tất cả</button>
+      <button type="button" id="btn-basket-download" class="primary">💾 Tải defense_rules.conf</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const VIEWED_KEY = 'waf_monitor_viewed_ids';
+  function loadViewedIds() {
+    try { return new Set(JSON.parse(localStorage.getItem(VIEWED_KEY) || '[]')); }
+    catch (_) { return new Set(); }
+  }
+  function saveViewedIds(set) {
+    try { localStorage.setItem(VIEWED_KEY, JSON.stringify([...set].slice(-2000))); }
+    catch (_) {}
+  }
+
+  const state = {
+    alerts: [],
+    selectedId: null,
+    sound: true,
+    notify: false,
+    autoSelect: true,
+    pattern: /FHACKER2026\{[0-9a-fA-F]{64}\}/g,
+    viewedIds: loadViewedIds(),
+    flashIds: new Set(),
+    reqMode: 'pretty',
+    respMode: 'pretty',
+  };
+
+  function markViewed(id) {
+    if (!id || state.viewedIds.has(id)) return;
+    state.viewedIds.add(id);
+    saveViewedIds(state.viewedIds);
+  }
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function playBeep() {
+    if (!state.sound) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+      [880, 1174].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + i * 0.12);
+        gain.gain.setValueAtTime(0.18, now + i * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.11);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.12);
+        osc.stop(now + i * 0.12 + 0.12);
+      });
+    } catch (_) {}
+  }
+
+  function sendDesktopNotify(alert) {
+    if (!state.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
+    new Notification('🚨 Flag Leak Detected!', {
+      body: `${alert.method} ${alert.uri}\n${alert.flags[0]}`,
+    });
+  }
+
+  function updateStats(st) {
+    const pill = $('status-pill');
+    pill.className = 'pill ' + (st.status === 'running' ? 'live' : st.status === 'error' ? 'error' : 'stopped');
+    $('status-text').textContent = (st.status || 'unknown').toUpperCase();
+    $('st-mode').textContent = st.mode || 'http';
+    $('st-scanned').textContent = (st.total_scanned || 0).toLocaleString();
+    $('st-skipped').textContent = (st.total_skipped || 0).toLocaleString();
+    $('st-alerts').textContent = state.alerts.length.toLocaleString();
+    $('st-last').textContent = st.last_poll_at ? st.last_poll_at.split('T')[1] : '—';
+    const err = $('err-banner');
+    if (st.last_error) {
+      err.style.display = 'block';
+      err.textContent = '⚠️ ' + st.last_error;
+    } else {
+      err.style.display = 'none';
+    }
+  }
+
+  function renderList() {
+    const q = $('filter-input').value.trim().toLowerCase();
+    const list = $('alert-list');
+    const filtered = state.alerts.filter(a => {
+      if (!q) return true;
+      return (
+        (a.uri || '').toLowerCase().includes(q) ||
+        (a.source_ip || '').toLowerCase().includes(q) ||
+        String(a.status || '').includes(q) ||
+        (a.flags || []).some(f => f.toLowerCase().includes(q))
+      );
+    });
+
+    const unreadCount = state.alerts.reduce((n, a) => n + (state.viewedIds.has(a.id) ? 0 : 1), 0);
+    $('st-unread').textContent = unreadCount.toLocaleString();
+    $('st-sidebar-total').textContent = state.alerts.length.toLocaleString();
+    $('unread-pill').classList.toggle('zero', unreadCount === 0);
+
+    list.replaceChildren();
+    for (const a of filtered) {
+      const card = document.createElement('div');
+      const isUnread = !state.viewedIds.has(a.id);
+      const isFlash = state.flashIds.has(a.id);
+      card.className = 'alert-card'
+        + (isUnread ? ' unread' : '')
+        + (a.id === state.selectedId ? ' selected' : '')
+        + (isFlash ? ' flash' : '');
+      const statusCls = 'b-status-' + String(a.status || '2')[0];
+      const t = (a.time || a.detected_at || '').replace('T', ' ').slice(11, 19);
+      const modsecBadge = (a.modsec_ids && a.modsec_ids.length)
+        ? `<span class="badge b-modsec">WAF: ${esc(a.modsec_ids[0])}${a.modsec_ids.length > 1 ? ' +' + (a.modsec_ids.length - 1) : ''}</span>`
+        : '';
+      card.innerHTML = `
+        <div class="card-top">
+          <div class="badges">
+            ${isUnread ? '<span class="badge b-new">CHƯA XEM</span>' : ''}
+            <span class="badge b-method">${esc(a.method)}</span>
+            <span class="badge ${statusCls}">${esc(a.status)}</span>
+            ${modsecBadge}
+          </div>
+          <span class="card-time">${esc(t)}</span>
+        </div>
+        <div class="card-uri" title="${esc(a.uri)}">${esc(a.uri)}</div>
+        <div class="card-meta">
+          <span>IP: ${esc(a.source_ip || '—')}</span>
+          <span>${esc((a.locations || []).join(', '))}</span>
+        </div>
+        <div class="card-flag" title="${esc((a.flags || []).join(', '))}">${esc((a.flags || [])[0] || '')}</div>
+      `;
+      card.addEventListener('click', () => {
+        markViewed(a.id);
+        state.flashIds.delete(a.id);
+        selectAlert(a.id);
+      });
+      list.appendChild(card);
+    }
+    $('st-alerts').textContent = state.alerts.length.toLocaleString();
+  }
+
+  function hlFlags(text) {
+    const re = new RegExp(state.pattern.source, 'g');
+    let out = '', last = 0;
+    for (const m of String(text ?? '').matchAll(re)) {
+      out += esc(text.slice(last, m.index));
+      out += `<mark class="hl-flag">${esc(m[0])}</mark>`;
+      last = m.index + m[0].length;
+    }
+    out += esc(String(text ?? '').slice(last));
+    return out;
+  }
+
+  function tokenize(text, regex, fn) {
+    let out = '', last = 0;
+    for (const m of text.matchAll(regex)) {
+      if (m.index > last) out += hlFlags(text.slice(last, m.index));
+      out += fn(m);
+      last = m.index + m[0].length;
+    }
+    if (last < text.length) out += hlFlags(text.slice(last));
+    return out;
+  }
+
+  function formatQueryParams(qs) {
+    return qs.split('&').map(part => {
+      const idx = part.indexOf('=');
+      if (idx < 0) return `<span class="hl-qkey">${hlFlags(part)}</span>`;
+      const k = part.slice(0, idx);
+      const v = part.slice(idx + 1);
+      return `<span class="hl-qkey">${hlFlags(k)}</span>=<span class="hl-qval">${hlFlags(v)}</span>`;
+    }).join('&amp;');
+  }
+
+  function renderHttpLine(line, side) {
+    const parts = String(line || '').split(' ');
+    if (side === 'request' && parts.length >= 2) {
+      const method = parts[0];
+      const ver = parts.length >= 3 ? parts[parts.length - 1] : '';
+      const uri = parts.length >= 3 ? parts.slice(1, -1).join(' ') : parts[1];
+      const qIdx = uri.indexOf('?');
+      const pathHtml = qIdx < 0
+        ? `<span class="hl-uri">${hlFlags(uri)}</span>`
+        : `<span class="hl-uri">${hlFlags(uri.slice(0, qIdx + 1))}</span>${formatQueryParams(uri.slice(qIdx + 1))}`;
+      return `<span class="hl-method">${esc(method)}</span> ${pathHtml}${ver ? ' <span class="hl-ver">' + esc(ver) + '</span>' : ''}`;
+    }
+    if (side === 'response' && parts.length >= 2) {
+      const ver = parts[0];
+      const code = parts.slice(1).join(' ');
+      const cls = 'hl-s' + (code[0] || '2');
+      return `<span class="hl-ver">${esc(ver)}</span> <span class="${cls}">${esc(code)}</span>`;
+    }
+    return `<span class="hl-line">${hlFlags(line)}</span>`;
+  }
+
+  function renderHeadersHtml(hdrText) {
+    if (!hdrText) return '';
+    return hdrText.split('\n').map(line => {
+      const idx = line.indexOf(':');
+      if (idx < 0) return hlFlags(line);
+      return `<span class="hl-hname">${esc(line.slice(0, idx))}</span>:<span class="hl-hval">${hlFlags(line.slice(idx + 1))}</span>`;
+    }).join('\n');
+  }
+
+  function getHeaderValue(hdrText, name) {
+    const target = name.toLowerCase();
+    for (const line of String(hdrText || '').split('\n')) {
+      const idx = line.indexOf(':');
+      if (idx > 0 && line.slice(0, idx).trim().toLowerCase() === target) {
+        return line.slice(idx + 1).trim();
+      }
+    }
+    return '';
+  }
+
+  function prettyHtmlIndent(html) {
+    const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+    const tokens = html.replace(/>\s+</g, '><').split(/(<[^>]+>)/g).filter(Boolean);
+    let indent = 0;
+    const lines = [];
+    for (const tok of tokens) {
+      if (tok.startsWith('</')) {
+        indent = Math.max(0, indent - 1);
+        lines.push('  '.repeat(indent) + tok);
+      } else if (tok.startsWith('<') && !tok.startsWith('<!') && !tok.startsWith('<?')) {
+        lines.push('  '.repeat(indent) + tok);
+        const m = tok.match(/^<([a-zA-Z0-9:-]+)/);
+        const tag = m ? m[1].toLowerCase() : '';
+        if (!tok.endsWith('/>') && !voidTags.has(tag)) indent++;
+      } else {
+        const trimmed = tok.trim();
+        if (trimmed) lines.push('  '.repeat(indent) + trimmed);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  function highlightJson(text) {
+    const re = /("(?:[^"\\]|\\.)*")(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+    return tokenize(text, re, m => {
+      if (m[1]) return m[2] ? `<span class="hl-jkey">${hlFlags(m[1])}</span>${esc(m[2])}` : `<span class="hl-jstr">${hlFlags(m[1])}</span>`;
+      if (m[3]) return `<span class="hl-jlit">${esc(m[0])}</span>`;
+      return `<span class="hl-jnum">${esc(m[0])}</span>`;
+    });
+  }
+
+  function highlightHtml(text) {
+    const re = /<!--[\s\S]*?-->|(<\/?)([\w:-]+)|([\w:-]+)(=)("[^"]*"|'[^']*')|\/?>/g;
+    return tokenize(text, re, m => {
+      if (m[0].startsWith('<!--')) return `<span class="hl-comment">${hlFlags(m[0])}</span>`;
+      if (m[2]) return `<span class="hl-tag">${esc(m[1] + m[2])}</span>`;
+      if (m[3]) return `<span class="hl-aname">${esc(m[3])}</span>=<span class="hl-aval">${hlFlags(m[5])}</span>`;
+      return `<span class="hl-tag">${esc(m[0])}</span>`;
+    });
+  }
+
+  function renderPrettyBody(body, hdrText) {
+    if (!body) return '';
+    const ct = getHeaderValue(hdrText, 'content-type').toLowerCase();
+    const trimmed = body.trim();
+    if (ct.includes('json') || trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        const formatted = JSON.stringify(JSON.parse(trimmed), null, 2);
+        return highlightJson(formatted);
+      } catch (_) {}
+    }
+    if (ct.includes('x-www-form-urlencoded')) {
+      return body.split('&').map(part => {
+        const idx = part.indexOf('=');
+        if (idx < 0) return `<span class="hl-qkey">${hlFlags(part)}</span>`;
+        const k = part.slice(0, idx);
+        const v = part.slice(idx + 1);
+        let decoded = '';
+        try {
+          const dv = decodeURIComponent(v.replace(/\+/g, ' '));
+          if (dv !== v) decoded = `  <span class="hl-comment"># ${hlFlags(dv)}</span>`;
+        } catch (_) {}
+        return `<span class="hl-qkey">${hlFlags(k)}</span> = <span class="hl-qval">${hlFlags(v)}</span>${decoded}`;
+      }).join('\n');
+    }
+    if (ct.includes('html') || ct.includes('xml') || trimmed.startsWith('<')) {
+      return highlightHtml(prettyHtmlIndent(body));
+    }
+    return hlFlags(body);
+  }
+
+  function renderPanes(a) {
+    if (!a) return;
+    if (state.reqMode === 'raw') {
+      $('pane-req').innerHTML = `${hlFlags(a.request_line)}\n${hlFlags(a.request_headers_text)}\n\n${hlFlags(a.request_body || '')}`;
+    } else {
+      const line = renderHttpLine(a.request_line, 'request');
+      const hdrs = renderHeadersHtml(a.request_headers_text);
+      const body = renderPrettyBody(a.request_body || '', a.request_headers_text);
+      $('pane-req').innerHTML = `${line}\n${hdrs}\n\n${body}`;
+    }
+
+    const truncNote = a.response_body_truncated ? '\n\n[... Response body bị cắt theo giới hạn log ...]' : '';
+    const pre = $('pane-resp');
+    const iframe = $('pane-resp-render');
+
+    if (state.respMode === 'render') {
+      pre.style.display = 'none';
+      iframe.style.display = 'block';
+      const ct = getHeaderValue(a.response_headers_text, 'content-type').toLowerCase();
+      const body = a.response_body || '';
+      if (ct.includes('html') || body.trim().startsWith('<')) {
+        iframe.srcdoc = body;
+      } else {
+        iframe.srcdoc = `<!doctype html><html><body style="font-family:monospace;white-space:pre-wrap;padding:12px;">${esc(body)}</body></html>`;
+      }
+    } else {
+      iframe.style.display = 'none';
+      pre.style.display = 'block';
+      if (state.respMode === 'raw') {
+        pre.innerHTML = `${hlFlags(a.response_line)}\n${hlFlags(a.response_headers_text || '')}\n\n${hlFlags(a.response_body || '')}${esc(truncNote)}`;
+      } else {
+        const line = renderHttpLine(a.response_line, 'response');
+        const hdrs = renderHeadersHtml(a.response_headers_text || '');
+        const body = renderPrettyBody(a.response_body || '', a.response_headers_text);
+        pre.innerHTML = `${line}\n${hdrs}\n\n${body}${esc(truncNote)}`;
+      }
+    }
+  }
+
+  document.querySelectorAll('[data-req-mode]').forEach(btn => {
+    btn.onclick = () => {
+      state.reqMode = btn.dataset.reqMode;
+      document.querySelectorAll('[data-req-mode]').forEach(b => b.classList.toggle('active', b === btn));
+      const a = state.alerts.find(x => x.id === state.selectedId);
+      if (a) renderPanes(a);
+    };
+  });
+  document.querySelectorAll('[data-resp-mode]').forEach(btn => {
+    btn.onclick = () => {
+      state.respMode = btn.dataset.respMode;
+      document.querySelectorAll('[data-resp-mode]').forEach(b => b.classList.toggle('active', b === btn));
+      const a = state.alerts.find(x => x.id === state.selectedId);
+      if (a) renderPanes(a);
+    };
+  });
+
+  function selectAlert(id) {
+    state.selectedId = id;
+    const a = state.alerts.find(x => x.id === id);
+    renderList();
+    if (!a) {
+      $('empty-state').style.display = 'flex';
+      $('insp-content').style.display = 'none';
+      return;
+    }
+    $('empty-state').style.display = 'none';
+    $('insp-content').style.display = 'flex';
+
+    $('insp-uri').textContent = `${a.method} ${a.host ? a.host : ''}${a.uri}`;
+    $('insp-meta').textContent = `Status: ${a.status} | IP: ${a.source_ip} | Time: ${a.time || a.detected_at}${a.request_time_ms != null ? ' | ' + a.request_time_ms + 'ms' : ''}`;
+
+    const flagsEl = $('insp-flags');
+    flagsEl.replaceChildren();
+    for (const f of (a.flags || [])) {
+      const chip = document.createElement('span');
+      chip.className = 'flag-chip';
+      chip.textContent = f;
+      chip.title = 'Click để copy flag';
+      chip.onclick = () => {
+        navigator.clipboard.writeText(f);
+        chip.textContent = '✓ Copied!';
+        setTimeout(() => { chip.textContent = f; }, 1000);
+      };
+      flagsEl.appendChild(chip);
+    }
+    $('insp-locs').textContent = 'Found in: ' + (a.locations || []).join(' • ');
+
+    const modsecEl = $('insp-modsec');
+    modsecEl.replaceChildren();
+    if (a.modsec && a.modsec.length) {
+      const lbl = document.createElement('span');
+      lbl.textContent = 'ModSec Rules:';
+      modsecEl.appendChild(lbl);
+      for (const m of a.modsec) {
+        const span = document.createElement('span');
+        span.className = 'modsec-item';
+        span.textContent = `[${m.id}] ${m.msg || ''}`;
+        span.title = JSON.stringify(m);
+        modsecEl.appendChild(span);
+      }
+    } else {
+      modsecEl.textContent = 'ModSec Rules: Không có rule nào trigger (0 hits — cần viết rule WAF chặn!)';
+    }
+
+    renderPanes(a);
+  }
+
+  function jumpToFlag() {
+    const mark = $('pane-resp').querySelector('mark.hl-flag');
+    if (mark) mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  $('btn-jump-flag').onclick = jumpToFlag;
+  $('btn-copy-curl').onclick = () => {
+    const a = state.alerts.find(x => x.id === state.selectedId);
+    if (a) navigator.clipboard.writeText(a.curl || '');
+  };
+  $('btn-copy-req').onclick = () => {
+    const a = state.alerts.find(x => x.id === state.selectedId);
+    if (a) navigator.clipboard.writeText(`${a.request_line}\r\n${a.request_headers_text}\r\n\r\n${a.request_body || ''}`);
+  };
+  $('btn-copy-resp').onclick = () => {
+    const a = state.alerts.find(x => x.id === state.selectedId);
+    if (a) navigator.clipboard.writeText(`${a.response_line}\r\n${a.response_headers_text}\r\n\r\n${a.response_body || ''}`);
+  };
+
+  $('filter-input').oninput = renderList;
+  $('btn-sound').onclick = () => {
+    state.sound = !state.sound;
+    $('btn-sound').classList.toggle('active', state.sound);
+    $('btn-sound').textContent = state.sound ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+  };
+  $('btn-autoselect').onclick = () => {
+    state.autoSelect = !state.autoSelect;
+    $('btn-autoselect').classList.toggle('active', state.autoSelect);
+  };
+  $('btn-notify').onclick = async () => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') {
+      const p = await Notification.requestPermission();
+      if (p !== 'granted') return;
+    }
+    state.notify = !state.notify;
+    $('btn-notify').classList.toggle('active', state.notify);
+  };
+  $('btn-mark-all-read').onclick = () => {
+    for (const a of state.alerts) state.viewedIds.add(a.id);
+    saveViewedIds(state.viewedIds);
+    state.flashIds.clear();
+    renderList();
+  };
+  $('btn-clear').onclick = async () => {
+    await fetch('/api/alerts/clear', { method: 'POST' });
+    state.alerts = [];
+    state.selectedId = null;
+    selectAlert(null);
+  };
+  $('btn-scan-recent').onclick = async () => {
+    const btn = $('btn-scan-recent');
+    btn.disabled = true;
+    btn.textContent = '⏳ Scanning...';
+    try {
+      const r = await fetch('/api/scan-recent', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({count: 100}) });
+      const d = await r.json();
+      if (!r.ok) alert(d.error || 'Scan failed');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔍 Scan Recent (100)';
+    }
+  };
+
+  const dlg = $('settings-dialog');
+  $('btn-settings').onclick = async () => {
+    const d = await (await fetch('/api/state')).json();
+    $('cfg-mode').value = d.config.mode || 'http';
+    $('cfg-url').value = d.config.waf_url || '';
+    $('cfg-user').value = d.config.username || '';
+    $('cfg-pass').value = '';
+    $('cfg-container').value = d.config.docker_container || '';
+    $('cfg-interval').value = d.config.poll_interval || 1.0;
+    $('cfg-pattern').value = d.config.pattern || '';
+    $('cfg-smart-filter').checked = d.config.smart_filter !== false;
+    $('cfg-insecure').checked = d.config.verify_ssl === false;
+    dlg.showModal();
+  };
+  $('btn-cfg-cancel').onclick = () => dlg.close();
+  $('settings-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      mode: $('cfg-mode').value,
+      waf_url: $('cfg-url').value.trim(),
+      username: $('cfg-user').value.trim(),
+      password: $('cfg-pass').value,
+      docker_container: $('cfg-container').value.trim(),
+      poll_interval: parseFloat($('cfg-interval').value) || 1.0,
+      pattern: $('cfg-pattern').value.trim(),
+      smart_filter: $('cfg-smart-filter').checked,
+      verify_ssl: !$('cfg-insecure').checked,
+    };
+    const r = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || 'Lỗi cấu hình'); return; }
+    try { state.pattern = new RegExp(payload.pattern, 'g'); } catch (_) {}
+    dlg.close();
+  };
+
+  // --- WAF Rule Generator & Basket ---
+  const BASKET_KEY = 'waf_monitor_rule_basket';
+  let ruleBasket = [];
+  try { ruleBasket = JSON.parse(localStorage.getItem(BASKET_KEY) || '[]'); } catch (_) { ruleBasket = []; }
+  const saveBasket = () => {
+    try { localStorage.setItem(BASKET_KEY, JSON.stringify(ruleBasket)); } catch (_) {}
+    $('st-basket').textContent = ruleBasket.length;
+  };
+  saveBasket();
+
+  let currentSuggestions = [];
+  function updateRulePreview() {
+    const checks = [...$('rule-options').querySelectorAll('input[type="checkbox"]')];
+    const parts = checks.filter(c => c.checked).map(c => currentSuggestions[Number(c.dataset.idx)].rule);
+    $('rule-preview').value = parts.join('\n\n');
+  }
+
+  async function validateRulesText(rulesText, boxEl, alertId = null) {
+    const r = await fetch('/api/validate-rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rules: rulesText, alert_id: alertId }),
+    });
+    const v = await r.json();
+    boxEl.style.display = 'block';
+    const hasErr = (v.errors || []).length > 0;
+    const hasWarn = (v.warnings || []).length > 0;
+    if (hasErr) {
+      boxEl.style.background = 'var(--red-bg)';
+      boxEl.style.border = '1px solid rgba(255,77,94,0.4)';
+      boxEl.style.color = '#fda4af';
+    } else if (hasWarn) {
+      boxEl.style.background = 'var(--amber-bg)';
+      boxEl.style.border = '1px solid rgba(255,176,32,0.45)';
+      boxEl.style.color = '#fde68a';
+    } else {
+      boxEl.style.background = 'var(--green-bg)';
+      boxEl.style.border = '1px solid rgba(34,197,94,0.4)';
+      boxEl.style.color = '#86efac';
+    }
+    const parts = [
+      `<b>${hasErr ? '✗ LỖI' : (hasWarn ? '⚠ CẢNH BÁO' : '✓ HỢP LỆ')}</b> — ${v.rule_count} SecRule | ReDoS max: ${v.max_redos_ms}ms | Benign FP: ${v.fp_count}/24`
+      + (v.attack_matched !== null ? ` | Khớp payload tấn công: ${v.attack_matched ? '✓ CÓ' : '⚠ CHƯA KHỚP'}` : '')
+    ];
+    for (const e of (v.errors || [])) parts.push('✗ ' + esc(e));
+    for (const w of (v.warnings || [])) parts.push('⚠ ' + esc(w));
+    boxEl.innerHTML = parts.join('<br>');
+  }
+
+  async function loadGeneratedRules() {
+    if (!state.selectedId) return;
+    const baseId = parseInt($('rule-base-id').value, 10) || 27200;
+    const actionMode = $('rule-action-mode').value || 'pass';
+    const scopeHost = $('rule-scope-host').checked;
+    const flagRoutes = $('rule-flag-routes').value || '';
+    try { localStorage.setItem('waf_legit_flag_routes', flagRoutes); } catch (e) {}
+    const r = await fetch('/api/generate-rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        alert_id: state.selectedId,
+        base_rule_id: baseId,
+        action_mode: actionMode,
+        scope_host: scopeHost,
+        legit_flag_routes: flagRoutes,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || 'Không sinh được rule'); return; }
+
+    $('rule-findings').innerHTML = '<b>Phân tích tự động:</b><br>' + (d.findings || []).map(f => '• ' + esc(f)).join('<br>');
+    currentSuggestions = d.suggestions || [];
+    const optsEl = $('rule-options');
+    optsEl.replaceChildren();
+    currentSuggestions.forEach((s, idx) => {
+      const lbl = document.createElement('label');
+      lbl.style.cssText = 'display:flex; align-items:flex-start; gap:8px; padding:6px 8px; border:1px solid var(--border); border-radius:6px; background:var(--panel-2); cursor:pointer;';
+      const ctBadge = `<span class="badge" style="background:rgba(59,130,246,0.2);color:#93c5fd;margin-right:5px;">${esc(s.config_type || 'MODSEC')}</span>`;
+      lbl.innerHTML = `<input type="checkbox" data-idx="${idx}" ${s.recommended ? 'checked' : ''} style="margin-top:3px;">
+        <div><div style="font-weight:600; font-size:12px;">${ctBadge}${esc(s.title)}</div><div style="font-size:11px; color:var(--muted);">${esc(s.description)}</div></div>`;
+      lbl.querySelector('input').onchange = () => {
+        updateRulePreview();
+        validateRulesText($('rule-preview').value, $('rule-val-box'), state.selectedId);
+      };
+      optsEl.appendChild(lbl);
+    });
+    updateRulePreview();
+    await validateRulesText($('rule-preview').value, $('rule-val-box'), state.selectedId);
+  }
+
+  function downloadText(filename, content) {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  const ruleDlg = $('rule-dialog');
+  $('btn-gen-rule').onclick = async () => {
+    if (!state.selectedId) return;
+    $('rule-base-id').value = 27200 + ruleBasket.length * 5;
+    try { $('rule-flag-routes').value = localStorage.getItem('waf_legit_flag_routes') || ''; } catch (e) {}
+    await loadGeneratedRules();
+    ruleDlg.showModal();
+  };
+  $('rule-base-id').onchange = loadGeneratedRules;
+  $('rule-flag-routes').onchange = loadGeneratedRules;
+  $('rule-action-mode').onchange = loadGeneratedRules;
+  $('rule-scope-host').onchange = loadGeneratedRules;
+  $('btn-rule-validate').onclick = () => validateRulesText($('rule-preview').value, $('rule-val-box'), state.selectedId);
+  $('btn-rule-close').onclick = () => ruleDlg.close();
+  $('btn-rule-copy').onclick = () => {
+    navigator.clipboard.writeText($('rule-preview').value);
+    $('btn-rule-copy').textContent = '✓ Đã copy';
+    setTimeout(() => { $('btn-rule-copy').textContent = '📋 Copy Rule'; }, 1200);
+  };
+  $('btn-rule-download').onclick = () => downloadText('waf_rule.conf', $('rule-preview').value + '\n');
+  $('btn-rule-add-basket').onclick = () => {
+    const txt = $('rule-preview').value.trim();
+    if (!txt) return;
+    ruleBasket.push(txt);
+    saveBasket();
+    $('btn-rule-add-basket').textContent = '✓ Đã thêm!';
+    setTimeout(() => { $('btn-rule-add-basket').textContent = '➕ Thêm vào bộ Rule'; }, 1000);
+  };
+
+  const exploitDlg = $('exploit-dialog');
+  let currentExploitFilename = 'exploit.py';
+  $('btn-gen-exploit').onclick = async () => {
+    if (!state.selectedId) return;
+    const r = await fetch('/api/generate-exploit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: state.selectedId }),
+    });
+    const d = await r.json();
+    if (!r.ok) { alert(d.error || 'Không sinh được exploit script'); return; }
+    currentExploitFilename = d.filename || 'exploit.py';
+    $('exploit-notes').innerHTML = '<b>Ghi chú tự động:</b><br>' + (d.notes || []).map(n => '• ' + esc(n)).join('<br>');
+    $('exploit-preview').value = d.script || '';
+    exploitDlg.showModal();
+  };
+  $('btn-exploit-close').onclick = () => exploitDlg.close();
+  $('btn-exploit-copy').onclick = () => {
+    navigator.clipboard.writeText($('exploit-preview').value);
+    $('btn-exploit-copy').textContent = '✓ Đã copy';
+    setTimeout(() => { $('btn-exploit-copy').textContent = '📋 Copy Script'; }, 1200);
+  };
+  $('btn-exploit-download').onclick = () => downloadText(currentExploitFilename, $('exploit-preview').value);
+
+  const basketDlg = $('basket-dialog');
+  $('btn-export-basket').onclick = () => {
+    $('basket-preview').value = ruleBasket.join('\n\n');
+    $('basket-val-box').style.display = 'none';
+    basketDlg.showModal();
+  };
+  $('btn-basket-validate').onclick = () => validateRulesText($('basket-preview').value, $('basket-val-box'));
+  $('btn-basket-close').onclick = () => basketDlg.close();
+  $('btn-basket-clear').onclick = () => {
+    ruleBasket = [];
+    saveBasket();
+    $('basket-preview').value = '';
+    $('basket-val-box').style.display = 'none';
+  };
+  $('btn-basket-copy').onclick = () => {
+    navigator.clipboard.writeText($('basket-preview').value);
+    $('btn-basket-copy').textContent = '✓ Đã copy';
+    setTimeout(() => { $('btn-basket-copy').textContent = '📋 Copy tất cả'; }, 1200);
+  };
+  $('btn-basket-download').onclick = () => downloadText('defense_rules.conf', $('basket-preview').value + '\n');
+
+  async function init() {
+    const data = await (await fetch('/api/state')).json();
+    if (data.config && data.config.pattern) {
+      try { state.pattern = new RegExp(data.config.pattern, 'g'); } catch (_) {}
+    }
+    state.alerts = data.alerts || [];
+    updateStats(data.stats || {});
+    renderList();
+    if (state.alerts.length) selectAlert(state.alerts[0].id);
+
+    const es = new EventSource('/api/stream');
+    es.addEventListener('stats', e => updateStats(JSON.parse(e.data)));
+    es.addEventListener('cleared', () => {
+      state.alerts = [];
+      state.selectedId = null;
+      selectAlert(null);
+    });
+    es.addEventListener('alert', e => {
+      const a = JSON.parse(e.data);
+      if (state.alerts.some(x => x.id === a.id)) return;
+      state.alerts.unshift(a);
+      state.flashIds.add(a.id);
+      playBeep();
+      sendDesktopNotify(a);
+      if (state.autoSelect) {
+        selectAlert(a.id);
+        setTimeout(jumpToFlag, 50);
+      } else {
+        renderList();
+      }
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

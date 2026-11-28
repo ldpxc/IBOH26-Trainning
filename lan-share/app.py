@@ -18,9 +18,13 @@ import re
 import secrets
 import shutil
 import socket
+import tempfile
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
+
+import markdown
 
 from flask import (
     Flask,
@@ -50,6 +54,7 @@ _NON_VIEWABLE_EXTENSIONS = {
 }
 
 _HTML_EXTENSIONS = {".html", ".htm"}
+_MARKDOWN_EXTENSIONS = {".md", ".markdown"}
 
 LOGIN_HTML = """<!doctype html>
 <html lang="vi">
@@ -250,6 +255,8 @@ INDEX_HTML = """<!doctype html>
                   <a class="btn btn-view" href="{{ url_for('view_file', path=item.rel_path) }}">Xem</a>
                 {% endif %}
                 <a class="btn btn-download" href="{{ url_for('download', path=item.rel_path) }}">Download</a>
+              {% else %}
+                <a class="btn btn-download" href="{{ url_for('download_folder', path=item.rel_path) }}">Tải thư mục</a>
               {% endif %}
               <form class="inline-form" method="post" action="{{ url_for('delete_item') }}"
                     onsubmit="return confirm('Chuyển mục này vào thùng rác?');">
@@ -309,6 +316,9 @@ VIEW_HTML = """<!doctype html>
     iframe.html-preview {
       width: 100%; height: 72vh; border: none; background: #ffffff; display: block;
     }
+    iframe.markdown-preview {
+      width: 100%; min-height: 72vh; border: none; background: #ffffff; display: block;
+    }
     details { border-top: 1px solid #334155; }
     summary {
       padding: 12px 16px; cursor: pointer; font-size: 13px; font-weight: 600;
@@ -333,6 +343,12 @@ VIEW_HTML = """<!doctype html>
         <details>
           <summary>Xem mã nguồn HTML</summary>
           <pre>{{ content }}</pre>
+        </details>
+      {% elif is_markdown %}
+        <iframe class="markdown-preview" sandbox="" srcdoc="{{ content }}"></iframe>
+        <details>
+          <summary>Xem mã nguồn Markdown</summary>
+          <pre>{{ source_content }}</pre>
         </details>
       {% else %}
         <pre>{{ content }}</pre>
@@ -585,17 +601,38 @@ def create_app(storage_dir: Path, password: str, secret_key: str | None = None) 
         if not is_viewable_file(target_file):
             abort(415)
 
-        content = target_file.read_text(encoding="utf-8", errors="replace")
+        source_content = target_file.read_text(encoding="utf-8", errors="replace")
         parent_rel = target_file.parent.relative_to(storage_root).as_posix()
         back_url = url_for("index") if parent_rel == "." else url_for("index", path=parent_rel)
         is_html = target_file.suffix.lower() in _HTML_EXTENSIONS
+        is_markdown = target_file.suffix.lower() in _MARKDOWN_EXTENSIONS
+        content = source_content
+        if is_markdown:
+            rendered_markdown = markdown.markdown(
+                source_content,
+                extensions=["fenced_code", "tables", "sane_lists"],
+            )
+            content = (
+                "<!doctype html><html><head><meta charset=\"utf-8\"><style>"
+                "body{font:16px/1.6 system-ui,-apple-system,Segoe UI,sans-serif;"
+                "color:#1f2937;max-width:900px;margin:32px auto;padding:0 24px}"
+                "pre{overflow:auto;padding:16px;background:#f3f4f6;border-radius:8px}"
+                "code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}"
+                "table{border-collapse:collapse}th,td{border:1px solid #d1d5db;padding:6px 10px}"
+                "img{max-width:100%}blockquote{border-left:4px solid #d1d5db;"
+                "margin-left:0;padding-left:16px;color:#4b5563}"
+                "</style></head><body>"
+                f"{rendered_markdown}</body></html>"
+            )
 
         return render_template_string(
             VIEW_HTML,
             filename=target_file.name,
             rel_path=rel_path,
             content=content,
+            source_content=source_content,
             is_html=is_html,
+            is_markdown=is_markdown,
             back_url=back_url,
         )
 
@@ -628,6 +665,53 @@ def create_app(storage_dir: Path, password: str, secret_key: str | None = None) 
         if not target_file.exists() or not target_file.is_file():
             abort(404)
         return send_file(target_file, as_attachment=True, download_name=target_file.name)
+
+    @app.route("/download-folder")
+    @login_required
+    def download_folder():
+        rel_path = request.args.get("path", "").strip()
+        if not rel_path:
+            abort(400)
+        target_dir = resolve_safe_path(storage_root, rel_path)
+        if not target_dir.exists() or not target_dir.is_dir():
+            abort(404)
+
+        # Build the archive on disk so large folders do not need to fit in memory.
+        fd, archive_path = tempfile.mkstemp(prefix="lan-share-", suffix=".zip")
+        os.close(fd)
+        try:
+            with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for current, dir_names, file_names in os.walk(target_dir, followlinks=False):
+                    current_path = Path(current)
+                    dir_names[:] = sorted(
+                        name for name in dir_names
+                        if not (current_path / name).is_symlink()
+                    )
+                    files_to_add = sorted(
+                        name for name in file_names
+                        if not (current_path / name).is_symlink()
+                        and (current_path / name).is_file()
+                    )
+
+                    relative_dir = current_path.relative_to(target_dir.parent)
+                    if not dir_names and not files_to_add:
+                        archive.writestr(relative_dir.as_posix().rstrip("/") + "/", "")
+
+                    for filename in files_to_add:
+                        file_path = current_path / filename
+                        archive.write(file_path, arcname=(relative_dir / filename).as_posix())
+        except Exception:
+            os.unlink(archive_path)
+            raise
+
+        response = send_file(
+            archive_path,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=f"{target_dir.name}.zip",
+        )
+        response.call_on_close(lambda: os.path.exists(archive_path) and os.unlink(archive_path))
+        return response
 
     return app
 
