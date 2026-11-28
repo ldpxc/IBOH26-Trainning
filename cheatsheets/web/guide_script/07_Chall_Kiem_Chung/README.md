@@ -1,6 +1,8 @@
 # 07 — Chall kiểm chứng
 
-Mục đích: có vài bài **lab nhỏ do bạn tự dựng** để chạy lại từng file cheatsheet và khẳng định "cách này dùng được". Mỗi bài nên có: request mẫu trong Burp + script Python tương ứng + kết quả đối chiếu.
+Thư mục này không dạy kỹ thuật mới. Mục đích: tự dựng vài bài lab nhỏ trên máy bạn, chạy lại từng script trong các file cheatsheet (`01_` đến `06_`, `08_`) để chắc chắn nó thực sự chạy được, không chỉ đọc lý thuyết. Mỗi bài gồm 3 phần: request mẫu bắt được trong Burp, script Python tương ứng, và kết quả đối chiếu 2 bên có khớp không.
+
+Bảng dưới liệt kê các bài lab nên dựng, mỗi bài trỏ tới đúng file cheatsheet nó kiểm chứng.
 
 > Chỉ dựng và chạy trên máy/lab của bạn.
 
@@ -17,8 +19,8 @@ Mục đích: có vài bài **lab nhỏ do bạn tự dựng** để chạy lạ
 | Tạo item → lấy ID → đọc/sửa | truyền ID giữa các bước | [`../02_Chuoi_Request/03_Truyen_ID_Giua_Cac_Buoc.md`](../02_Chuoi_Request/03_Truyen_ID_Giua_Cac_Buoc.md) |
 | Trang trả JSON/HTML/302 | đọc response, redirect | [`../02_Chuoi_Request/04_Doc_Response.md`](../02_Chuoi_Request/04_Doc_Response.md) |
 | Endpoint ping với wordlist | Intruder → vòng lặp | [`../03_Thao_Tac_Nang_Cao/01_Intruder_Sang_Vong_Lap.md`](../03_Thao_Tac_Nang_Cao/01_Intruder_Sang_Vong_Lap.md) |
-| Coupon redeem 1 lần | race condition | [`../03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md`](../03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md) |
-| Job async + callback | polling / OOB | [`../03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md`](../03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md) |
+| Mã giảm giá chỉ được dùng 1 lần | gửi nhiều request cùng lúc (chạy song song) để "lách" giới hạn | [`../03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md`](../03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md) |
+| Việc xử lý chạy ngầm rồi báo kết quả sau | hỏi lại nhiều lần chờ kết quả (polling) | [`../03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md`](../03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md) |
 | Mỗi loại lỗ hổng đã giải | theo lỗ hổng | [`../04_Theo_Lo_Hong/`](../04_Theo_Lo_Hong/) |
 | 3 đội, mỗi đội 1 flag | nhiều đội + lưu flag | [`../05_Nhieu_Doi_Va_Flag/`](../05_Nhieu_Doi_Va_Flag/) |
 | Request Python lệch Burp | dùng Burp làm proxy | [`../06_Debug/`](../06_Debug/) |

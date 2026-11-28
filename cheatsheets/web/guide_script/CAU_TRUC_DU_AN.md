@@ -27,11 +27,11 @@ Sheatchee/
 ├── 04_Theo_Lo_Hong/             # SQLi, IDOR, LFI, CMDi, SSTI, SSRF, Upload, XSS/CSRF
 ├── 05_Nhieu_Doi_Va_Flag/        # Lặp targets, trích flag, lưu flag
 ├── 06_Debug/                    # Python qua Burp, Burp!=Python, 403/WAF, lỗi thường gặp
-├── 07_Chall_Kiem_Chung/         # Ý tưởng lab tự kiểm chứng
-├── 08_Khai_Thac_Lo_Hong_Web/    # Tài liệu nền tảng lỗ hổng web
+├── 07_Chall_Kiem_Chung/         # Tự dựng lab nhỏ để kiểm chứng script chạy đúng
+├── 08_Khai_Thac_Lo_Hong_Web/    # Nhận ra lỗ hổng bằng mắt (ví dụ đời thường + dấu hiệu); code mẫu ở 04_
 │
-├── logs/                        # Runtime (gitignored)
-└── results/                     # Runtime, flags.txt... (gitignored)
+├── logs/                        # Sinh ra lúc chạy, không commit lên git
+└── results/                     # Sinh ra lúc chạy, flags.txt... (không commit lên git)
 ```
 
 ## 2. Thành phần cốt lõi
@@ -60,7 +60,7 @@ http://10.0.2.1:8000
 
 | Nhu cầu | Mở |
 |---|---|
-| Chưa biết Python/exploit web, cần học từ 0 | [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) |
+| Chưa biết Python / chưa biết khai thác web, cần học từ 0 | [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) |
 | Tra cứu 5 giây | [`CHEATSHEET_NHANH.md`](CHEATSHEET_NHANH.md) |
 | Bắt đầu exploit nhiều đội | [`scripts/template.py`](scripts/template.py) |
 | Request cơ bản | `01_Request_Co_Ban/` |

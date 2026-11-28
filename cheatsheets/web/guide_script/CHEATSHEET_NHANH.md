@@ -4,7 +4,7 @@ Mở file này khi đang thi: **Burp đã chạy được → copy snippet → d
 
 | Đang cần làm gì trong Python? | Mở file | Cú pháp cốt lõi nhớ nhanh |
 |---|---|---|
-| Chưa biết Python / chưa biết exploit web, cần học trước | [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) | biến, hàm, dict, `import`, `requests.Session()` |
+| Chưa biết Python / chưa biết khai thác web (hack web), cần học trước | [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) | biến, hàm, dict, `import`, `requests.Session()` |
 | Bắt đầu nhanh: quét `targets.txt`, lấy flag, lưu kết quả | [`scripts/template.py`](scripts/template.py) | `solve_one(session, base_url)` + `ThreadPoolExecutor(max_workers=4)` |
 | GET query bình thường / sửa param | [`01_Request_Co_Ban/01_GET_Query.md`](01_Request_Co_Ban/01_GET_Query.md) | `s.get(url, params={"q":"test"}, timeout=5)` |
 | GET tham số trùng tên / giữ thứ tự query | [`01_Request_Co_Ban/01_GET_Query.md`](01_Request_Co_Ban/01_GET_Query.md) | `urlencode([("id","1"),("id","2")])` rồi ghép vào URL |

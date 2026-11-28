@@ -2,7 +2,7 @@
 
 Kho code mẫu để chuyển thao tác đã làm được trên **Burp Suite** sang **Python** thật nhanh khi thi offline (không AI, không Internet).
 
-## Chưa biết Python / chưa biết exploit web?
+## Chưa biết Python / chưa biết khai thác web (hack web)?
 
 Đọc [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) trước — 15-20 phút, dạy từ con số 0: cú pháp Python tối thiểu, Burp request map sang Python ra sao, và 1 bài ví dụ đầy đủ từ "giải tay" đến "script chạy được", giải thích từng dòng.
 
@@ -45,7 +45,7 @@ python scripts/template.py
 | [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) | Học từ 0: Python tối thiểu + Burp->Python + 1 ví dụ đầy đủ có giải thích |
 | [`CHEATSHEET_NHANH.md`](CHEATSHEET_NHANH.md) | Mục lục tra cứu 5 giây: cần gì -> mở file nào |
 | [`scripts/template.py`](scripts/template.py) | File độc lập 1-file, copy ra thành `baiX.py` rồi sửa `solve_one()` |
-| [`scripts/targets.txt`](scripts/targets.txt) | Danh sách mục tiêu runtime (local, không commit) |
+| [`scripts/targets.txt`](scripts/targets.txt) | Danh sách mục tiêu dùng khi chạy thật (để trên máy bạn, không đưa lên git) |
 | [`scripts/targets.example.txt`](scripts/targets.example.txt) | Mẫu targets, có `@OUR_TEAM` và comment `#` |
 | `01_Request_Co_Ban/` | GET/POST/Header-Cookie/Upload/Encoding |
 | `02_Chuoi_Request/` | Login, CSRF, truyền ID, đọc response, tính toán cục bộ (JWT/hash/brute-force) |
@@ -53,14 +53,14 @@ python scripts/template.py
 | `04_Theo_Lo_Hong/` | SQLi, IDOR, LFI, CMDi, SSTI, SSRF, Upload, XSS/CSRF |
 | `05_Nhieu_Doi_Va_Flag/` | Lặp targets, trích flag, lưu flag |
 | `06_Debug/` | Python qua Burp, khác biệt Burp/Python, 403/WAF, lỗi thường gặp |
-| `07_Chall_Kiem_Chung/` | Ý tưởng lab tự kiểm chứng |
-| `08_Khai_Thac_Lo_Hong_Web/` | Tài liệu nền tảng lỗ hổng web |
+| `07_Chall_Kiem_Chung/` | Tự dựng lab nhỏ để kiểm chứng script chạy đúng |
+| `08_Khai_Thac_Lo_Hong_Web/` | Nhận ra lỗ hổng bằng mắt (ví dụ đời thường + dấu hiệu), code mẫu nằm ở `04_` |
 
 ## Quy ước snippet
 
 - Mỗi file `01_`-`06_` có đoạn Python ngắn, **độc lập**, có đủ `import`, copy vào `solve_one()` là chạy.
 - Host mẫu: `http://target`. Thay bằng mục tiêu thật.
-- Luôn có `timeout`; khi mass dùng `workers=4`, `delay=0.5`.
+- Luôn có `timeout`; khi quét nhiều đội cùng lúc dùng `workers=4`, nghỉ `delay=0.5` giây giữa mỗi lần gửi.
 - Chỉ dùng trên hệ thống/lab/CTF được phép.
 
 ## Tài liệu chi tiết

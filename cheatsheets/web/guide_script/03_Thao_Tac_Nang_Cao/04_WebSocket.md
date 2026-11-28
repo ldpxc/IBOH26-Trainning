@@ -37,14 +37,15 @@ def solve_one(base_url_ws):
 - `websocket.create_connection(url)` mở 1 kết nối WebSocket, tương đương việc Burp tự giữ 1 kênh mở trong tab WS history — không có "Session()" kiểu `requests`, cookie login (nếu cần) phải lấy từ 1 request HTTP thường trước, rồi truyền vào `header=[f"Cookie: {cookie}"]` khi `create_connection`.
 - `ws.send(...)` gửi 1 message lên server; `ws.recv()` chờ nhận 1 message (chặn luồng tới khi có dữ liệu hoặc hết timeout) — khác HTTP là **1 lần gửi có thể cần nhận nhiều message** mới ra được cái bạn cần, vì server có thể gửi nhiều message độc lập (ví dụ thông báo hệ thống trước, rồi mới tới message thật).
 - Luôn giới hạn số lần `recv()` (`for _ in range(10)`) — đừng `while True` không có điều kiện dừng, kết nối WS có thể treo vô hạn nếu server không gửi gì thêm.
-- Nếu cần cookie/token để kết nối WS (xem Burp WS history có header `Cookie` không):
-  ```python
-  ws = websocket.create_connection(
-      base_url_ws,
-      header=[f"Cookie: session={cookie_value}"],
-      timeout=5,
-  )
-  ```
+- Nếu cần cookie/token để kết nối WS (xem Burp WS history có header `Cookie` không), truyền thêm `header=` khi gọi `create_connection` (copy đúng thụt lề như dưới, đừng để dính thụt lề của gạch đầu dòng này):
+
+```python
+ws = websocket.create_connection(
+    base_url_ws,
+    header=[f"Cookie: session={cookie_value}"],
+    timeout=5,
+)
+```
 - Debug qua Burp: Burp Suite (bản có hỗ trợ WS) hiển thị message dạng text trong tab WebSocket history — copy đúng format JSON/text đó vào `ws.send(...)`, so message nhận được với tab đó khi sai.
 
 ## Lưu ý nhanh
