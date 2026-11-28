@@ -144,7 +144,6 @@ def render_page(team: str, service: str, checks: list, markers: list) -> str:
 
     return f"""<!doctype html>
 <html lang="vi"><head><meta charset="utf-8">
-<meta http-equiv="refresh" content="0">
 <title>Dashboard {team}/{service}</title>
 <style>
  body{{font-family:system-ui,sans-serif;max-width:820px;margin:24px auto;padding:0 16px;color:#222;background:#f7f6f2}}
