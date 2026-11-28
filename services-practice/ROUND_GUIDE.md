@@ -55,8 +55,16 @@ tạo bảng), vào UI WAF → **Cài đặt chung → ModSecurity** → đổi
    http://127.0.0.1:<BW_PORT>`** trước khi bật chặn thật trên UI (xem
    `tools/test_rules_waf/`), y hệt quy trình sẽ dùng lúc thi.
 4. Hết thời gian round (tự canh đồng hồ), dừng lại so: team nào chặn được
-   nhiều lỗ hổng hơn / vẫn giữ app hoạt động bình thường (tự curl vài endpoint
-   "bình thường" xem có bị chặn nhầm không) là thắng round đó.
+   nhiều lỗ hổng hơn / vẫn giữ app hoạt động bình thường là thắng round đó.
+   Dùng `healthcheck_notevault.py` (mô phỏng bot SLA 30s/lần của BTC, tự phân
+   loại lỗi đúng 3 nguyên nhân Điều 5: sập/quá tải, WAF chặn nhầm, không đọc
+   được cờ) thay vì tự `curl` tay từng endpoint:
+   ```bash
+   spwn
+   python3 healthcheck_notevault.py --base-url http://127.0.0.1:9000   # đổi cổng theo team (xem ./spin.sh ps)
+   ```
+   Chạy song song 1 cửa sổ riêng, để liên tục trong lúc viết/bật rule — thấy
+   ngay dòng `WAF CHAN NHAM` là biết rule vừa viết chặn nhầm người dùng hợp lệ.
 5. Muốn "reset round" (như BTC dựng lại service + phát cờ mới mỗi round):
    ```bash
    ./spin.sh rotate a notevault
