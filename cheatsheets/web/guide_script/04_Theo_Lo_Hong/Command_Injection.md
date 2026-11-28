@@ -53,7 +53,7 @@ if __name__ == "__main__":
 Nếu đã nghi command injection mà thử tay 4 payload trên không ra, hoặc muốn tool tự dò kỹ hơn (commix tự thử hàng chục biến thể, tự né 1 số WAF, tự tìm ra kiểu blind bằng time-based nếu cần), dùng `commix` đã có sẵn tại `~/hoc/CTF/Tools/web/commix/`:
 
 ```bash
-spwn   # activate venv pwn trước, commix cần python3 + vài thư viện trong venv này
+spwn   # activate venv venv_fhacker26 trước, commix cần python3 + vài thư viện trong venv này
 cd ~/hoc/CTF/Tools/web/commix
 
 # Tham số bị nghi dính ở QUERY STRING (GET) -- đặt ngay trong URL

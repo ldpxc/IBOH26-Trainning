@@ -1,44 +1,41 @@
-# Chuẩn bị máy trước ngày thi (gửi đồng đội, làm khi còn Internet)
+# Chuẩn bị máy trước ngày thi
 
-Danh sách này phục vụ đúng bộ cheatsheet `guide_script/` (xem `README.md`). **Tất cả bước dưới đây cần Internet — phải làm trước ngày thi**, vì lúc thi không có mạng.
-
-Giả định máy chạy Linux kiểu Ubuntu/Debian (dùng `apt`). Nếu máy khác (Mac/Windows/WSL), đổi lệnh cài phần mềm hệ thống ở Bước 1 cho đúng (brew/choco/...), các bước còn lại (pip, git clone) giữ nguyên.
-
----
+--
 
 ## 1. Phần mềm hệ thống
 
-```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip git perl php-cli gcc make maven openjdk-11-jdk openjdk-21-jdk
-```
-
-| Gói | Dùng cho |
-|---|---|
-| `python3`, `python3-venv`, `python3-pip` | Chạy toàn bộ script trong cheatsheet |
-| `git` | Clone tool + clone chính repo cheatsheet này |
-| `perl` | Chạy `PadBuster` |
-| `php-cli` | Chạy `phpggc`, test chuỗi filter của `php_filter_chain_generator` |
-| `gcc`, `make` | Build `hash_extender` |
-| `maven` | Build `ysoserial` từ source |
-| `openjdk-11-jdk` | **Bắt buộc** để chạy `ysoserial` đúng — JDK 21 mặc định sẽ báo lỗi `InaccessibleObjectException` |
-| `openjdk-21-jdk` | Dùng cho mọi việc Java khác bình thường (giữ cả 2 bản JDK, không gỡ bản nào) |
+| Gói                                      | Dùng cho                                                                                         |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `python3`, `python3-venv`, `python3-pip` | Chạy toàn bộ script trong cheatsheet                                                             |
+| `git`                                    | Clone tool + clone chính repo cheatsheet này                                                     |
+| `perl`                                   | Chạy `PadBuster`                                                                                 |
+| `php-cli`                                | Chạy `phpggc`, test chuỗi filter của `php_filter_chain_generator`                                |
+| `gcc`, `make`                            | Build `hash_extender`                                                                            |
+| `maven`                                  | Build `ysoserial` từ source                                                                      |
+| `openjdk-11-jdk`                         | **Bắt buộc** để chạy `ysoserial` đúng — JDK 21 mặc định sẽ báo lỗi `InaccessibleObjectException` |
+| `openjdk-21-jdk`                         | Dùng cho mọi việc Java khác bình thường (giữ cả 2 bản JDK, không gỡ bản nào)                     |
 
 **Burp Suite**: cài riêng (Community hoặc Pro) từ https://portswigger.net/burp — không có trong `apt`.
 
 ---
 
-## 2. Tạo venv Python riêng + alias kích hoạt nhanh
+## 2. Tạo venv Python tên `venv_fhacker26` + alias kích hoạt nhanh
+
+Venv đặt **ngay trong thư mục chứa tool** (`~/hoc/CTF/Tools/web/`, cùng cấp với `commix/`, `tplmap/`...) — gọn, chỉ cần nhớ 1 thư mục duy nhất cho mọi thứ của giải này.
+
+Đường dẫn `~/hoc/CTF/Tools/web/` chỉ là ví dụ mẫu, **đặt ở đâu bạn muốn cũng được** — chỉ cần:
+- Venv và các tool clone ở Bước 4 nằm **chung 1 thư mục gốc**.
+- Nếu đổi sang thư mục khác, nhớ đổi lại đúng đường dẫn đó ở **mọi lệnh còn lại** trong file này (Bước 4 trở xuống đều viết sẵn theo `~/hoc/CTF/Tools/web/`).
 
 ```bash
-mkdir -p ~/hoc/CTF/Tools/venv ~/hoc/CTF/Tools/web
-python3 -m venv ~/hoc/CTF/Tools/venv/pwn
-echo 'alias spwn="source ~/hoc/CTF/Tools/venv/pwn/bin/activate"' >> ~/.bashrc   # dùng ~/.zshrc nếu máy chạy zsh
+mkdir -p ~/hoc/CTF/Tools/web
+python3 -m venv ~/hoc/CTF/Tools/web/venv_fhacker26
+echo 'alias spwn="source ~/hoc/CTF/Tools/web/venv_fhacker26/bin/activate"' >> ~/.bashrc   # dùng ~/.zshrc nếu máy chạy zsh
 source ~/.bashrc
 spwn
 ```
 
-Từ giờ, mỗi khi mở terminal mới cần chạy script/tool Python trong cheatsheet, gõ `spwn` trước.
+Từ giờ, mỗi khi mở terminal mới cần chạy script/tool Python trong cheatsheet, gõ `spwn` trước (tên alias giữ nguyên `spwn` cho ngắn, dù venv tên `venv_fhacker26` — alias chỉ là phím tắt, không cần trùng tên venv).
 
 ---
 
@@ -56,15 +53,15 @@ Nếu chưa clone repo kịp, cài tay tương đương:
 pip install requests beautifulsoup4 lxml PyYAML tenacity pyjwt flask flask-unsign websocket-client pycryptodome
 ```
 
-| Thư viện | Dùng cho |
-|---|---|
-| `requests` | Toàn bộ script gửi HTTP — thư viện quan trọng nhất |
-| `beautifulsoup4`, `lxml` | Đọc/trích dữ liệu từ HTML (lấy CSRF token...) |
-| `PyYAML` | Đọc file cấu hình dạng YAML nếu cần |
-| `pyjwt` | Bài `JWT_Attacks.md`, `02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md` |
-| `flask`, `flask-unsign` | Bài `Session_Cookie_Forge.md` |
-| `websocket-client` | Bài `03_Thao_Tac_Nang_Cao/04_WebSocket.md` |
-| `pycryptodome` | Các bài crypto cần tự mã hoá/giải mã (padding oracle, hash length extension) |
+| Thư viện                 | Dùng cho                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `requests`               | Toàn bộ script gửi HTTP — thư viện quan trọng nhất                           |
+| `beautifulsoup4`, `lxml` | Đọc/trích dữ liệu từ HTML (lấy CSRF token...)                                |
+| `PyYAML`                 | Đọc file cấu hình dạng YAML nếu cần                                          |
+| `pyjwt`                  | Bài `JWT_Attacks.md`, `02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md`              |
+| `flask`, `flask-unsign`  | Bài `Session_Cookie_Forge.md`                                                |
+| `websocket-client`       | Bài `03_Thao_Tac_Nang_Cao/04_WebSocket.md`                                   |
+| `pycryptodome`           | Các bài crypto cần tự mã hoá/giải mã (padding oracle, hash length extension) |
 
 ---
 
@@ -96,22 +93,22 @@ git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git exploitdb
 > `SecLists` và `PayloadsAllTheThings` khá nặng (vài trăm MB) — clone sớm, kiểm tra còn đủ dung lượng đĩa.
 > `ysoserial` clone KHÔNG dùng `--depth 1` vì bước build cần đầy đủ (dùng maven).
 
-| Tool | Dùng ở bài |
-|---|---|
-| `commix` | `Command_Injection.md` |
-| `tplmap` | `SSTI.md` |
-| `smuggler` | `HTTP_Request_Smuggling.md` |
-| `graphql-cop`, `clairvoyance` | `GraphQL.md` |
-| `XSStrike` | `XSS_CSRF.md`, `XSS_Filter_CSP_Bypass.md` |
-| `php_filter_chain_generator` | `Path_Traversal_LFI.md` |
-| `git-dumper`, `GitTools` | `Recon_Source_Leak.md` |
-| `hash_extender` | `Crypto_Hash_Length_Extension.md` |
-| `padbuster` | `Crypto_Padding_Oracle.md` |
-| `jwt_tool` | `JWT_Attacks.md` |
-| `phpggc`, `ysoserial` | `Deserialization.md` |
-| `Gopherus` | SSRF qua gopher:// (payload khai thác Redis/Memcached nội bộ) |
+| Tool                               | Dùng ở bài                                                    |
+| ---------------------------------- | ------------------------------------------------------------- |
+| `commix`                           | `Command_Injection.md`                                        |
+| `tplmap`                           | `SSTI.md`                                                     |
+| `smuggler`                         | `HTTP_Request_Smuggling.md`                                   |
+| `graphql-cop`, `clairvoyance`      | `GraphQL.md`                                                  |
+| `XSStrike`                         | `XSS_CSRF.md`, `XSS_Filter_CSP_Bypass.md`                     |
+| `php_filter_chain_generator`       | `Path_Traversal_LFI.md`                                       |
+| `git-dumper`, `GitTools`           | `Recon_Source_Leak.md`                                        |
+| `hash_extender`                    | `Crypto_Hash_Length_Extension.md`                             |
+| `padbuster`                        | `Crypto_Padding_Oracle.md`                                    |
+| `jwt_tool`                         | `JWT_Attacks.md`                                              |
+| `phpggc`, `ysoserial`              | `Deserialization.md`                                          |
+| `Gopherus`                         | SSRF qua gopher:// (payload khai thác Redis/Memcached nội bộ) |
 | `PayloadsAllTheThings`, `SecLists` | Kho payload/wordlist tra cứu offline khi payload mẫu không ăn |
-| `exploitdb` | Tra CVE/exploit có sẵn khi challenge dùng phần mềm/CMS cụ thể |
+| `exploitdb`                        | Tra CVE/exploit có sẵn khi challenge dùng phần mềm/CMS cụ thể |
 
 ---
 
@@ -124,7 +121,7 @@ cd ~/hoc/CTF/Tools/web/hash_extender && make && cd ..
 # ysoserial -- build bằng maven (mất vài phút)
 cd ~/hoc/CTF/Tools/web/ysoserial && mvn -q clean package -DskipTests && cd ..
 
-# jwt_tool, graphql-cop, XSStrike -- mỗi tool có requirements.txt riêng, cài vào ĐÚNG venv pwn
+# jwt_tool, graphql-cop, XSStrike -- mỗi tool có requirements.txt riêng, cài vào ĐÚNG venv venv_fhacker26
 spwn
 pip install -r ~/hoc/CTF/Tools/web/jwt_tool/requirements.txt
 pip install -r ~/hoc/CTF/Tools/web/graphql-cop/requirements.txt
