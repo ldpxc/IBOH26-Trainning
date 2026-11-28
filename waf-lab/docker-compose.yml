@@ -1,0 +1,162 @@
+# WAF Lab – Môi trường luyện tập Attack/Defense
+# DVWA  → WAF1 → http://localhost:8010  (WAF UI: http://localhost:8011)
+# Juice Shop → WAF2 → http://localhost:8020  (WAF UI: http://localhost:8021)
+#
+# Luyện tập:
+#   1. Tấn công app qua cổng WAF (8010, 8020)
+#   2. Viết rule WAF trong UI để chặn
+#   3. Kiểm tra Traffic log
+
+name: waf-lab
+
+services:
+
+  # ─────────────────────────────────────────────
+  # DATABASE chung cho 2 WAF
+  # ─────────────────────────────────────────────
+  postgres-dvwa:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: bunkerweb
+      POSTGRES_USER: bunkerweb
+      POSTGRES_PASSWORD: labpassdvwa123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata_dvwa:/var/lib/postgresql/data
+    networks: [db_dvwa]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bunkerweb -d bunkerweb"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  postgres-juice:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: bunkerweb
+      POSTGRES_USER: bunkerweb
+      POSTGRES_PASSWORD: labpassjuice123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata_juice:/var/lib/postgresql/data
+    networks: [db_juice]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bunkerweb -d bunkerweb"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # APP 1: DVWA (Damn Vulnerable Web Application)
+  # Lỗ hổng: SQLi, XSS, LFI, CMDi, CSRF, Upload
+  # ─────────────────────────────────────────────
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    environment:
+      DB_SERVER: dvwa-db
+      DB_PORT: "3306"
+      DB_DATABASE: dvwa
+      DB_USERNAME: dvwa
+      DB_PASSWORD: p@ssw0rd
+      RECAPTCHA_PRIV_KEY: ""
+      RECAPTCHA_PUB_KEY: ""
+    networks:
+      edge_dvwa:
+        aliases: [fuap_edge]
+      dvwa_db: []
+    restart: unless-stopped
+    depends_on:
+      dvwa-db:
+        condition: service_healthy
+
+  dvwa-db:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: dvwaroot
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: p@ssw0rd
+    volumes:
+      - dvwa_db:/var/lib/mysql
+    networks: [dvwa_db]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  waf-dvwa:
+    image: ghcr.io/f-hacker-macos/custom_waf26:latest
+    platform: linux/amd64
+    depends_on:
+      dvwa:
+        condition: service_started
+      postgres-dvwa:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8010:8080"   # App qua WAF
+      - "127.0.0.1:8011:7000"   # WAF UI
+    volumes:
+      - waf_logs_dvwa:/var/log/bunkerweb
+    env_file: [.env.dvwa]
+    environment:
+      DATABASE_URI: postgresql://bunkerweb:labpassdvwa123@postgres-dvwa:5432/bunkerweb
+    networks: [edge_dvwa, db_dvwa]
+    mem_limit: 3g
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────
+  # APP 2: OWASP Juice Shop
+  # Lỗ hổng: SQLi, XSS, IDOR, JWT, SSRF, Upload...
+  # ─────────────────────────────────────────────
+  juiceshop:
+    image: bkimminich/juice-shop:latest
+    networks:
+      edge_juice:
+        aliases: [fuap_edge]
+    restart: unless-stopped
+
+  waf-juice:
+    image: ghcr.io/f-hacker-macos/custom_waf26:latest
+    platform: linux/amd64
+    depends_on:
+      juiceshop:
+        condition: service_started
+      postgres-juice:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8020:8080"   # App qua WAF
+      - "127.0.0.1:8021:7000"   # WAF UI
+    volumes:
+      - waf_logs_juice:/var/log/bunkerweb
+    env_file: [.env.juice]
+    environment:
+      DATABASE_URI: postgresql://bunkerweb:labpassjuice123@postgres-juice:5432/bunkerweb
+    networks: [edge_juice, db_juice]
+    mem_limit: 3g
+    restart: unless-stopped
+
+volumes:
+  pgdata_dvwa:
+  pgdata_juice:
+  dvwa_db:
+  waf_logs_dvwa:
+  waf_logs_juice:
+
+networks:
+  edge_dvwa:
+    driver: bridge
+  edge_juice:
+    driver: bridge
+  dvwa_db:
+    driver: bridge
+    internal: true
+  db_dvwa:
+    driver: bridge
+    internal: true
+  db_juice:
+    driver: bridge
+    internal: true

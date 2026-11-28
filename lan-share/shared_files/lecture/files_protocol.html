@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filesystem và giao thức: SSRF, traversal, upload, XXE · IBOH Web</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:120px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.brute{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.brute .bytes{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+.brute .b{border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--surface);min-width:32px;text-align:center}
+.brute .b.found{background:var(--ok-soft);border-color:var(--ok);font-weight:700}
+.brute .b.testing{background:var(--accent-soft);border-color:var(--accent)}
+.brute button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer;margin-top:8px}
+.brute .msg{color:var(--mem);margin-top:8px}
+
+blockquote.note{margin:14px 0}
+section.block h2{margin-top:3px}
+.tablewrap table{min-width:560px}
+footer a{margin-right:12px}
+</style>
+</head>
+<body>
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+<header class="hero"><div class="wrap hero-inner">
+<div class="kicker">IBOH · WEB · FILES &amp; PROTOCOLS</div>
+<h1>Filesystem và giao thức: SSRF, traversal, upload, XXE</h1>
+<p class="sub"><strong>Tóm tắt 1 phút:</strong> Bốn lỗi này xảy ra khi request data điều khiển đường dẫn filesystem, nội dung được lưu/serve, đích mạng hoặc parser XML. Trace dữ liệu đến đúng sink và kiểm tra trust boundary tại server. OWASP khuyên ưu tiên ánh xạ ID opaque sang tài nguyên server-owned, allowlist định dạng/đích, và cấu hình parser an toàn; blacklist chuỗi/prefix không đủ. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Path_Traversal_Prevention_Cheat_Sheet.html">OWASP Path Traversal</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html">OWASP Upload</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP SSRF</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html">OWASP XXE</a>)</p>
+<div class="meta-row"><span class="chip"><b>Định dạng:</b> HTML</span><span class="chip"><b>Mã mẫu:</b> loopback/lab</span><span class="chip"><b>Markdown:</b> <a href="files_protocol.md">mở bản .md</a></span></div>
+<nav class="toc" aria-label="Mục lục"><a href="#06-server-side-request-forgery-ssrf">06 — Server-side request forgery (SSRF)</a><a href="#07-path-traversal-local-file-inclusion">07 — Path traversal / local file inclusion</a><a href="#08-upload-file-khong-an-toan">08 — Upload file không an toàn</a><a href="#11-xml-external-entity-xxe">11 — XML External Entity (XXE)</a><a href="#nguon-va-gioi-han">Nguồn và giới hạn</a></nav>
+</div></header>
+<main><section class="block" id="mo-au"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Mở đầu</h2><p>Các ví dụ cố ý lỗi dùng service lab. PoC chỉ nhắm loopback, fixture tự tạo, không đọc file/host/service thật. Mã minh họa, chưa chạy trong repo.</p></div></section><section class="block" id="06-server-side-request-forgery-ssrf"><div class="wrap"><div class="secnum">06 / WEB</div><h2>06 — Server-side request forgery (SSRF)</h2><p><strong>Combat ·</strong> Dấu hiệu: URL/host từ request chảy tới <code>requests.get</code>, <code>urlopen</code>, HTTP client, importer hoặc fetch helper. PoC gọi marker server riêng trên loopback. Vá tốt nhất: client gửi service key, app tạo URL từ allowlist server-side; chặn redirect, giới hạn response/time và network egress.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<pre><code class="language-python">@app.get(&quot;/preview&quot;)
+def preview():
+    url = request.args[&quot;url&quot;]
+    return requests.get(url).content  # BUG: đích do user chọn, redirects mặc định</code></pre>
+<p>Search request input tới bất kỳ server-side fetcher nào: image/avatar, webhook, PDF preview, XML resolver. URL “hợp lệ” chưa đủ; DNS answer, IPv4/IPv6, redirect, scheme và proxy có thể đổi đích cuối. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP SSRF Prevention</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Injection/18-Server-Side_Request_Forgery/">OWASP WSTG SSRF</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<p>Chạy marker server chỉ trên loopback, không serve filesystem:</p>
+<pre><code class="language-python"># marker.py — process độc lập, chỉ trả một chuỗi cố định
+from http.server import BaseHTTPRequestHandler, HTTPServer
+class H(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == &quot;/marker&quot;:
+            self.send_response(200); self.end_headers()
+            self.wfile.write(b&quot;LOCAL_SSRF_MARKER&quot;)
+HTTPServer((&quot;127.0.0.1&quot;, 9100), H).serve_forever()</code></pre>
+<p>Gửi request duy nhất tới service lab:</p>
+<pre><code class="language-python">import requests
+r = requests.get(&quot;http://127.0.0.1:5000/preview&quot;,
+                 params={&quot;url&quot;: &quot;http://127.0.0.1:9100/marker&quot;}, timeout=3)
+print(r.status_code, r.text)  # bản lỗi phản chiếu LOCAL_SSRF_MARKER</code></pre>
+<h3>Vá và vì sao</h3>
+<pre><code class="language-python">DESTINATIONS = {&quot;status&quot;: &quot;https://status.example.invalid/health&quot;}
+@app.get(&quot;/preview&quot;)
+def preview():
+    key = request.args.get(&quot;service&quot;, &quot;&quot;)
+    url = DESTINATIONS.get(key)
+    if url is None:
+        abort(400)
+    with requests.get(url, timeout=(2, 3), allow_redirects=False, stream=True) as response:
+        response.raise_for_status()
+        body = response.raw.read(64_001, decode_content=True)
+        if len(body) &gt; 64_000:
+            abort(502)  # tối đa đọc 64,001 byte rồi đóng response
+    return Response(body, content_type=&quot;text/plain&quot;)</code></pre>
+<p>Client không còn chọn URL tùy ý; chỉ mã <code>status</code> được ánh xạ đến destination do server cấu hình. <code>.invalid</code> là hostname giữ chỗ, không phải endpoint chạy được. Thêm egress firewall/proxy, response limit, timeout; nếu phải hỗ trợ URL tùy ý, kiểm tra IP đã resolve (v4/v6), reject non-public, xử lý redirect từng hop và dùng SSRF-aware client. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP SSRF Prevention</a>)</p>
+<p><strong>Hồi quy:</strong> test service key hợp lệ bằng mock; <code>url</code> tùy ý, loopback/private, scheme lạ, redirect tới host khác, response lớn và timeout phải không tạo request trái policy. Network layer cũng phải chặn đích nội bộ.</p></div></section><section class="block" id="07-path-traversal-local-file-inclusion"><div class="wrap"><div class="secnum">07 / WEB</div><h2>07 — Path traversal / local file inclusion</h2><p><strong>Combat ·</strong> Dấu hiệu: <code>file</code>, <code>path</code>, <code>name</code>, <code>page</code> từ request đi tới <code>open</code>, <code>send_file</code>, include/template loader hoặc archive extraction. PoC chỉ đọc sentinel giả ở ngoài thư mục public lab. Vá tốt nhất: nhận ID rồi map sang path cố định; nếu path tương đối thật sự cần, canonicalize và chứng minh containment ngay trước open.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<p>Giả sử lab có <code>/srv/lab/public/</code> và file fixture giả <code>/srv/lab/parent-sentinel.txt</code>:</p>
+<pre><code class="language-python">@app.get(&quot;/file&quot;)
+def get_file():
+    name = request.args[&quot;name&quot;]
+    return send_file(PUBLIC_DIR / name)  # BUG: request controls path</code></pre>
+<p>Tìm input chảy đến filesystem, <code>include</code>, template loader hay tên entry khi giải nén. Không kết luận chỉ từ keyword: kiểm tra normalize/authorization có chạy trước sink không. Xóa literal <code>../</code> không đủ vì separator/encoding/absolute path/symlink và thứ tự decode khác nhau. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Path_Traversal_Prevention_Cheat_Sheet.html">OWASP Path Traversal Prevention</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization/01-Directory_Traversal_File_Include/">OWASP WSTG Directory Traversal</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">import requests
+r = requests.get(&quot;http://127.0.0.1:8000/file&quot;,
+                 params={&quot;name&quot;: &quot;../parent-sentinel.txt&quot;}, timeout=3)
+print(r.status_code, r.text)  # chỉ trông đợi marker do chính lab tạo</code></pre>
+<h3>Vá và vì sao</h3>
+<p>Với catalog cố định, dùng ID map:</p>
+<pre><code class="language-python">FILES = {
+    &quot;rules&quot;: APP_DATA / &quot;rules.txt&quot;,
+    &quot;faq&quot;: APP_DATA / &quot;faq.txt&quot;,
+}
+@app.get(&quot;/download&quot;)
+def download():
+    target = FILES.get(request.args.get(&quot;id&quot;, &quot;&quot;))
+    if target is None:
+        abort(404)
+    return send_file(target)</code></pre>
+<p>Không có request path nào được nối vào filesystem; client chỉ chọn key trong danh mục server-owned. Nếu nghiệp vụ cần filename, resolve về absolute, kiểm <code>relative_to(base)</code> theo path component rồi mở đúng target; tránh directory attacker-writable vì symlink/TOCTOU. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Path_Traversal_Prevention_Cheat_Sheet.html">OWASP Path Traversal</a>, <a href="https://docs.python.org/3/library/pathlib.html">Python pathlib</a>)</p>
+<p><strong>Hồi quy:</strong> chỉ file ID hợp lệ đọc được; thử <code>../parent-sentinel.txt</code>, absolute path, URL-encoded và separator phù hợp OS đều không trả fixture ngoài root. Test symlink riêng nếu attacker có thể ghi thư mục.</p></div></section><section class="block" id="08-upload-file-khong-an-toan"><div class="wrap"><div class="secnum">08 / WEB</div><h2>08 — Upload file không an toàn</h2><p><strong>Combat ·</strong> Dấu hiệu: <code>save(upload.filename)</code>, chỉ kiểm extension/client MIME, lưu vào webroot hoặc trả HTML/SVG inline từ app origin. PoC upload text marker giả tên <code>.png</code> với MIME giả. Vá theo định dạng nghiệp vụ: giới hạn byte, parse/decode server-side, re-encode canonical, tên do server tạo, lưu ngoài webroot, download có authorization/attachment.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<pre><code class="language-python">@app.post(&quot;/avatar&quot;)
+def avatar():
+    f = request.files[&quot;file&quot;]
+    if f.filename.endswith(&quot;.png&quot;):
+        f.save(UPLOAD_DIR / f.filename)  # BUG: tên/loại tin từ client
+        return &quot;ok&quot;
+    abort(400)</code></pre>
+<p><code>Content-Type</code> trong multipart và HTML <code>accept</code> do client kiểm soát. Signature cũng không đủ một mình. Kiểm tra cách upload được lưu, parse, phục vụ lại, xử lý quyền, và headers. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html">OWASP File Upload</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/14-Business_Logic/08-Upload_of_Unexpected_File_Types/">OWASP WSTG Upload</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">import requests
+r = requests.post(
+    &quot;http://127.0.0.1:5000/avatar&quot;,
+    files={&quot;file&quot;: (&quot;avatar.png&quot;, b&quot;LAB_ONLY_NOT_A_PNG&quot;, &quot;image/png&quot;)},
+    timeout=3,
+)
+print(r.status_code, r.text)  # code chỉ check extension sẽ nhận marker giả</code></pre>
+<h3>Vá và vì sao</h3>
+<p>Ví dụ nhận PNG avatar với Pillow; <code>PRIVATE_UPLOAD_DIR</code> nằm ngoài webroot và app đã đặt <code>MAX_CONTENT_LENGTH</code>:</p>
+<pre><code class="language-python">from io import BytesIO
+import secrets
+from PIL import Image, UnidentifiedImageError
+
+MAX_BYTES = 2 * 1024 * 1024
+MAX_PIXELS = 4_000_000
+Image.MAX_IMAGE_PIXELS = MAX_PIXELS
+app.config[&quot;MAX_CONTENT_LENGTH&quot;] = 3 * 1024 * 1024  # multipart overhead + file limit
+
+@app.post(&quot;/avatar&quot;)
+def avatar():
+    upload = request.files.get(&quot;file&quot;)
+    if upload is None:
+        abort(400)
+    raw = upload.stream.read(MAX_BYTES + 1)
+    if len(raw) &gt; MAX_BYTES:
+        abort(413)
+    try:
+        source = Image.open(BytesIO(raw))
+        if source.format != &quot;PNG&quot;:
+            abort(400)
+        if source.width * source.height &gt; MAX_PIXELS:
+            abort(413)
+        source.load()                       # buộc decode ở server
+        out = BytesIO()
+        source.convert(&quot;RGBA&quot;).save(out, format=&quot;PNG&quot;)  # canonical re-encode
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError):
+        abort(400)
+    object_id = secrets.token_hex(16) + &quot;.png&quot;
+    (PRIVATE_UPLOAD_DIR / object_id).write_bytes(out.getvalue())
+    return {&quot;id&quot;: object_id}, 201</code></pre>
+<p>Bản vá tin parser phía server và bytes sau re-encode, không tên/extension/MIME của client; kích thước/pixel bị giới hạn và object nằm ngoài webroot. Bản production cần pin, cập nhật và sandbox image library; serve qua route kiểm quyền với <code>Content-Disposition: attachment</code> và <code>X-Content-Type-Options: nosniff</code> khi phù hợp. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html">OWASP File Upload</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/14-Business_Logic/08-Upload_of_Unexpected_File_Types/">OWASP WSTG Upload</a>)</p>
+<p><strong>Hồi quy:</strong> PNG hợp lệ được decode và tạo ID ngẫu nhiên; text giả PNG, file lỗi, kích thước quá mức và file ngoài allowlist bị từ chối. Kiểm tra file không thể chạy/hiển thị active content dưới origin ứng dụng.</p></div></section><section class="block" id="11-xml-external-entity-xxe"><div class="wrap"><div class="secnum">11 / WEB</div><h2>11 — XML External Entity (XXE)</h2><p><strong>Combat ·</strong> Dấu hiệu: XML không tin cậy đi vào parser/resolver cho phép DTD/external entities; kiểm tra cả SOAP, SVG, upload và worker phụ. PoC chỉ tham chiếu file fixture lab tự tạo. Vá: reject DOCTYPE/DTD, disable external entities/DTD/schema access; fail closed nếu parser không hỗ trợ setting.</p>
+<h3>Code lỗi và cách nhận ra</h3>
+<p>Ví dụ Java JAXP cố ý bật external entity resolution:</p>
+<pre><code class="language-java">DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
+f.setFeature(&quot;http://xml.org/sax/features/external-general-entities&quot;, true);
+f.setFeature(&quot;http://xml.org/sax/features/external-parameter-entities&quot;, true);
+f.setFeature(&quot;http://apache.org/xml/features/nonvalidating/load-external-dtd&quot;, true);
+Document doc = f.newDocumentBuilder().parse(untrustedInput); // BUG</code></pre>
+<p>Review mọi parser instance/provider/version, DTD, external entity, XInclude, resolver, schema và stylesheet. Không kết luận raw parser nào cũng dễ tổn thương: nhiều phiên bản hiện đại tắt external resolution mặc định; kiểm tra cấu hình chạy thật và các parser thứ cấp. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html">OWASP XXE Prevention</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Injection/07-XML_Injection/">OWASP WSTG XXE</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<p>Tạo riêng fixture <code>/tmp/xxe-lab-sentinel.txt</code> với nội dung <code>LAB_ONLY_MARKER</code>, chạy app Java lab trên <code>127.0.0.1:8080</code>, rồi gửi XML này. Không thay path bằng file thật.</p>
+<pre><code class="language-python">import requests
+xml = b&#x27;&#x27;&#x27;&lt;?xml version=&quot;1.0&quot;?&gt;
+&lt;!DOCTYPE x [&lt;!ENTITY lab SYSTEM &quot;file:///tmp/xxe-lab-sentinel.txt&quot;&gt;]&gt;
+&lt;x&gt;&amp;lab;&lt;/x&gt;&#x27;&#x27;&#x27;
+r = requests.post(&quot;http://127.0.0.1:8080/parse&quot;, data=xml,
+                  headers={&quot;Content-Type&quot;: &quot;application/xml&quot;}, timeout=3)
+print(r.status_code, r.text)  # bản lỗi nếu resolve: LAB_ONLY_MARKER</code></pre>
+<h3>Vá và vì sao</h3>
+<p>Java DOM, JDK 9+:</p>
+<pre><code class="language-java">DocumentBuilderFactory f = DocumentBuilderFactory.newDefaultInstance();
+f.setFeature(&quot;http://apache.org/xml/features/disallow-doctype-decl&quot;, true);
+f.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+f.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, &quot;&quot;);
+f.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, &quot;&quot;);
+f.setXIncludeAware(false);
+DocumentBuilder builder = f.newDocumentBuilder();
+Document doc = builder.parse(untrustedInput);</code></pre>
+<p>Nếu feature bắt buộc không được hỗ trợ, dừng thay vì parse không an toàn. Với Python, dùng parser hardening đã thiết kế cho input không tin cậy:</p>
+<pre><code class="language-python">from defusedxml import ElementTree as SafeET
+root = SafeET.fromstring(xml_bytes, forbid_dtd=True)</code></pre>
+<p>Tắt DTD/external resolution ngăn parser mở fixture theo khai báo XML; giới hạn byte/thời gian riêng vì tắt XXE không tự chặn mọi resource exhaustion. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html">OWASP XXE Prevention</a>, <a href="https://github.com/tiran/defusedxml">defusedxml</a>)</p>
+<p><strong>Hồi quy:</strong> bản lỗi local có thể trả sentinel giả; bản vá từ chối DTD/entity mà không trả marker. Test mọi parser path, gồm XML trong upload/convert/report; giới hạn kích thước và thời gian riêng. Không dùng <code>/etc/passwd</code>, <code>/dev/random</code>, callback ra ngoài hay URL public trong PoC.</p></div></section><section class="block" id="nguon-va-gioi-han"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Nguồn và giới hạn</h2><p>Cấu hình parser, HTTP client và file processing phụ thuộc runtime, OS, version và deployment. Code review phải theo source-to-sink và xác nhận policy thực tế; tên hàm nghi vấn chỉ là chỉ báo. Nguồn: <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization/01-Directory_Traversal_File_Include/">OWASP WSTG Traversal</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/14-Business_Logic/08-Upload_of_Unexpected_File_Types/">OWASP WSTG Upload</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Injection/18-Server-Side_Request_Forgery/">OWASP WSTG SSRF</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/XML_Security_Cheat_Sheet.html">OWASP XML Security</a>, <a href="https://docs.python.org/3/library/pathlib.html">Python pathlib</a>, <a href="https://docs.python.org/3/library/urllib.request.html">Python urllib</a>.</p></div></section></main>
+<footer><div class="wrap"><p><strong>IBOH · Web security</strong> · Nội dung mẫu phục vụ lab được phép, không phải hướng dẫn nhắm hệ thống thật.</p><p><a href="../web.html">Mục lục Web</a><a href="files_protocol.md">Bản Markdown</a></p></div></footer>
+<script>
+(function(){"use strict";var btn=document.getElementById("themeBtn");function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("web-theme",n);}catch(e){}});try{var s=localStorage.getItem("web-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}})();
+</script>
+</body>
+</html>

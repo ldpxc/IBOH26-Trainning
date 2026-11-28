@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Injection — SQLi, XSS, command injection, SSTI · IBOH Web</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#eceae3;--fg:#23211c;--muted:#6c675c;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --danger:#c0392b;--danger-soft:#f6ddd8;--warn:#b8860b;--warn-soft:#f3e7c7;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:740px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --danger:#e8705f;--danger-soft:#331c18;--warn:#d9b55f;--warn-soft:#2e2713;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.68;font-size:16.5px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+.wide{max-width:1000px}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:42px 30px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,48px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;word-break:break-word}
+.sub{color:var(--muted);font-size:17px;max-width:56ch}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:600}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(22px,4vw,28px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:19px;margin:26px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:16px;margin:18px 0 4px}
+section.block{padding-block:34px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:12px 0}strong{font-weight:600}a{color:var(--accent);text-underline-offset:3px}
+.lead{font-size:18px}
+ul,ol{padding-left:22px;margin:12px 0}li{margin:7px 0}
+mark{background:var(--accent-soft);color:inherit;padding:0 4px;border-radius:3px;font-family:var(--font-mono);font-size:.9em}
+.mem-term{color:var(--mem);font-weight:600}
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:13px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.note.tip{border-color:var(--ok)}.note.warn{border-color:var(--danger)}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.tldr{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.tldr p{margin:6px 0}
+.combat{border:2px solid var(--accent);border-radius:14px;overflow:hidden;margin:4px 0 0}
+.combat-h{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:10px 16px;font-size:15.5px}
+.combat-b{padding:2px 16px 10px;background:var(--surface)}
+.combat-row{padding:12px 0;border-bottom:1px solid var(--line)}
+.combat-row:last-child{border-bottom:none}
+.combat-row .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;margin-bottom:5px;display:block}
+.combat-row p{margin:0;font-size:14px}.combat-row pre{margin:4px 0 0}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:13px;line-height:1.62;padding:16px;border-radius:12px;overflow-x:auto;margin:14px 0;border:1px solid #00000030}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .p{color:#d9b55f}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre code{background:none;padding:0;font-size:inherit}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:16px 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h4{margin:0 0 4px;font-size:15px}.card p{margin:0;font-size:14px;color:var(--muted)}
+.card .term{font-family:var(--font-mono);color:var(--accent);font-size:12.5px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td code{font-size:.85em}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--danger);font-weight:700}.maybe{color:var(--warn);font-weight:700}
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:20px 0}
+.step{display:grid;grid-template-columns:32px 1fr;gap:13px;margin:16px 0}
+.step .n{font-family:var(--font-mono);font-weight:700;color:#fff;background:var(--accent);width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.step .body h4{margin:1px 0 4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 0}
+.tab{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:8px 13px;border-radius:9px 9px 0 0;cursor:pointer;border-bottom:none}
+.tab.active{background:var(--code-bg);color:var(--code-fg);border-color:var(--code-bg)}
+.tabpanel pre{margin-top:0;border-top-left-radius:0}
+.reqitem{display:grid;grid-template-columns:30px 1fr;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:var(--surface);align-items:start;margin:8px 0}
+.reqitem .ico{font-size:17px;line-height:1.3}
+.reqitem h4{margin:0 0 2px;font-size:15px}.reqitem p{margin:0;font-size:14px;color:var(--muted)}
+.frame{font-family:var(--font-mono);font-size:12px;display:flex;flex-direction:column;gap:3px;margin:12px 0}
+.fr{display:grid;grid-template-columns:120px 1fr;gap:8px;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2)}
+.fr .o{color:var(--mem);white-space:nowrap}
+.fr.key{background:var(--accent-soft);border-color:var(--accent)}
+details{margin-top:8px;border:1px solid var(--line);border-radius:9px;padding:0 12px;background:var(--surface)}
+summary{cursor:pointer;font-size:14px;color:var(--muted);font-family:var(--font-mono);padding:10px 0}
+details[open] summary{color:var(--accent)}details .dc{padding-bottom:10px;font-size:14.5px}
+.ex{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--mem);border-radius:0 12px 12px 0;padding:13px 16px;margin:12px 0}
+.ex .level{font-family:var(--font-mono);font-size:11px;color:var(--mem);font-weight:700;letter-spacing:.06em}
+figure{margin:22px 0}figure.dg{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 16px 6px}
+figure svg{display:block;max-width:100%;height:auto;margin:0 auto}
+figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.55}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer}
+footer{padding-block:26px 44px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.brute{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:16px;margin:12px 0;font-family:var(--font-mono);font-size:12.5px}
+.brute .bytes{display:flex;gap:4px;flex-wrap:wrap;margin:10px 0}
+.brute .b{border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--surface);min-width:32px;text-align:center}
+.brute .b.found{background:var(--ok-soft);border-color:var(--ok);font-weight:700}
+.brute .b.testing{background:var(--accent-soft);border-color:var(--accent)}
+.brute button{font-family:var(--font-mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer;margin-top:8px}
+.brute .msg{color:var(--mem);margin-top:8px}
+
+blockquote.note{margin:14px 0}
+section.block h2{margin-top:3px}
+.tablewrap table{min-width:560px}
+footer a{margin-right:12px}
+</style>
+</head>
+<body>
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐ giao diện</button>
+<header class="hero"><div class="wrap hero-inner">
+<div class="kicker">IBOH · WEB · INJECTION</div>
+<h1>Injection — SQLi, XSS, command injection, SSTI</h1>
+<p class="sub"><strong>Tóm tắt 1 phút:</strong> Bốn lỗi này xuất hiện khi dữ liệu do người dùng kiểm soát bị diễn giải thành cú pháp của SQL, trình duyệt, shell hoặc template engine. Hãy lần theo đường đi <strong>source → sink</strong>; vá ngay ở ranh giới bằng API có tham số/cú pháp tách biệt. Tài liệu OWASP Top 10:2025 xếp Injection ở A05; các lớp dưới cần cách vá riêng, không có một bộ lọc chung chữa được tất cả. (<a href="https://top10.owasp.org/2025/0x00_2025-Introduction/">OWASP Top 10:2025</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Injection_Prevention_Cheat_Sheet.html">OWASP Injection Prevention</a>)</p>
+<div class="meta-row"><span class="chip"><b>Định dạng:</b> HTML</span><span class="chip"><b>Mã mẫu:</b> loopback/lab</span><span class="chip"><b>Markdown:</b> <a href="injection.md">mở bản .md</a></span></div>
+<nav class="toc" aria-label="Mục lục"><a href="#01-sql-injection-sqli">01 — SQL injection (SQLi)</a><a href="#02-cross-site-scripting-xss">02 — Cross-site scripting (XSS)</a><a href="#09-os-command-injection">09 — OS command injection</a><a href="#10-server-side-template-injection-ssti">10 — Server-side template injection (SSTI)</a><a href="#mau-giang-va-nguon">Mẫu giảng và nguồn</a></nav>
+</div></header>
+<main><section class="block" id="mo-au"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Mở đầu</h2><p><strong>Ví dụ xuyên suốt:</strong> một service Flask cục bộ có catalog sản phẩm và trang greeting. Snippet cố ý lỗi để code review/lab; mọi PoC bên dưới chỉ gọi <code>127.0.0.1:5000</code> và dùng marker vô hại.</p></div></section><section class="block" id="01-sql-injection-sqli"><div class="wrap"><div class="secnum">01 / WEB</div><h2>01 — SQL injection (SQLi)</h2><p><strong>Combat ·</strong> Dấu hiệu: <code>request.args</code>/JSON nối vào chuỗi đưa tới <code>execute</code>, <code>text()</code> hay query SQL động. Điều kiện: giá trị request có thể thay đổi cú pháp query. Proof: truy vấn <code>SELECT</code> trả thêm hàng seed giả với điều kiện luôn đúng. Bản vá: bind giá trị; tên cột/bảng phải lấy từ allowlist.</p>
+<h3>Code lỗi và cách đọc</h3>
+<pre><code class="language-python">@app.get(&quot;/search&quot;)
+def search():
+    q = request.args.get(&quot;q&quot;, &quot;&quot;)
+    sql = f&quot;SELECT id, name FROM products WHERE name = &#x27;{q}&#x27;&quot;  # BUG: input thành SQL syntax
+    return jsonify([dict(r) for r in db.execute(sql).fetchall()])</code></pre>
+<p>Khi review, tìm f-string/nối chuỗi bên trong <code>execute()</code>; kiểm tra cả stored procedure và ORM API nhận raw SQL. Placeholder không thể thay thế tên bảng/cột hay <code>ORDER BY</code>, nên vị trí cú pháp động cần map qua allowlist, không lấy tùy ý từ client. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html">OWASP SQLi Prevention</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Injection/05-SQL_Injection/">OWASP WSTG SQLi</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">import requests
+BASE = &quot;http://127.0.0.1:5000&quot;  # cố định loopback; DB chỉ có hàng giả
+r = requests.get(BASE + &quot;/search&quot;, params={&quot;q&quot;: &quot;&#x27; OR &#x27;1&#x27;=&#x27;1&quot;}, timeout=3)
+print(r.status_code, r.text)  # bản lỗi: thấy cả apple và pear đã seed</code></pre>
+<h3>Vá và hiểu vì sao</h3>
+<pre><code class="language-python">rows = db.execute(
+    &quot;SELECT id, name FROM products WHERE name = ?&quot;, (q,)
+).fetchall()
+return jsonify([dict(r) for r in rows])</code></pre>
+<p>Driver gửi query structure và value riêng; dấu nháy/OR trong <code>q</code> trở thành nội dung tìm kiếm thay vì điều kiện SQL. Python <code>sqlite3</code> khuyến nghị placeholder và binding tham số. (<a href="https://docs.python.org/3/library/sqlite3.html">Python sqlite3</a>)</p>
+<p><strong>Hồi quy:</strong> seed hai dòng <code>apple</code>, <code>pear</code>; PoC ở trên không còn trả mọi dòng. Thử Unicode, dấu nháy và input dài; query vẫn không lỗi cú pháp, không phản hồi lỗi DB nội bộ cho client. Nếu order field tùy chọn, test mọi giá trị ngoài allowlist bị từ chối.</p></div></section><section class="block" id="02-cross-site-scripting-xss"><div class="wrap"><div class="secnum">02 / WEB</div><h2>02 — Cross-site scripting (XSS)</h2><p><strong>Combat ·</strong> Dấu hiệu: dữ liệu không tin cậy đi vào <code>innerHTML</code>, <code>document.write</code>, event handler, template escape hatch (<code>|safe</code>, <code>dangerouslySetInnerHTML</code>, <code>v-html</code>) hoặc HTML dựng bằng nối chuỗi. Proof: marker JavaScript chỉ đặt <code>data-lab-xss</code> trong DOM local. Vá bằng autoescape đúng context hoặc DOM <code>textContent</code>; sanitizer chỉ khi thật sự cho phép rich HTML.</p>
+<h3>Code lỗi và cách đọc</h3>
+<pre><code class="language-python">@app.get(&quot;/hello&quot;)
+def hello():
+    name = request.args.get(&quot;name&quot;, &quot;&quot;)
+    return f&quot;&lt;p&gt;Hello {name}&lt;/p&gt;&quot;  # BUG: raw HTML interpolation</code></pre>
+<p>Trace input tới HTML body, thuộc tính, URL, JS string và DOM sink riêng biệt: một encoder HTML không an toàn cho tất cả context. Tìm luồng từ URL/hash/storage/API tới <code>innerHTML</code>/<code>insertAdjacentHTML</code>; nếu chỉ cần text, đó là sai sink. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html">OWASP XSS Prevention</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html">OWASP DOM XSS</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">from urllib.parse import quote
+payload = &quot;&lt;script&gt;document.body.dataset.labXss=&#x27;ran&#x27;&lt;/script&gt;&quot;
+print(&quot;Mở URL này trên browser local:&quot;)
+print(&quot;http://127.0.0.1:5000/hello?name=&quot; + quote(payload))
+# DevTools trên trang lab: document.body.dataset.labXss === &quot;ran&quot;</code></pre>
+<p>Payload chỉ đặt marker DOM, không đọc cookie, gửi request hay đổi dữ liệu.</p>
+<h3>Vá và hiểu vì sao</h3>
+<pre><code class="language-python"># Flask view
+return render_template(&quot;hello.html&quot;, name=name)</code></pre>
+<pre><code class="language-html">&lt;!-- templates/hello.html: autoescape mặc định của template HTML --&gt;
+&lt;p&gt;Hello {{ name }}&lt;/p&gt;</code></pre>
+<p>Template tĩnh xử lý <code>name</code> như text và encode theo HTML context; không dùng <code>|safe</code> cho giá trị request. Trên client dùng <code>textContent</code>. CSP là lớp phụ trợ, không thay thế escaping. (<a href="https://flask.palletsprojects.com/en/stable/templating/">Flask templating</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html">OWASP XSS Prevention</a>)</p>
+<p><strong>Hồi quy:</strong> trước vá marker làm <code>dataset.labXss</code> được đặt; sau vá payload hiện như chữ và marker không được đặt. Với DOM XSS, kiểm tra kết quả trong browser, không chỉ dò response HTML.</p></div></section><section class="block" id="09-os-command-injection"><div class="wrap"><div class="secnum">09 / WEB</div><h2>09 — OS command injection</h2><p><strong>Combat ·</strong> Dấu hiệu: request value tới <code>os.system</code>, <code>popen</code>, <code>subprocess(..., shell=True)</code>, <code>sh -c</code>, PHP <code>system/exec</code>. Proof: chỉ in <code>POC_OK</code> bằng lệnh <code>printf</code> thứ hai. Vá: xóa process nếu có API thuần ngôn ngữ; nếu cần process, dùng executable và argv cố định, <code>shell=False</code>, validation theo ngữ nghĩa chương trình.</p>
+<h3>Code lỗi và cách đọc</h3>
+<pre><code class="language-python">@app.get(&quot;/label&quot;)
+def label():
+    name = request.args.get(&quot;name&quot;, &quot;&quot;)
+    result = subprocess.run(
+        f&quot;printf &#x27;label=%s\\n&#x27; {name}&quot;, shell=True,
+        text=True, capture_output=True, timeout=2,
+    )
+    return result.stdout</code></pre>
+<p>Không dừng ở “đã quote shell”: dữ liệu có thể bị diễn giải như option của chương trình ngay cả khi shell parser đã bị bỏ. Theo dõi biến tainted tới lệnh và mọi đối số. Python nêu <code>shell=True</code> khiến ứng dụng chịu trách nhiệm quoting; OWASP khuyên tránh gọi OS command khi có thư viện. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html">OWASP OS Command Injection</a>, <a href="https://docs.python.org/3/library/subprocess.html#security-considerations">Python subprocess security</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">import requests
+r = requests.get(
+    &quot;http://127.0.0.1:5000/label&quot;,
+    params={&quot;name&quot;: &quot;demo; printf POC_OK&quot;}, timeout=3,
+)
+print(r.text)  # bản lỗi: xuất hiện thêm POC_OK</code></pre>
+<h3>Vá và hiểu vì sao</h3>
+<p>Nếu chỉ cần format nhãn, bỏ hẳn process:</p>
+<pre><code class="language-python">return f&quot;label={name}\n&quot;</code></pre>
+<p>Nếu thực sự cần công cụ, ưu tiên thư viện; nếu không, truyền list argv với tên executable cố định, <code>shell=False</code>, validate option/value và quyền process tối thiểu. Tách argv ngăn shell phân tích dấu <code>;</code>, nhưng không tự chặn option injection. (<a href="https://docs.python.org/3/library/subprocess.html#security-considerations">Python subprocess</a>, <a href="https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html">OWASP OS Command Injection</a>)</p>
+<p><strong>Hồi quy:</strong> trong container lab Linux, cùng marker không còn sinh lệnh thứ hai; input là text hoặc bị validation từ chối. Không dùng <code>id</code>, shell, file, mạng hay payload phá hoại trong minh chứng này.</p></div></section><section class="block" id="10-server-side-template-injection-ssti"><div class="wrap"><div class="secnum">10 / WEB</div><h2>10 — Server-side template injection (SSTI)</h2><p><strong>Combat ·</strong> Dấu hiệu: dữ liệu request ghép vào template source hoặc truyền vào <code>render_template_string</code>/<code>Environment.from_string</code>. Proof arithmetic <code>{{7*7}}</code> trả <code>49</code>. Vá bằng file template cố định và truyền input thành biến; output autoescape giảm XSS nhưng không vá template-source injection.</p>
+<h3>Code lỗi và cách đọc</h3>
+<pre><code class="language-python">@app.get(&quot;/greet&quot;)
+def greet():
+    name = request.args.get(&quot;name&quot;, &quot;&quot;)
+    return render_template_string(&quot;Hello &quot; + name)  # BUG: user input là template</code></pre>
+<p>Phân biệt <code>{{ name }}</code> trong template cố định với <code>name</code> được nối vào chuỗi template trước khi compile. Tìm <code>from_string</code>, <code>render_template_string</code>, <code>createTemplate</code> và tương đương. Tác động tùy engine và object context được lộ. (<a href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Template_Injection_Prevention_Cheat_Sheet.html">OWASP SSTI Prevention</a>, <a href="https://jinja.palletsprojects.com/en/stable/api/#jinja2.Environment.from_string">Jinja API</a>)</p>
+<h3>PoC lab cục bộ</h3>
+<pre><code class="language-python">import requests
+r = requests.get(
+    &quot;http://127.0.0.1:5000/greet&quot;, params={&quot;name&quot;: &quot;{{7*7}}&quot;}, timeout=3
+)
+print(r.text)  # bản lỗi: Hello 49</code></pre>
+<h3>Vá và hiểu vì sao</h3>
+<pre><code class="language-python"># view
+return render_template(&quot;greet.html&quot;, name=name)</code></pre>
+<pre><code class="language-html">&lt;!-- templates/greet.html --&gt;
+Hello {{ name }}</code></pre>
+<p>Engine compile source do ứng dụng sở hữu; <code>name</code> được truyền sau như data. Nếu sản phẩm thật sự cho phép user tự viết template, cần sandbox/engine ít quyền, context tối thiểu, không đưa secret hoặc object có side effect; không dùng escaping làm cách vá. (<a href="https://flask.palletsprojects.com/en/stable/templating/">Flask templating</a>, <a href="https://jinja.palletsprojects.com/en/stable/sandbox/">Jinja sandbox</a>)</p>
+<p><strong>Hồi quy:</strong> bản lỗi trả <code>49</code>; bản vá hiển thị literal <code>{{7*7}}</code> sau khi escape. PoC dừng ở arithmetic; không nâng thành file access hoặc thực thi code.</p></div></section><section class="block" id="mau-giang-va-nguon"><div class="wrap"><div class="secnum">WEB / GIẢNG SÂU</div><h2>Mẫu giảng và nguồn</h2><p>Dạy mỗi mục theo chuỗi: <strong>30 giây nhận diện → code lỗi → PoC marker → code vá → invariant hồi quy</strong>. Đây là bản compact theo Combat Card + giảng sâu trong <a href="../_CHUAN_VIET_BAIGIANG.html">_CHUAN_VIET_BAIGIANG.html</a>; các ví dụ trên minh họa source-to-sink, chưa được chạy. Nguồn chung: <a href="https://cheatsheetseries.owasp.org/cheatsheets/Secure_Code_Review_Cheat_Sheet.html">OWASP Secure Code Review</a>, <a href="https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Injection/">OWASP WSTG Injection</a>.</p></div></section></main>
+<footer><div class="wrap"><p><strong>IBOH · Web security</strong> · Nội dung mẫu phục vụ lab được phép, không phải hướng dẫn nhắm hệ thống thật.</p><p><a href="../web.html">Mục lục Web</a><a href="injection.md">Bản Markdown</a></p></div></footer>
+<script>
+(function(){"use strict";var btn=document.getElementById("themeBtn");function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("web-theme",n);}catch(e){}});try{var s=localStorage.getItem("web-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}})();
+</script>
+</body>
+</html>

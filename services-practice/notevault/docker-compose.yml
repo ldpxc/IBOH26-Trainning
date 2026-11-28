@@ -1,0 +1,35 @@
+# Dùng để tự kiểm app ĐỘC LẬP (chưa qua WAF) — xem services-practice/README.md.
+# Khi đã xác nhận app đúng thiết kế, service này được ghép vào
+# services-practice/compose.template.yml (có BunkerWeb) để luyện thật.
+name: notevault-standalone
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pw_dev
+      MYSQL_DATABASE: notevault
+      MYSQL_USER: notevault
+      MYSQL_PASSWORD: notevault_pw
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_pw_dev"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      args:
+        FLAG_SECRET_BUILD: ${FLAG_SECRET_BUILD:-dev-secret-change-me}
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_NAME: notevault
+      DB_USER: notevault
+      DB_PASS: notevault_pw
+      FLAG_SECRET: ${FLAG_SECRET:-dev-secret-change-me}
+    ports:
+      - "127.0.0.1:8081:80"

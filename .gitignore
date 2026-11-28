@@ -43,4 +43,6 @@ Thumbs.db
 # file nặng, không đẩy lên git
 *.mp4
 *.zip
-docs/briefing/*.pdf
+*.pdf
+*.pptx
+.claude/settings.local.json

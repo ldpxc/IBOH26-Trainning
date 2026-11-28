@@ -1,0 +1,14 @@
+{
+  "name": "socialhub",
+  "version": "1.0.0",
+  "private": true,
+  "main": "app/server.js",
+  "scripts": { "start": "node app/server.js" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cookie-parser": "^1.4.6",
+    "jsonwebtoken": "^9.0.2",
+    "graphql": "^16.8.1",
+    "puppeteer": "^22.8.0"
+  }
+}

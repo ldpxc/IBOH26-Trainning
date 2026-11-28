@@ -1,0 +1,14 @@
+# Dùng để tự kiểm app ĐỘC LẬP (chưa qua WAF). Khi đã xác nhận đúng thiết kế,
+# ghép vào services-practice/compose.template.yml (có BunkerWeb) để luyện thật.
+name: pulseapi-standalone
+
+services:
+  app:
+    build: .
+    environment:
+      FLAG_SECRET: ${FLAG_SECRET:-dev-secret-change-me}
+      APP_SECRET_KEY: dev-flask-secret-change-me
+      APP_AES_KEY: devaeskey1234567
+      EXPORT_SECRET: export-signing-secret-2026
+    ports:
+      - "127.0.0.1:8082:80"

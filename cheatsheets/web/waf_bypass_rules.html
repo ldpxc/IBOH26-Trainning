@@ -1,0 +1,590 @@
+<title>WAF — Bypass &amp; Viết Rule Phòng Thủ — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Kỹ năng xuyên suốt — áp dụng cho MỌI bài trước</div>
+    <h1>WAF — Bypass &amp; Viết Rule Phòng Thủ</h1>
+    <p class="sub">Khác mọi bài trước (mỗi bài là 1 lỗ hổng cụ thể), bài này là <strong>kỹ năng dùng chung</strong>:
+    khi payload SQLi/XSS/SSTI/LFI... của bạn bị chặn, làm sao lách; và khi tới lượt phòng thủ, viết rule chặn
+    đúng payload đối thủ mà không tự bắn vào chân mình (chặn nhầm request của chính service, bị trừ SVC).</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload bypass</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 Viết rule phòng thủ</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>WAF là gì, bypass/viết rule để làm gì?</h2>
+  <p class="lead"><strong>WAF (Web Application Firewall)</strong> là 1 lớp đứng <strong>giữa</strong> người dùng
+  và ứng dụng thật, soi từng request, so khớp với các "rule" (thường là regex) để nhận diện payload tấn công và
+  chặn trước khi nó tới được app. Trong F-Hacker, bạn ở cả 2 vai: <strong>tấn công</strong> — WAF của đối thủ có
+  thể chặn payload chuẩn của bạn, cần biến tấu để lọt qua; <strong>phòng thủ</strong> — bạn tự viết rule chặn
+  đúng payload đối thủ hay dùng, nhưng không được chặn nhầm request bình thường (quy chế phạt nặng).</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  WAF so khớp <strong>nguyên văn</strong> request nó nhìn thấy. Mọi kỹ thuật bypass đều xoay quanh 1 ý tưởng duy
+  nhất: làm cho <strong>payload trông khác đi với WAF</strong> nhưng <strong>app đích vẫn hiểu đúng ý đồ gốc</strong>
+  — lợi dụng việc 2 bên (WAF và app) không hiểu request giống hệt nhau 100%.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để bypass/viết rule ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ WAF BYPASS &amp; RULES</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra có WAF trong 30 giây</span>
+        Payload chuẩn (vd <code>' OR 1=1</code>) trả về lỗi/status lạ (403, trang "Forbidden/Blocked" riêng,
+        không phải lỗi app bình thường) ⟹ có WAF. Payload vô hại vẫn qua bình thường ⟹ WAF chặn theo nội dung,
+        không chặn toàn bộ.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Đã có payload gốc biết chắc hoạt động nếu không có WAF (từ các bài trước) — giờ chỉ cần biến tấu để qua
+        được lớp lọc thêm.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh: payload nào/vị trí nào bị chặn</span>
+        Burp Repeater: gửi payload gốc trước (xác nhận bị chặn), rồi thử dần từng biến thể ở mục 06, mỗi lần chỉ
+        đổi 1 thứ để biết chính xác kỹ thuật nào mới là thứ "cởi trói" được.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload bypass dán-chạy-ngay (thử theo thứ tự)</span>
+<pre><code><span class="c"># 1. Đổi hoa/thường</span>
+UnIoN SeLeCt  <span class="c">(thay vì UNION SELECT)</span>
+<span class="c"># 2. Chèn comment/khoảng trắng lạ giữa từ khóa</span>
+UNION/**/SELECT   UNION%0aSELECT
+<span class="c"># 3. URL-encode / double-encode</span>
+%27%20OR%201=1   %2527%2520OR...
+<span class="c"># 4. Đổi vị trí payload (URL -&gt; body -&gt; header -&gt; cookie)</span>
+Cookie: search=' OR 1=1--     (thay vì query string)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🛡️ Viết rule phòng thủ (cú pháp ModSecurity)</span>
+<pre><code>SecRule ARGS <span class="s">"@rx (?i)union\s+select"</span> \
+    <span class="s">"id:1001,phase:2,deny,status:403,msg:'SQLi UNION blocked'"</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + quy chế phải nhớ</span>
+        <strong>CẤM</strong>: chặn theo IP, deny-all, chặn API phục vụ cờ. Chặn nhầm API có bug bị trừ SVC
+        <strong>gấp đôi</strong>. Luôn <code>DetectionOnly</code> trước, xem log, rồi mới <code>block</code>. Chưa
+        hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>WAF (Web Application Firewall)</b> — phần mềm/thiết bị đứng chặn giữa Internet và ứng
+  dụng web thật, soi nội dung từng request (URL, header, body) so với tập "rule" đã định nghĩa, chặn request
+  khớp rule tấn công.</div>
+  <div class="def"><b>ModSecurity</b> — WAF mã nguồn mở phổ biến nhất, dùng ngôn ngữ rule riêng (<code>SecRule</code>),
+  thường đi kèm bộ rule mẫu <strong>OWASP CRS</strong> (Core Rule Set). Nhiều nền tảng WAF-UI cho CTF (kể cả của
+  BTC F-Hacker) xây trên nền này hoặc tương tự.</div>
+  <div class="def"><b>DetectionOnly mode</b> — chế độ WAF chỉ <strong>ghi log</strong> khi rule khớp, KHÔNG thực
+  sự chặn request. Dùng để kiểm tra rule có bắt nhầm request hợp lệ hay không <strong>trước khi</strong> bật chế
+  độ chặn thật.</div>
+  <p>Luật chơi (từ quy chế, nhắc lại vì cực kỳ quan trọng):</p>
+  <ul>
+    <li>Chặn theo <strong>payload</strong>, KHÔNG chặn theo IP (mọi request kể cả bot healthcheck BTC đến từ
+    cùng 1 IP — chặn IP là chặn cả bot).</li>
+    <li>KHÔNG deny-all (chặn toàn bộ request).</li>
+    <li>KHÔNG chặn API phục vụ cờ (API nào có bug cố ý — cố ý chặn bị trừ SVC gấp đôi so với chặn nhầm API
+    thường).</li>
+    <li>WAF giới hạn 2 CPU/3GB RAM — rule nặng (regex thảm họa) làm chậm WAF cũng mất điểm SVC.</li>
+  </ul>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO BYPASS ĐƯỢC</div>
+  <h2>WAF và app không "nhìn" request giống hệt nhau</h2>
+  <p>WAF là 1 chương trình riêng, dùng engine parse/regex riêng của nó — <strong>khác với</strong> engine của
+  ứng dụng thật phía sau (PHP, Python, Node...). Hai chương trình khác nhau, viết bởi 2 đội khác nhau, hoàn toàn
+  có thể <strong>hiểu cùng 1 chuỗi byte theo 2 cách khác nhau</strong> — đây gọi là <strong>parser
+  differential</strong>. Mọi kỹ thuật bypass WAF về bản chất là tìm ra 1 điểm khác biệt đó: WAF nhìn thấy A
+  (không khớp rule, cho qua), app nhìn thấy B (chính là payload tấn công thật, thực thi bình thường) — dù A và B
+  xuất phát từ cùng 1 request.</p>
+  <p>Ví dụ dễ hình dung: WAF so khớp chữ hoa/thường nghiêm ngặt (<code>UNION</code> ≠ <code>UnIoN</code> với
+  regex không có cờ <code>i</code>), nhưng SQL hoàn toàn không phân biệt hoa thường ở từ khóa — app vẫn hiểu
+  <code>UnIoN SeLeCt</code> y hệt <code>UNION SELECT</code>.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Parser differential — nhìn khác nhau, hiểu khác nhau</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .box-ok{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr13)}
+    </style>
+    <defs><marker id="arr13" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="220" height="50" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">Request thật gửi đi:</text>
+    <text x="22" y="56" class="lbl-a">id=1 UnIoN/**/SeLeCt...</text>
+
+    <path d="M240,45 H278" class="arrow"/>
+    <rect x="283" y="20" width="195" height="50" rx="10" class="box-ok"/>
+    <text x="295" y="40" class="lbl-m">WAF (regex "UNION SELECT"</text>
+    <text x="295" y="56" class="lbl-ok">đúng hoa/thường) -&gt; KHÔNG khớp -&gt; CHO QUA</text>
+
+    <path d="M480,45 H518" class="arrow"/>
+    <rect x="523" y="20" width="147" height="50" rx="10" class="box-a"/>
+    <text x="535" y="40" class="lbl-m">App (SQL engine)</text>
+    <text x="535" y="56" class="lbl-a">-&gt; hiểu y hệt UNION SELECT</text>
+
+    <path d="M595,80 V105" class="arrow"/>
+    <rect x="283" y="110" width="200" height="40" rx="10" class="box-a"/>
+    <text x="295" y="134" class="lbl-a">SQLi THỰC THI THÀNH CÔNG</text>
+
+    <text x="10" y="175" class="lbl-m">Cùng 1 chuỗi byte -&gt; WAF đọc ra "an toàn", App đọc ra "lệnh SQL thật"</text>
+  </svg>
+  </div>
+  <p>3 "trục" khác biệt hay khai thác nhất:</p>
+  <table>
+    <tr><th>Trục khác biệt</th><th>Ví dụ</th></tr>
+    <tr><td><strong>Cú pháp tương đương</strong> — WAF chỉ biết 1 cách viết, app hiểu nhiều cách</td><td>Hoa/thường, comment giữa từ khóa, hàm thay thế cú pháp</td></tr>
+    <tr><td><strong>Tầng encode</strong> — WAF so khớp trước/sau decode khác app</td><td>URL-encode, double-encode, Unicode normalization</td></tr>
+    <tr><td><strong>Vị trí trong request</strong> — WAF chỉ soi 1 số chỗ, app đọc nhiều chỗ hơn</td><td>Body thay vì URL, header, cookie, param pollution</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP WAF</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Payload tấn công trả 403 với trang lỗi RIÊNG (không phải lỗi app chuẩn, vd "Request blocked by security policy")</td><td>Có WAF, đang ở chế độ chặn (block)</td></tr>
+    <tr><td>Payload tấn công vẫn qua, nhưng log/response có header lạ (<code>X-WAF-...</code>)</td><td>Có WAF nhưng đang DetectionOnly, hoặc rule chưa khớp đúng payload này</td></tr>
+    <tr><td>Response time khác biệt rõ giữa request thường và request có payload</td><td>WAF tốn thời gian xử lý thêm — gợi ý có lớp lọc, dù không chặn hẳn</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dò dần từng kỹ thuật bypass trong Repeater</span>
+  <ol style="margin:4px 0 0">
+    <li>Gửi payload gốc (chưa bypass) → xác nhận bị chặn (403/trang lỗi riêng).</li>
+    <li>Nhân bản tab, thử lần lượt TỪNG kỹ thuật ở mục 06 — đổi hoa/thường trước (rẻ nhất để thử), rồi encode,
+    rồi đổi vị trí.</li>
+    <li>Mỗi lần chỉ đổi 1 biến — nếu đổi nhiều thứ cùng lúc mà qua được, bạn không biết chính xác kỹ thuật nào
+    thực sự cần thiết (có thể chỉ cần 1 trong số đó).</li>
+  </ol></div>
+  <div class="note tip"><span class="tag">Dùng Intruder để quét nhanh nhiều biến thể</span>Nạp payload list gồm
+  nhiều cách encode/case khác nhau của CÙNG 1 payload gốc, Start attack, lọc theo status code — biến thể nào trả
+  khác 403 là đã lọt qua.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD BYPASS ĐẦY ĐỦ (TẤN CÔNG)</div>
+  <h2>Catalog kỹ thuật — áp dụng được cho MỌI bài trước</h2>
+
+  <h3>A. Biến đổi cú pháp tương đương</h3>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Ví dụ</th></tr>
+    <tr><td>Đổi hoa/thường</td><td><code>UnIoN SeLeCt</code>, <code>ScRiPt</code></td></tr>
+    <tr><td>Chèn comment giữa từ khóa (SQL)</td><td><code>UNION/**/SELECT</code></td></tr>
+    <tr><td>Xuống dòng/tab thay khoảng trắng</td><td><code>UNION%0aSELECT</code>, <code>cat${IFS}flag.txt</code></td></tr>
+    <tr><td>Hàm/toán tử thay thế cùng tác dụng</td><td>SQLi: <code>||</code> thay <code>OR</code>; XSS: <code>&lt;svg onload=...&gt;</code> thay <code>&lt;script&gt;</code></td></tr>
+  </table>
+
+  <h3>B. Encode nhiều tầng</h3>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Ví dụ</th></tr>
+    <tr><td>URL-encode 1 lần</td><td><code>%27%20OR%201%3D1</code></td></tr>
+    <tr><td>Double-encode (khi app tự decode 2 lần, WAF chỉ decode 1 lần)</td><td><code>%2527</code> (decode lần 1 ra <code>%27</code>, lần 2 mới ra <code>'</code>)</td></tr>
+    <tr><td>HTML entity (cho XSS)</td><td><code>&amp;#x3C;script&amp;#x3E;</code></td></tr>
+    <tr><td>Unicode/overlong UTF-8</td><td>Một số WAF cũ chỉ so khớp ASCII thuần, không chuẩn hóa Unicode trước khi so</td></tr>
+    <tr><td>Base64 (nếu app tự decode trước khi xử lý, hiếm nhưng gặp ở API đặc thù)</td><td>Mã hóa cả payload, gửi kèm tham số báo "đây là base64"</td></tr>
+  </table>
+
+  <h3>C. Đổi vị trí payload</h3>
+  <table>
+    <tr><th>Vị trí</th><th>Khi nào hiệu quả</th></tr>
+    <tr><td>Body thay vì query string URL</td><td>WAF chỉ cấu hình soi URL, không soi body (hoặc ngược lại)</td></tr>
+    <tr><td>Header tùy chỉnh (<code>X-Forwarded-For</code>, <code>User-Agent</code>, <code>Referer</code>)</td><td>Nếu app đọc giá trị từ header này (vd log poisoning, SSRF qua header), WAF có thể chỉ soi body/URL</td></tr>
+    <tr><td>Cookie</td><td>Tương tự — nhiều rule mẫu chỉ tập trung vào ARGS (query+body), bỏ qua cookie</td></tr>
+    <tr><td>Parameter pollution (gửi trùng tên tham số)</td><td>WAF soi giá trị đầu, app dùng giá trị cuối (hoặc ngược lại) — xem bài Mass Assignment/HPP</td></tr>
+    <tr><td>Content-Type lạ (multipart thay application/json)</td><td>Một số WAF parse body khác nhau tùy Content-Type, có thể bỏ sót ở định dạng ít gặp</td></tr>
+  </table>
+
+  <h3>D. Parser differential nâng cao (khi A-C không đủ)</h3>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Ý tưởng</th></tr>
+    <tr><td>Chunked transfer encoding</td><td>Chia nhỏ payload thành nhiều chunk HTTP — một số WAF không ráp lại đúng trước khi so khớp</td></tr>
+    <tr><td>Content-Length sai lệch cố ý</td><td>Khiến WAF và app đọc độ dài body khác nhau, dẫn tới parse khác đoạn</td></tr>
+    <tr><td>Null byte/ký tự điều khiển chèn giữa payload</td><td>Một số engine regex dừng so khớp sớm khi gặp ký tự null</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: WAF PRACTICE REPO &amp; CYBERCHEF</div>
+  <h2>Luyện trước ngày thi bằng repo BTC cấp</h2>
+
+  <h3>A. Repo luyện tập chính thức của BTC</h3>
+  <div class="def"><b>f-hacker-macos/2026-waf-practice</b> — repo BTC cung cấp để luyện viết rule WAF trước
+  ngày thi (quy chế Điều 3.7). Đây là môi trường DUY NHẤT nên dùng để luyện — giống hệt giao diện/hành vi WAF
+  thật sẽ dùng trong thi.</div>
+  <pre><code>git clone https://github.com/f-hacker-macos/2026-waf-practice
+cd 2026-waf-practice
+make up
+<span class="c"># App qua WAF: http://localhost:8000</span>
+<span class="c"># UI WAF (viết rule, xem log): http://localhost:8005</span></code></pre>
+  <div class="note warn"><span class="tag">Phải làm TRƯỚC ngày thi</span>Cần Internet để <code>git clone</code>
+  và <code>make up</code> (tải image Docker). Phòng thi không có Internet — luyện xong, nhớ cách thao tác UI
+  (bật DetectionOnly, xem log, chuyển sang block) chứ không dựng lại được trong phòng thi.</div>
+
+  <h3>B. CyberChef — thử nhanh nhiều tầng encode</h3>
+  <p>Mở <code>~/hoc/CTF/Tools/web/CyberChef/CyberChef_v11.6.0.html</code>. Dùng để thử nhanh double-encode, Unicode, hay
+  bất kỳ biến đổi nào ở mục 06.B mà không cần tự tính tay — xếp nhiều khối (recipe) liên tiếp (vd URL Encode →
+  URL Encode lần 2) để tạo double-encode ngay lập tức.</p>
+
+  <h3>C. Workflow viết rule thực chiến (dùng UI WAF)</h3>
+  <ol>
+    <li>Vào UI WAF (cổng 8005 lúc luyện, hoặc địa chỉ BTC cấp lúc thi thật), chọn chế độ <strong>DetectionOnly</strong>.</li>
+    <li>Viết rule mới (regex theo mẫu mục 10), lưu lại.</li>
+    <li>Gửi vài request payload tấn công THẬT (đã biết từ các bài trước) — xem tab log, xác nhận rule có khớp
+    (match) đúng các request đó không.</li>
+    <li>Gửi thêm vài request <strong>bình thường</strong> (giả lập người dùng/bot healthcheck) — xác nhận rule
+    KHÔNG khớp nhầm.</li>
+    <li>Chỉ khi cả 2 bước trên đều đúng mới chuyển rule sang chế độ <strong>Block</strong>.</li>
+  </ol>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KIỂM TRA RULE TỰ ĐỘNG</div>
+  <h2>Thay vì tự tay gửi từng request, kiểm tra rule bằng script</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/search"</span>
+
+<span class="c"># Request tấn công (phải bị chặn sau khi viết rule)</span>
+r1 = requests.get(url, params={<span class="s">"q"</span>: <span class="s">"' UNION SELECT 1,2,3-- -"</span>})
+<span class="k">print</span>(<span class="s">"Payload tấn công:"</span>, r1.status_code)   <span class="c"># mong đợi 403 sau khi bật rule</span>
+
+<span class="c"># Request bình thường (KHÔNG được bị chặn)</span>
+r2 = requests.get(url, params={<span class="s">"q"</span>: <span class="s">"laptop gaming"</span>})
+<span class="k">print</span>(<span class="s">"Request thường:"</span>, r2.status_code)   <span class="c"># mong đợi 200</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — kiểm tra 1 rule với nhiều ca, báo cáo tóm tắt</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/search"</span>
+ATTACK_CASES = [<span class="s">"' UNION SELECT 1,2,3-- -"</span>, <span class="s">"' OR 1=1-- -"</span>, <span class="s">"UnIoN/**/SeLeCt 1,2,3-- -"</span>]
+NORMAL_CASES = [<span class="s">"laptop"</span>, <span class="s">"ao thun nam"</span>, <span class="s">"iPhone 15"</span>]
+
+<span class="k">def</span> <span class="d">test_rule</span>():
+    blocked_attacks = <span class="k">sum</span>(1 <span class="k">for</span> p <span class="k">in</span> ATTACK_CASES
+                         <span class="k">if</span> requests.get(url, params={<span class="s">"q"</span>: p}).status_code == 403)
+    blocked_normal = <span class="k">sum</span>(1 <span class="k">for</span> p <span class="k">in</span> NORMAL_CASES
+                        <span class="k">if</span> requests.get(url, params={<span class="s">"q"</span>: p}).status_code == 403)
+    <span class="k">print</span>(<span class="s">f"Chặn đúng payload tấn công: {blocked_attacks}/{len(ATTACK_CASES)}"</span>)
+    <span class="k">print</span>(<span class="s">f"Chặn NHẦM request thường: {blocked_normal}/{len(NORMAL_CASES)} (phải = 0!)"</span>)
+
+test_rule()</code></pre>
+
+  <h3>(C) Bản tái dùng — chạy lại sau mỗi lần sửa rule, trước khi chuyển sang Block</h3>
+  <pre><code><span class="k">import</span> requests, sys
+
+ATTACK_CASES = [<span class="s">"' UNION SELECT 1,2,3-- -"</span>, <span class="s">"' OR 1=1-- -"</span>]
+NORMAL_CASES = [<span class="s">"laptop"</span>, <span class="s">"ao thun nam"</span>]
+
+<span class="k">def</span> <span class="d">test_rule</span>(url):
+    ok = <span class="k">True</span>
+    <span class="k">for</span> p <span class="k">in</span> ATTACK_CASES:
+        r = requests.get(url, params={<span class="s">"q"</span>: p}, timeout=5)
+        <span class="k">if</span> r.status_code != 403:
+            <span class="k">print</span>(<span class="s">f"⚠ CHƯA chặn: {p!r} (status {r.status_code})"</span>); ok = <span class="k">False</span>
+    <span class="k">for</span> p <span class="k">in</span> NORMAL_CASES:
+        r = requests.get(url, params={<span class="s">"q"</span>: p}, timeout=5)
+        <span class="k">if</span> r.status_code == 403:
+            <span class="k">print</span>(<span class="s">f"❌ CHẶN NHẦM: {p!r} -- SỬA RULE NGAY, có thể bị trừ SVC"</span>); ok = <span class="k">False</span>
+    <span class="k">if</span> ok:
+        <span class="k">print</span>(<span class="s">"✅ Rule an toàn để chuyển sang Block"</span>)
+    <span class="k">return</span> ok
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    test_rule(sys.argv[1] <span class="k">if</span> <span class="k">len</span>(sys.argv) > 1 <span class="k">else</span> <span class="s">"http://localhost:8000/search"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Dùng script này mỗi lần sửa rule</span>Chạy lại (C) sau MỖI lần sửa rule
+  trước khi bật Block — nhanh hơn nhiều so với tự tay gửi lại từng request qua Burp mỗi lần.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Cả 2 chiều: bypass đối thủ + tự phòng thủ</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Tấn công — payload chuẩn bị chặn</div><div class="d">SQLi <code>' UNION SELECT...</code> trả 403 trên service đối thủ ⟹ có WAF.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Bypass</div><div class="d">Thử <code>UnIoN/**/SeLeCt</code> → qua được (status 200, response chứa flag) ⟹ WAF đối thủ chỉ so khớp chữ thường nguyên văn.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Phòng thủ — tự xem log traffic</div><div class="d">Vào UI WAF của mình, xem log thấy nhiều request có pattern <code>UnIoN.*SeLeCt</code> từ IP lạ (không phải bot healthcheck) ⟹ đối thủ đang dùng chính kỹ thuật này tấn công mình.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Viết rule (DetectionOnly trước)</div><div class="d"><code>SecRule ARGS "@rx (?i)union\s*(/\*.*?\*/)?\s*select"</code> — bắt cả biến thể hoa/thường và comment chèn giữa.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Test bằng script (C) mục 08</div><div class="d">Chạy script, xác nhận cả 2 payload tấn công bị 403, cả 2 request thường vẫn 200 ⟹ an toàn.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Chuyển sang Block</div><div class="d">Bật chế độ Block thật, tiếp tục theo dõi log vài phút để chắc chắn không có request hợp lệ nào bị lọt vào diện chặn.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / VIẾT RULE PHÒNG THỦ — CHI TIẾT ĐẦY ĐỦ</div>
+  <h2>Cú pháp, quy tắc, và checklist trước khi Block</h2>
+
+  <h3>A. Cú pháp cơ bản (kiểu ModSecurity, tham khảo nếu UI BTC dùng tương tự)</h3>
+  <pre><code>SecRule BIẾN <span class="s">"@toán_tử giá_trị"</span> \
+    <span class="s">"id:SỐ_DUY_NHẤT,phase:2,deny,status:403,msg:'Mô tả rule'"</span>
+
+<span class="c"># Ví dụ cụ thể: chặn UNION SELECT (không phân biệt hoa thường) trong mọi tham số</span>
+SecRule ARGS <span class="s">"@rx (?i)union\s+select"</span> \
+    <span class="s">"id:1001,phase:2,deny,status:403,msg:'SQLi UNION blocked'"</span>
+
+<span class="c"># Ví dụ: chặn __proto__ (prototype pollution) trong body JSON</span>
+SecRule REQUEST_BODY <span class="s">"@rx __proto__"</span> \
+    <span class="s">"id:1002,phase:2,deny,status:403,msg:'Prototype pollution blocked'"</span></code></pre>
+
+  <h3>B. Rule mẫu theo từng bài đã học — dán nhanh lúc thi</h3>
+  <table>
+    <tr><th>Lỗ hổng</th><th>Rule regex gợi ý</th></tr>
+    <tr><td>SQLi</td><td><code>(?i)union\s*(/\*.*?\*/)?\s*select|'\s*(or|and)\s+['\d]</code></td></tr>
+    <tr><td>Command Injection</td><td><code>[;&amp;|`]\s*(cat|id|whoami|ls|nc|bash|sh)\b</code></td></tr>
+    <tr><td>SSTI (Jinja2)</td><td><code>\{\{.*(__class__|__globals__|__mro__|__import__|popen|system).*\}\}</code></td></tr>
+    <tr><td>LFI/Path Traversal</td><td><code>\.\.(/|%2f)|php://filter</code></td></tr>
+    <tr><td>File Upload</td><td><code>(?i)filename=.*\.(php\d?|phtml|phar)["']?$</code></td></tr>
+    <tr><td>XXE</td><td><code>&lt;!DOCTYPE|&lt;!ENTITY.*SYSTEM</code></td></tr>
+    <tr><td>Recon/source leak</td><td><code>^/\.git/|^/\.env$</code></td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Chuẩn bị sẵn trước ngày thi</span>Copy bảng này vào tài liệu giấy/file
+  mang theo — lúc thi chỉ cần dán đúng rule tương ứng với lỗ hổng đã xác định trên service của mình, không cần
+  nhớ/viết lại từ đầu.</div>
+
+  <h3>C. Checklist BẮT BUỘC trước khi chuyển sang Block</h3>
+  <div class="note warn"><span class="tag">Vi phạm = trừ điểm nặng (Điều 3.5, Điều 5)</span>
+  <ul style="margin:4px 0 0">
+    <li>☐ Rule chặn theo <strong>payload</strong>, không có điều kiện nào theo IP.</li>
+    <li>☐ Không phải deny-all (rule chỉ khớp request CỤ THỂ có payload, không khớp mọi request).</li>
+    <li>☐ Đã kiểm tra rule KHÔNG khớp API phục vụ cờ (API đọc flag hợp lệ của bot healthcheck).</li>
+    <li>☐ Đã chạy script test (mục 08.C) xác nhận 0 request bình thường bị chặn nhầm.</li>
+    <li>☐ Regex không có catastrophic backtracking (tránh <code>(a+)+b</code> kiểu lồng nhiều <code>+</code>/<code>*</code> — làm WAF chậm, mất SVC).</li>
+    <li>☐ Đã bật DetectionOnly và xem log ít nhất vài phút trước khi chuyển Block thật.</li>
+  </ul></div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi bypass không ăn / rule gây hại</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Đổi hoa/thường vẫn bị chặn</td><td>WAF đã bật cờ regex <code>(?i)</code> (không phân biệt hoa thường)</td><td>Thử nhóm encode (mục 06.B) hoặc đổi vị trí (mục 06.C) thay vì tiếp tục thử biến thể case</td></tr>
+    <tr><td>Rule mới viết chặn luôn cả request của chính bot healthcheck</td><td>Regex quá rộng (vd chặn mọi dấu nháy đơn thay vì đúng pattern tấn công)</td><td>Thu hẹp regex, test lại bằng script (C) mục 08 trước khi bật Block</td></tr>
+    <tr><td>WAF bị chậm/mất SVC sau khi thêm rule</td><td>Regex có catastrophic backtracking, hoặc quá nhiều rule chạy mỗi request</td><td>Đơn giản hóa regex, tránh lồng nhiều <code>(...)+</code>/<code>(...)*</code>, gộp các rule tương tự lại nếu được</td></tr>
+    <tr><td>Double-encode không ăn dù app có vẻ decode nhiều lần</td><td>WAF cũng decode nhiều lần giống app (không có khác biệt để khai thác)</td><td>Thử trục khác (vị trí, cú pháp tương đương) thay vì tiếp tục với encode</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào bypass khả thi / không</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>WAF dùng signature/regex cố định, có khác biệt xử lý so với app thật (case, encode, vị trí tham số).</td></tr>
+    <tr><td>❌</td><td>WAF dùng machine learning/behavior-based detection (hiếm trong CTF, phổ biến hơn ở sản phẩm thương mại) — không có "1 kỹ thuật" bypass chung.</td></tr>
+    <tr><td>❌</td><td>Rule được viết với <code>(?i)</code> + chuẩn hóa encode/Unicode trước khi so khớp + áp dụng cho MỌI vị trí (ARGS, body, header, cookie) — bề mặt bypass thu hẹp đáng kể, chỉ còn trông chờ vào lỗ hổng trong chính kỹ thuật lỗ hổng đó bị bỏ sót khỏi rule.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng repo <code>2026-waf-practice</code>, viết 1 rule chặn SQLi theo mẫu mục
+  10.B, test bằng DetectionOnly, xác nhận không chặn nhầm trước khi Block.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ bước <code>make up</code> cần thời gian tải Docker image lần đầu
+  — làm việc này sớm, đừng để sát ngày thi.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> rule bạn viết ở bài tập 1 vô tình chặn nhầm 1 request tìm kiếm có chữ
+  "select" trong tên sản phẩm (vd "Select Comfort Mattress"). Sửa lại regex cho hẹp hơn mà vẫn bắt được SQLi thật.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Yêu cầu có cả <code>UNION</code> VÀ <code>SELECT</code> gần nhau
+  (<code>union\s*(/\*.*?\*/)?\s*select</code>) thay vì chỉ match riêng lẻ <code>select</code>.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> đối thủ viết rule chặn SQLi theo đúng mẫu mục 10.B (có <code>(?i)</code>,
+  bắt cả comment). Thiết kế 1 payload SQLi vẫn vượt qua được rule này bằng kỹ thuật KHÁC nhóm cú pháp tương
+  đương/encode (gợi ý: đổi vị trí payload).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Rule mẫu chỉ soi <code>ARGS</code> (query string + body thường) — thử
+  gửi payload qua <strong>Cookie header</strong> nếu app có đọc giá trị từ đó vào query, xem rule có áp dụng cho
+  <code>REQUEST_COOKIES</code> không.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>WAF (Web Application Firewall)</td><td>Lớp lọc request dựa trên rule, đứng giữa người dùng và ứng dụng thật.</td></tr>
+    <tr><td>Parser differential</td><td>Sự khác biệt trong cách 2 thành phần (WAF và app) hiểu cùng 1 request.</td></tr>
+    <tr><td>DetectionOnly</td><td>Chế độ WAF chỉ ghi log khi rule khớp, không thực sự chặn — dùng để kiểm tra an toàn trước khi bật chặn thật.</td></tr>
+    <tr><td>Catastrophic backtracking</td><td>Lỗi hiệu năng của regex khi cấu trúc lồng nhiều lượng tử (<code>+</code>/<code>*</code>) khiến thời gian khớp tăng theo cấp số nhân với input dài.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> repo <code>f-hacker-macos/2026-waf-practice</code>
+  (luyện trước ngày thi, cần Internet), <code>~/hoc/CTF/Tools/web/CyberChef/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("waf-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("waf-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

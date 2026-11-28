@@ -1,0 +1,83 @@
+# Bản "qua WAF" của pulseapi để luyện A/D thật. Xem notevault/compose.arena.yml
+# để biết chi tiết — cấu trúc giống hệt, chỉ pulseapi không cần DB riêng
+# (state trong RAM).
+#
+# KHÔNG chạy trực tiếp — dùng services-practice/spin.sh.
+name: ${PROJECT_NAME:-pulseapi-arena}
+
+services:
+  app:
+    build:
+      context: .
+    environment:
+      FLAG_SECRET: ${FLAG_SECRET:-dev-secret-change-me}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-dev-flask-secret-change-me}
+      APP_AES_KEY: ${APP_AES_KEY:-devaeskey1234567}
+      EXPORT_SECRET: ${EXPORT_SECRET:-export-signing-secret-2026}
+    networks:
+      waf_edge:
+        aliases: [fuap_edge]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: bunkerweb
+      POSTGRES_USER: bunkerweb
+      POSTGRES_PASSWORD: ${WAF_DB_PASSWORD:-ChangeMe_Waf_Db_2026}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [waf_db]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bunkerweb -d bunkerweb"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  fuap_bunkerweb:
+    image: ghcr.io/f-hacker-macos/custom_waf26:${TAG:-latest}
+    platform: linux/amd64
+    depends_on:
+      app: { condition: service_started }
+      postgres: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:${BW_PORT:-8010}:8080"
+      - "127.0.0.1:${BW_UI_PORT:-8015}:7000"
+    volumes:
+      - waf_logs:/var/log/bunkerweb
+    environment:
+      DATABASE_URI: postgresql://bunkerweb:${WAF_DB_PASSWORD:-ChangeMe_Waf_Db_2026}@postgres:5432/bunkerweb
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe_Bw_2026!}
+      SERVER_NAME: localhost
+      MULTISITE: "no"
+      USE_REVERSE_PROXY: "yes"
+      REVERSE_PROXY_URL: /
+      REVERSE_PROXY_HOST: http://fuap_edge:80
+      SEND_ANONYMOUS_REPORT: "no"
+      TZ: Asia/Ho_Chi_Minh
+      DATABASE_POOL_SIZE: 5
+      DATABASE_POOL_MAX_OVERFLOW: 5
+      USE_BAD_BEHAVIOR: "no"
+      USE_LIMIT_REQ: "no"
+      USE_LIMIT_CONN: "no"
+      USE_DNSBL: "no"
+      USE_BUNKERNET: "no"
+      USE_MODSECURITY_CRS_PLUGINS: "no"
+      AUTO_REDIRECT_HTTP_TO_HTTPS: "no"
+    networks: [waf_edge, waf_db]
+    mem_limit: 3g
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  waf_logs:
+
+networks:
+  waf_edge:
+    driver: bridge
+  waf_db:
+    driver: bridge
+    internal: true

