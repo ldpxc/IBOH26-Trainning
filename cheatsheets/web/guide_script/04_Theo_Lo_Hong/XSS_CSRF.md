@@ -71,4 +71,6 @@ python3 xsstrike.py -u "http://target/search" --data "q=test"
 - XSS: luôn kiểm tra payload có bị encode hay không — nếu `&lt;script&gt;` xuất hiện thay vì `<script>`, server đã lọc, không có XSS ở chỗ đó; cũng cần để ý payload nằm trong context nào (giữa tag HTML, trong 1 attribute, trong JavaScript) vì mỗi context cần cách viết payload khác nhau.
 - CSRF: dấu hiệu an toàn (không bị CSRF) là server đòi hỏi 1 token riêng (khác cookie) hoặc kiểm tra header `Origin`/`Referer` phải đúng domain — thiếu cả hai thường là có lỗ hổng.
 - Trong thi Attack-Defense, không tự ý gửi payload gây hại thật tới người chơi khác ngoài phạm vi kiểm tra của chính đội mình (ví dụ không chủ động gửi link XSS cho đối phương bấm) — chỉ dùng để xác nhận lỗi và lấy flag trên hệ thống được phép kiểm tra.
+- Đã xác nhận XSS ở đây nhưng flag không nằm ngay trong response: xem [`XSS_Admin_Bot.md`](XSS_Admin_Bot.md) — thường phải báo link cho 1 "bot" tự động mở, không phải đọc trực tiếp.
+- Payload `<script>alert(1)</script>` bị chặn/encode: xem [`XSS_Filter_CSP_Bypass.md`](XSS_Filter_CSP_Bypass.md) — các cách né bộ lọc và CSP.
 - Chỉ dùng trên hệ thống được phép (máy chủ của đội mình/đối phương trong phạm vi thi đấu).
