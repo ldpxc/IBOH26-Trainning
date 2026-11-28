@@ -56,6 +56,21 @@ if __name__ == "__main__":
 - Với mỗi path trả 200 (tồn tại thật), script thử tìm flag trực tiếp trong nội dung bằng regex — nhưng phần lớn trường hợp thực tế (đặc biệt `.git/config`), file lộ ra KHÔNG chứa flag trực tiếp, mà là bước đầu để bạn tự chạy tiếp công cụ khác (như `git-dumper`) đọc toàn bộ source rồi mới tìm ra lỗ hổng/flag thật — script này chỉ làm đúng việc "dò xem có lộ gì không", phần dump sâu hơn cần làm tay ngoài script.
 - `print(...)` ở mỗi bước giúp bạn nhìn thấy ngay path nào lộ (status 200) mà không cần đoán — đúng tinh thần "in ra và nhìn" đã nói ở bài Bắt Đầu Từ 0.
 
+## Dùng tool có sẵn `git-dumper` thay vì tự viết tay
+
+Khi `.git/` đã lộ (thấy `.git/config` hoặc `.git/HEAD` trả 200), đừng cố tự viết script tải từng file trong `.git/` — dùng ngay `git-dumper` tại `~/hoc/CTF/Tools/web/git-dumper/`:
+
+```bash
+spwn
+cd ~/hoc/CTF/Tools/web/git-dumper
+python3 git_dumper.py http://target/.git/ ./dumped_source
+```
+
+- Tham số 1: URL tới đúng thư mục `.git/` (có dấu `/` ở cuối). Tham số 2: thư mục trên máy bạn để lưu source dump ra — tool tự tạo nếu chưa có.
+- Chạy xong, `cd dumped_source && git log --all` để xem lịch sử commit (có thể có commit cũ chứa mật khẩu/API key đã bị xoá ở commit sau nhưng vẫn còn trong lịch sử), hoặc mở thẳng code đọc tìm hardcode flag/lỗ hổng.
+- Nếu `.git/` trả 403 khi truy cập trực tiếp bằng trình duyệt nhưng `git-dumper` vẫn dump được (vì nó tải từng file theo tên đã đoán trước, không cần liệt kê thư mục) — cứ thử trước khi coi là "không lộ được gì".
+- **Dự phòng**: nếu `git-dumper` lỗi hoặc chạy chậm, có `GitTools` tại `~/hoc/CTF/Tools/web/GitTools/` làm tương tự bằng bash: `bash ~/hoc/CTF/Tools/web/GitTools/Dumper/gitdumper.sh "http://target/.git/" ./dumped_source2`.
+
 ## Lưu ý nhanh
 
 - Nếu `.git/config` lộ (status 200), đừng cố đọc flag trực tiếp từ nó — chạy ngay `python3 ~/hoc/CTF/Tools/web/git-dumper/git_dumper.py http://target/.git/ ./dumped_source` để dump toàn bộ source, rồi đọc code tìm đúng lỗ hổng/flag hardcode.

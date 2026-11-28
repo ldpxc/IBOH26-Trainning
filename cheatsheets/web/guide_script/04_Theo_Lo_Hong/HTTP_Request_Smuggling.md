@@ -60,6 +60,21 @@ if __name__ == "__main__":
 - `Content-Length: {cl_value}` cố ý ghi NHỎ HƠN độ dài thật của `chunk_body` — đây là "lỗi cố ý" khiến 2 lớp server đọc request khác nhau: lớp đọc theo Content-Length sẽ dừng sớm ở đúng `cl_value` byte, còn lớp đọc theo Transfer-Encoding: chunked sẽ đọc tiếp tới khi gặp đúng định dạng chunk kết thúc (`0\r\n\r\n`).
 - `sock.recv(8192)` đọc tối đa 8192 byte response trả về — nếu kỹ thuật thành công, phần nội dung của request ẩn (`/admin/flag`) có thể lộ ra trong response của request KẾ TIẾP gửi trên cùng kết nối (không phải response của chính request này) — thực tế khi thi cần gửi 1 request "mồi" ngay sau để lấy phần bị lẫn ra, snippet này chỉ minh họa cấu trúc cơ bản.
 
+## Dùng tool có sẵn `smuggler` thay vì tự viết tay
+
+Script `socket` thô ở trên chỉ thử đúng 1 kiểu (CL.TE). Để dò an toàn xem có bất đồng bộ nào tồn tại không (bằng cách đo thời gian phản hồi, không gửi payload "nguy hiểm" thật), dùng `smuggler` đã có sẵn tại `~/hoc/CTF/Tools/web/smuggler/`:
+
+```bash
+spwn
+cd ~/hoc/CTF/Tools/web/smuggler
+python3 smuggler.py -u "http://target/"
+```
+
+- Không cần tham số gì đặc biệt khác ngoài `-u` — `smuggler` tự gửi hàng chục biến thể request (CL.TE, TE.CL, TE.TE với các cách viết `Transfer-Encoding` khác nhau) và tự đo xem request nào khiến kết nối "lạc nhịp" (thời gian phản hồi bất thường).
+- Kết quả in ra dạng `[VULNERABLE]` kèm tên kỹ thuật (ví dụ `CLTE`) nếu phát hiện; nếu toàn bộ đều `[-]` hoặc `safe`, nghĩa là không có 2 lớp server hoặc đã được patch — không cần cố viết script tay nữa.
+- Nếu `-m POST` không cho kết quả, thử lại với `-m GET` (`--method GET`) — endpoint một số app chỉ nhận GET.
+- Thấy dòng ghi `[VULNERABLE]` rồi mới áp dụng đúng kỹ thuật tương ứng (ví dụ CL.TE) vào script `socket` ở trên để tự tạo request giấu theo đúng mục tiêu bạn muốn (đọc `/admin/flag`...).
+
 ## Lưu ý nhanh
 
 - Nếu không chắc chắn có 2 lớp server, dùng kỹ thuật dò an toàn bằng đo thời gian (timing-based) trước khi gửi payload "nguy hiểm" — tool `smuggler` ở `~/hoc/CTF/Tools/web/smuggler/` tự quét hàng chục biến thể mà không ảnh hưởng ai.

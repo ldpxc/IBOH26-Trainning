@@ -53,6 +53,31 @@ if __name__ == "__main__":
 - Script tự lọc field theo từ khoá (`admin`, `secret`, `flag`...) vì khi có hàng trăm field, bạn không có thời gian đọc hết bằng mắt — để máy tự tìm chỗ đáng nghi trước.
 - Field tồn tại trong schema không có nghĩa là bạn ĐƯỢC xem nó — GraphQL không tự kiểm quyền, việc kiểm quyền do code của từng field tự quyết định; rất nhiều lúc dev quên kiểm ở 1 field lẻ dù field khác đã kiểm đúng. Đây là lý do field "admin" có thể trả dữ liệu dù bạn chỉ là user thường.
 
+## Dùng tool có sẵn `graphql-cop` và `clairvoyance` thay vì tự viết tay
+
+Script tay chỉ hỏi được 1 lần, dò qua từ khoá nghi ngờ. 2 tool có sẵn sau làm kỹ hơn:
+
+**`graphql-cop`** — tự quét 1 loạt lỗi cấu hình phổ biến (introspection mở, batching không giới hạn, field gây lỗi crash server...), tại `~/hoc/CTF/Tools/web/graphql-cop/`:
+
+```bash
+spwn
+cd ~/hoc/CTF/Tools/web/graphql-cop
+python3 graphql-cop.py -t "http://target/graphql"
+```
+
+Kết quả in ra từng dòng mức độ `[HIGH]`/`[MEDIUM]`/`[LOW]` kèm tên lỗi (ví dụ `Introspection Query Enabled`) — đọc đúng dòng `[HIGH]` trước, đó là chỗ đáng khai thác nhất.
+
+**`clairvoyance`** — dùng khi introspection đã bị TẮT (bước 1 trong script tay báo lỗi): nó vẫn dò ra được tên field/type thật bằng cách gửi hàng loạt tên phổ biến rồi đọc lỗi gợi ý ("did you mean...?") của server, tại `~/hoc/CTF/Tools/web/clairvoyance/`:
+
+```bash
+spwn
+cd ~/hoc/CTF/Tools/web/clairvoyance
+python3 -m clairvoyance "http://target/graphql"
+```
+
+- Chạy xong sẽ in ra 1 JSON schema (cấu trúc field/type) được "dò" lại từ đầu dù introspection đã tắt — mở file/kết quả đó tìm field nghe tên nhạy cảm (`flag`, `admin`, `secret`) rồi tự viết query gửi field đó bằng `requests` như script tay ở trên.
+- `clairvoyance` chạy khá lâu (gửi rất nhiều request để dò từng field) — chỉ chạy khi thật sự cần (introspection đã tắt), không chạy mặc định cho mọi bài.
+
 ## Lưu ý nhanh
 
 - Nếu bước 1 báo lỗi "introspection is disabled" — nghĩa là server đã tắt tính năng tự hỏi ngược (cấu hình đúng); bạn phải đoán tên field theo quy ước thông thường (`user`, `admin`, `order`...) hoặc xem code JS của trang để tìm đúng tên query/field thật đang được dùng.

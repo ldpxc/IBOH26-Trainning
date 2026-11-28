@@ -47,6 +47,25 @@ if __name__ == "__main__":
 - **Phần 3 (CSRF)**: gửi thẳng request đổi email mà **không** kèm bất kỳ token nào, chỉ dựa vào cookie session đang có sẵn trong `session` (giữ từ các request trước nếu đã login). Nếu request này vẫn chạy thành công (status 200 hoặc 302 chuyển hướng, không phải 403/400 báo thiếu token), nghĩa là ai cũng có thể lừa nạn nhân gửi request này hộ họ — chỉ cần nạn nhân đang đăng nhập và mở 1 trang có form tự submit tới đây.
 - `allow_redirects=False`: mặc định `requests` sẽ tự "đi theo" redirect (như trình duyệt tự nhảy trang); tắt nó đi để thấy đúng status gốc (ví dụ `302`) và header `Location` thật, giống cách Burp hiển thị response gốc trước khi bạn tự bấm "Follow redirect".
 
+## Dùng tool có sẵn `XSStrike` thay vì tự viết tay (cho XSS)
+
+Script tay chỉ thử đúng 1 payload cố định. `XSStrike` tự phân tích context (payload nằm giữa tag HTML, trong attribute, hay trong JavaScript) rồi tự sinh payload phù hợp đúng chỗ đó — có sẵn tại `~/hoc/CTF/Tools/web/XSStrike/`:
+
+```bash
+spwn
+cd ~/hoc/CTF/Tools/web/XSStrike
+
+# Tham số nghi dính trong query string
+python3 xsstrike.py -u "http://target/search?q=test"
+
+# Tham số dính trong POST form
+python3 xsstrike.py -u "http://target/search" --data "q=test"
+```
+
+- Không cần tự đoán payload — XSStrike tự gửi `q=test` thường trước để xem nó phản chiếu (reflect) ra ở đâu trong HTML, từ đó tự sinh payload đúng theo context, rồi tự gửi lại kiểm chứng.
+- Kết quả in dòng `[VULN]` kèm payload nó xác nhận chạy được (ví dụ chữ in ra "XSS" thật trong môi trường giả lập trình duyệt headless của nó) — copy đúng payload đó dán vào tham số thật trên trình duyệt/Burp để lấy flag (thường flag hiện qua `document.cookie`/`alert()` admin bot đọc được).
+- Không cần chạy XSStrike cho mọi tham số nếu đã nghi trước 1 tham số cụ thể từ Burp — chạy đúng tham số đó để tiết kiệm thời gian.
+
 ## Lưu ý nhanh
 
 - XSS: luôn kiểm tra payload có bị encode hay không — nếu `&lt;script&gt;` xuất hiện thay vì `<script>`, server đã lọc, không có XSS ở chỗ đó; cũng cần để ý payload nằm trong context nào (giữa tag HTML, trong 1 attribute, trong JavaScript) vì mỗi context cần cách viết payload khác nhau.
