@@ -9,10 +9,10 @@ Sheatchee là **Kho Code Mẫu (Copy-Paste Cookbook)** để chuyển thao tác 
 ```text
 Sheatchee/
 ├── README.md
+├── 00_Bat_Dau_Tu_Zero.md        # Học từ 0: Python tối thiểu + Burp->Python + ví dụ đầy đủ
 ├── CHEATSHEET_NHANH.md          # Mục lục tra cứu 5 giây
 ├── CAU_TRUC_DU_AN.md
-├── HUONG_DAN_SU_DUNG.md         # Tài liệu cũ (tham khảo)
-├── DANH_GIA_MO_HINH_HIEN_TAI.md # Đánh giá trước khi đơn giản hóa
+├── DANH_GIA_MO_HINH_HIEN_TAI.md # Đánh giá trước khi đơn giản hóa (lưu sử)
 ├── requirements.txt
 ├── .gitignore
 │
@@ -60,6 +60,7 @@ http://10.0.2.1:8000
 
 | Nhu cầu | Mở |
 |---|---|
+| Chưa biết Python/exploit web, cần học từ 0 | [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) |
 | Tra cứu 5 giây | [`CHEATSHEET_NHANH.md`](CHEATSHEET_NHANH.md) |
 | Bắt đầu exploit nhiều đội | [`scripts/template.py`](scripts/template.py) |
 | Request cơ bản | `01_Request_Co_Ban/` |

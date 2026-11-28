@@ -2,6 +2,10 @@
 
 Kho code mẫu để chuyển thao tác đã làm được trên **Burp Suite** sang **Python** thật nhanh khi thi offline (không AI, không Internet).
 
+## Chưa biết Python / chưa biết exploit web?
+
+Đọc [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) trước — 15-20 phút, dạy từ con số 0: cú pháp Python tối thiểu, Burp request map sang Python ra sao, và 1 bài ví dụ đầy đủ từ "giải tay" đến "script chạy được", giải thích từng dòng.
+
 ## Quy trình dùng trong phòng thi
 
 1. **Giải tay trên Burp** cho 1 đội/mục tiêu.
@@ -38,6 +42,7 @@ python scripts/template.py
 
 | Đường dẫn | Dùng để làm gì |
 |---|---|
+| [`00_Bat_Dau_Tu_Zero.md`](00_Bat_Dau_Tu_Zero.md) | Học từ 0: Python tối thiểu + Burp->Python + 1 ví dụ đầy đủ có giải thích |
 | [`CHEATSHEET_NHANH.md`](CHEATSHEET_NHANH.md) | Mục lục tra cứu 5 giây: cần gì -> mở file nào |
 | [`scripts/template.py`](scripts/template.py) | File độc lập 1-file, copy ra thành `baiX.py` rồi sửa `solve_one()` |
 | [`scripts/targets.txt`](scripts/targets.txt) | Danh sách mục tiêu runtime (local, không commit) |
@@ -61,5 +66,4 @@ python scripts/template.py
 ## Tài liệu chi tiết
 
 - Cấu trúc dự án: [`CAU_TRUC_DU_AN.md`](CAU_TRUC_DU_AN.md)
-- Hướng dẫn cũ chi tiết (nếu cần): [`HUONG_DAN_SU_DUNG.md`](HUONG_DAN_SU_DUNG.md)
-- Đánh giá mô hình trước khi đơn giản hóa: [`DANH_GIA_MO_HINH_HIEN_TAI.md`](DANH_GIA_MO_HINH_HIEN_TAI.md)
+- Đánh giá mô hình trước khi đơn giản hóa (lưu sử, các script nhắc tới trong đó đã bị gỡ): [`DANH_GIA_MO_HINH_HIEN_TAI.md`](DANH_GIA_MO_HINH_HIEN_TAI.md)

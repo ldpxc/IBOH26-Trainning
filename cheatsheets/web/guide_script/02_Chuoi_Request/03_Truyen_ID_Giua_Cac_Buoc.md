@@ -28,6 +28,13 @@ user_id = m.group(1) if m else None
 print(user_id)
 ```
 
+## Giải thích cho người mới
+- Nhiều bài có 2+ bước phụ thuộc nhau: bước 1 tạo ra 1 ID (của job, order, user...), bước 2 phải dùng đúng ID đó. Trên Burp bạn copy ID bằng tay từ response bước 1 dán vào URL bước 2 — trong script phải làm việc đó tự động.
+- **Bước 1**: `r.json()` chuyển response JSON thành dict Python; `job["id"]` lấy giá trị theo đúng key tên `id` — key này phải khớp với response thật (xem trong Burp, có thể là `id`, `job_id`, `data.id`...).
+- **Bước 2**: dùng f-string `f"{base}/api/jobs/{job_id}"` để nhúng ID vừa lấy vào URL, giống việc bạn tự sửa URL trong Burp Repeater rồi bấm gửi lại.
+- **Bước 3**: nếu ID không nằm trong JSON mà nằm trong HTML hoặc header `Location` (redirect sau khi tạo object), dùng `re.search(...)` để trích số/ID ra từ chuỗi đó.
+- Luôn in giá trị vừa lấy ra (`print(job_id)`) trước khi dùng ở bước sau — nếu `job_id` sai (`None`, rỗng, hoặc nhầm key), bước sau sẽ lỗi nhưng lỗi hiện ra lại nằm ở bước sau, dễ làm bạn tưởng nhầm chỗ.
+
 ## Lưu ý nhanh
 - In `r.text[:300]` hoặc `r.json()` ngay sau bước 1 để xác nhận đúng key/đường dẫn ID.
 - ID có thể nằm ở JSON, HTML, header `Location`, hoặc `Set-Cookie`.

@@ -29,6 +29,12 @@ r = requests.Session().send(req, timeout=5)
 print(r.request.url)
 ```
 
+## Giải thích cho người mới
+- "Encode" = đổi ký tự đặc biệt (dấu cách, `+`, `&`...) thành dạng `%XX` an toàn để nhét vào URL — giống việc Burp tự hiển thị `%20` thay cho dấu cách. `quote()`/`quote_plus()` làm việc đó; `unquote()`/`unquote_plus()` làm ngược lại (giải mã).
+- `quote_plus` encode dấu cách thành `+` (kiểu query/form); `quote` giữ dấu cách thành `%20` (kiểu path) — nhìn vào Burp xem URL dùng `+` hay `%20` để chọn đúng hàm.
+- Base64/Hex không phải để "ẩn giấu" mà là 2 cách biểu diễn dữ liệu nhị phân bằng chữ — hay gặp khi cookie/token/param là chuỗi base64, hoặc cần encode payload trước khi gửi.
+- **Khối cuối**: nếu payload bạn copy từ Burp **đã chứa sẵn** `%27`, `%20`... (đã encode rồi), đừng đưa nó vào `params={"q": payload}` — vì requests sẽ encode thêm 1 lần nữa, biến `%27` thành `%2527` (sai). Cách đúng là ghép thẳng vào URL rồi gửi qua `Request(...).prepare()` như snippet trên, để giữ nguyên y những gì bạn đã có.
+
 ## Lưu ý nhanh
 - `quote_plus` cho form/query kiểu `+`; `quote` an toàn hơn cho path segment.
 - Nếu bạn đã có `%2f` mà truyền vào `params=`, requests có thể encode dấu `%` thành `%252f`.
