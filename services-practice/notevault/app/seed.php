@@ -55,8 +55,19 @@ function ensure_note(PDO $pdo, int $userId, string $title, string $body): void {
     $stmt->execute([$userId, $title, $body]);
 }
 
-$adminId = ensure_user($pdo, 'admin', 'admin_demo_pw_2026', 1);
-$aliceId = ensure_user($pdo, 'alice', 'alice_demo_pw_2026', 0);
+// Mật khẩu admin/alice sinh RIÊNG theo từng team, dẫn xuất từ
+// SEED_PASSWORD_SECRET (khác FLAG_SECRET -- cái này KHÔNG đổi theo
+// `spin.sh rotate`, để không làm mất đăng nhập giữa các round). Nhờ vậy
+// team B không biết trước mật khẩu admin của team A (và ngược lại) --
+// buộc phải tự tìm đường khai thác (SQLi/IDOR/deserialization/type
+// juggling...) thay vì chỉ đăng nhập thẳng bằng mật khẩu demo công khai.
+function seed_password(string $role): string {
+    $secret = getenv('SEED_PASSWORD_SECRET') ?: 'dev-seed-secret-change-me';
+    return substr(hash_hmac('sha256', "seed:$role", $secret), 0, 16);
+}
+
+$adminId = ensure_user($pdo, 'admin', seed_password('admin'), 1);
+$aliceId = ensure_user($pdo, 'alice', seed_password('alice'), 0);
 
 // {{FLAG:idor}} được thay bằng flag thật lúc hiển thị (xem inc/flag.php) --
 // không cần sửa DB khi rotate flag, chỉ cần đổi FLAG_SECRET + restart.

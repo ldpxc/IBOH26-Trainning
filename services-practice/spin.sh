@@ -67,6 +67,18 @@ write_env() {
   else
     flag_secret="${team}-${svc}-$(date +%s)-$(head -c8 /dev/urandom | od -An -tx1 | tr -d ' \n')"
   fi
+  # SEED_PASSWORD_SECRET: khác FLAG_SECRET ở chỗ KHÔNG đổi theo `rotate` --
+  # dùng để sinh mật khẩu admin/alice riêng theo từng team (notevault), để
+  # 1 team không biết trước mật khẩu app của team kia (chỉ dùng chung
+  # ADMIN_PASSWORD của UI WAF, không liên quan tài khoản trong app). Sinh 1
+  # lần lúc `up` đầu tiên, giữ nguyên mọi lần `up`/`rotate` sau để không làm
+  # mất đăng nhập giữa round.
+  local seed_pw_secret
+  if [[ -f "$dir/.env" ]] && grep -q '^SEED_PASSWORD_SECRET=' "$dir/.env"; then
+    seed_pw_secret=$(grep '^SEED_PASSWORD_SECRET=' "$dir/.env" | cut -d= -f2-)
+  else
+    seed_pw_secret="seed-${team}-${svc}-$(head -c12 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+  fi
   cat > "$dir/.env" <<EOF
 PROJECT_NAME=${team}_${svc}
 BW_PORT=${BW_PORT}
@@ -75,8 +87,17 @@ WAF_DB_PASSWORD=waf_db_${team}_${svc}
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=ChangeMe_Bw_2026!
 FLAG_SECRET=${flag_secret}
+SEED_PASSWORD_SECRET=${seed_pw_secret}
 EOF
   echo "$dir/.env"
+}
+
+# Tính đúng công thức seed.php dùng để sinh mật khẩu admin/alice từ
+# SEED_PASSWORD_SECRET -- dùng để in ra cho người dùng xem (không phải để
+# healthcheck gọi, Python tự tính lại bằng hmac).
+seed_password() {
+  local secret="$1" role="$2"
+  printf '%s' "seed:${role}" | openssl dgst -sha256 -hmac "$secret" -r | awk '{print substr($1,1,16)}'
 }
 
 seed_detection_only() {
@@ -128,6 +149,12 @@ cmd_up() {
   ports_for "$team" "$svc"
   echo "✅ ${team}/${svc}: app qua WAF http://127.0.0.1:${BW_PORT}/  |  WAF UI http://127.0.0.1:${BW_UI_PORT}/"
   echo "   Đăng nhập UI WAF: admin / ChangeMe_Bw_2026! (đổi trong .runtime/${team}_${svc}/.env nếu muốn)"
+  if [[ "$svc" == "notevault" ]]; then
+    local seed_secret; seed_secret=$(grep '^SEED_PASSWORD_SECRET=' "$envfile" | cut -d= -f2-)
+    echo "   Tài khoản app (CHỈ team ${team} biết -- không chia sẻ cho team kia):"
+    echo "     admin / $(seed_password "$seed_secret" admin)"
+    echo "     alice / $(seed_password "$seed_secret" alice)"
+  fi
 }
 
 cmd_down() {

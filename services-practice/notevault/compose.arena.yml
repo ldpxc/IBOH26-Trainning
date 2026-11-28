@@ -35,6 +35,7 @@ services:
       DB_USER: notevault
       DB_PASS: notevault_pw
       FLAG_SECRET: ${FLAG_SECRET:-dev-secret-change-me}
+      SEED_PASSWORD_SECRET: ${SEED_PASSWORD_SECRET:-dev-seed-secret-change-me}
     networks:
       arena_db: {}
       waf_edge:

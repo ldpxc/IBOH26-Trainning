@@ -61,10 +61,21 @@ tạo bảng), vào UI WAF → **Cài đặt chung → ModSecurity** → đổi
    được cờ) thay vì tự `curl` tay từng endpoint:
    ```bash
    spwn
-   python3 healthcheck_notevault.py --base-url http://127.0.0.1:9000   # đổi cổng theo team (xem ./spin.sh ps)
+   python3 healthcheck_notevault.py --base-url http://127.0.0.1:9000 --env-file .runtime/a_notevault/.env
+   # team b: đổi cổng + .env cho đúng (xem ./spin.sh ps):
+   # python3 healthcheck_notevault.py --base-url http://127.0.0.1:9010 --env-file .runtime/b_notevault/.env
    ```
    Chạy song song 1 cửa sổ riêng, để liên tục trong lúc viết/bật rule — thấy
    ngay dòng `WAF CHAN NHAM` là biết rule vừa viết chặn nhầm người dùng hợp lệ.
+
+   **Mật khẩu `admin`/`alice` của notevault giờ random riêng theo từng
+   team** (sinh lúc `spin.sh up`, in ra ngay dưới dòng `✅ .../notevault:` —
+   đọc lại bằng `./spin.sh up <team> notevault` nếu lỡ không chép kịp). 1
+   team KHÔNG biết trước mật khẩu app của team kia — chỉ `--env-file` của
+   **chính team mình** mới tính đúng mật khẩu của **chính team đó**, buộc
+   phải tự tìm đường khai thác (SQLi/IDOR/deserialization/type juggling...)
+   để lấy flag của đối thủ, đúng tinh thần thi thật — không còn chuyện tiện
+   tay login bằng mật khẩu demo công khai của cả 2 bên.
 5. Muốn "reset round" (như BTC dựng lại service + phát cờ mới mỗi round):
    ```bash
    ./spin.sh rotate a notevault

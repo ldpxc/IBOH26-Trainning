@@ -11,16 +11,22 @@ spin.sh). Phân loại lỗi đúng 3 nguyên nhân quy chế liệt kê ở Đi
       flag -- đây là dấu hiệu rule chặn-theo-nội-dung-response đã tự
       chặn luôn người dùng hợp lệ, xem lại cuộc trò chuyện về SVC/DEF).
 
-Dùng:
+Dùng (chỉ dùng cho ĐÚNG team của mình -- mật khẩu admin/alice giờ random
+riêng theo từng team, tự đọc từ file .env của chính team đó, KHÔNG hard-code
+nữa -- xem lại cuộc trò chuyện về việc không nên dùng credential có sẵn để
+"tấn công" team kia):
     spwn   # activate venv trước
-    python3 healthcheck_notevault.py --base-url http://127.0.0.1:9000
-    python3 healthcheck_notevault.py --base-url http://127.0.0.1:9010 --interval 30
-    python3 healthcheck_notevault.py --base-url http://127.0.0.1:9000 --once   # test nhanh, chạy 1 lần rồi thoát
+    python3 healthcheck_notevault.py --base-url http://127.0.0.1:9000 --env-file .runtime/a_notevault/.env
+    python3 healthcheck_notevault.py --base-url http://127.0.0.1:9010 --env-file .runtime/b_notevault/.env --interval 30
+    python3 healthcheck_notevault.py --base-url http://127.0.0.1:9000 --env-file .runtime/a_notevault/.env --once   # test nhanh
 
 Mặc định --base-url là cổng team "a" (9000) theo đúng spin.sh. Team "b" dùng
-9010 (notevault), xem `./spin.sh ps` để lấy đúng cổng.
+9010 (notevault), xem `./spin.sh ps` để lấy đúng cổng -- --env-file cũng phải
+đổi theo đúng team đang chạy (file do chính `spin.sh up` sinh ra).
 """
 import argparse
+import hashlib
+import hmac
 import re
 import sys
 import time
@@ -31,11 +37,26 @@ import requests
 FLAG_RE = re.compile(r"FHACKER2026\{[0-9a-fA-F]{64}\}")
 NOTE_LINK_RE = re.compile(r'/note\.php\?id=(\d+)"[^>]*>([^<]*)')
 
-# 2 tài khoản hợp lệ do seed.php tạo sẵn (xem services-practice/notevault/app/seed.php)
-USERS = [
-    {"username": "alice", "password": "alice_demo_pw_2026", "expect_flag": False},
-    {"username": "admin", "password": "admin_demo_pw_2026", "expect_flag": True},
-]
+
+def seed_password(secret: str, role: str) -> str:
+    """Y hệt công thức trong notevault/app/seed.php -- không được đổi 1 bên
+    mà quên đổi bên kia, nếu không mật khẩu tính ra sẽ sai."""
+    return hmac.new(secret.encode(), f"seed:{role}".encode(), hashlib.sha256).hexdigest()[:16]
+
+
+def read_seed_secret(env_file: str) -> str:
+    try:
+        with open(env_file, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("SEED_PASSWORD_SECRET="):
+                    return line.split("=", 1)[1].strip()
+    except FileNotFoundError:
+        print(f"[!] Không thấy file {env_file} -- phải chạy `./spin.sh up <team> notevault` trước, "
+              f"hoặc trỏ --env-file đúng vào .runtime/<team>_notevault/.env của team mình.", file=sys.stderr)
+        sys.exit(1)
+    print(f"[!] File {env_file} không có dòng SEED_PASSWORD_SECRET= -- bản spin.sh có thể cũ, "
+          f"chạy `./spin.sh up <team> notevault` lại để sinh dòng này.", file=sys.stderr)
+    sys.exit(1)
 
 
 class CheckResult:
@@ -123,14 +144,14 @@ def check_user_flow(base_url: str, username: str, password: str, expect_flag: bo
     return CheckResult(name, True)
 
 
-def check_benign_search(base_url: str, timeout: float) -> CheckResult:
+def check_benign_search(base_url: str, alice_password: str, timeout: float) -> CheckResult:
     """Tìm kiếm bằng 1 từ khoá hoàn toàn bình thường (không ký tự SQL) --
     bài test false-positive cho rule chặn SQLi trên search.php."""
     name = "tìm kiếm bình thường (search.php?q=note)"
     s = requests.Session()
     s.verify = False
     try:
-        s.post(base_url + "/login.php", data={"username": "alice", "password": "alice_demo_pw_2026"}, timeout=timeout)
+        s.post(base_url + "/login.php", data={"username": "alice", "password": alice_password}, timeout=timeout)
         r = s.get(base_url + "/search.php", params={"q": "note"}, timeout=timeout)
     except requests.exceptions.RequestException as e:
         return CheckResult(name, False, classify_http_error(e))
@@ -141,22 +162,44 @@ def check_benign_search(base_url: str, timeout: float) -> CheckResult:
     return CheckResult(name, True)
 
 
-def run_cycle(base_url: str, timeout: float):
+def run_cycle(base_url: str, users: list, timeout: float):
     checks = [check_uptime(base_url, timeout)]
-    for u in USERS:
+    for u in users:
         checks.append(check_user_flow(base_url, u["username"], u["password"], u["expect_flag"], timeout))
-    checks.append(check_benign_search(base_url, timeout))
+    checks.append(check_benign_search(base_url, users[0]["password"], timeout))
     return checks
 
 
 def main():
     ap = argparse.ArgumentParser(description="Mô phỏng bot SLA (SVC) cho notevault -- dùng khi luyện tập A/D không có dashboard thật.")
     ap.add_argument("--base-url", default="http://127.0.0.1:9000", help="URL app qua WAF, vd http://127.0.0.1:9000 (team a) hoặc :9010 (team b)")
+    ap.add_argument("--env-file", default=None,
+                     help="File .env do spin.sh sinh (vd .runtime/a_notevault/.env) -- tự đọc SEED_PASSWORD_SECRET "
+                          "để tính đúng mật khẩu admin/alice của CHÍNH team này. Bắt buộc trừ khi dùng --admin-password/--alice-password.")
+    ap.add_argument("--admin-password", default=None, help="Ghi đè mật khẩu admin thay vì tự tính từ --env-file")
+    ap.add_argument("--alice-password", default=None, help="Ghi đè mật khẩu alice thay vì tự tính từ --env-file")
     ap.add_argument("--interval", type=float, default=30.0, help="Giây giữa mỗi lần check, mặc định 30s giống quy chế thật")
     ap.add_argument("--timeout", type=float, default=6.0, help="Timeout mỗi request (giây)")
     ap.add_argument("--once", action="store_true", help="Chạy đúng 1 vòng rồi thoát (test nhanh)")
     ap.add_argument("--log-file", default=None, help="Nếu đặt, ghi thêm (append) mỗi dòng kết quả vào file này")
     args = ap.parse_args()
+
+    if args.admin_password and args.alice_password:
+        admin_pw, alice_pw = args.admin_password, args.alice_password
+    elif args.env_file:
+        secret = read_seed_secret(args.env_file)
+        admin_pw = args.admin_password or seed_password(secret, "admin")
+        alice_pw = args.alice_password or seed_password(secret, "alice")
+    else:
+        print("[!] Thiếu --env-file (hoặc đủ cả --admin-password và --alice-password). "
+              "Trỏ đúng vào .runtime/<team>_notevault/.env của CHÍNH team đang chạy, "
+              "xem `./spin.sh up <team> notevault` để biết đường dẫn.", file=sys.stderr)
+        sys.exit(1)
+
+    users = [
+        {"username": "alice", "password": alice_pw, "expect_flag": False},
+        {"username": "admin", "password": admin_pw, "expect_flag": True},
+    ]
 
     base_url = args.base_url.rstrip("/")
     total, failed = 0, 0
@@ -166,7 +209,7 @@ def main():
     try:
         while True:
             ts = datetime.now().strftime("%H:%M:%S")
-            checks = run_cycle(base_url, args.timeout)
+            checks = run_cycle(base_url, users, args.timeout)
             ok_count = sum(1 for c in checks if c.ok)
             total += len(checks)
             failed += len(checks) - ok_count
